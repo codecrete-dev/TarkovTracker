@@ -52,7 +52,7 @@ Web app for tracking Escape from Tarkov player progress. Nuxt 3 SPA with Supabas
 **Tarkov Data**:
 - `app/composables/tarkovdata.ts` - Central data composable
 - Uses `graphology` for task dependency graphs
-- Filters via `DISABLED_TASKS` constant
+- Filters via `EXCLUDED_SCAV_KARMA_TASKS` constant (excluded until Fence Rep tracking is implemented)
 
 ---
 

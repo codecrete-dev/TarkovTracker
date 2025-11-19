@@ -78,10 +78,21 @@ export function getEditionName(edition: number | undefined): string {
   return found ? found.title : `Edition ${edition}`;
 }
 
-export const DISABLED_TASKS = [
-  "61e6e5e0f5b9633f6719ed95",
-  "61e6e60223374d168a4576a6",
-  "61e6e621bfeab00251576265",
-  "61e6e615eea2935bc018a2c5",
-  "61e6e60c5ca3b3783662be27",
+// Scav Karma (Fence Rep) tasks excluded from tracking
+// These "Compensation for Damage" tasks require Scav Karma validation which isn't yet implemented
+// They would always show as incomplete without proper Fence reputation tracking
+export const EXCLUDED_SCAV_KARMA_TASKS = [
+  "61e6e5e0f5b9633f6719ed95", // Compensation for Damage - Trust (Scav Karma -1 Quest)
+  "61e6e60223374d168a4576a6", // Compensation for Damage - Wager (Scav Karma -1 Quest)
+  "61e6e621bfeab00251576265", // Compensation for Damage - Collection (Scav Karma -1 Quest)
+  "61e6e615eea2935bc018a2c5", // Compensation for Damage - Barkeep (Scav Karma -1 Quest)
+  "61e6e60c5ca3b3783662be27", // Compensation for Damage - Wergild (Scav Karma -3 Quest)
 ];
+
+// Currency item IDs to exclude from quest item tracking
+// These represent in-game currencies that are always obtainable and don't need to be tracked
+export const CURRENCY_ITEM_IDS = [
+  "5696686a4bdc2da3298b456a", // Dollars (USD)
+  "5449016a4bdc2d6f028b456f", // Roubles (RUB)
+  "569668774bdc2da2298b4568", // Euros (EUR)
+] as const;

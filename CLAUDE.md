@@ -82,7 +82,7 @@ The app supports **dual game modes** (PvP and PvE) with separate progress tracki
 **Tarkov Data System**:
 - `app/composables/tarkovdata.ts`: Central composable that initializes and exports all game data
 - Uses graph structures (via `graphology`) for task dependencies
-- Filters disabled tasks via `DISABLED_TASKS` constant
+- Filters Scav Karma tasks via `EXCLUDED_SCAV_KARMA_TASKS` constant (tasks excluded until Fence Rep system is implemented)
 - Exports: tasks, objectives, hideoutStations, maps, traders, etc.
 
 ### Component Organization
