@@ -3,6 +3,7 @@ import { useProgressStore } from "@/stores/progress";
 import { useMetadataStore } from "@/stores/metadata";
 import { useTarkovStore } from "@/stores/tarkov";
 import { CURRENCY_ITEM_IDS } from "@/utils/constants";
+import type { TaskObjective } from "@/types/tarkov";
 export function useDashboardStats() {
   const progressStore = useProgressStore();
   const metadataStore = useMetadataStore();
@@ -13,9 +14,7 @@ export function useDashboardStats() {
     if (!metadataStore.tasks) return [];
     const currentFaction = tarkovStore.getPMCFaction();
     return metadataStore.tasks.filter(
-      (task) =>
-        task &&
-        (task.factionName === "Any" || task.factionName === currentFaction)
+      (task) => task && (task.factionName === "Any" || task.factionName === currentFaction)
     );
   });
 
@@ -32,8 +31,7 @@ export function useDashboardStats() {
   // Failed tasks count
   const failedTasksCount = computed(() => {
     if (!metadataStore.tasks) return 0;
-    return metadataStore.tasks.filter((t) => tarkovStore.isTaskFailed(t.id))
-      .length;
+    return metadataStore.tasks.filter((t) => tarkovStore.isTaskFailed(t.id)).length;
   });
 
   // Needed item task objectives (memoized)
@@ -67,10 +65,7 @@ export function useDashboardStats() {
       return 0;
     }
     return metadataStore.objectives.filter(
-      (objective) =>
-        objective &&
-        objective.id &&
-        tarkovStore.isTaskObjectiveComplete(objective.id)
+      (objective) => objective && objective.id && tarkovStore.isTaskObjectiveComplete(objective.id)
     ).length;
   });
   // Completed tasks count
@@ -83,13 +78,11 @@ export function useDashboardStats() {
     ).length;
   });
   // Helper to check if objective is relevant for current faction
-  const isObjectiveRelevant = (objective: any) => {
+  const isObjectiveRelevant = (objective: TaskObjective | null | undefined) => {
     if (!objective) return false;
     if (
       objective.item &&
-      CURRENCY_ITEM_IDS.includes(
-        objective.item.id as (typeof CURRENCY_ITEM_IDS)[number]
-      )
+      CURRENCY_ITEM_IDS.includes(objective.item.id as (typeof CURRENCY_ITEM_IDS)[number])
     ) {
       return false;
     }
@@ -101,8 +94,7 @@ export function useDashboardStats() {
       relatedTask &&
       relatedTask.factionName &&
       currentPMCFaction !== undefined &&
-      (relatedTask.factionName === "Any" ||
-        relatedTask.factionName === currentPMCFaction)
+      (relatedTask.factionName === "Any" || relatedTask.factionName === currentPMCFaction)
     );
   };
 
@@ -123,8 +115,7 @@ export function useDashboardStats() {
       if (!objective.id || !objective.taskId) return;
 
       const taskCompletion = progressStore.tasksCompletions[objective.taskId];
-      const objectiveCompletion =
-        progressStore.objectiveCompletions[objective.id];
+      const objectiveCompletion = progressStore.objectiveCompletions[objective.id];
 
       if (
         (taskCompletion && taskCompletion["self"]) ||
@@ -155,8 +146,7 @@ export function useDashboardStats() {
   });
   // Total Kappa tasks count
   const totalKappaTasks = computed(() => {
-    return relevantTasks.value.filter((task) => task.kappaRequired === true)
-      .length;
+    return relevantTasks.value.filter((task) => task.kappaRequired === true).length;
   });
 
   // Completed Kappa tasks count
@@ -164,14 +154,12 @@ export function useDashboardStats() {
     if (!progressStore.tasksCompletions) return 0;
     return relevantTasks.value.filter(
       (task) =>
-        task.kappaRequired === true &&
-        progressStore.tasksCompletions[task.id]?.self === true
+        task.kappaRequired === true && progressStore.tasksCompletions[task.id]?.self === true
     ).length;
   });
   // Total Lightkeeper tasks count
   const totalLightkeeperTasks = computed(() => {
-    return relevantTasks.value.filter((task) => task.lightkeeperRequired === true)
-      .length;
+    return relevantTasks.value.filter((task) => task.lightkeeperRequired === true).length;
   });
 
   // Completed Lightkeeper tasks count
@@ -179,8 +167,7 @@ export function useDashboardStats() {
     if (!progressStore.tasksCompletions) return 0;
     return relevantTasks.value.filter(
       (task) =>
-        task.lightkeeperRequired === true &&
-        progressStore.tasksCompletions[task.id]?.self === true
+        task.lightkeeperRequired === true && progressStore.tasksCompletions[task.id]?.self === true
     ).length;
   });
 
@@ -190,9 +177,7 @@ export function useDashboardStats() {
 
     return metadataStore.sortedTraders
       .map((trader) => {
-        const traderTasks = relevantTasks.value.filter(
-          (task) => task.trader?.id === trader.id
-        );
+        const traderTasks = relevantTasks.value.filter((task) => task.trader?.id === trader.id);
         const totalTasks = traderTasks.length;
         const completedTasks = traderTasks.filter(
           (task) => progressStore.tasksCompletions[task.id]?.self === true

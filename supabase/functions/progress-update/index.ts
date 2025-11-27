@@ -11,16 +11,28 @@ import {
 const VALID_GAME_MODES = ["pvp", "pve"] as const
 type GameMode = typeof VALID_GAME_MODES[number]
 
+interface ProgressData {
+  level?: number
+  faction?: string
+  taskCompletions?: Record<string, boolean>
+  taskObjectives?: Record<string, boolean>
+  hideoutModules?: Record<string, number>
+  hideoutParts?: Record<string, number>
+}
+
 interface ProgressUpdateRequest {
   gameMode: GameMode
-  progressData: {
-    level?: number
-    faction?: string
-    taskCompletions?: Record<string, boolean>
-    taskObjectives?: Record<string, boolean>
-    hideoutModules?: Record<string, number>
-    hideoutParts?: Record<string, number>
-  }
+  progressData: ProgressData
+}
+
+interface UserProgress {
+  user_id?: string
+  currentGameMode: GameMode
+  pvp: ProgressData
+  pve: ProgressData
+  created_at?: string
+  updated_at?: string
+  [key: string]: unknown
 }
 
 serve(async (req) => {
@@ -85,7 +97,7 @@ serve(async (req) => {
     }
 
     // Prepare the progress data structure
-    let updatedProgress: any
+    let updatedProgress: UserProgress
 
     if (currentProgress) {
       // User has existing progress - merge with new data
