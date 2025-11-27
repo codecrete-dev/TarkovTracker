@@ -21,20 +21,20 @@
   </UFormGroup>
 </template>
 <script setup lang="ts">
-import { computed } from "vue";
-import { useTarkovStore } from "@/stores/tarkov";
-const tarkovStore = useTarkovStore();
-const displayName = computed({
-  get: () => tarkovStore.getDisplayName() || "",
-  set: (newName) => {
-    if (newName && newName.trim()) {
-      tarkovStore.setDisplayName(newName.trim());
-    } else {
-      tarkovStore.setDisplayName(null);
-    }
-  },
-});
-const clearDisplayName = () => {
-  tarkovStore.setDisplayName(null);
-};
+  import { computed } from "vue";
+  import { useTarkovStore } from "@/stores/tarkov";
+  const tarkovStore = useTarkovStore();
+  const displayName = computed({
+    get: () => tarkovStore.getDisplayName() || "",
+    set: (newName) => {
+      if (newName && newName.trim()) {
+        tarkovStore.setDisplayName(newName.trim());
+      } else {
+        tarkovStore.setDisplayName(null);
+      }
+    },
+  });
+  const clearDisplayName = () => {
+    tarkovStore.setDisplayName(null);
+  };
 </script>

@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { useTarkovTime } from '../useTarkovTime';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { useTarkovTime } from "../useTarkovTime";
 
-describe('useTarkovTime', () => {
+describe("useTarkovTime", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -10,17 +10,17 @@ describe('useTarkovTime', () => {
     vi.useRealTimers();
   });
 
-  it('initializes with formatted time string', () => {
-    const mockDate = new Date('2024-01-01T12:00:00Z');
+  it("initializes with formatted time string", () => {
+    const mockDate = new Date("2024-01-01T12:00:00Z");
     vi.setSystemTime(mockDate);
 
     const { tarkovTime } = useTarkovTime();
 
-    expect(typeof tarkovTime.value).toBe('string');
+    expect(typeof tarkovTime.value).toBe("string");
   });
 
-  it('updates time automatically after interval', async () => {
-    const mockDate = new Date('2024-01-01T12:00:00Z');
+  it("updates time automatically after interval", async () => {
+    const mockDate = new Date("2024-01-01T12:00:00Z");
     vi.setSystemTime(mockDate);
 
     const { tarkovTime } = useTarkovTime();
@@ -31,19 +31,19 @@ describe('useTarkovTime', () => {
     vi.advanceTimersByTime(4000);
 
     // Time should have updated
-    expect(typeof tarkovTime.value).toBe('string');
+    expect(typeof tarkovTime.value).toBe("string");
   });
 
-  it('provides time as string', () => {
+  it("provides time as string", () => {
     const { tarkovTime } = useTarkovTime();
 
-    expect(typeof tarkovTime.value).toBe('string');
+    expect(typeof tarkovTime.value).toBe("string");
   });
 
-  it('composable can be imported and used', () => {
+  it("composable can be imported and used", () => {
     const result = useTarkovTime();
 
-    expect(result).toHaveProperty('tarkovTime');
+    expect(result).toHaveProperty("tarkovTime");
     expect(result.tarkovTime).toBeDefined();
   });
 });

@@ -35,31 +35,21 @@ export default defineEventHandler(async (event) => {
   let gameMode = (query.gameMode as string)?.toLowerCase() || "regular";
 
   // Ensure valid language (fallback to English if unsupported)
-  if (
-    !SUPPORTED_LANGUAGES.includes(lang as (typeof SUPPORTED_LANGUAGES)[number])
-  ) {
+  if (!SUPPORTED_LANGUAGES.includes(lang as (typeof SUPPORTED_LANGUAGES)[number])) {
     lang = "en";
   }
 
   // Ensure valid game mode
-  if (
-    !VALID_GAME_MODES.includes(gameMode as (typeof VALID_GAME_MODES)[number])
-  ) {
+  if (!VALID_GAME_MODES.includes(gameMode as (typeof VALID_GAME_MODES)[number])) {
     gameMode = "regular";
   }
 
   // Create cache key from parameters
   const cacheKey = `data-${lang}-${gameMode}`;
-  
+
   // Create fetcher function for tarkov.dev API
   const fetcher = createTarkovFetcher(TARKOV_DATA_QUERY, { lang, gameMode });
 
   // Use the shared edge cache utility
-  return await useEdgeCache(
-    event,
-    cacheKey,
-    fetcher,
-    CACHE_TTL,
-    { cacheKeyPrefix: 'tarkov' }
-  );
+  return await useEdgeCache(event, cacheKey, fetcher, CACHE_TTL, { cacheKeyPrefix: "tarkov" });
 });

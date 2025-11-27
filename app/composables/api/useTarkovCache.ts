@@ -100,21 +100,14 @@ export function useTarkovCache() {
       await clearCacheByGameMode(apiGameMode);
       await refreshStats();
     } catch (error) {
-      console.error(
-        `[TarkovCache] Error clearing cache for ${gameMode}:`,
-        error
-      );
+      console.error(`[TarkovCache] Error clearing cache for ${gameMode}:`, error);
     } finally {
       isLoading.value = false;
     }
   }
 
   // Clear a specific cache entry
-  async function clearEntry(
-    type: CacheType,
-    gameMode: string,
-    lang: string = "en"
-  ) {
+  async function clearEntry(type: CacheType, gameMode: string, lang: string = "en") {
     if (typeof window === "undefined") return;
 
     isLoading.value = true;

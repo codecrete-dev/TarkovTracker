@@ -2,15 +2,12 @@
   <div>
     <template v-if="!xs">
       <div class="m-0 p-0">
-        <div class="flex mb-2 text-lg">
+        <div class="mb-2 flex text-lg">
           <div class="w-full">
             <task-link :task="task" />
           </div>
         </div>
-        <UTooltip
-          v-if="task.minPlayerLevel != 0"
-          text="Minimum level required to access task"
-        >
+        <UTooltip v-if="task.minPlayerLevel != 0" text="Minimum level required to access task">
           <InfoRow icon="mdi-menu-right" class="text-sm text-gray-400">
             <i18n-t keypath="page.tasks.questcard.level" scope="global">
               <template #count>{{ task.minPlayerLevel }}</template>
@@ -33,11 +30,11 @@
         </InfoRow>
         <InfoRow v-if="task?.factionName != 'Any'" class="mb-1 text-sm text-gray-400">
           <template #icon>
-            <img :src="factionImage" class="w-6 h-6 mx-1 invert" />
+            <img :src="factionImage" class="mx-1 h-6 w-6 invert" />
           </template>
           {{ task.factionName }}
         </InfoRow>
-        <div v-if="nonKappa" class="flex mb-1">
+        <div v-if="nonKappa" class="mb-1 flex">
           <div class="mr-1">
             <UBadge size="xs" color="error" variant="outline">
               {{ t("page.tasks.questcard.nonkappa") }}
@@ -61,26 +58,26 @@
   </div>
 </template>
 <script setup lang="ts">
-import { useI18n } from "vue-i18n";
-import TaskLink from "./TaskLink.vue";
-import InfoRow from "./InfoRow.vue";
+  import { useI18n } from "vue-i18n";
+  import TaskLink from "./TaskLink.vue";
+  import InfoRow from "./InfoRow.vue";
 
-interface Task {
-  minPlayerLevel: number;
-  predecessors?: unknown[];
-  successors?: unknown[];
-  factionName: string;
-  wikiLink: string;
-}
-defineProps<{
-  task: Task;
-  xs: boolean;
-  lockedBefore: number;
-  lockedBehind: number;
-  factionImage: string;
-  nonKappa: boolean;
-  neededBy: string[];
-  activeUserView: string;
-}>();
-const { t } = useI18n({ useScope: "global" });
+  interface Task {
+    minPlayerLevel: number;
+    predecessors?: unknown[];
+    successors?: unknown[];
+    factionName: string;
+    wikiLink: string;
+  }
+  defineProps<{
+    task: Task;
+    xs: boolean;
+    lockedBefore: number;
+    lockedBehind: number;
+    factionImage: string;
+    nonKappa: boolean;
+    neededBy: string[];
+    activeUserView: string;
+  }>();
+  const { t } = useI18n({ useScope: "global" });
 </script>

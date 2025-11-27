@@ -1,6 +1,6 @@
 import { computed, ref, watch, nextTick } from "vue";
 import { defineStore } from "pinia";
-import { useSupabaseListener } from '@/composables/supabase/useSupabaseListener';
+import { useSupabaseListener } from "@/composables/supabase/useSupabaseListener";
 import { useSystemStoreWithSupabase } from "./useSystemStore";
 import type { TeamState, TeamGetters } from "@/types/tarkov";
 import type { Store } from "pinia";
@@ -9,37 +9,34 @@ import type { UserState } from "@/shared_state";
 /**
  * Team store definition with getters for team info and members
  */
-export const useTeamStore = defineStore<string, TeamState, TeamGetters>(
-  "team",
-  {
-    state: (): TeamState => ({}),
-    getters: {
-      teamOwner(state) {
-        return state?.owner || null;
-      },
-      isOwner(state) {
+export const useTeamStore = defineStore<string, TeamState, TeamGetters>("team", {
+  state: (): TeamState => ({}),
+  getters: {
+    teamOwner(state) {
+      return state?.owner || null;
+    },
+    isOwner(state) {
       const { $supabase } = useNuxtApp();
       const owner = state.owner;
       return owner === $supabase.user?.id;
     },
-      teamPassword(state) {
-        return state?.password || null;
-      },
-      teamMembers(state) {
-        return state?.members || [];
-      },
-      teammates(state) {
-        const currentMembers = state?.members;
+    teamPassword(state) {
+      return state?.password || null;
+    },
+    teamMembers(state) {
+      return state?.members || [];
+    },
+    teammates(state) {
+      const currentMembers = state?.members;
       const { $supabase } = useNuxtApp();
       const currentUID = $supabase.user?.id;
-        if (currentMembers && currentUID) {
-          return currentMembers.filter((member) => member !== currentUID);
-        }
-        return [];
-      },
+      if (currentMembers && currentUID) {
+        return currentMembers.filter((member) => member !== currentUID);
+      }
+      return [];
     },
-  }
-);
+  },
+});
 export function useTeamStoreWithSupabase() {
   const { systemStore } = useSystemStoreWithSupabase();
   const teamStore = useTeamStore();
@@ -87,20 +84,16 @@ export function useTeammateStores() {
       const { $supabase } = useNuxtApp();
       const currentUID = $supabase.user?.id;
       const newTeammatesArray =
-        newState.members?.filter(
-          (member: string) => member !== currentUID
-        ) || [];
+        newState.members?.filter((member: string) => member !== currentUID) || [];
       // Remove stores for teammates no longer in the team
       for (const teammate of Object.keys(teammateStores.value)) {
         if (!newTeammatesArray.includes(teammate)) {
           if (teammateUnsubscribes.value[teammate]) {
             teammateUnsubscribes.value[teammate]();
-            const { [teammate]: _removed, ...rest } =
-              teammateUnsubscribes.value;
+            const { [teammate]: _removed, ...rest } = teammateUnsubscribes.value;
             teammateUnsubscribes.value = rest;
           }
-          const { [teammate]: _storeRemoved, ...restStores } =
-            teammateStores.value;
+          const { [teammate]: _storeRemoved, ...restStores } = teammateStores.value;
           teammateStores.value = restStores as typeof teammateStores.value;
         }
       }
@@ -138,7 +131,7 @@ export function useTeammateStores() {
       // Note: We need to store the cleanup function, not the unsubscribe function directly
       const { cleanup } = useSupabaseListener({
         store: storeInstance,
-        table: 'user_progress',
+        table: "user_progress",
         filter: `user_id=eq.${teammateId}`,
         storeId: `teammate-${teammateId}`,
       });

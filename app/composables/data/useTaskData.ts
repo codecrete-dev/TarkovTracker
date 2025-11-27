@@ -8,7 +8,7 @@ import { EXCLUDED_SCAV_KARMA_TASKS } from "@/utils/constants";
  */
 export function useTaskData() {
   const metadataStore = useMetadataStore();
-  
+
   // Reactive data from store
   const tasks = computed(() => metadataStore.tasks);
   const taskGraph = computed(() => metadataStore.taskGraph);
@@ -20,29 +20,29 @@ export function useTaskData() {
   const neededItemTaskObjectives = computed(() => metadataStore.neededItemTaskObjectives);
   const loading = computed(() => metadataStore.loading);
   const error = computed(() => metadataStore.error);
-  
+
   // Computed properties
   const enabledTasks = computed(() =>
     tasks.value.filter((task) => !EXCLUDED_SCAV_KARMA_TASKS.includes(task.id))
   );
-  
+
   // Utility functions that delegate to the store
   const getTaskById = (taskId: string): Task | undefined => {
     return metadataStore.getTaskById(taskId);
   };
-  
+
   const getTasksByTrader = (traderId: string): Task[] => {
     return metadataStore.getTasksByTrader(traderId);
   };
-  
+
   const getTasksByMap = (mapId: string): Task[] => {
     return metadataStore.getTasksByMap(mapId);
   };
-  
+
   const isPrerequisiteFor = (taskId: string, targetTaskId: string): boolean => {
     return metadataStore.isPrerequisiteFor(taskId, targetTaskId);
   };
-  
+
   return {
     // Reactive data
     tasks,

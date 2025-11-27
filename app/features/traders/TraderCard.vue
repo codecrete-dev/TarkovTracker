@@ -7,11 +7,11 @@
     class="h-full"
   >
     <template #content>
-      <div class="p-4 space-y-6">
+      <div class="space-y-6 p-4">
         <!-- Loyalty Level Selector -->
         <div class="space-y-2">
-          <div class="text-sm text-surface-300 font-medium">Loyalty Level</div>
-          <div class="flex gap-1 justify-between">
+          <div class="text-surface-300 text-sm font-medium">Loyalty Level</div>
+          <div class="flex justify-between gap-1">
             <UButton
               v-for="lvl in 4"
               :key="lvl"
@@ -28,7 +28,7 @@
 
         <!-- Reputation Input -->
         <div class="space-y-2">
-          <div class="text-sm text-surface-300 font-medium">Reputation</div>
+          <div class="text-surface-300 text-sm font-medium">Reputation</div>
           <UInput
             type="number"
             :model-value="reputation"
@@ -36,8 +36,8 @@
             placeholder="0.00"
             @update:model-value="(val) => $emit('update:reputation', Number(val))"
           >
-             <template #trailing>
-              <span class="text-gray-500 text-xs">REP</span>
+            <template #trailing>
+              <span class="text-xs text-gray-500">REP</span>
             </template>
           </UInput>
         </div>
@@ -47,16 +47,16 @@
 </template>
 
 <script setup lang="ts">
-import type { Trader } from "@/types/tarkov";
-import GenericCard from "@/components/ui/GenericCard.vue";
+  import type { Trader } from "@/types/tarkov";
+  import GenericCard from "@/components/ui/GenericCard.vue";
 
-defineProps<{
-  trader: Trader;
-  level: number;
-  reputation: number;
-}>();
+  defineProps<{
+    trader: Trader;
+    level: number;
+    reputation: number;
+  }>();
 
-defineEmits<{
-  (e: "update:level" | "update:reputation", value: number): void;
-}>();
+  defineEmits<{
+    (e: "update:level" | "update:reputation", value: number): void;
+  }>();
 </script>

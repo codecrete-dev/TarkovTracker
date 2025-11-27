@@ -1,9 +1,6 @@
 import { ref, computed, watch, shallowRef, triggerRef } from "vue";
 import { useTarkovStore } from "@/stores/tarkov";
-import {
-  useSafeLocale,
-  extractLanguageCode,
-} from "@/composables/utils/i18nHelpers";
+import { useSafeLocale, extractLanguageCode } from "@/composables/utils/i18nHelpers";
 import {
   API_GAME_MODES,
   GAME_MODES,
@@ -17,10 +14,7 @@ import {
   CACHE_CONFIG,
   type CacheType,
 } from "@/utils/tarkovCache";
-import type {
-  TarkovDataQueryResult,
-  TarkovHideoutQueryResult,
-} from "@/types/tarkov";
+import type { TarkovDataQueryResult, TarkovHideoutQueryResult } from "@/types/tarkov";
 
 /**
  * Singleton state for shared Tarkov data query
@@ -36,8 +30,7 @@ import type {
 
 // Shared singleton state
 let sharedDataQuery: ReturnType<typeof createSharedDataQuery> | null = null;
-let sharedHideoutQuery: ReturnType<typeof createSharedHideoutQuery> | null =
-  null;
+let sharedHideoutQuery: ReturnType<typeof createSharedHideoutQuery> | null = null;
 
 // Track if cleanup has been run this session
 let cleanupRun = false;
@@ -115,15 +108,12 @@ function createSharedDataQuery() {
       console.log(`[TarkovData] Fetching from server: ${fetchKey}`);
       cacheStatus.value = "miss";
 
-      const response = await $fetch<{ data: TarkovDataQueryResult }>(
-        "/api/tarkov/data",
-        {
-          query: {
-            lang,
-            gameMode,
-          },
-        }
-      );
+      const response = await $fetch<{ data: TarkovDataQueryResult }>("/api/tarkov/data", {
+        query: {
+          lang,
+          gameMode,
+        },
+      });
 
       if (response?.data) {
         result.value = response.data;
@@ -226,14 +216,11 @@ function createSharedHideoutQuery() {
       console.log(`[TarkovHideout] Fetching from server: ${fetchKey}`);
       cacheStatus.value = "miss";
 
-      const response = await $fetch<{ data: TarkovHideoutQueryResult }>(
-        "/api/tarkov/hideout",
-        {
-          query: {
-            gameMode,
-          },
-        }
-      );
+      const response = await $fetch<{ data: TarkovHideoutQueryResult }>("/api/tarkov/hideout", {
+        query: {
+          gameMode,
+        },
+      });
 
       if (response?.data) {
         result.value = response.data;

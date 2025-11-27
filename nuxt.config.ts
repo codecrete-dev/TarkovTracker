@@ -11,6 +11,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       appUrl: process.env.NUXT_PUBLIC_APP_URL || "http://localhost:3000",
+      teamGatewayUrl: process.env.NUXT_PUBLIC_TEAM_GATEWAY_URL || "",
     },
   },
   devtools: {
@@ -23,6 +24,25 @@ export default defineNuxtConfig({
   serverDir: resolve(__dirname, "app/server"),
   nitro: {
     preset: "cloudflare-pages",
+    cloudflare: {
+      pages: {
+        routes: {
+          include: ["/*"],
+          exclude: ["/_fonts/*", "/_nuxt/*", "/img/*", "/favicon.ico", "/robots.txt"],
+        },
+      },
+    },
+  },
+  routeRules: {
+    // Prerender the index page for zero-invocation loading of the SPA shell
+    "/": { prerender: true },
+    // Explicit long-term caching for build assets
+    "/_nuxt/**": {
+      headers: { "cache-control": "public,max-age=31536000,immutable" },
+    },
+    "/_fonts/**": {
+      headers: { "cache-control": "public,max-age=31536000,immutable" },
+    },
   },
   app: {
     baseURL: "/",
@@ -50,9 +70,7 @@ export default defineNuxtConfig({
   modules: [
     "@nuxt/eslint",
     // Only load test utils during local dev/test so production builds don't try to resolve devDependency
-    process.env.NODE_ENV === "development"
-      ? "@nuxt/test-utils/module"
-      : undefined,
+    process.env.NODE_ENV === "development" ? "@nuxt/test-utils/module" : undefined,
     "@pinia/nuxt",
     "@nuxt/ui",
     "@nuxt/image",
@@ -115,6 +133,36 @@ export default defineNuxtConfig({
       template: {
         compilerOptions: {
           isCustomElement: (tag: string) => tag === "suspense",
+        },
+      },
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: (id) => {
+            if (id.includes("node_modules/d3")) {
+              return "vendor-d3";
+            }
+            if (id.includes("node_modules/graphology")) {
+              return "vendor-graphology";
+            }
+            if (id.includes("node_modules/@supabase")) {
+              return "vendor-supabase";
+            }
+            if (id.includes("node_modules/@nuxt/ui") || id.includes("node_modules/@vueuse")) {
+              return "vendor-ui";
+            }
+            if (
+              id.includes("node_modules/vue") ||
+              id.includes("node_modules/pinia") ||
+              id.includes("node_modules/ufo") ||
+              id.includes("node_modules/ofetch") ||
+              id.includes("node_modules/defu") ||
+              id.includes("node_modules/h3")
+            ) {
+              return "vendor-core";
+            }
+          },
         },
       },
     },

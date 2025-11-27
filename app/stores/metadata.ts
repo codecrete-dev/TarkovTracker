@@ -1,9 +1,6 @@
 import { defineStore } from "pinia";
 import { useTarkovStore } from "@/stores/tarkov";
-import {
-  useSafeLocale,
-  extractLanguageCode,
-} from "@/composables/utils/i18nHelpers";
+import { useSafeLocale, extractLanguageCode } from "@/composables/utils/i18nHelpers";
 import {
   API_GAME_MODES,
   GAME_MODES,
@@ -125,9 +122,7 @@ export const useMetadataStore = defineStore("metadata", {
     },
 
     enabledTasks: (state): Task[] => {
-      return state.tasks.filter(
-        (task) => !EXCLUDED_SCAV_KARMA_TASKS.includes(task.id)
-      );
+      return state.tasks.filter((task) => !EXCLUDED_SCAV_KARMA_TASKS.includes(task.id));
     },
 
     // Computed properties for maps with merged static data
@@ -137,9 +132,7 @@ export const useMetadataStore = defineStore("metadata", {
       }
       const mergedMaps = state.maps.map((map) => {
         const lowerCaseName = map.name.toLowerCase();
-        const mapKey =
-          MAP_NAME_MAPPING[lowerCaseName] ||
-          lowerCaseName.replace(/\s+|\+/g, "");
+        const mapKey = MAP_NAME_MAPPING[lowerCaseName] || lowerCaseName.replace(/\s+|\+/g, "");
         const staticData = state.staticMapData?.[mapKey];
         if (staticData?.svg) {
           return {
@@ -147,9 +140,7 @@ export const useMetadataStore = defineStore("metadata", {
             svg: staticData.svg,
           };
         } else {
-          console.warn(
-            `Static SVG data not found for map: ${map.name} (lookup key: ${mapKey})`
-          );
+          console.warn(`Static SVG data not found for map: ${map.name} (lookup key: ${mapKey})`);
           return map;
         }
       });
@@ -187,9 +178,7 @@ export const useMetadataStore = defineStore("metadata", {
     maxStationLevels: (state): { [stationId: string]: number } => {
       const maxLevels: { [stationId: string]: number } = {};
       state.hideoutStations.forEach((station) => {
-        maxLevels[station.id] = Math.max(
-          ...station.levels.map((level) => level.level)
-        );
+        maxLevels[station.id] = Math.max(...station.levels.map((level) => level.level));
       });
       return maxLevels;
     },
@@ -234,18 +223,13 @@ export const useMetadataStore = defineStore("metadata", {
       const store = useTarkovStore();
       const effectiveLocale = localeOverride || useSafeLocale().value;
 
-      console.log(
-        "[MetadataStore] updateLanguageAndGameMode - raw locale:",
-        effectiveLocale
-      );
+      console.log("[MetadataStore] updateLanguageAndGameMode - raw locale:", effectiveLocale);
       // Update language code
       const mappedCode = LOCALE_TO_API_MAPPING[effectiveLocale];
       if (mappedCode) {
         this.languageCode = mappedCode;
       } else {
-        this.languageCode = extractLanguageCode(effectiveLocale, [
-          ...API_SUPPORTED_LANGUAGES,
-        ]);
+        this.languageCode = extractLanguageCode(effectiveLocale, [...API_SUPPORTED_LANGUAGES]);
       }
 
       // Update game mode
@@ -271,10 +255,7 @@ export const useMetadataStore = defineStore("metadata", {
         cleanupExpiredCache().catch(console.error);
       }
 
-      await Promise.all([
-        this.fetchTasksData(forceRefresh),
-        this.fetchHideoutData(forceRefresh),
-      ]);
+      await Promise.all([this.fetchTasksData(forceRefresh), this.fetchHideoutData(forceRefresh)]);
     },
 
     /**
@@ -374,9 +355,7 @@ export const useMetadataStore = defineStore("metadata", {
           );
 
           if (cached) {
-            console.log(
-              `[MetadataStore] Hideout loaded from cache: ${apiGameMode}`
-            );
+            console.log(`[MetadataStore] Hideout loaded from cache: ${apiGameMode}`);
             this.processHideoutData(cached);
             this.hideoutLoading = false;
             return;
@@ -384,9 +363,7 @@ export const useMetadataStore = defineStore("metadata", {
         }
 
         // Step 2: Fetch from server API
-        console.log(
-          `[MetadataStore] Fetching hideout from server: ${apiGameMode}`
-        );
+        console.log(`[MetadataStore] Fetching hideout from server: ${apiGameMode}`);
 
         const response = (await $fetch<{
           data: TarkovHideoutQueryResult;
@@ -432,9 +409,7 @@ export const useMetadataStore = defineStore("metadata", {
       // Filter out scav karma tasks at the source
       // These tasks require Scav Karma validation which isn't yet implemented
       const allTasks = data.tasks || [];
-      this.tasks = allTasks.filter(
-        (task) => !EXCLUDED_SCAV_KARMA_TASKS.includes(task.id)
-      );
+      this.tasks = allTasks.filter((task) => !EXCLUDED_SCAV_KARMA_TASKS.includes(task.id));
 
       this.maps = data.maps || [];
       this.traders = data.traders || [];
@@ -464,9 +439,7 @@ export const useMetadataStore = defineStore("metadata", {
 
       if (this.hideoutStations.length > 0) {
         const graphBuilder = useGraphBuilder();
-        const processedData = graphBuilder.processHideoutData(
-          this.hideoutStations
-        );
+        const processedData = graphBuilder.processHideoutData(this.hideoutStations);
 
         this.hideoutModules = processedData.hideoutModules;
         this.hideoutGraph = processedData.hideoutGraph;
@@ -551,9 +524,7 @@ export const useMetadataStore = defineStore("metadata", {
 
     getStaticMapKey(mapName: string): string {
       const lowerCaseName = mapName.toLowerCase();
-      return (
-        MAP_NAME_MAPPING[lowerCaseName] || lowerCaseName.replace(/\s+|\+/g, "")
-      );
+      return MAP_NAME_MAPPING[lowerCaseName] || lowerCaseName.replace(/\s+|\+/g, "");
     },
 
     hasMapSvg(mapId: string): boolean {
@@ -588,15 +559,11 @@ export const useMetadataStore = defineStore("metadata", {
     },
 
     getItemsForModule(moduleId: string): NeededItemHideoutModule[] {
-      return this.neededItemHideoutModules.filter(
-        (item) => item.hideoutModule.id === moduleId
-      );
+      return this.neededItemHideoutModules.filter((item) => item.hideoutModule.id === moduleId);
     },
 
     getModulesRequiringItem(itemId: string): NeededItemHideoutModule[] {
-      return this.neededItemHideoutModules.filter(
-        (item) => item.item.id === itemId
-      );
+      return this.neededItemHideoutModules.filter((item) => item.item.id === itemId);
     },
 
     getTotalConstructionTime(moduleId: string): number {

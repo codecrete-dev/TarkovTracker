@@ -5,27 +5,24 @@ import type { SystemState, SystemGetters } from "@/types/tarkov";
 /**
  * System store definition with getters for user tokens and team info
  */
-export const useSystemStore = defineStore<string, SystemState, SystemGetters>(
-  "system",
-  {
-    state: (): SystemState => ({}),
-    getters: {
-      userTokens(state) {
-        return state?.tokens || [];
-      },
-      userTokenCount(state) {
-        return state?.tokens?.length || 0;
-      },
-      userTeam(state) {
-        return state.team || null;
-      },
-      userTeamIsOwn(state) {
-        const { $supabase } = useNuxtApp();
-        return state?.team === $supabase.user?.id || false;
-      },
+export const useSystemStore = defineStore<string, SystemState, SystemGetters>("system", {
+  state: (): SystemState => ({}),
+  getters: {
+    userTokens(state) {
+      return state?.tokens || [];
     },
-  }
-);
+    userTokenCount(state) {
+      return state?.tokens?.length || 0;
+    },
+    userTeam(state) {
+      return state.team || null;
+    },
+    userTeamIsOwn(state) {
+      const { $supabase } = useNuxtApp();
+      return state?.team === $supabase.user?.id || false;
+    },
+  },
+});
 export function useSystemStoreWithSupabase() {
   const systemStore = useSystemStore();
   const { $supabase } = useNuxtApp();

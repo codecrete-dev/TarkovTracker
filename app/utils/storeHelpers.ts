@@ -3,10 +3,7 @@ import type { Store } from "pinia";
  * Clears store properties that are not present in the new state
  * This ensures the store doesn't retain stale data when remote documents are updated
  */
-export function clearStaleState(
-  store: Store,
-  newState?: Record<string, unknown>
-): void {
+export function clearStaleState(store: Store, newState?: Record<string, unknown>): void {
   try {
     const currentState = store.$state;
     const missingProperties = Object.keys(currentState).filter((key) => {
@@ -35,10 +32,7 @@ export function clearStaleState(
 /**
  * Safely patches a store with new data
  */
-export function safePatchStore(
-  store: Store,
-  data: Record<string, unknown>
-): void {
+export function safePatchStore(store: Store, data: Record<string, unknown>): void {
   try {
     if (data && typeof data === "object") {
       store.$patch(data);
@@ -99,19 +93,13 @@ export function safeJsonCopy<T>(obj: T): T {
 /**
  * Checks if a value is a non-empty object
  */
-export function isValidObject(
-  value: unknown
-): value is Record<string, unknown> {
+export function isValidObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 /**
  * Safely gets a nested property from an object
  */
-export function safeGet<T>(
-  obj: unknown,
-  path: string,
-  defaultValue?: T
-): T | undefined {
+export function safeGet<T>(obj: unknown, path: string, defaultValue?: T): T | undefined {
   try {
     const keys = path.split(".");
     let result = obj;

@@ -48,9 +48,7 @@ export function useHideoutFiltering() {
       if (isStoreLoading.value) {
         return [];
       }
-      const hideoutStationList = JSON.parse(
-        JSON.stringify(hideoutStations.value)
-      );
+      const hideoutStationList = JSON.parse(JSON.stringify(hideoutStations.value));
 
       // Display all upgradeable stations
       if (activePrimaryView.value === "available") {
@@ -59,9 +57,7 @@ export function useHideoutFiltering() {
           const nextLevelData = station.levels.find((l) => l.level === lvl + 1);
           if (!nextLevelData) return false;
           return nextLevelData.stationLevelRequirements.every(
-            (req) =>
-              (progressStore.hideoutLevels?.[req.station.id]?.self || 0) >=
-              req.level
+            (req) => (progressStore.hideoutLevels?.[req.station.id]?.self || 0) >= req.level
           );
         });
       }
@@ -70,8 +66,7 @@ export function useHideoutFiltering() {
       if (activePrimaryView.value === "maxed") {
         return hideoutStationList.filter(
           (station: HideoutStation) =>
-            (progressStore.hideoutLevels?.[station.id]?.self || 0) ===
-            station.levels.length
+            (progressStore.hideoutLevels?.[station.id]?.self || 0) === station.levels.length
         );
       }
 
@@ -82,9 +77,7 @@ export function useHideoutFiltering() {
           const nextLevelData = station.levels.find((l) => l.level === lvl + 1);
           if (!nextLevelData) return false;
           return !nextLevelData.stationLevelRequirements.every(
-            (req) =>
-              (progressStore.hideoutLevels?.[req.station.id]?.self || 0) >=
-              req.level
+            (req) => (progressStore.hideoutLevels?.[req.station.id]?.self || 0) >= req.level
           );
         });
       }

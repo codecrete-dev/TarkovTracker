@@ -1,19 +1,19 @@
 <template>
-  <div class="container mx-auto p-4 space-y-6">
-    <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+  <div class="container mx-auto space-y-6 p-4">
+    <div class="flex flex-col items-center justify-between gap-4 md:flex-row">
       <div>
         <h1 class="text-2xl font-bold text-white">Traders</h1>
-        <p class="text-surface-400 text-sm mt-1">
+        <p class="text-surface-400 mt-1 text-sm">
           Configure your Loyalty Level and Reputation for {{ gameMode }} mode
         </p>
       </div>
     </div>
 
     <div v-if="loading" class="flex justify-center p-12">
-      <UIcon name="i-heroicons-arrow-path" class="animate-spin text-4xl text-primary-500" />
+      <UIcon name="i-heroicons-arrow-path" class="text-primary-500 animate-spin text-4xl" />
     </div>
 
-    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       <TraderCard
         v-for="trader in sortedTraders"
         :key="trader.id"
@@ -28,34 +28,31 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useTarkovStore } from '@/stores/tarkov';
-import { useTraderData } from '@/composables/data/useTraderData';
-import TraderCard from '@/features/traders/TraderCard.vue';
+  import { computed } from "vue";
+  import { useTarkovStore } from "@/stores/tarkov";
+  import { useTraderData } from "@/composables/data/useTraderData";
+  import TraderCard from "@/features/traders/TraderCard.vue";
 
-const tarkovStore = useTarkovStore();
-const { traders, loading } = useTraderData();
+  const tarkovStore = useTarkovStore();
+  const { traders, loading } = useTraderData();
 
-const gameMode = computed(() => {
-  const mode = tarkovStore.getCurrentGameMode();
-  return mode === 'pvp' ? 'PvP' : 'PvE';
-});
+  const gameMode = computed(() => {
+    const mode = tarkovStore.getCurrentGameMode();
+    return mode === "pvp" ? "PvP" : "PvE";
+  });
 
-const sortedTraders = computed(() => {
-  if (!traders.value) return [];
-  // Filter out internal/system traders if they appear in the list
-  // Keeping Fence, Lightkeeper, etc.
-  return traders.value.filter(t => 
-    t.name && 
-    !['System', 'Unheard'].includes(t.name)
-  );
-});
+  const sortedTraders = computed(() => {
+    if (!traders.value) return [];
+    // Filter out internal/system traders if they appear in the list
+    // Keeping Fence, Lightkeeper, etc.
+    return traders.value.filter((t) => t.name && !["System", "Unheard"].includes(t.name));
+  });
 
-const updateLevel = (traderId: string, level: number) => {
-  tarkovStore.setTraderLevel(traderId, level);
-};
+  const updateLevel = (traderId: string, level: number) => {
+    tarkovStore.setTraderLevel(traderId, level);
+  };
 
-const updateReputation = (traderId: string, reputation: number) => {
-  tarkovStore.setTraderReputation(traderId, reputation);
-};
+  const updateReputation = (traderId: string, reputation: number) => {
+    tarkovStore.setTraderReputation(traderId, reputation);
+  };
 </script>

@@ -18,5 +18,5 @@
   </icon-card>
 </template>
 <script setup>
-import IconCard from "@/components/ui/IconCard.vue";
+  import IconCard from "@/components/ui/IconCard.vue";
 </script>

@@ -1,6 +1,6 @@
 <template>
   <UCard class="p-2" :ui="{ body: { padding: 'p-2' } }">
-    <div class="flex items-center justify-between mb-2">
+    <div class="mb-2 flex items-center justify-between">
       <div class="text-left">
         <div class="text-2xl font-bold">
           {{ progressStore.getDisplayName(props.teammember) }}
@@ -16,7 +16,7 @@
           <img :src="groupIcon" class="max-w-[64px] object-contain" />
         </span>
         <span class="ml-2">
-          <div class="text-xs text-center mb-1">
+          <div class="mb-1 text-center text-xs">
             {{ $t("navigation_drawer.level") }}
           </div>
           <div class="text-center">
@@ -27,7 +27,7 @@
         </span>
       </div>
     </div>
-    <div class="flex justify-between items-center">
+    <div class="flex items-center justify-between">
       <div>
         <i18n-t
           v-if="!preferencesStore.teamIsHidden(props.teammember)"
@@ -48,20 +48,15 @@
       </div>
       <div class="flex gap-1">
         <UButton
-          :disabled="
-            props.teammember == $supabase.user.id ||
-            preferencesStore.taskTeamAllHidden
-          "
+          :disabled="props.teammember == $supabase.user.id || preferencesStore.taskTeamAllHidden"
           variant="outline"
           :icon="
-            props.teammember != $supabase.user.id &&
-            preferencesStore.teamIsHidden(props.teammember)
+            props.teammember != $supabase.user.id && preferencesStore.teamIsHidden(props.teammember)
               ? 'i-mdi-eye-off'
               : 'i-mdi-eye'
           "
           :color="
-            props.teammember != $supabase.user.id &&
-            preferencesStore.teamIsHidden(props.teammember)
+            props.teammember != $supabase.user.id && preferencesStore.teamIsHidden(props.teammember)
               ? 'red'
               : 'green'
           "
@@ -84,83 +79,78 @@
   </UCard>
 </template>
 <script setup>
-// Team member management moved to Cloudflare Workers - TODO: Implement replacement
-import { computed, ref } from "vue";
-import { useI18n } from "vue-i18n";
-import { usePreferencesStore } from "@/stores/preferences";
-import { useProgressStore } from "@/stores/progress";
-import { useMetadataStore } from "@/stores/metadata";
-const { $supabase } = useNuxtApp();
-const toast = useToast();
-// Define the props for the component
-const props = defineProps({
-  teammember: {
-    type: String,
-    required: true,
-  },
-  isTeamOwnerView: {
-    type: Boolean,
-    required: true,
-  },
-});
-const teamStoreId = computed(() => {
-  if (props.teammember == $supabase.user.id) {
-    return "self";
-  } else {
-    return props.teammember;
-  }
-});
-const progressStore = useProgressStore();
-const preferencesStore = usePreferencesStore();
-const metadataStore = useMetadataStore();
-const tasks = computed(() => metadataStore.tasks);
-const playerLevels = computed(() => metadataStore.playerLevels);
-const { t } = useI18n({ useScope: "global" });
-const completedTaskCount = computed(() => {
-  return tasks.value.filter(
-    (task) =>
-      progressStore.tasksCompletions?.[task.id]?.[teamStoreId.value] == true
-  ).length;
-});
-const groupIcon = computed(() => {
-  const level = progressStore.getLevel(props.teammember);
-  const entry = playerLevels.value.find((pl) => pl.level === level);
-  return entry?.levelBadgeImageLink ?? "";
-});
-const kickingTeammate = ref(false);
-const kickTeammate = async () => {
-  if (!props.teammember) return;
-  kickingTeammate.value = true;
-  try {
-    // TODO: Implement Cloudflare Workers integration for kicking team members
-    console.log("TODO: Implement Cloudflare Workers for kickTeammate function");
-    throw new Error(
-      "Team member kicking not yet implemented with Cloudflare Workers"
-    );
+  // Team member management moved to Cloudflare Workers - TODO: Implement replacement
+  import { computed, ref } from "vue";
+  import { useI18n } from "vue-i18n";
+  import { usePreferencesStore } from "@/stores/preferences";
+  import { useProgressStore } from "@/stores/progress";
+  import { useMetadataStore } from "@/stores/metadata";
+  const { $supabase } = useNuxtApp();
+  const toast = useToast();
+  // Define the props for the component
+  const props = defineProps({
+    teammember: {
+      type: String,
+      required: true,
+    },
+    isTeamOwnerView: {
+      type: Boolean,
+      required: true,
+    },
+  });
+  const teamStoreId = computed(() => {
+    if (props.teammember == $supabase.user.id) {
+      return "self";
+    } else {
+      return props.teammember;
+    }
+  });
+  const progressStore = useProgressStore();
+  const preferencesStore = usePreferencesStore();
+  const metadataStore = useMetadataStore();
+  const tasks = computed(() => metadataStore.tasks);
+  const playerLevels = computed(() => metadataStore.playerLevels);
+  const { t } = useI18n({ useScope: "global" });
+  const completedTaskCount = computed(() => {
+    return tasks.value.filter(
+      (task) => progressStore.tasksCompletions?.[task.id]?.[teamStoreId.value] == true
+    ).length;
+  });
+  const groupIcon = computed(() => {
+    const level = progressStore.getLevel(props.teammember);
+    const entry = playerLevels.value.find((pl) => pl.level === level);
+    return entry?.levelBadgeImageLink ?? "";
+  });
+  const kickingTeammate = ref(false);
+  const kickTeammate = async () => {
+    if (!props.teammember) return;
+    kickingTeammate.value = true;
+    try {
+      // TODO: Implement Cloudflare Workers integration for kicking team members
+      console.log("TODO: Implement Cloudflare Workers for kickTeammate function");
+      throw new Error("Team member kicking not yet implemented with Cloudflare Workers");
 
-    // Placeholder for future implementation:
-    // const session = await $supabase.client.auth.getSession();
-    // if (!session.data.session) {
-    //   throw new Error('User not authenticated');
-    // }
-    // const response = await fetch('/api/team/kick', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Authorization': `Bearer ${session.data.session.access_token}`,
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify({ kicked: props.teammember }),
-    // });
-    // const result = await response.json();
-    // ... handle response
-  } catch (error) {
-    const backendMsg =
-      error?.message || error?.data?.message || error?.toString();
-    const message =
-      backendMsg || t("page.team.card.manageteam.membercard.kick_error");
-    console.error("[TeammemberCard.vue] Error kicking teammate:", error);
-    toast.add({ title: message, color: "red" });
-  }
-  kickingTeammate.value = false;
-};
+      // Placeholder for future implementation:
+      // const session = await $supabase.client.auth.getSession();
+      // if (!session.data.session) {
+      //   throw new Error('User not authenticated');
+      // }
+      // const response = await fetch('/api/team/kick', {
+      //   method: 'POST',
+      //   headers: {
+      //     'Authorization': `Bearer ${session.data.session.access_token}`,
+      //     'Content-Type': 'application/json',
+      //   },
+      //   body: JSON.stringify({ kicked: props.teammember }),
+      // });
+      // const result = await response.json();
+      // ... handle response
+    } catch (error) {
+      const backendMsg = error?.message || error?.data?.message || error?.toString();
+      const message = backendMsg || t("page.team.card.manageteam.membercard.kick_error");
+      console.error("[TeammemberCard.vue] Error kicking teammate:", error);
+      toast.add({ title: message, color: "red" });
+    }
+    kickingTeammate.value = false;
+  };
 </script>

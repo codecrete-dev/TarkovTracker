@@ -1,16 +1,8 @@
-import { ref, computed, onMounted, type ComputedRef } from "vue";
-import {
-  useSafeLocale,
-  extractLanguageCode,
-} from "@/composables/utils/i18nHelpers";
+import { ref, computed, onMounted } from "vue";
+import { useSafeLocale, extractLanguageCode } from "@/composables/utils/i18nHelpers";
 import type { StaticMapData } from "@/types/tarkov";
 import mapsData from "./maps.json";
-import {
-  API_GAME_MODES,
-  GAME_MODES,
-  API_SUPPORTED_LANGUAGES,
-  LOCALE_TO_API_MAPPING,
-} from "@/utils/constants";
+import { API_SUPPORTED_LANGUAGES, LOCALE_TO_API_MAPPING } from "@/utils/constants";
 
 // Singleton state
 const availableLanguages = ref<string[]>([...API_SUPPORTED_LANGUAGES]);

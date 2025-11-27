@@ -1,7 +1,7 @@
 <template>
-  <div class="flex items-center justify-center h-52 text-center">
+  <div class="flex h-52 items-center justify-center text-center">
     <UCard
-      class="bg-transparent border border-white/10 text-surface-50 w-full max-w-xl"
+      class="text-surface-50 w-full max-w-xl border border-white/10 bg-transparent"
       :ui="{ body: 'p-6' }"
     >
       {{ $t("page.not_found.not_found_description") }}

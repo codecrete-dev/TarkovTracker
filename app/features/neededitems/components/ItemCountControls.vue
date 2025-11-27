@@ -3,16 +3,16 @@
     <UButton
       variant="ghost"
       color="neutral"
-      class="p-0 m-0 min-w-0 cursor-pointer"
+      class="m-0 min-w-0 cursor-pointer p-0"
       size="sm"
       @click="$emit('decrease')"
     >
-      <UIcon name="i-mdi-minus-thick" class="w-5 h-5" />
+      <UIcon name="i-mdi-minus-thick" class="h-5 w-5" />
     </UButton>
     <UButton
       variant="ghost"
       color="neutral"
-      class="px-2 mx-1 min-w-0 text-sm font-semibold cursor-pointer"
+      class="mx-1 min-w-0 cursor-pointer px-2 text-sm font-semibold"
       size="sm"
       @click="$emit('toggle')"
     >
@@ -21,22 +21,22 @@
     <UButton
       variant="ghost"
       color="neutral"
-      class="p-0 m-0 min-w-0 cursor-pointer"
+      class="m-0 min-w-0 cursor-pointer p-0"
       size="sm"
       @click="$emit('increase')"
     >
-      <UIcon name="i-mdi-plus-thick" class="w-5 h-5" />
+      <UIcon name="i-mdi-plus-thick" class="h-5 w-5" />
     </UButton>
   </div>
 </template>
 <script setup lang="ts">
-defineProps<{
-  currentCount: number;
-  neededCount: number;
-}>();
-defineEmits<{
-  decrease: [];
-  increase: [];
-  toggle: [];
-}>();
+  defineProps<{
+    currentCount: number;
+    neededCount: number;
+  }>();
+  defineEmits<{
+    decrease: [];
+    increase: [];
+    toggle: [];
+  }>();
 </script>

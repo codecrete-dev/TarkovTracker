@@ -14,6 +14,7 @@ export interface SupabaseUser {
   created_at?: string;
   uid?: string;
   displayName?: string | null;
+  username?: string | null;
   emailVerified?: boolean;
   photoURL?: string | null;
   avatarUrl?: string | null;
@@ -23,7 +24,10 @@ export interface SupabaseUser {
 export interface SupabasePlugin {
   client: SupabaseClient;
   user: SupabaseUser;
-  signInWithOAuth: (provider: "twitch" | "discord", options?: { skipBrowserRedirect?: boolean; redirectTo?: string }) => Promise<{ url?: string }>;
+  signInWithOAuth: (
+    provider: "twitch" | "discord",
+    options?: { skipBrowserRedirect?: boolean; redirectTo?: string }
+  ) => Promise<{ url?: string }>;
   signOut: () => Promise<void>;
 }
 declare module "#app" {

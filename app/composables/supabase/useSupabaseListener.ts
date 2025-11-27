@@ -1,15 +1,7 @@
 import { onUnmounted, ref, watch } from "vue";
 import type { Store } from "pinia";
-import type {
-  RealtimePostgresChangesPayload,
-  RealtimeChannel,
-} from "@supabase/supabase-js";
-import {
-  clearStaleState,
-  safePatchStore,
-  resetStore,
-  devLog,
-} from "@/utils/storeHelpers";
+import type { RealtimePostgresChangesPayload, RealtimeChannel } from "@supabase/supabase-js";
+import { clearStaleState, safePatchStore, resetStore, devLog } from "@/utils/storeHelpers";
 export interface SupabaseListenerConfig {
   store: Store;
   table: string;
@@ -40,9 +32,7 @@ export function useSupabaseListener({
     // Expecting format "column=eq.value"
     const [column, rest] = filter.split("=eq.");
     if (!column || !rest) {
-      console.error(
-        `[${storeIdForLogging}] Invalid filter format. Expected 'col=eq.val'`
-      );
+      console.error(`[${storeIdForLogging}] Invalid filter format. Expected 'col=eq.val'`);
       return;
     }
     const { data, error } = await $supabase.client
@@ -52,10 +42,7 @@ export function useSupabaseListener({
       .single();
     if (error && error.code !== "PGRST116") {
       // PGRST116 is "The result contains 0 rows"
-      console.error(
-        `[${storeIdForLogging}] Error fetching initial data:`,
-        error
-      );
+      console.error(`[${storeIdForLogging}] Error fetching initial data:`, error);
       return;
     }
     if (data) {
@@ -72,9 +59,7 @@ export function useSupabaseListener({
   const setupSubscription = () => {
     if (channel.value) return;
     if (!filter) return;
-    devLog(
-      `[${storeIdForLogging}] Setting up subscription for ${table} with filter ${filter}`
-    );
+    devLog(`[${storeIdForLogging}] Setting up subscription for ${table} with filter ${filter}`);
     channel.value = $supabase.client
       .channel(`public:${table}:${filter}`)
       .on(

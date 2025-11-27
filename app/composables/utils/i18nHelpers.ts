@@ -33,14 +33,9 @@ export function useSafeLocale() {
 /**
  * Extracts language code from locale, falling back to 'en'
  */
-export function extractLanguageCode(
-  locale: string,
-  availableLanguages: string[] = ["en"]
-): string {
+export function extractLanguageCode(locale: string, availableLanguages: string[] = ["en"]): string {
   const browserLocale = locale.split(/[-_]/)[0];
-  return browserLocale && availableLanguages.includes(browserLocale)
-    ? browserLocale
-    : "en";
+  return browserLocale && availableLanguages.includes(browserLocale) ? browserLocale : "en";
 }
 /**
  * Gets the browser's language preference as a fallback

@@ -98,20 +98,13 @@ export default defineNuxtPlugin(() => {
           sessionUser.user_metadata?.name ||
           sessionUser.email?.split("@")[0] ||
           null;
-        user.displayName =
-          sessionUser.user_metadata?.full_name || user.username;
+        user.displayName = sessionUser.user_metadata?.full_name || user.username;
       } else {
-        user.username =
-          sessionUser.user_metadata?.name ||
-          sessionUser.email?.split("@")[0] ||
-          null;
-        user.displayName =
-          sessionUser.user_metadata?.full_name || user.username;
+        user.username = sessionUser.user_metadata?.name || sessionUser.email?.split("@")[0] || null;
+        user.displayName = sessionUser.user_metadata?.full_name || user.username;
       }
       const avatarUrl =
-        sessionUser.user_metadata?.avatar_url ||
-        sessionUser.user_metadata?.picture ||
-        null;
+        sessionUser.user_metadata?.avatar_url || sessionUser.user_metadata?.picture || null;
       user.avatarUrl = avatarUrl;
       user.photoURL = avatarUrl;
       user.lastLoginAt = sessionUser.last_sign_in_at || null;
@@ -133,11 +126,7 @@ export default defineNuxtPlugin(() => {
     updateUserState(session?.user || null);
     // Clean up OAuth hash after session is established
     if (session && window.location.hash.includes("access_token")) {
-      window.history.replaceState(
-        null,
-        "",
-        window.location.pathname + window.location.search
-      );
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
       console.log("[Supabase] Cleaned OAuth hash from URL after session established");
     }
   });
@@ -145,15 +134,14 @@ export default defineNuxtPlugin(() => {
     updateUserState(session?.user || null);
     // Clean up OAuth hash on auth state change
     if (session && window.location.hash.includes("access_token")) {
-      window.history.replaceState(
-        null,
-        "",
-        window.location.pathname + window.location.search
-      );
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
       console.log("[Supabase] Cleaned OAuth hash from URL on auth state change");
     }
   });
-  const signInWithOAuth = async (provider: "twitch" | "discord", options?: { skipBrowserRedirect?: boolean; redirectTo?: string }) => {
+  const signInWithOAuth = async (
+    provider: "twitch" | "discord",
+    options?: { skipBrowserRedirect?: boolean; redirectTo?: string }
+  ) => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {

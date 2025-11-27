@@ -54,14 +54,10 @@ export const PMC_FACTIONS = ["USEC", "BEAR"] as const;
 export const DEFAULT_PMC_FACTION = "USEC" as const;
 export type PMCFaction = (typeof PMC_FACTIONS)[number]; // "USEC" | "BEAR"
 // Helper to normalize and validate PMC faction input
-export function normalizePMCFaction(
-  input: string | undefined | null
-): PMCFaction {
+export function normalizePMCFaction(input: string | undefined | null): PMCFaction {
   if (!input) return DEFAULT_PMC_FACTION;
   const upper = input.toUpperCase();
-  return PMC_FACTIONS.includes(upper as PMCFaction)
-    ? (upper as PMCFaction)
-    : DEFAULT_PMC_FACTION;
+  return PMC_FACTIONS.includes(upper as PMCFaction) ? (upper as PMCFaction) : DEFAULT_PMC_FACTION;
 }
 
 // Default values for game setup

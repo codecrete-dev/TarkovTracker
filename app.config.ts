@@ -48,8 +48,7 @@ export default defineAppConfig({
         base: "relative w-full",
         input:
           "h-11 bg-surface-900 border border-white/15 text-surface-50 placeholder:text-surface-500 rounded-md pl-10 pr-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-white/20",
-        leading:
-          "absolute inset-y-0 left-3 flex items-center pointer-events-none text-surface-300",
+        leading: "absolute inset-y-0 left-3 flex items-center pointer-events-none text-surface-300",
         options: "z-[9999] max-h-60 overflow-auto",
       },
     },
@@ -109,8 +108,7 @@ export default defineAppConfig({
               "ring ring-inset ring-success-500 text-success-500 hover:bg-success-950 hover:text-white",
             soft: "bg-success-950 hover:bg-success-900 text-success-200",
             ghost: "text-success-500 hover:bg-success-950",
-            link:
-              "text-success-500 hover:text-success-400 underline-offset-4 hover:underline",
+            link: "text-success-500 hover:text-success-400 underline-offset-4 hover:underline",
           },
         },
       },

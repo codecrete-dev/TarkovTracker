@@ -7,14 +7,8 @@ import { useTeammateStores } from "./useTeamStore";
 import type { Task } from "~/types/tarkov";
 import type { Store } from "pinia";
 import type { UserState, UserProgressData } from "~/shared_state";
-import {
-  GAME_MODES,
-  GAME_EDITIONS,
-  SPECIAL_STATIONS,
-} from "@/utils/constants";
-function getGameModeData(
-  store: Store<string, UserState> | undefined
-): UserProgressData {
+import { GAME_MODES, GAME_EDITIONS, SPECIAL_STATIONS } from "@/utils/constants";
+function getGameModeData(store: Store<string, UserState> | undefined): UserProgressData {
   if (!store) return {} as UserProgressData;
   const currentGameMode = store.$state.currentGameMode || GAME_MODES.PVP;
   const gameModeState = store.$state[currentGameMode as keyof UserState];
@@ -82,8 +76,7 @@ export const useProgressStore = defineStore("progress", () => {
       for (const teamId of Object.keys(visibleTeamStores.value)) {
         const store = visibleTeamStores.value[teamId];
         const currentData = getGameModeData(store);
-        completions[task.id]![teamId] =
-          currentData?.taskCompletions?.[task.id]?.complete ?? false;
+        completions[task.id]![teamId] = currentData?.taskCompletions?.[task.id]?.complete ?? false;
       }
     }
     return completions;
@@ -122,8 +115,7 @@ export const useProgressStore = defineStore("progress", () => {
         const currentData = getGameModeData(store);
         const playerLevel = currentData?.level ?? 0;
         const currentPlayerFaction = playerFaction.value[teamId];
-        const isTaskComplete =
-          tasksCompletions.value[task.id]?.[teamId] ?? false;
+        const isTaskComplete = tasksCompletions.value[task.id]?.[teamId] ?? false;
         if (isTaskComplete) {
           available[task.id]![teamId] = false;
           continue;
@@ -131,8 +123,7 @@ export const useProgressStore = defineStore("progress", () => {
         let failedReqsMet = true;
         if (task.failedRequirements) {
           for (const req of task.failedRequirements) {
-            const failed =
-              currentData?.taskCompletions?.[req.task.id]?.failed ?? false;
+            const failed = currentData?.taskCompletions?.[req.task.id]?.failed ?? false;
             if (failed) {
               failedReqsMet = false;
               break;
@@ -150,8 +141,7 @@ export const useProgressStore = defineStore("progress", () => {
         let traderLevelsMet = true;
         if (task.traderLevelRequirements) {
           for (const req of task.traderLevelRequirements) {
-            const currentTraderLevel =
-              traderLevelsAchieved.value[teamId]?.[req.trader.id] ?? 0;
+            const currentTraderLevel = traderLevelsAchieved.value[teamId]?.[req.trader.id] ?? 0;
             if (currentTraderLevel < req.level) {
               traderLevelsMet = false;
               break;
@@ -165,8 +155,7 @@ export const useProgressStore = defineStore("progress", () => {
         let prereqsMet = true;
         if (task.taskRequirements) {
           for (const req of task.taskRequirements) {
-            const isPrereqComplete =
-              tasksCompletions.value[req.task.id]?.[teamId] ?? false;
+            const isPrereqComplete = tasksCompletions.value[req.task.id]?.[teamId] ?? false;
             if (!isPrereqComplete) {
               prereqsMet = false;
               break;
@@ -204,7 +193,7 @@ export const useProgressStore = defineStore("progress", () => {
     }
     return completions;
   });
-  const hideoutLevels = computed (() => {
+  const hideoutLevels = computed(() => {
     const levels: HideoutLevelMap = {};
     if (!metadataStore.hideoutStations.length || !visibleTeamStores.value) return {};
     for (const station of metadataStore.hideoutStations) {
@@ -217,50 +206,29 @@ export const useProgressStore = defineStore("progress", () => {
         let maxManuallyCompletedLevel = 0;
         if (station.levels && Array.isArray(station.levels)) {
           for (const lvl of station.levels) {
-            if (
-              lvl &&
-              lvl.id &&
-              modulesState[lvl.id]?.complete &&
-              typeof lvl.level === "number"
-            ) {
-              maxManuallyCompletedLevel = Math.max(
-                maxManuallyCompletedLevel,
-                lvl.level
-              );
+            if (lvl && lvl.id && modulesState[lvl.id]?.complete && typeof lvl.level === "number") {
+              maxManuallyCompletedLevel = Math.max(maxManuallyCompletedLevel, lvl.level);
             }
           }
         }
         let currentStationDisplayLevel;
         if (station.normalizedName === SPECIAL_STATIONS.STASH) {
           const gameEditionVersion = store?.$state.gameEdition ?? 0;
-          const edition = gameEditionData.value.find(
-            (e) => e.value === gameEditionVersion
-          );
+          const edition = gameEditionData.value.find((e) => e.value === gameEditionVersion);
           const defaultStashFromEdition = edition?.defaultStashLevel ?? 0;
           const maxLevel = station.levels?.length || 0;
-          const effectiveStashLevel = Math.min(
-            defaultStashFromEdition,
-            maxLevel
-          );
+          const effectiveStashLevel = Math.min(defaultStashFromEdition, maxLevel);
           if (effectiveStashLevel === maxLevel) {
             currentStationDisplayLevel = maxLevel;
           } else {
-            currentStationDisplayLevel = Math.max(
-              effectiveStashLevel,
-              maxManuallyCompletedLevel
-            );
+            currentStationDisplayLevel = Math.max(effectiveStashLevel, maxManuallyCompletedLevel);
           }
         } else if (station.normalizedName === SPECIAL_STATIONS.CULTIST_CIRCLE) {
           const gameEditionVersion = store?.$state.gameEdition ?? 0;
-          const edition = gameEditionData.value.find(
-            (e) => e.value === gameEditionVersion
-          );
+          const edition = gameEditionData.value.find((e) => e.value === gameEditionVersion);
           const defaultCultistCircleFromEdition = edition?.defaultCultistCircleLevel ?? 0;
           const maxLevel = station.levels?.length || 0;
-          const effectiveCultistCircleLevel = Math.min(
-            defaultCultistCircleFromEdition,
-            maxLevel
-          );
+          const effectiveCultistCircleLevel = Math.min(defaultCultistCircleFromEdition, maxLevel);
           if (effectiveCultistCircleLevel === maxLevel) {
             currentStationDisplayLevel = maxLevel;
           } else {
@@ -292,8 +260,7 @@ export const useProgressStore = defineStore("progress", () => {
       for (const teamId of Object.keys(visibleTeamStores.value)) {
         const store = visibleTeamStores.value[teamId];
         const currentData = getGameModeData(store);
-        completions[moduleId]![teamId] =
-          currentData?.hideoutModules?.[moduleId]?.complete ?? false;
+        completions[moduleId]![teamId] = currentData?.hideoutModules?.[moduleId]?.complete ?? false;
       }
     }
     return completions;
@@ -306,9 +273,7 @@ export const useProgressStore = defineStore("progress", () => {
     // Collect all part/requirement IDs from all station levels
     const allPartIds = metadataStore.hideoutStations.flatMap(
       (station) =>
-        station.levels?.flatMap(
-          (level) => level.itemRequirements?.map((req) => req.id) || []
-        ) || []
+        station.levels?.flatMap((level) => level.itemRequirements?.map((req) => req.id) || []) || []
     );
 
     for (const partId of allPartIds) {
@@ -316,8 +281,7 @@ export const useProgressStore = defineStore("progress", () => {
       for (const teamId of Object.keys(visibleTeamStores.value)) {
         const store = visibleTeamStores.value[teamId];
         const currentData = getGameModeData(store);
-        completions[partId]![teamId] =
-          currentData?.hideoutParts?.[partId]?.complete ?? false;
+        completions[partId]![teamId] = currentData?.hideoutParts?.[partId]?.complete ?? false;
       }
     }
     return completions;
@@ -349,9 +313,7 @@ export const useProgressStore = defineStore("progress", () => {
     const currentData = getGameModeData(store);
     return currentData?.pmcFaction ?? "Unknown";
   };
-  const getTeammateStore = (
-    teamId: string
-  ): Store<string, UserState> | null => {
+  const getTeammateStore = (teamId: string): Store<string, UserState> | null => {
     return teammateStores.value[teamId] || null;
   };
 
@@ -363,10 +325,7 @@ export const useProgressStore = defineStore("progress", () => {
     return taskCompletion?.complete === true;
   };
 
-  const getTaskStatus = (
-    teamId: string,
-    taskId: string
-  ): "completed" | "failed" | "incomplete" => {
+  const getTaskStatus = (teamId: string, taskId: string): "completed" | "failed" | "incomplete" => {
     const storeKey = getTeamIndex(teamId);
     const store = teamStores.value[storeKey];
     const currentData = getGameModeData(store);
@@ -384,21 +343,17 @@ export const useProgressStore = defineStore("progress", () => {
     const currentData = store.$state[currentGameMode] || store.$state;
     switch (category) {
       case "tasks": {
-        const totalTasks = Object.keys(
-          currentData.taskCompletions || {}
+        const totalTasks = Object.keys(currentData.taskCompletions || {}).length;
+        const completedTasks = Object.values(currentData.taskCompletions || {}).filter(
+          (completion) => completion?.complete === true
         ).length;
-        const completedTasks = Object.values(
-          currentData.taskCompletions || {}
-        ).filter((completion) => completion?.complete === true).length;
         return totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
       }
       case "hideout": {
-        const totalModules = Object.keys(
-          currentData.hideoutModules || {}
+        const totalModules = Object.keys(currentData.hideoutModules || {}).length;
+        const completedModules = Object.values(currentData.hideoutModules || {}).filter(
+          (module) => module?.complete === true
         ).length;
-        const completedModules = Object.values(
-          currentData.hideoutModules || {}
-        ).filter((module) => module?.complete === true).length;
         return totalModules > 0 ? (completedModules / totalModules) * 100 : 0;
       }
       default:

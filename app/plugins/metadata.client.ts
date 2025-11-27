@@ -7,10 +7,10 @@ import { useMetadataStore } from "@/stores/metadata";
  */
 export default defineNuxtPlugin(async () => {
   const metadataStore = useMetadataStore();
-  
+
   // Initialize the metadata store and fetch data
   await metadataStore.initialize();
-  
+
   return {
     provide: {
       metadata: metadataStore,

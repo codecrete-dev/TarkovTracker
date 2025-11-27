@@ -7,11 +7,8 @@
     >
       <task-objective :objective="objective" />
     </div>
-    <div
-      v-if="irrelevantCount > 0"
-      class="w-full p-1 opacity-50 flex items-center"
-    >
-      <UIcon name="i-mdi-eye-off" class="mr-1 w-4 h-4" />
+    <div v-if="irrelevantCount > 0" class="flex w-full items-center p-1 opacity-50">
+      <UIcon name="i-mdi-eye-off" class="mr-1 h-4 w-4" />
       <i18n-t
         keypath="page.tasks.questcard.objectiveshidden"
         :plural="irrelevantCount"
@@ -24,10 +21,10 @@
   </div>
 </template>
 <script setup>
-import TaskObjective from "./TaskObjective.vue";
-defineProps({
-  objectives: { type: Array, required: true },
-  irrelevantCount: { type: Number, required: true },
-  uncompletedIrrelevant: { type: Number, required: true },
-});
+  import TaskObjective from "./TaskObjective.vue";
+  defineProps({
+    objectives: { type: Array, required: true },
+    irrelevantCount: { type: Number, required: true },
+    uncompletedIrrelevant: { type: Number, required: true },
+  });
 </script>

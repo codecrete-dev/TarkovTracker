@@ -1,23 +1,21 @@
 <template>
   <KeepAlive>
-    <div class="rounded h-full relative" :class="itemCardClasses">
-      <div class="flex items-end flex-col h-full">
+    <div class="relative h-full rounded" :class="itemCardClasses">
+      <div class="flex h-full flex-col items-end">
         <!-- Item image -->
         <div
-          class="flex self-stretch aspect-square min-w-[150px] min-h-[150px] max-h-[300px] relative"
+          class="relative flex aspect-square max-h-[300px] min-h-[150px] min-w-[150px] self-stretch"
         >
           <div style="position: absolute; left: 0px; top: 0px; z-index: 2">
             <div
-              class="flex items-center item-count-sheet py-1 px-2 shadow-md"
+              class="item-count-sheet flex items-center px-2 py-1 shadow-md"
               :class="itemCountTagClasses"
             >
-              {{ currentCount.toLocaleString() }}/{{
-                neededCount.toLocaleString()
-              }}
+              {{ currentCount.toLocaleString() }}/{{ neededCount.toLocaleString() }}
               <UIcon
                 v-if="props.need.foundInRaid"
                 name="i-mdi-checkbox-marked-circle-outline"
-                class="ml-1 w-4 h-4"
+                class="ml-1 h-4 w-4"
               />
             </div>
           </div>
@@ -28,21 +26,21 @@
             :is-visible="true"
             size="large"
             simple-mode
-            class="w-full h-full"
+            class="h-full w-full"
           />
         </div>
-        <div class="flex self-center items-center mt-2 mx-2">
-          <div class="text-center px-2">
+        <div class="mx-2 mt-2 flex items-center self-center">
+          <div class="px-2 text-center">
             {{ item.name }}
           </div>
           <UIcon
             v-if="props.need.foundInRaid"
             name="i-mdi-checkbox-marked-circle-outline"
-            class="ml-1 w-4 h-4"
+            class="ml-1 h-4 w-4"
           />
         </div>
         <!-- Item need details -->
-        <div class="flex flex-col self-center mt-2 mx-2 w-full">
+        <div class="mx-2 mt-2 flex w-full flex-col self-center">
           <template v-if="props.need.needType == 'taskObjective'">
             <div class="flex justify-center">
               <task-link :task="relatedTask" />
@@ -55,12 +53,9 @@
             />
           </template>
           <template v-else-if="props.need.needType == 'hideoutModule'">
-            <div class="flex justify-center mb-1 mt-1">
+            <div class="mt-1 mb-1 flex justify-center">
               <div class="text-center">
-                <station-link
-                  :station="relatedStation"
-                  class="justify-center"
-                />
+                <station-link :station="relatedStation" class="justify-center" />
               </div>
               <div class="ml-1">{{ props.need.hideoutModule.level }}</div>
             </div>
@@ -77,7 +72,7 @@
         <!-- Item count actions -->
         <div
           v-if="!selfCompletedNeed"
-          class="flex h-full self-stretch justify-center mt-2 mb-2 mx-2"
+          class="mx-2 mt-2 mb-2 flex h-full justify-center self-stretch"
         >
           <ItemCountControls
             :current-count="currentCount"
@@ -87,69 +82,54 @@
             @toggle="$emit('toggleCount')"
           />
         </div>
-        <div
-          v-else
-          class="flex h-full self-stretch justify-center mt-2 mb-2 mx-2"
-        >
-          <TeamNeedsDisplay
-            :team-needs="teamNeeds"
-            :needed-count="neededCount"
-          />
+        <div v-else class="mx-2 mt-2 mb-2 flex h-full justify-center self-stretch">
+          <TeamNeedsDisplay :team-needs="teamNeeds" :needed-count="neededCount" />
         </div>
       </div>
     </div>
   </KeepAlive>
 </template>
 <script setup>
-import { defineAsyncComponent, computed, inject } from "vue";
-import { useTarkovStore } from "@/stores/tarkov";
-import ItemCountControls from "./components/ItemCountControls.vue";
-import RequirementInfo from "./components/RequirementInfo.vue";
-import TeamNeedsDisplay from "./components/TeamNeedsDisplay.vue";
+  import { defineAsyncComponent, computed, inject } from "vue";
+  import { useTarkovStore } from "@/stores/tarkov";
+  import ItemCountControls from "./components/ItemCountControls.vue";
+  import RequirementInfo from "./components/RequirementInfo.vue";
+  import TeamNeedsDisplay from "./components/TeamNeedsDisplay.vue";
 
-const TaskLink = defineAsyncComponent(() =>
-  import("@/features/tasks/TaskLink")
-);
-const StationLink = defineAsyncComponent(() =>
-  import("@/features/hideout/StationLink")
-);
-const props = defineProps({
-  need: {
-    type: Object,
-    required: true,
-  },
-});
-const tarkovStore = useTarkovStore();
-const {
-  selfCompletedNeed,
-  relatedTask,
-  relatedStation,
-  lockedBefore,
-  neededCount,
-  currentCount,
-  levelRequired,
-  item,
-  teamNeeds,
-  imageItem,
-} = inject("neededitem");
-const itemCardClasses = computed(() => {
-  return {
-    "bg-gradient-to-t from-complete to-surface":
-      selfCompletedNeed.value || currentCount.value >= neededCount.value,
-    "bg-gray-800": !(
-      selfCompletedNeed.value || currentCount.value >= neededCount.value
-    ),
-  };
-});
-const itemCountTagClasses = computed(() => {
-  return {
-    "bg-clip-padding rounded-tl-[5px] rounded-br-[10px]": true,
-    "bg-white text-black": !(
-      selfCompletedNeed.value || currentCount.value >= neededCount.value
-    ),
-    "bg-complete":
-      selfCompletedNeed.value || currentCount.value >= neededCount.value,
-  };
-});
-defineEmits(["decreaseCount", "increaseCount", "toggleCount"]);
+  const TaskLink = defineAsyncComponent(() => import("@/features/tasks/TaskLink"));
+  const StationLink = defineAsyncComponent(() => import("@/features/hideout/StationLink"));
+  const props = defineProps({
+    need: {
+      type: Object,
+      required: true,
+    },
+  });
+  const tarkovStore = useTarkovStore();
+  const {
+    selfCompletedNeed,
+    relatedTask,
+    relatedStation,
+    lockedBefore,
+    neededCount,
+    currentCount,
+    levelRequired,
+    item,
+    teamNeeds,
+    imageItem,
+  } = inject("neededitem");
+  const itemCardClasses = computed(() => {
+    return {
+      "bg-gradient-to-t from-complete to-surface":
+        selfCompletedNeed.value || currentCount.value >= neededCount.value,
+      "bg-gray-800": !(selfCompletedNeed.value || currentCount.value >= neededCount.value),
+    };
+  });
+  const itemCountTagClasses = computed(() => {
+    return {
+      "bg-clip-padding rounded-tl-[5px] rounded-br-[10px]": true,
+      "bg-white text-black": !(selfCompletedNeed.value || currentCount.value >= neededCount.value),
+      "bg-complete": selfCompletedNeed.value || currentCount.value >= neededCount.value,
+    };
+  });
+  defineEmits(["decreaseCount", "increaseCount", "toggleCount"]);
 </script>

@@ -47,9 +47,7 @@ export class DataValidationUtils {
    * Validate API token format
    */
   static isValidApiToken(token: string): boolean {
-    return (
-      typeof token === "string" && token.length > 10 && token.trim() === token
-    );
+    return typeof token === "string" && token.length > 10 && token.trim() === token;
   }
   /**
    * Check if data is worth migrating (has meaningful content)

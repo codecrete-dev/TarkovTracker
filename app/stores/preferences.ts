@@ -117,190 +117,187 @@ type PreferencesStoreDefinition = StoreDefinition<
   PreferencesGetters,
   PreferencesActions
 >;
-export const usePreferencesStore: PreferencesStoreDefinition = defineStore(
-  "preferences",
-  {
-    state: (): PreferencesState => {
-      const state = JSON.parse(JSON.stringify(defaultState));
-      // Always reset saving state on store creation
-      state.saving = { ...initialSavingState };
-      return state;
+export const usePreferencesStore: PreferencesStoreDefinition = defineStore("preferences", {
+  state: (): PreferencesState => {
+    const state = JSON.parse(JSON.stringify(defaultState));
+    // Always reset saving state on store creation
+    state.saving = { ...initialSavingState };
+    return state;
+  },
+  getters: {
+    getStreamerMode(state) {
+      return state.streamerMode ?? false;
     },
-    getters: {
-      getStreamerMode(state) {
-        return state.streamerMode ?? false;
-      },
-      teamIsHidden: (state) => {
-        return (teamId: string): boolean => {
-          // Always show self unless explicitly hidden (though self shouldn't be hidden usually)
-          // But definitely don't let "Hide All" hide self
-          if (teamId === "self") {
-            return state.teamHide?.[teamId] || false;
-          }
-          return state.taskTeamHideAll || state.teamHide?.[teamId] || false;
-        };
-      },
-      taskTeamAllHidden: (state) => {
-        return state.taskTeamHideAll ?? false;
-      },
-      itemsTeamAllHidden: (state) => {
-        return state.itemsTeamHideAll ?? false;
-      },
-      itemsTeamNonFIRHidden: (state) => {
-        return state.itemsTeamHideAll || state.itemsTeamHideNonFIR || false;
-      },
-      itemsTeamHideoutHidden: (state) => {
-        return state.itemsTeamHideAll || state.itemsTeamHideHideout || false;
-      },
-      mapTeamAllHidden: (state) => {
-        return state.mapTeamHideAll ?? false;
-      },
-      // Add default values for views using nullish coalescing
-      getTaskPrimaryView: (state) => {
-        return state.taskPrimaryView ?? "all";
-      },
-      getTaskMapView: (state) => {
-        return state.taskMapView ?? "all";
-      },
-      getTaskTraderView: (state) => {
-        return state.taskTraderView ?? "all";
-      },
-      getTaskSecondaryView: (state) => {
-        return state.taskSecondaryView ?? "available";
-      },
-      getTaskUserView: (state) => {
-        return state.taskUserView ?? "self";
-      },
-      getNeededTypeView: (state) => {
-        return state.neededTypeView ?? "all";
-      },
-      itemsNeededHideNonFIR: (state) => {
-        return state.itemsHideNonFIR ?? false;
-      },
-      getHideGlobalTasks: (state) => {
-        return state.hideGlobalTasks ?? false;
-      },
-      getHideNonKappaTasks: (state) => {
-        return state.hideNonKappaTasks ?? false;
-      },
-      getNeededItemsStyle: (state) => {
-        return state.neededitemsStyle ?? "mediumCard";
-      },
-      getHideoutPrimaryView: (state) => {
-        return state.hideoutPrimaryView ?? "available";
-      },
-      getLocaleOverride: (state) => {
-        return state.localeOverride ?? null;
-      },
-    },
-    actions: {
-      setStreamerMode(mode: boolean) {
-        this.streamerMode = mode;
-        // Persistence handled automatically by plugin
-        this.saving = this.saving ?? { ...initialSavingState };
-        this.saving.streamerMode = true;
-      },
-      toggleHidden(teamId: string) {
-        if (!this.teamHide) {
-          this.teamHide = {};
+    teamIsHidden: (state) => {
+      return (teamId: string): boolean => {
+        // Always show self unless explicitly hidden (though self shouldn't be hidden usually)
+        // But definitely don't let "Hide All" hide self
+        if (teamId === "self") {
+          return state.teamHide?.[teamId] || false;
         }
-        this.teamHide[teamId] = !this.teamHide[teamId];
-      },
-      setQuestTeamHideAll(hide: boolean) {
-        this.taskTeamHideAll = hide;
-      },
-      setItemsTeamHideAll(hide: boolean) {
-        this.itemsTeamHideAll = hide;
-      },
-      setItemsTeamHideNonFIR(hide: boolean) {
-        this.itemsTeamHideNonFIR = hide;
-      },
-      setItemsTeamHideHideout(hide: boolean) {
-        this.itemsTeamHideHideout = hide;
-      },
-      setMapTeamHideAll(hide: boolean) {
-        this.mapTeamHideAll = hide;
-      },
-      setTaskPrimaryView(view: string) {
-        this.taskPrimaryView = view;
-      },
-      setTaskMapView(view: string) {
-        this.taskMapView = view;
-      },
-      setTaskTraderView(view: string) {
-        this.taskTraderView = view;
-      },
-      setTaskSecondaryView(view: string) {
-        this.taskSecondaryView = view;
-      },
-      setTaskUserView(view: string) {
-        this.taskUserView = view;
-      },
-      setNeededTypeView(view: string) {
-        this.neededTypeView = view;
-      },
-      setItemsNeededHideNonFIR(hide: boolean) {
-        this.itemsHideNonFIR = hide;
-        // Persistence handled automatically by plugin
-        this.saving = this.saving ?? { ...initialSavingState };
-        this.saving.itemsNeededHideNonFIR = true;
-      },
-      setHideGlobalTasks(hide: boolean) {
-        this.hideGlobalTasks = hide;
-        // Persistence handled automatically by plugin
-        this.saving = this.saving ?? { ...initialSavingState };
-        this.saving.hideGlobalTasks = true;
-      },
-      setHideNonKappaTasks(hide: boolean) {
-        this.hideNonKappaTasks = hide;
-        // Persistence handled automatically by plugin
-        this.saving = this.saving ?? { ...initialSavingState };
-        this.saving.hideNonKappaTasks = true;
-      },
-      setNeededItemsStyle(style: string) {
-        this.neededitemsStyle = style;
-      },
-      setHideoutPrimaryView(view: string) {
-        this.hideoutPrimaryView = view;
-      },
-      setLocaleOverride(locale: string | null) {
-        this.localeOverride = locale;
-      },
+        return state.taskTeamHideAll || state.teamHide?.[teamId] || false;
+      };
     },
-    // Enable automatic localStorage persistence
-    persist: {
-      key: "preferences", // LocalStorage key for user preference data
-      storage: typeof window !== "undefined" ? localStorage : undefined,
-      // Use serializer instead of paths for selective persistence
-      serializer: {
-        serialize: JSON.stringify,
-        deserialize: JSON.parse,
-      },
-      // Pick specific properties to persist (excluding transient state)
-      pick: [
-        "streamerMode",
-        "teamHide",
-        "taskTeamHideAll",
-        "itemsTeamHideAll",
-        "itemsTeamHideNonFIR",
-        "itemsTeamHideHideout",
-        "mapTeamHideAll",
-        "taskPrimaryView",
-        "taskMapView",
-        "taskTraderView",
-        "taskSecondaryView",
-        "taskUserView",
-        "neededTypeView",
-        "itemsHideNonFIR",
-        "hideGlobalTasks",
-        "hideNonKappaTasks",
-        "neededitemsStyle",
-        "hideoutPrimaryView",
-        "localeOverride",
-      ],
+    taskTeamAllHidden: (state) => {
+      return state.taskTeamHideAll ?? false;
     },
-  }
-) as PreferencesStoreDefinition;
+    itemsTeamAllHidden: (state) => {
+      return state.itemsTeamHideAll ?? false;
+    },
+    itemsTeamNonFIRHidden: (state) => {
+      return state.itemsTeamHideAll || state.itemsTeamHideNonFIR || false;
+    },
+    itemsTeamHideoutHidden: (state) => {
+      return state.itemsTeamHideAll || state.itemsTeamHideHideout || false;
+    },
+    mapTeamAllHidden: (state) => {
+      return state.mapTeamHideAll ?? false;
+    },
+    // Add default values for views using nullish coalescing
+    getTaskPrimaryView: (state) => {
+      return state.taskPrimaryView ?? "all";
+    },
+    getTaskMapView: (state) => {
+      return state.taskMapView ?? "all";
+    },
+    getTaskTraderView: (state) => {
+      return state.taskTraderView ?? "all";
+    },
+    getTaskSecondaryView: (state) => {
+      return state.taskSecondaryView ?? "available";
+    },
+    getTaskUserView: (state) => {
+      return state.taskUserView ?? "self";
+    },
+    getNeededTypeView: (state) => {
+      return state.neededTypeView ?? "all";
+    },
+    itemsNeededHideNonFIR: (state) => {
+      return state.itemsHideNonFIR ?? false;
+    },
+    getHideGlobalTasks: (state) => {
+      return state.hideGlobalTasks ?? false;
+    },
+    getHideNonKappaTasks: (state) => {
+      return state.hideNonKappaTasks ?? false;
+    },
+    getNeededItemsStyle: (state) => {
+      return state.neededitemsStyle ?? "mediumCard";
+    },
+    getHideoutPrimaryView: (state) => {
+      return state.hideoutPrimaryView ?? "available";
+    },
+    getLocaleOverride: (state) => {
+      return state.localeOverride ?? null;
+    },
+  },
+  actions: {
+    setStreamerMode(mode: boolean) {
+      this.streamerMode = mode;
+      // Persistence handled automatically by plugin
+      this.saving = this.saving ?? { ...initialSavingState };
+      this.saving.streamerMode = true;
+    },
+    toggleHidden(teamId: string) {
+      if (!this.teamHide) {
+        this.teamHide = {};
+      }
+      this.teamHide[teamId] = !this.teamHide[teamId];
+    },
+    setQuestTeamHideAll(hide: boolean) {
+      this.taskTeamHideAll = hide;
+    },
+    setItemsTeamHideAll(hide: boolean) {
+      this.itemsTeamHideAll = hide;
+    },
+    setItemsTeamHideNonFIR(hide: boolean) {
+      this.itemsTeamHideNonFIR = hide;
+    },
+    setItemsTeamHideHideout(hide: boolean) {
+      this.itemsTeamHideHideout = hide;
+    },
+    setMapTeamHideAll(hide: boolean) {
+      this.mapTeamHideAll = hide;
+    },
+    setTaskPrimaryView(view: string) {
+      this.taskPrimaryView = view;
+    },
+    setTaskMapView(view: string) {
+      this.taskMapView = view;
+    },
+    setTaskTraderView(view: string) {
+      this.taskTraderView = view;
+    },
+    setTaskSecondaryView(view: string) {
+      this.taskSecondaryView = view;
+    },
+    setTaskUserView(view: string) {
+      this.taskUserView = view;
+    },
+    setNeededTypeView(view: string) {
+      this.neededTypeView = view;
+    },
+    setItemsNeededHideNonFIR(hide: boolean) {
+      this.itemsHideNonFIR = hide;
+      // Persistence handled automatically by plugin
+      this.saving = this.saving ?? { ...initialSavingState };
+      this.saving.itemsNeededHideNonFIR = true;
+    },
+    setHideGlobalTasks(hide: boolean) {
+      this.hideGlobalTasks = hide;
+      // Persistence handled automatically by plugin
+      this.saving = this.saving ?? { ...initialSavingState };
+      this.saving.hideGlobalTasks = true;
+    },
+    setHideNonKappaTasks(hide: boolean) {
+      this.hideNonKappaTasks = hide;
+      // Persistence handled automatically by plugin
+      this.saving = this.saving ?? { ...initialSavingState };
+      this.saving.hideNonKappaTasks = true;
+    },
+    setNeededItemsStyle(style: string) {
+      this.neededitemsStyle = style;
+    },
+    setHideoutPrimaryView(view: string) {
+      this.hideoutPrimaryView = view;
+    },
+    setLocaleOverride(locale: string | null) {
+      this.localeOverride = locale;
+    },
+  },
+  // Enable automatic localStorage persistence
+  persist: {
+    key: "preferences", // LocalStorage key for user preference data
+    storage: typeof window !== "undefined" ? localStorage : undefined,
+    // Use serializer instead of paths for selective persistence
+    serializer: {
+      serialize: JSON.stringify,
+      deserialize: JSON.parse,
+    },
+    // Pick specific properties to persist (excluding transient state)
+    pick: [
+      "streamerMode",
+      "teamHide",
+      "taskTeamHideAll",
+      "itemsTeamHideAll",
+      "itemsTeamHideNonFIR",
+      "itemsTeamHideHideout",
+      "mapTeamHideAll",
+      "taskPrimaryView",
+      "taskMapView",
+      "taskTraderView",
+      "taskSecondaryView",
+      "taskUserView",
+      "neededTypeView",
+      "itemsHideNonFIR",
+      "hideGlobalTasks",
+      "hideNonKappaTasks",
+      "neededitemsStyle",
+      "hideoutPrimaryView",
+      "localeOverride",
+    ],
+  },
+}) as PreferencesStoreDefinition;
 // Watch for Supabase user state changing
 if (import.meta.client) {
   setTimeout(() => {
@@ -327,23 +324,17 @@ if (import.meta.client) {
                   .single();
 
                 if (data && !error) {
-                  console.log(
-                    "[PreferencesStore] Loading preferences from Supabase:",
-                    data
-                  );
+                  console.log("[PreferencesStore] Loading preferences from Supabase:", data);
                   // Update store with server data
                   Object.keys(data).forEach((key) => {
-                    if (
-                      key !== "user_id" &&
-                      key !== "created_at" &&
-                      key !== "updated_at"
-                    ) {
+                    if (key !== "user_id" && key !== "created_at" && key !== "updated_at") {
                       const camelKey = key.replace(/_([a-z])/g, (_, letter) =>
                         letter.toUpperCase()
                       );
                       if (camelKey in preferencesStore.$state) {
                         // Fix type issue by casting through unknown first
-                        (preferencesStore.$state as unknown as Record<string, unknown>)[camelKey] = data[key];
+                        (preferencesStore.$state as unknown as Record<string, unknown>)[camelKey] =
+                          data[key];
                       }
                     }
                   });
@@ -365,10 +356,8 @@ if (import.meta.client) {
                       team_hide: preferencesState.teamHide,
                       task_team_hide_all: preferencesState.taskTeamHideAll,
                       items_team_hide_all: preferencesState.itemsTeamHideAll,
-                      items_team_hide_non_fir:
-                        preferencesState.itemsTeamHideNonFIR,
-                      items_team_hide_hideout:
-                        preferencesState.itemsTeamHideHideout,
+                      items_team_hide_non_fir: preferencesState.itemsTeamHideNonFIR,
+                      items_team_hide_hideout: preferencesState.itemsTeamHideHideout,
                       map_team_hide_all: preferencesState.mapTeamHideAll,
                       task_primary_view: preferencesState.taskPrimaryView,
                       task_map_view: preferencesState.taskMapView,
@@ -387,10 +376,7 @@ if (import.meta.client) {
                 });
               }
             } catch (_error) {
-              console.error(
-                "Error in preferencesStore watch for user.loggedIn:",
-                _error
-              );
+              console.error("Error in preferencesStore watch for user.loggedIn:", _error);
             }
           },
           { immediate: true }

@@ -2,10 +2,8 @@
   <GenericCard icon="mdi-database-import-outline" icon-color="white">
     <template #title>Data Migration</template>
     <template #content>
-      <p class="mb-4">
-        Migrate your progress data from the old TarkovTracker site.
-      </p>
-      <div class="mb-3 bg-gray-800 rounded-lg p-4">
+      <p class="mb-4">Migrate your progress data from the old TarkovTracker site.</p>
+      <div class="mb-3 rounded-lg bg-gray-800 p-4">
         <MigrationSteps />
         <form @submit.prevent="migration.fetchWithApiToken">
           <UInput
@@ -28,28 +26,23 @@
               />
             </template>
           </UInput>
-          <div class="flex justify-between items-center">
+          <div class="flex items-center justify-between">
             <div v-if="migration.fetchingApi.value" class="flex items-center">
-              <UIcon
-                name="i-mdi-loading"
-                class="animate-spin mr-2 w-6 h-6 text-primary"
-              />
+              <UIcon name="i-mdi-loading" class="text-primary mr-2 h-6 w-6 animate-spin" />
               <span>Fetching data...</span>
             </div>
             <UAlert
               v-else-if="migration.apiFetchSuccess.value"
               color="green"
               variant="soft"
-              class="mb-0 mt-0 grow mr-4"
+              class="mt-0 mr-4 mb-0 grow"
               title="Data ready to import"
             />
             <div v-else class="grow"></div>
             <UButton
               color="primary"
               :loading="migration.fetchingApi.value"
-              :disabled="
-                !migration.apiToken.value || migration.fetchingApi.value
-              "
+              :disabled="!migration.apiToken.value || migration.fetchingApi.value"
               class="px-4"
               @click="migration.fetchWithApiToken"
             >
@@ -69,30 +62,24 @@
         :importing="migration.importing.value"
         @confirm="migration.confirmImport"
         @show-objectives-details="migration.showObjectivesDetails.value = true"
-        @show-failed-tasks-details="
-          migration.showFailedTaskDetails.value = true
-        "
+        @show-failed-tasks-details="migration.showFailedTaskDetails.value = true"
       />
       <UModal v-model="migration.showObjectivesDetails.value">
         <UCard>
           <template #header>
-            <div class="text-xl font-medium px-4 py-3">
-              Task Objectives Information
-            </div>
+            <div class="px-4 py-3 text-xl font-medium">Task Objectives Information</div>
           </template>
           <div class="px-4 pb-4">
             <p>
-              The count of {{ migration.countTaskObjectives.value }} task
-              objectives represents all objective data in your import.
+              The count of {{ migration.countTaskObjectives.value }} task objectives represents all
+              objective data in your import.
             </p>
             <p class="mt-3">
-              The dashboard may show a different number because it only counts
-              unique task objectives that are currently relevant to your
-              progress.
+              The dashboard may show a different number because it only counts unique task
+              objectives that are currently relevant to your progress.
             </p>
             <p class="mt-3">
-              This difference is normal and doesn't indicate any problem with
-              your data migration.
+              This difference is normal and doesn't indicate any problem with your data migration.
             </p>
           </div>
           <template #footer>
@@ -111,13 +98,12 @@
       <UModal v-model="migration.showFailedTaskDetails.value">
         <UCard>
           <template #header>
-            <div class="text-xl font-medium px-4 py-3">Failed Task Details</div>
+            <div class="px-4 py-3 text-xl font-medium">Failed Task Details</div>
           </template>
           <div class="px-4 pb-4">
             <p>
-              These tasks are marked as "failed" in your data. This typically
-              happens when you chose a different quest branch or when a task
-              became unavailable.
+              These tasks are marked as "failed" in your data. This typically happens when you chose
+              a different quest branch or when a task became unavailable.
             </p>
             <div class="mt-2 space-y-2">
               <div
@@ -135,8 +121,9 @@
               </div>
             </div>
             <p class="mt-3">
-              <strong>Note:</strong> This is normal for tasks that are mutually
-              exclusive with other tasks you've completed.
+              <strong>Note:</strong>
+              This is normal for tasks that are mutually exclusive with other tasks you've
+              completed.
             </p>
           </div>
           <template #footer>
@@ -156,9 +143,9 @@
   </GenericCard>
 </template>
 <script setup>
-import { useDataMigration } from "@/composables/useDataMigration";
-import GenericCard from "@/components/ui/GenericCard.vue";
-import MigrationSteps from "./MigrationSteps.vue";
-import ImportConfirmDialog from "./ImportConfirmDialog.vue";
-const migration = useDataMigration();
+  import { useDataMigration } from "@/composables/useDataMigration";
+  import GenericCard from "@/components/ui/GenericCard.vue";
+  import MigrationSteps from "./MigrationSteps.vue";
+  import ImportConfirmDialog from "./ImportConfirmDialog.vue";
+  const migration = useDataMigration();
 </script>

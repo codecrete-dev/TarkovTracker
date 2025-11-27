@@ -10,7 +10,7 @@ export function useInfiniteScroll(
   } = {}
 ) {
   const { rootMargin = "100px", threshold = 0.1, enabled = true } = options;
-  
+
   let observer: IntersectionObserver | null = null;
   const isLoading = ref(false);
 

@@ -28,8 +28,7 @@ export function useGraphBuilder() {
    */
   function buildTaskGraph(taskList: Task[]): AbstractGraph {
     const newGraph = createGraph();
-    const activeRequirements: { task: Task; requirement: TaskRequirement }[] =
-      [];
+    const activeRequirements: { task: Task; requirement: TaskRequirement }[] = [];
     // Add all tasks as nodes and process non-active requirements
     taskList.forEach((task) => {
       safeAddNode(newGraph, task.id);
@@ -117,10 +116,7 @@ export function useGraphBuilder() {
         // Item requirements
         // Exclude "findItem" objectives as they are passive checks that auto-complete
         // when the player acquires the items for the corresponding "giveItem" objective
-        if (
-          (objective?.item?.id || objective?.markerItem?.id) &&
-          objective.type !== "findItem"
-        ) {
+        if ((objective?.item?.id || objective?.markerItem?.id) && objective.type !== "findItem") {
           tempNeededObjectives.push({
             id: objective.id,
             needType: "taskObjective",
@@ -145,10 +141,7 @@ export function useGraphBuilder() {
   /**
    * Enhances tasks with graph relationship data
    */
-  function enhanceTasksWithRelationships(
-    taskList: Task[],
-    graph: AbstractGraph
-  ): Task[] {
+  function enhanceTasksWithRelationships(taskList: Task[], graph: AbstractGraph): Task[] {
     return taskList.map((task) => ({
       ...task,
       traderIcon: task.trader?.imageLink,
@@ -169,9 +162,7 @@ export function useGraphBuilder() {
         level.stationLevelRequirements?.forEach((requirement) => {
           if (requirement?.station?.id) {
             // Find the required level's ID
-            const requiredStation = stations.find(
-              (s) => s.id === requirement.station.id
-            );
+            const requiredStation = stations.find((s) => s.id === requirement.station.id);
             const requiredLevel = requiredStation?.levels.find(
               (l) => l.level === requirement.level
             );
@@ -193,10 +184,7 @@ export function useGraphBuilder() {
   /**
    * Converts hideout levels to modules with relationship data
    */
-  function createHideoutModules(
-    stations: HideoutStation[],
-    graph: AbstractGraph
-  ): HideoutModule[] {
+  function createHideoutModules(stations: HideoutStation[], graph: AbstractGraph): HideoutModule[] {
     const modules: HideoutModule[] = [];
     stations.forEach((station) => {
       station.levels.forEach((level) => {
@@ -216,9 +204,7 @@ export function useGraphBuilder() {
   /**
    * Extracts item requirements from hideout modules
    */
-  function extractItemRequirements(
-    modules: HideoutModule[]
-  ): NeededItemHideoutModule[] {
+  function extractItemRequirements(modules: HideoutModule[]): NeededItemHideoutModule[] {
     const neededItems: NeededItemHideoutModule[] = [];
     modules.forEach((module) => {
       module.itemRequirements?.forEach((req) => {

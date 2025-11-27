@@ -1,9 +1,6 @@
 import type { UserProgressData } from "@/shared_state";
 import type { GameMode } from "@/utils/constants";
-import {
-  GAME_EDITION_STRING_VALUES,
-  normalizePMCFaction,
-} from "@/utils/constants";
+import { GAME_EDITION_STRING_VALUES, normalizePMCFaction } from "@/utils/constants";
 // import { defaultState, migrateToGameModeStructure } from "@/shared_state";
 // Define a basic interface for the progress data structure
 export interface ProgressData {
@@ -159,10 +156,8 @@ export default class DataMigrationService {
       if (error || !data) return false;
       const hasProgress =
         (data.level && data.level > 1) ||
-        (data.task_completions &&
-          Object.keys(data.task_completions).length > 0) ||
-        (data.task_objectives &&
-          Object.keys(data.task_objectives).length > 0) ||
+        (data.task_completions && Object.keys(data.task_completions).length > 0) ||
+        (data.task_objectives && Object.keys(data.task_objectives).length > 0) ||
         (data.hideout_modules && Object.keys(data.hideout_modules).length > 0);
       return !!hasProgress;
     } catch (error) {
@@ -184,9 +179,7 @@ export default class DataMigrationService {
       const { $supabase } = useNuxtApp();
       const hasExisting = await this.hasUserData(uid);
       if (hasExisting) {
-        console.warn(
-          "[DataMigrationService] User already has data, aborting automatic migration."
-        );
+        console.warn("[DataMigrationService] User already has data, aborting automatic migration.");
         return false;
       }
       // Prepare data for Supabase (map to snake_case columns)
@@ -208,14 +201,9 @@ export default class DataMigrationService {
         // For now, we'll assume the schema handles the main fields.
         // If we need to store migration metadata, we might need a metadata column or just ignore it for now as it's less critical.
       };
-      const { error } = await $supabase.client
-        .from("user_progress")
-        .upsert(supabaseData);
+      const { error } = await $supabase.client.from("user_progress").upsert(supabaseData);
       if (error) {
-        console.error(
-          "[DataMigrationService] Error migrating data to Supabase:",
-          error
-        );
+        console.error("[DataMigrationService] Error migrating data to Supabase:", error);
         return false;
       }
       // Backup local data
@@ -223,17 +211,11 @@ export default class DataMigrationService {
       try {
         localStorage.setItem(backupKey, JSON.stringify(localData));
       } catch (backupError) {
-        console.warn(
-          "[DataMigrationService] Could not backup local data:",
-          backupError
-        );
+        console.warn("[DataMigrationService] Could not backup local data:", backupError);
       }
       return true;
     } catch (error) {
-      console.error(
-        "[DataMigrationService] General error in migrateDataToUser:",
-        error
-      );
+      console.error("[DataMigrationService] General error in migrateDataToUser:", error);
       return false;
     }
   }
@@ -263,18 +245,12 @@ export default class DataMigrationService {
         pmc_faction: normalizePMCFaction(importedData.pmcFaction),
         display_name: importedData.displayName || null,
         task_completions: importedData.taskCompletions || {},
-        task_objectives: this.transformTaskObjectives(
-          importedData.taskObjectives || {}
-        ),
+        task_objectives: this.transformTaskObjectives(importedData.taskObjectives || {}),
         hideout_modules: importedData.hideoutModules || {},
-        hideout_parts: this.transformHideoutParts(
-          importedData.hideoutParts || {}
-        ),
+        hideout_parts: this.transformHideoutParts(importedData.hideoutParts || {}),
         last_updated: new Date().toISOString(),
       };
-      const { error } = await $supabase.client
-        .from("user_progress")
-        .upsert(supabaseData);
+      const { error } = await $supabase.client.from("user_progress").upsert(supabaseData);
       if (error) {
         console.error(
           `[DataMigrationService] Supabase error importing data for user ${uid}:`,
@@ -320,9 +296,7 @@ export default class DataMigrationService {
         headers,
       });
       if (!response.ok) {
-        console.error(
-          `[DataMigrationService] API token fetch failed: ${response.status}`
-        );
+        console.error(`[DataMigrationService] API token fetch failed: ${response.status}`);
         return null;
       }
       // Definition for the raw data structure from the old API
@@ -352,9 +326,7 @@ export default class DataMigrationService {
           dataFromApi = apiJsonResponse as OldApiRawData;
         }
       } else {
-        console.error(
-          "[DataMigrationService] API response is not a valid object."
-        );
+        console.error("[DataMigrationService] API response is not a valid object.");
         return null;
       }
       // Type definitions for the expected array elements from the old API
@@ -393,43 +365,37 @@ export default class DataMigrationService {
       }
       const hideoutModules: ProgressData["hideoutModules"] = {};
       if (Array.isArray(dataFromApi.hideoutModulesProgress)) {
-        dataFromApi.hideoutModulesProgress.forEach(
-          (module: OldHideoutModuleProgress) => {
-            if (module.complete === true) {
-              hideoutModules![module.id] = {
-                // Non-null assertion
-                complete: true,
-                timestamp: Date.now(),
-              };
-            }
+        dataFromApi.hideoutModulesProgress.forEach((module: OldHideoutModuleProgress) => {
+          if (module.complete === true) {
+            hideoutModules![module.id] = {
+              // Non-null assertion
+              complete: true,
+              timestamp: Date.now(),
+            };
           }
-        );
+        });
       }
       const hideoutParts: ProgressData["hideoutParts"] = {};
       if (Array.isArray(dataFromApi.hideoutPartsProgress)) {
-        dataFromApi.hideoutPartsProgress.forEach(
-          (part: OldHideoutPartProgress) => {
-            hideoutParts![part.id] = {
-              // Non-null assertion
-              complete: part.complete || false,
-              count: part.count || 0,
-              timestamp: part.complete ? Date.now() : null,
-            };
-          }
-        );
+        dataFromApi.hideoutPartsProgress.forEach((part: OldHideoutPartProgress) => {
+          hideoutParts![part.id] = {
+            // Non-null assertion
+            complete: part.complete || false,
+            count: part.count || 0,
+            timestamp: part.complete ? Date.now() : null,
+          };
+        });
       }
       const taskObjectives: ProgressData["taskObjectives"] = {};
       if (Array.isArray(dataFromApi.taskObjectivesProgress)) {
-        dataFromApi.taskObjectivesProgress.forEach(
-          (objective: OldTaskObjectiveProgress) => {
-            taskObjectives![objective.id] = {
-              // Non-null assertion
-              complete: objective.complete || false,
-              count: objective.count || 0,
-              timestamp: objective.complete ? Date.now() : null,
-            };
-          }
-        );
+        dataFromApi.taskObjectivesProgress.forEach((objective: OldTaskObjectiveProgress) => {
+          taskObjectives![objective.id] = {
+            // Non-null assertion
+            complete: objective.complete || false,
+            count: objective.count || 0,
+            timestamp: objective.complete ? Date.now() : null,
+          };
+        });
       }
       const migrationData: ProgressData = {
         level: dataFromApi.playerLevel || dataFromApi.level || 1,
@@ -447,10 +413,7 @@ export default class DataMigrationService {
       };
       return migrationData;
     } catch (error) {
-      console.error(
-        "[DataMigrationService] Error fetching data with API token:",
-        error
-      );
+      console.error("[DataMigrationService] Error fetching data with API token:", error);
       return null;
     }
   }

@@ -12,21 +12,15 @@
         >
           <template #leading>
             <UIcon
-              :name="
-                currentModeIcon.startsWith('mdi-')
-                  ? `i-${currentModeIcon}`
-                  : currentModeIcon
-              "
-              class="w-4 h-4"
+              :name="currentModeIcon.startsWith('mdi-') ? `i-${currentModeIcon}` : currentModeIcon"
+              class="h-4 w-4"
             />
           </template>
           <template #item="{ item }">
             <div class="flex items-center gap-2">
               <UIcon
-                :name="
-                  item.icon.startsWith('mdi-') ? `i-${item.icon}` : item.icon
-                "
-                class="w-4 h-4"
+                :name="item.icon.startsWith('mdi-') ? `i-${item.icon}` : item.icon"
+                class="h-4 w-4"
               />
               <span>{{ item.label }}</span>
             </div>
@@ -38,32 +32,31 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
-import { useTarkovStore } from "@/stores/tarkov";
-import { GAME_MODE_OPTIONS, type GameMode } from "@/utils/constants";
+  import { computed } from "vue";
+  import { useTarkovStore } from "@/stores/tarkov";
+  import { GAME_MODE_OPTIONS, type GameMode } from "@/utils/constants";
 
-const store = useTarkovStore();
+  const store = useTarkovStore();
 
-const gameModeOptions = GAME_MODE_OPTIONS;
+  const gameModeOptions = GAME_MODE_OPTIONS;
 
-const selectedGameMode = computed({
-  get() {
-    return store.getCurrentGameMode();
-  },
-  set(newMode: GameMode) {
-    store.switchGameMode(newMode);
-  },
-});
+  const selectedGameMode = computed({
+    get() {
+      return store.getCurrentGameMode();
+    },
+    set(newMode: GameMode) {
+      store.switchGameMode(newMode);
+    },
+  });
 
-const currentModeIcon = computed(() => {
-  const currentMode = store.getCurrentGameMode();
-  return (
-    gameModeOptions.find((option) => option.value === currentMode)?.icon ||
-    "mdi-sword-cross"
-  );
-});
+  const currentModeIcon = computed(() => {
+    const currentMode = store.getCurrentGameMode();
+    return (
+      gameModeOptions.find((option) => option.value === currentMode)?.icon || "mdi-sword-cross"
+    );
+  });
 </script>
 
 <style scoped>
-/* No additional styles needed for settings page version */
+  /* No additional styles needed for settings page version */
 </style>

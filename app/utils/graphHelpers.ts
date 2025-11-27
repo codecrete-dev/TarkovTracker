@@ -2,11 +2,7 @@ import Graph from "graphology";
 /**
  * Recursively gets all predecessors (ancestors) of a node in the graph
  */
-export function getPredecessors(
-  graph: Graph,
-  nodeId: string,
-  visited: string[] = []
-): string[] {
+export function getPredecessors(graph: Graph, nodeId: string, visited: string[] = []): string[] {
   let predecessors: string[] = [];
   try {
     predecessors = graph.inNeighbors(nodeId);
@@ -20,9 +16,7 @@ export function getPredecessors(
       if (visited.includes(predecessor)) {
         continue;
       }
-      predecessors = predecessors.concat(
-        getPredecessors(graph, predecessor, [...visited])
-      );
+      predecessors = predecessors.concat(getPredecessors(graph, predecessor, [...visited]));
     }
   }
   return [...new Set(predecessors)];
@@ -30,11 +24,7 @@ export function getPredecessors(
 /**
  * Recursively gets all successors (descendants) of a node in the graph
  */
-export function getSuccessors(
-  graph: Graph,
-  nodeId: string,
-  visited: string[] = []
-): string[] {
+export function getSuccessors(graph: Graph, nodeId: string, visited: string[] = []): string[] {
   let successors: string[] = [];
   try {
     successors = graph.outNeighbors(nodeId);
@@ -48,9 +38,7 @@ export function getSuccessors(
       if (visited.includes(successor)) {
         continue;
       }
-      successors = successors.concat(
-        getSuccessors(graph, successor, [...visited])
-      );
+      successors = successors.concat(getSuccessors(graph, successor, [...visited]));
     }
   }
   return [...new Set(successors)];
@@ -90,11 +78,7 @@ export function safeAddNode(graph: Graph, nodeId: string): void {
 /**
  * Safely adds an edge to the graph if both nodes exist
  */
-export function safeAddEdge(
-  graph: Graph,
-  sourceId: string,
-  targetId: string
-): void {
+export function safeAddEdge(graph: Graph, sourceId: string, targetId: string): void {
   try {
     if (graph.hasNode(sourceId) && graph.hasNode(targetId)) {
       graph.mergeEdge(sourceId, targetId);

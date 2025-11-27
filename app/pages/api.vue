@@ -1,11 +1,8 @@
 <template>
-  <div class="container mx-auto px-4 py-6 max-w-4xl space-y-4">
-    <UCard
-      class="bg-surface-900 border border-white/10"
-      :ui="{ body: 'space-y-3' }"
-    >
+  <div class="container mx-auto max-w-4xl space-y-4 px-4 py-6">
+    <UCard class="bg-surface-900 border border-white/10" :ui="{ body: 'space-y-3' }">
       <template #header>
-        <h1 class="text-xl font-semibold text-surface-50">
+        <h1 class="text-surface-50 text-xl font-semibold">
           {{ $t("page.api.title") }}
         </h1>
       </template>
@@ -19,12 +16,9 @@
         :title="$t('page.api.auth_required')"
       />
     </UCard>
-    <UCard
-      class="bg-surface-900 border border-white/10"
-      :ui="{ body: 'space-y-3' }"
-    >
+    <UCard class="bg-surface-900 border border-white/10" :ui="{ body: 'space-y-3' }">
       <template #header>
-        <h2 class="text-lg font-semibold text-surface-50">
+        <h2 class="text-surface-50 text-lg font-semibold">
           {{ $t("page.api.endpoints.title") }}
         </h2>
       </template>
@@ -33,7 +27,7 @@
           <UBadge color="primary" variant="solid" size="xs">GET</UBadge>
           <div class="space-y-1">
             <div class="text-surface-50 font-medium">/api/items</div>
-            <div class="text-sm text-surface-300">
+            <div class="text-surface-300 text-sm">
               {{ $t("page.api.endpoints.items") }}
             </div>
           </div>
@@ -43,7 +37,7 @@
           <UBadge color="primary" variant="solid" size="xs">GET</UBadge>
           <div class="space-y-1">
             <div class="text-surface-50 font-medium">/api/tasks</div>
-            <div class="text-sm text-surface-300">
+            <div class="text-surface-300 text-sm">
               {{ $t("page.api.endpoints.tasks") }}
             </div>
           </div>

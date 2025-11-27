@@ -1,6 +1,6 @@
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted } from "vue";
 export function useTarkovTime() {
-  const tarkovTime = ref('');
+  const tarkovTime = ref("");
   let intervalId: number | null = null;
   const updateTime = () => {
     const oneHour = 60 * 60 * 1000;
@@ -12,11 +12,11 @@ export function useTarkovTime() {
     const tarkovHour = tarkovTimeObj.getUTCHours();
     const tarkovMinute = tarkovTimeObj.getUTCMinutes();
     const tarkovSecondHour = (tarkovHour + 12) % 24;
-    tarkovTime.value = `${tarkovHour.toString().padStart(2, '0')}:${tarkovMinute
+    tarkovTime.value = `${tarkovHour.toString().padStart(2, "0")}:${tarkovMinute
       .toString()
-      .padStart(2, '0')} / ${tarkovSecondHour.toString().padStart(2, '0')}:${tarkovMinute
+      .padStart(2, "0")} / ${tarkovSecondHour.toString().padStart(2, "0")}:${tarkovMinute
       .toString()
-      .padStart(2, '0')}`;
+      .padStart(2, "0")}`;
   };
   onMounted(() => {
     updateTime();

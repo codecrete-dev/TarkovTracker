@@ -4,8 +4,9 @@
 /* Tailwind v4 + Nuxt UI v4 theme tokens */
 @theme {
   --font-sans: "Share Tech Mono", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "Share Tech Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
-    Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-mono:
+    "Share Tech Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
 
   /* Primary (brand tan) */
   --color-primary-50: hsl(42 31.3% 93.7%);
@@ -385,7 +386,15 @@
 }
 
 /* Nav text overrides: replace gray-400 default with pure white at stepped opacities */
-.text-gray-400 { color: rgba(255, 255, 255, 0.6); }
-.text-gray-500 { color: rgba(255, 255, 255, 0.7); }
-.text-gray-300 { color: rgba(255, 255, 255, 0.8); }
-.text-gray-200 { color: rgba(255, 255, 255, 0.9); }
+.text-gray-400 {
+  color: rgba(255, 255, 255, 0.6);
+}
+.text-gray-500 {
+  color: rgba(255, 255, 255, 0.7);
+}
+.text-gray-300 {
+  color: rgba(255, 255, 255, 0.8);
+}
+.text-gray-200 {
+  color: rgba(255, 255, 255, 0.9);
+}

@@ -2,8 +2,8 @@
   "recommendations": [
     "dbaeumer.vscode-eslint",
     "bradlc.vscode-tailwindcss",
-    "vue.volar",
     "esbenp.prettier-vscode",
-    "apollographql.vscode-apollo"
+    "oderwat.indent-rainbow",
+    "vue.volar"
   ]
 }

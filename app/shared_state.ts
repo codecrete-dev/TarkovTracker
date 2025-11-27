@@ -95,18 +95,12 @@ export function migrateToGameModeStructure(legacyData: unknown): UserState {
     // This is a partially migrated state, use the existing data as legacy format
     const migratedProgressData: UserProgressData = {
       level: (data.level as number) || defaultProgressData.level,
-      pmcFaction:
-        (data.pmcFaction as "USEC" | "BEAR") || defaultProgressData.pmcFaction,
-      displayName:
-        (data.displayName as string) || defaultProgressData.displayName,
-      taskCompletions:
-        (data.taskCompletions as UserProgressData["taskCompletions"]) || {},
-      taskObjectives:
-        (data.taskObjectives as UserProgressData["taskObjectives"]) || {},
-      hideoutParts:
-        (data.hideoutParts as UserProgressData["hideoutParts"]) || {},
-      hideoutModules:
-        (data.hideoutModules as UserProgressData["hideoutModules"]) || {},
+      pmcFaction: (data.pmcFaction as "USEC" | "BEAR") || defaultProgressData.pmcFaction,
+      displayName: (data.displayName as string) || defaultProgressData.displayName,
+      taskCompletions: (data.taskCompletions as UserProgressData["taskCompletions"]) || {},
+      taskObjectives: (data.taskObjectives as UserProgressData["taskObjectives"]) || {},
+      hideoutParts: (data.hideoutParts as UserProgressData["hideoutParts"]) || {},
+      hideoutModules: (data.hideoutModules as UserProgressData["hideoutModules"]) || {},
       traders: (data.traders as UserProgressData["traders"]) || {},
     };
     return {
@@ -120,17 +114,12 @@ export function migrateToGameModeStructure(legacyData: unknown): UserState {
   const data = (legacyData as Record<string, unknown>) || {};
   const migratedProgressData: UserProgressData = {
     level: (data.level as number) || defaultProgressData.level,
-    pmcFaction:
-      (data.pmcFaction as "USEC" | "BEAR") || defaultProgressData.pmcFaction,
-    displayName:
-      (data.displayName as string) || defaultProgressData.displayName,
-    taskCompletions:
-      (data.taskCompletions as UserProgressData["taskCompletions"]) || {},
-    taskObjectives:
-      (data.taskObjectives as UserProgressData["taskObjectives"]) || {},
+    pmcFaction: (data.pmcFaction as "USEC" | "BEAR") || defaultProgressData.pmcFaction,
+    displayName: (data.displayName as string) || defaultProgressData.displayName,
+    taskCompletions: (data.taskCompletions as UserProgressData["taskCompletions"]) || {},
+    taskObjectives: (data.taskObjectives as UserProgressData["taskObjectives"]) || {},
     hideoutParts: (data.hideoutParts as UserProgressData["hideoutParts"]) || {},
-    hideoutModules:
-      (data.hideoutModules as UserProgressData["hideoutModules"]) || {},
+    hideoutModules: (data.hideoutModules as UserProgressData["hideoutModules"]) || {},
     traders: (data.traders as UserProgressData["traders"]) || {},
   };
   return {
@@ -169,17 +158,13 @@ const getCurrentData = (state: UserState): UserProgressData => {
 };
 // Simplified getters using arrow functions
 export const getters = {
-  getCurrentGameMode: (state: UserState) => () =>
-    state.currentGameMode || GAME_MODES.PVP,
+  getCurrentGameMode: (state: UserState) => () => state.currentGameMode || GAME_MODES.PVP,
   playerLevel: (state: UserState) => () => getCurrentData(state).level ?? 1,
   getGameEdition: (state: UserState) => () => state.gameEdition ?? 1,
-  getPMCFaction: (state: UserState) => () =>
-    getCurrentData(state).pmcFaction ?? "USEC",
+  getPMCFaction: (state: UserState) => () => getCurrentData(state).pmcFaction ?? "USEC",
   getDisplayName: (state: UserState) => () => {
     const currentData = getCurrentData(state);
-    return currentData.displayName === ""
-      ? null
-      : currentData.displayName ?? null;
+    return currentData.displayName === "" ? null : (currentData.displayName ?? null);
   },
   getObjectiveCount: (state: UserState) => (objectiveId: string) =>
     getCurrentData(state)?.taskObjectives?.[objectiveId]?.count ?? 0,
@@ -266,28 +251,13 @@ export const actions = {
     });
   },
   setTaskComplete(this: UserState, taskId: string) {
-    updateObjective(
-      this,
-      "taskCompletions",
-      taskId,
-      createCompletion(true, false)
-    );
+    updateObjective(this, "taskCompletions", taskId, createCompletion(true, false));
   },
   setTaskFailed(this: UserState, taskId: string) {
-    updateObjective(
-      this,
-      "taskCompletions",
-      taskId,
-      createCompletion(true, true)
-    );
+    updateObjective(this, "taskCompletions", taskId, createCompletion(true, true));
   },
   setTaskUncompleted(this: UserState, taskId: string) {
-    updateObjective(
-      this,
-      "taskCompletions",
-      taskId,
-      createCompletion(false, false)
-    );
+    updateObjective(this, "taskCompletions", taskId, createCompletion(false, false));
   },
   setTaskObjectiveComplete(this: UserState, objectiveId: string) {
     updateObjective(this, "taskObjectives", objectiveId, {

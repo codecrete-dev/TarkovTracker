@@ -26,9 +26,7 @@ export function useSupabaseSync({
   transform,
   debounceMs = 1000,
 }: SupabaseSyncConfig) {
-  console.log(
-    `[Sync] useSupabaseSync initialized for table: ${table}, debounce: ${debounceMs}ms`
-  );
+  console.log(`[Sync] useSupabaseSync initialized for table: ${table}, debounce: ${debounceMs}ms`);
   const { $supabase } = useNuxtApp();
   const isSyncing = ref(false);
   const isPaused = ref(false);
@@ -64,12 +62,8 @@ export function useSupabaseSync({
       // Log detailed info about what we're syncing
       if (table === "user_progress") {
         const userData = dataToSave as SupabaseUserData;
-        const pvpTasks = Object.keys(
-          userData.pvp_data?.taskCompletions || {}
-        ).length;
-        const pveTasks = Object.keys(
-          userData.pve_data?.taskCompletions || {}
-        ).length;
+        const pvpTasks = Object.keys(userData.pvp_data?.taskCompletions || {}).length;
+        const pveTasks = Object.keys(userData.pve_data?.taskCompletions || {}).length;
         console.log(`[Sync] About to upsert to ${table}:`, {
           userId: userData.user_id,
           gameMode: userData.current_game_mode,
@@ -98,9 +92,7 @@ export function useSupabaseSync({
   const unwatch = watch(
     () => store.$state,
     (newState) => {
-      console.log(
-        `[Sync] Store state changed for ${table}, triggering debounced sync`
-      );
+      console.log(`[Sync] Store state changed for ${table}, triggering debounced sync`);
       debouncedSync(JSON.parse(JSON.stringify(newState)));
     },
     { deep: true }

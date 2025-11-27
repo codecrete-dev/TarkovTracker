@@ -1,5 +1,5 @@
 <template>
-  <div class="container mx-auto px-4 py-6 space-y-4">
+  <div class="container mx-auto space-y-4 px-4 py-6">
     <div class="grid gap-4 md:grid-cols-2">
       <!-- Section 1: General Settings -->
       <GenericCard
@@ -10,9 +10,9 @@
         class="h-full"
       >
         <template #title>
-          <span class="text-lg font-semibold">{{
-            $t("settings.general.title", "General Settings")
-          }}</span>
+          <span class="text-lg font-semibold">
+            {{ $t("settings.general.title", "General Settings") }}
+          </span>
         </template>
         <template #title-right>
           <UAlert
@@ -20,24 +20,19 @@
             icon="i-mdi-lock"
             color="warning"
             variant="soft"
-            class="text-sm p-1 inline-flex items-center"
+            class="inline-flex items-center p-1 text-sm"
           >
             <template #description>
               <span class="text-sm">
-                {{
-                  $t(
-                    "settings.general.login_required",
-                    "Log in to enable these settings."
-                  )
-                }}
+                {{ $t("settings.general.login_required", "Log in to enable these settings.") }}
               </span>
             </template>
           </UAlert>
         </template>
         <template #content>
-          <div class="px-4 py-3 space-y-4">
+          <div class="space-y-4 px-4 py-3">
             <div class="space-y-2">
-              <p class="text-sm font-semibold text-surface-200">
+              <p class="text-surface-200 text-sm font-semibold">
                 {{ $t("settings.general.streamer_mode", "Streamer Mode") }}
               </p>
               <div class="flex items-center gap-3">
@@ -52,9 +47,9 @@
                 <UIcon
                   v-if="preferencesStore.saving && preferencesStore.saving.streamerMode"
                   name="i-heroicons-arrow-path"
-                  class="w-4 h-4 animate-spin text-primary-500"
+                  class="text-primary-500 h-4 w-4 animate-spin"
                 />
-                <span class="text-xs text-surface-400">
+                <span class="text-surface-400 text-xs">
                   {{
                     $t(
                       "settings.general.streamer_mode_hint",
@@ -76,14 +71,14 @@
         class="h-full"
       >
         <template #title>
-          <span class="text-lg font-semibold">{{
-            $t("settings.game_profile.title", "Game Profile")
-          }}</span>
+          <span class="text-lg font-semibold">
+            {{ $t("settings.game_profile.title", "Game Profile") }}
+          </span>
         </template>
         <template #content>
-          <div class="px-4 py-3 space-y-4">
+          <div class="space-y-4 px-4 py-3">
             <div class="space-y-2">
-              <p class="text-sm font-semibold text-surface-200">
+              <p class="text-surface-200 text-sm font-semibold">
                 {{ $t("settings.game_profile.game_edition", "Game Edition") }}
               </p>
               <USelectMenu
@@ -95,10 +90,7 @@
                 :ui-menu="selectMenuUi"
               >
                 <template #leading>
-                  <UIcon
-                    name="i-mdi-gift-open"
-                    class="w-4 h-4 text-surface-300"
-                  />
+                  <UIcon name="i-mdi-gift-open" class="text-surface-300 h-4 w-4" />
                 </template>
               </USelectMenu>
             </div>
@@ -121,7 +113,7 @@
           icon="i-mdi-information"
           color="info"
           variant="soft"
-          class="text-sm p-1 inline-flex items-center"
+          class="inline-flex items-center p-1 text-sm"
         >
           <template #description>
             <span class="text-sm">
@@ -136,13 +128,11 @@
         </UAlert>
       </template>
       <template #content>
-        <div class="px-4 py-4 space-y-3">
+        <div class="space-y-3 px-4 py-4">
           <div class="grid gap-3 md:grid-cols-3">
             <!-- Reset PvP Button with Modal -->
             <UModal
-              :title="
-                $t('settings.data_management.reset_pvp_title', 'Reset PvP Data')
-              "
+              :title="$t('settings.data_management.reset_pvp_title', 'Reset PvP Data')"
               :description="
                 $t(
                   'settings.data_management.reset_pvp_confirmation',
@@ -154,15 +144,10 @@
                 icon="i-mdi-shield-sword"
                 block
                 :ui="{
-                  base: 'bg-pvp-900 hover:bg-pvp-800 active:bg-pvp-700 text-pvp-200 focus-visible:ring focus-visible:ring-pvp-500'
+                  base: 'bg-pvp-900 hover:bg-pvp-800 active:bg-pvp-700 text-pvp-200 focus-visible:ring focus-visible:ring-pvp-500',
                 }"
               >
-                {{
-                  $t(
-                    "settings.data_management.reset_pvp_data",
-                    "Reset PvP Data"
-                  )
-                }}
+                {{ $t("settings.data_management.reset_pvp_data", "Reset PvP Data") }}
               </UButton>
               <template #body>
                 <UAlert
@@ -176,7 +161,7 @@
                     )
                   "
                 />
-                <p class="text-sm text-surface-200 mt-4">
+                <p class="text-surface-200 mt-4 text-sm">
                   {{
                     $t(
                       "settings.data_management.reset_pvp_warning",
@@ -192,9 +177,7 @@
                     variant="soft"
                     class="min-w-26 justify-center text-center"
                   >
-                    {{
-                      $t("settings.data_management.reset_cancel", "Cancel")
-                    }}
+                    {{ $t("settings.data_management.reset_cancel", "Cancel") }}
                   </UButton>
                   <UButton
                     color="error"
@@ -203,12 +186,7 @@
                     :loading="resetting"
                     @click="resetPvPData"
                   >
-                    {{
-                      $t(
-                        "settings.data_management.reset_confirm",
-                        "Reset PvP Data"
-                      )
-                    }}
+                    {{ $t("settings.data_management.reset_confirm", "Reset PvP Data") }}
                   </UButton>
                 </div>
               </template>
@@ -216,9 +194,7 @@
 
             <!-- Reset PvE Button with Modal -->
             <UModal
-              :title="
-                $t('settings.data_management.reset_pve_title', 'Reset PvE Data')
-              "
+              :title="$t('settings.data_management.reset_pve_title', 'Reset PvE Data')"
               :description="
                 $t(
                   'settings.data_management.reset_pve_confirmation',
@@ -230,15 +206,10 @@
                 icon="i-mdi-account-group"
                 block
                 :ui="{
-                  base: 'bg-pve-900 hover:bg-pve-800 active:bg-pve-700 text-pve-200 focus-visible:ring focus-visible:ring-pve-500'
+                  base: 'bg-pve-900 hover:bg-pve-800 active:bg-pve-700 text-pve-200 focus-visible:ring focus-visible:ring-pve-500',
                 }"
               >
-                {{
-                  $t(
-                    "settings.data_management.reset_pve_data",
-                    "Reset PvE Data"
-                  )
-                }}
+                {{ $t("settings.data_management.reset_pve_data", "Reset PvE Data") }}
               </UButton>
               <template #body>
                 <UAlert
@@ -252,7 +223,7 @@
                     )
                   "
                 />
-                <p class="text-sm text-surface-200 mt-4">
+                <p class="text-surface-200 mt-4 text-sm">
                   {{
                     $t(
                       "settings.data_management.reset_pve_warning",
@@ -263,14 +234,8 @@
               </template>
               <template #footer>
                 <div class="flex w-full items-center gap-3 pt-1">
-                  <UButton
-                    color="neutral"
-                    variant="soft"
-                    class="min-w-26fy-center text-center"
-                  >
-                    {{
-                      $t("settings.data_management.reset_cancel", "Cancel")
-                    }}
+                  <UButton color="neutral" variant="soft" class="min-w-26fy-center text-center">
+                    {{ $t("settings.data_management.reset_cancel", "Cancel") }}
                   </UButton>
                   <UButton
                     color="error"
@@ -279,12 +244,7 @@
                     :loading="resetting"
                     @click="resetPvEData"
                   >
-                    {{
-                      $t(
-                        "settings.data_management.reset_confirm",
-                        "Reset PvE Data"
-                      )
-                    }}
+                    {{ $t("settings.data_management.reset_confirm", "Reset PvE Data") }}
                   </UButton>
                 </div>
               </template>
@@ -292,9 +252,7 @@
 
             <!-- Reset All Button with Modal -->
             <UModal
-              :title="
-                $t('settings.data_management.reset_all_title', 'Reset All Data')
-              "
+              :title="$t('settings.data_management.reset_all_title', 'Reset All Data')"
               :description="
                 $t(
                   'settings.data_management.reset_all_confirmation',
@@ -302,15 +260,8 @@
                 )
               "
             >
-              <UButton
-                color="error"
-                variant="soft"
-                icon="i-mdi-delete-sweep"
-                block
-              >
-                {{
-                  $t("settings.data_management.reset_all_data", "Reset All Data")
-                }}
+              <UButton color="error" variant="soft" icon="i-mdi-delete-sweep" block>
+                {{ $t("settings.data_management.reset_all_data", "Reset All Data") }}
               </UButton>
               <template #body>
                 <UAlert
@@ -324,7 +275,7 @@
                     )
                   "
                 />
-                <p class="text-sm text-surface-200 mt-4">
+                <p class="text-surface-200 mt-4 text-sm">
                   {{
                     $t(
                       "settings.data_management.reset_all_warning",
@@ -340,9 +291,7 @@
                     variant="soft"
                     class="min-w-26 justify-center text-center"
                   >
-                    {{
-                      $t("settings.data_management.reset_cancel", "Cancel")
-                    }}
+                    {{ $t("settings.data_management.reset_cancel", "Cancel") }}
                   </UButton>
                   <UButton
                     color="error"
@@ -351,18 +300,13 @@
                     :loading="resetting"
                     @click="resetAllData"
                   >
-                    {{
-                      $t(
-                        "settings.data_management.reset_confirm",
-                        "Reset All Data"
-                      )
-                    }}
+                    {{ $t("settings.data_management.reset_confirm", "Reset All Data") }}
                   </UButton>
                 </div>
               </template>
             </UModal>
           </div>
-          <p class="text-xs text-center text-surface-400">
+          <p class="text-surface-400 text-center text-xs">
             {{
               $t(
                 "settings.data_management.reset_hint",
@@ -374,16 +318,11 @@
       </template>
     </GenericCard>
     <!-- Section 4: API Management -->
-    <GenericCard
-      icon="mdi-api"
-      icon-color="primary"
-      highlight-color="blue"
-      :fill-height="false"
-    >
+    <GenericCard icon="mdi-api" icon-color="primary" highlight-color="blue" :fill-height="false">
       <template #title>
-        <span class="text-lg font-semibold">{{
-          $t("settings.api_management.title", "API Management")
-        }}</span>
+        <span class="text-lg font-semibold">
+          {{ $t("settings.api_management.title", "API Management") }}
+        </span>
       </template>
       <template #title-right>
         <UAlert
@@ -391,7 +330,7 @@
           icon="i-mdi-lock"
           color="warning"
           variant="soft"
-          class="text-sm p-1 inline-flex items-center"
+          class="inline-flex items-center p-1 text-sm"
         >
           <template #description>
             <span class="text-sm">
@@ -406,7 +345,7 @@
         </UAlert>
       </template>
       <template #content>
-        <div class="px-4 py-4 space-y-3">
+        <div class="space-y-3 px-4 py-4">
           <UButton
             color="primary"
             variant="soft"
@@ -415,11 +354,9 @@
             :disabled="!user.loggedIn"
             @click="navigateToApiPage"
           >
-            {{
-              $t("settings.api_management.manage_tokens", "Manage API Tokens")
-            }}
+            {{ $t("settings.api_management.manage_tokens", "Manage API Tokens") }}
           </UButton>
-          <p class="text-xs text-center text-surface-400">
+          <p class="text-surface-400 text-center text-xs">
             {{
               $t(
                 "settings.api_management.hint",
@@ -437,144 +374,144 @@
   </div>
 </template>
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import { useRouter } from "vue-router";
-import { usePreferencesStore } from "@/stores/preferences";
-import { useTarkovStore } from "@/stores/tarkov";
-import { GAME_EDITIONS } from "@/utils/constants";
-import GenericCard from "@/components/ui/GenericCard.vue";
-import AccountDeletionCard from "@/features/settings/AccountDeletionCard.vue";
-import DataMigrationCard from "@/features/settings/DataMigrationCard.vue";
+  import { computed, ref } from "vue";
+  import { useRouter } from "vue-router";
+  import { usePreferencesStore } from "@/stores/preferences";
+  import { useTarkovStore } from "@/stores/tarkov";
+  import { GAME_EDITIONS } from "@/utils/constants";
+  import GenericCard from "@/components/ui/GenericCard.vue";
+  import AccountDeletionCard from "@/features/settings/AccountDeletionCard.vue";
+  import DataMigrationCard from "@/features/settings/DataMigrationCard.vue";
 
-// Page meta
-definePageMeta({
-  title: "Settings",
-});
+  // Page meta
+  definePageMeta({
+    title: "Settings",
+  });
 
-// Composables
-const { $supabase } = useNuxtApp();
-const router = useRouter();
-const toast = useToast();
-const preferencesStore = usePreferencesStore();
-const tarkovStore = useTarkovStore();
-const selectUi = {};
-const selectMenuUi = {
-  container: "z-[9999]",
-  background: "bg-surface-900",
-  shadow: "shadow-xl",
-  rounded: "rounded-lg",
-  ring: "ring-1 ring-white/10",
-  padding: "p-1",
-  option: {
-    base: "px-3 py-2 text-sm cursor-pointer transition-colors rounded",
-    inactive: "text-surface-200 hover:bg-surface-800 hover:text-white",
-    active: "bg-surface-800 text-white",
-    selected: "bg-primary-500/10 text-primary-100 ring-1 ring-primary-500",
-  },
-};
-// Reactive state
-const resetting = ref(false);
+  // Composables
+  const { $supabase } = useNuxtApp();
+  const router = useRouter();
+  const toast = useToast();
+  const preferencesStore = usePreferencesStore();
+  const tarkovStore = useTarkovStore();
+  const selectUi = {};
+  const selectMenuUi = {
+    container: "z-[9999]",
+    background: "bg-surface-900",
+    shadow: "shadow-xl",
+    rounded: "rounded-lg",
+    ring: "ring-1 ring-white/10",
+    padding: "p-1",
+    option: {
+      base: "px-3 py-2 text-sm cursor-pointer transition-colors rounded",
+      inactive: "text-surface-200 hover:bg-surface-800 hover:text-white",
+      active: "bg-surface-800 text-white",
+      selected: "bg-primary-500/10 text-primary-100 ring-1 ring-primary-500",
+    },
+  };
+  // Reactive state
+  const resetting = ref(false);
 
-// Computed properties
-const user = computed(() => ({
-  loggedIn: $supabase.user.loggedIn,
-}));
-// Streamer mode
-const streamerMode = computed({
-  get() {
-    return preferencesStore.getStreamerMode;
-  },
-  set(newValue) {
-    preferencesStore.setStreamerMode(newValue);
-  },
-});
-// Game edition
-const gameEditionOptions = computed(() =>
-  GAME_EDITIONS.map((edition) => ({
-    label: edition.title,
-    value: edition.value,
-  }))
-);
-const selectedGameEdition = computed({
-  get() {
-    return tarkovStore.getGameEdition();
-  },
-  set(newValue: number) {
-    tarkovStore.setGameEdition(newValue);
-  },
-});
+  // Computed properties
+  const user = computed(() => ({
+    loggedIn: $supabase.user.loggedIn,
+  }));
+  // Streamer mode
+  const streamerMode = computed({
+    get() {
+      return preferencesStore.getStreamerMode;
+    },
+    set(newValue) {
+      preferencesStore.setStreamerMode(newValue);
+    },
+  });
+  // Game edition
+  const gameEditionOptions = computed(() =>
+    GAME_EDITIONS.map((edition) => ({
+      label: edition.title,
+      value: edition.value,
+    }))
+  );
+  const selectedGameEdition = computed({
+    get() {
+      return tarkovStore.getGameEdition();
+    },
+    set(newValue: number) {
+      tarkovStore.setGameEdition(newValue);
+    },
+  });
 
-// Methods
-const navigateToApiPage = () => {
-  router.push("/api");
-};
+  // Methods
+  const navigateToApiPage = () => {
+    router.push("/api");
+  };
 
-const resetPvPData = async () => {
-  resetting.value = true;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (tarkovStore as any).resetPvPData();
-    toast.add({
-      title: "PvP Data Reset",
-      description: "Your PvP progress has been reset successfully.",
-      color: "success",
-    });
-    // Modal will auto-close after successful action
-  } catch (error) {
-    console.error("Error resetting PvP data:", error);
-    toast.add({
-      title: "Reset Failed",
-      description: "Failed to reset PvP data. Please try again.",
-      color: "error",
-    });
-  } finally {
-    resetting.value = false;
-  }
-};
+  const resetPvPData = async () => {
+    resetting.value = true;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (tarkovStore as any).resetPvPData();
+      toast.add({
+        title: "PvP Data Reset",
+        description: "Your PvP progress has been reset successfully.",
+        color: "success",
+      });
+      // Modal will auto-close after successful action
+    } catch (error) {
+      console.error("Error resetting PvP data:", error);
+      toast.add({
+        title: "Reset Failed",
+        description: "Failed to reset PvP data. Please try again.",
+        color: "error",
+      });
+    } finally {
+      resetting.value = false;
+    }
+  };
 
-const resetPvEData = async () => {
-  resetting.value = true;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (tarkovStore as any).resetPvEData();
-    toast.add({
-      title: "PvE Data Reset",
-      description: "Your PvE progress has been reset successfully.",
-      color: "success",
-    });
-    // Modal will auto-close after successful action
-  } catch (error) {
-    console.error("Error resetting PvE data:", error);
-    toast.add({
-      title: "Reset Failed",
-      description: "Failed to reset PvE data. Please try again.",
-      color: "error",
-    });
-  } finally {
-    resetting.value = false;
-  }
-};
+  const resetPvEData = async () => {
+    resetting.value = true;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (tarkovStore as any).resetPvEData();
+      toast.add({
+        title: "PvE Data Reset",
+        description: "Your PvE progress has been reset successfully.",
+        color: "success",
+      });
+      // Modal will auto-close after successful action
+    } catch (error) {
+      console.error("Error resetting PvE data:", error);
+      toast.add({
+        title: "Reset Failed",
+        description: "Failed to reset PvE data. Please try again.",
+        color: "error",
+      });
+    } finally {
+      resetting.value = false;
+    }
+  };
 
-const resetAllData = async () => {
-  resetting.value = true;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (tarkovStore as any).resetAllData();
-    toast.add({
-      title: "All Data Reset",
-      description: "All your progress has been reset successfully.",
-      color: "success",
-    });
-    // Modal will auto-close after successful action
-  } catch (error) {
-    console.error("Error resetting all data:", error);
-    toast.add({
-      title: "Reset Failed",
-      description: "Failed to reset data. Please try again.",
-      color: "error",
-    });
-  } finally {
-    resetting.value = false;
-  }
-};
+  const resetAllData = async () => {
+    resetting.value = true;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (tarkovStore as any).resetAllData();
+      toast.add({
+        title: "All Data Reset",
+        description: "All your progress has been reset successfully.",
+        color: "success",
+      });
+      // Modal will auto-close after successful action
+    } catch (error) {
+      console.error("Error resetting all data:", error);
+      toast.add({
+        title: "Reset Failed",
+        description: "Failed to reset data. Please try again.",
+        color: "error",
+      });
+    } finally {
+      resetting.value = false;
+    }
+  };
 </script>

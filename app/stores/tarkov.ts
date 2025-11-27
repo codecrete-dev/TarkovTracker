@@ -48,12 +48,9 @@ const tarkovActions = {
       !this.currentGameMode ||
       !this.pvp ||
       !this.pve ||
-      ((this as unknown as Record<string, unknown>).level !== undefined &&
-        !this.pvp?.level);
+      ((this as unknown as Record<string, unknown>).level !== undefined && !this.pvp?.level);
     if (needsMigration) {
-      console.log(
-        "Migrating legacy data structure to gamemode-aware structure"
-      );
+      console.log("Migrating legacy data structure to gamemode-aware structure");
       const currentState = JSON.parse(JSON.stringify(this.$state));
       const migratedData = migrateToGameModeStructure(currentState);
       this.$patch(migratedData);
@@ -336,10 +333,7 @@ export const useTarkovStore = defineStore("swapTarkov", {
                 console.log(`[TarkovStore] Data backed up to ${backupKey}`);
                 localStorage.removeItem("progress");
               } catch (e) {
-                console.error(
-                  "[TarkovStore] Error backing up/clearing localStorage:",
-                  e
-                );
+                console.error("[TarkovStore] Error backing up/clearing localStorage:", e);
               }
             }
             return JSON.parse(JSON.stringify(defaultState)) as UserState;
@@ -427,9 +421,7 @@ export async function initializeTarkovSync() {
       // If Supabase has ANY data (even if "empty"), use it as source of truth
       // This prevents overwriting existing Supabase data
       if (data) {
-        console.log(
-          "[TarkovStore] Loading data from Supabase (user exists in DB)"
-        );
+        console.log("[TarkovStore] Loading data from Supabase (user exists in DB)");
         tarkovStore.$patch({
           currentGameMode: data.current_game_mode || GAME_MODES.PVP,
           gameEdition: data.game_edition || 1,

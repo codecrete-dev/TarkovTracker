@@ -15,13 +15,13 @@ const MAP_NAME_MAPPING: { [key: string]: string } = {
  */
 export function useMapData() {
   const metadataStore = useMetadataStore();
-  
+
   // Reactive data from store
   const maps = computed(() => metadataStore.mapsWithSvg);
   const rawMaps = computed(() => metadataStore.maps);
   const loading = computed(() => metadataStore.loading);
   const error = computed(() => metadataStore.error);
-  
+
   // Computed properties
   const mapsWithSvg = computed(() => metadataStore.mapsWithSvg);
   const mapsByAvailability = computed(() => {
@@ -36,24 +36,24 @@ export function useMapData() {
     });
     return { withSvg, withoutSvg };
   });
-  
+
   // Utility functions that delegate to the store
   const getMapById = (mapId: string): TarkovMap | undefined => {
     return metadataStore.getMapById(mapId);
   };
-  
+
   const getMapByName = (mapName: string): TarkovMap | undefined => {
     return metadataStore.getMapByName(mapName);
   };
-  
+
   const getStaticMapKey = (mapName: string): string => {
     return metadataStore.getStaticMapKey(mapName);
   };
-  
+
   const hasMapSvg = (mapId: string): boolean => {
     return metadataStore.hasMapSvg(mapId);
   };
-  
+
   return {
     // Reactive data
     maps,
