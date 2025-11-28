@@ -30,10 +30,19 @@ serve(async (req) => {
 
     // Parse and validate request body
     const body = await req.json()
-    const fieldsError = validateRequiredFields(body, ["name", "join_code"])
+    // Accept legacy "password" as alias for join_code for backward compatibility
+    const joinCode =
+      typeof body.join_code === "string"
+        ? body.join_code
+        : typeof (body as Record<string, unknown>).password === "string"
+          ? (body as { password: string }).password
+          : undefined
+
+    const fieldsError = validateRequiredFields({ ...body, join_code: joinCode }, ["name", "join_code"])
     if (fieldsError) return fieldsError
 
-    const { name, join_code, maxMembers = MAX_TEAM_MEMBERS } = body
+    const { name, maxMembers = MAX_TEAM_MEMBERS } = body
+    const join_code = joinCode as string
 
     // Validate team name length
     if (typeof name !== "string" || name.trim().length === 0) {
