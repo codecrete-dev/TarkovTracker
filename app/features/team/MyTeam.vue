@@ -157,6 +157,20 @@
     loading.value.createTeam = true;
     try {
       validateAuth();
+      // If backend thinks we're already in a team, sync local state and abort
+      if (!systemStore.$state.team) {
+        const { data: membership } = await $supabase.client
+          .from("team_memberships")
+          .select("team_id")
+          .eq("user_id", $supabase.user.id)
+          .maybeSingle();
+        if (membership?.team_id) {
+          systemStore.$patch({ team: membership.team_id });
+          showNotification(t("page.team.card.myteam.create_team_error_ui_update"), "error");
+          loading.value.createTeam = false;
+          return;
+        }
+      }
       const result = (await callTeamFunction("createTeam")) as CreateTeamResponse;
       if (!result?.team) {
         throw new Error(t("page.team.card.myteam.create_team_error_ui_update"));

@@ -54,6 +54,19 @@ serve(async (req) => {
     }
 
     if (existingMembership && existingMembership.length > 0) {
+      const existingTeamId = existingMembership[0].team_id
+      if (existingTeamId) {
+        const { error: systemHealError } = await supabase
+          .from("user_system")
+          .upsert({
+            user_id: user.id,
+            team_id: existingTeamId,
+            updated_at: new Date().toISOString()
+          })
+        if (systemHealError) {
+          console.error("user_system heal failed:", systemHealError)
+        }
+      }
       return createErrorResponse("You are already a member of a team. Leave your current team first.", 400)
     }
 
