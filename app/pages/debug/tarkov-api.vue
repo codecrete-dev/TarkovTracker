@@ -58,7 +58,7 @@
                 result.playerLevels
                   ?.slice(0, 5)
                   .map((l: any) => l.level)
-                  .join(", ")
+                  .join(', ')
               }}
             </div>
           </template>
@@ -89,11 +89,11 @@
   </div>
 </template>
 <script setup lang="ts">
-  import { storeToRefs } from "pinia";
-  import { computed } from "vue";
-  import { useMetadataStore } from "@/stores/useMetadata";
-  import { useTarkovStore } from "@/stores/useTarkov";
-  import { API_GAME_MODES, GAME_MODES } from "@/utils/constants";
+  import { storeToRefs } from 'pinia';
+  import { computed } from 'vue';
+  import { useMetadataStore } from '@/stores/useMetadata';
+  import { useTarkovStore } from '@/stores/useTarkov';
+  import { API_GAME_MODES, GAME_MODES } from '@/utils/constants';
   const tarkovStore = useTarkovStore();
   const metadataStore = useMetadataStore();
   const gameMode = computed(
@@ -117,19 +117,19 @@
     return [
       {
         label: `Traders (${result.value.traders?.length || 0})`,
-        slot: "traders",
+        slot: 'traders',
       },
       {
         label: `Tasks (${result.value.tasks?.length || 0})`,
-        slot: "tasks",
+        slot: 'tasks',
       },
       {
         label: `Maps (${result.value.maps?.length || 0})`,
-        slot: "maps",
+        slot: 'maps',
       },
       {
         label: `Player Levels (${result.value.playerLevels?.length || 0})`,
-        slot: "player-levels",
+        slot: 'player-levels',
       },
     ];
   });

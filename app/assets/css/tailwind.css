@@ -1,15 +1,15 @@
-@import "tailwindcss";
-@import "@nuxt/ui";
+@import 'tailwindcss';
+@import '@nuxt/ui';
 /* Smooth scrolling for hash anchor navigation */
 html {
   scroll-behavior: smooth;
 }
 /* Tailwind v4 + Nuxt UI v4 theme tokens */
 @theme {
-  --font-sans: "Share Tech Mono", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Share Tech Mono', ui-sans-serif, system-ui, sans-serif;
   --font-mono:
-    "Share Tech Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    "Courier New", monospace;
+    'Share Tech Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
   /* Primary (brand tan) */
   --color-primary-50: hsl(42 31.3% 93.7%);
   --color-primary-100: hsl(39 28.8% 88.4%);

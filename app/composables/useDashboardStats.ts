@@ -1,9 +1,9 @@
-import { computed } from "vue";
-import { useMetadataStore } from "@/stores/useMetadata";
-import { useProgressStore } from "@/stores/useProgress";
-import { useTarkovStore } from "@/stores/useTarkov";
-import type { TaskObjective } from "@/types/tarkov";
-import { CURRENCY_ITEM_IDS } from "@/utils/constants";
+import { computed } from 'vue';
+import { useMetadataStore } from '@/stores/useMetadata';
+import { useProgressStore } from '@/stores/useProgress';
+import { useTarkovStore } from '@/stores/useTarkov';
+import type { TaskObjective } from '@/types/tarkov';
+import { CURRENCY_ITEM_IDS } from '@/utils/constants';
 export function useDashboardStats() {
   const progressStore = useProgressStore();
   const metadataStore = useMetadataStore();
@@ -13,7 +13,7 @@ export function useDashboardStats() {
     if (!metadataStore.tasks) return [];
     const currentFaction = tarkovStore.getPMCFaction();
     return metadataStore.tasks.filter(
-      (task) => task && (task.factionName === "Any" || task.factionName === currentFaction)
+      (task) => task && (task.factionName === 'Any' || task.factionName === currentFaction)
     );
   });
   // Available tasks count
@@ -34,13 +34,13 @@ export function useDashboardStats() {
   const neededItemTaskObjectives = computed(() => {
     if (!metadataStore.objectives) return [];
     const itemObjectiveTypes = [
-      "giveItem",
-      "findItem",
-      "findQuestItem",
-      "giveQuestItem",
-      "plantQuestItem",
-      "plantItem",
-      "buildWeapon",
+      'giveItem',
+      'findItem',
+      'findQuestItem',
+      'giveQuestItem',
+      'plantQuestItem',
+      'plantItem',
+      'buildWeapon',
     ];
     return metadataStore.objectives.filter(
       (obj) => obj && obj.type && itemObjectiveTypes.includes(obj.type)
@@ -89,7 +89,7 @@ export function useDashboardStats() {
       relatedTask &&
       relatedTask.factionName &&
       currentPMCFaction !== undefined &&
-      (relatedTask.factionName === "Any" || relatedTask.factionName === currentPMCFaction)
+      (relatedTask.factionName === 'Any' || relatedTask.factionName === currentPMCFaction)
     );
   };
   // Completed task items count
@@ -110,8 +110,8 @@ export function useDashboardStats() {
       const taskCompletion = progressStore.tasksCompletions[objective.taskId];
       const objectiveCompletion = progressStore.objectiveCompletions[objective.id];
       if (
-        (taskCompletion && taskCompletion["self"]) ||
-        (objectiveCompletion && objectiveCompletion["self"]) ||
+        (taskCompletion && taskCompletion['self']) ||
+        (objectiveCompletion && objectiveCompletion['self']) ||
         (objective.count &&
           objective.id &&
           objective.count <= tarkovStore.getObjectiveCount(objective.id))
@@ -175,7 +175,7 @@ export function useDashboardStats() {
           imageLink: trader.imageLink,
           totalTasks,
           completedTasks,
-          percentage: totalTasks > 0 ? ((completedTasks / totalTasks) * 100).toFixed(1) : "0.0",
+          percentage: totalTasks > 0 ? ((completedTasks / totalTasks) * 100).toFixed(1) : '0.0',
         };
       })
       .filter((stats) => stats.totalTasks > 0); // Only show traders with at least 1 task

@@ -1,6 +1,7 @@
 {
   // https://nuxt.com/docs/guide/concepts/typescript
   "files": [],
+  "exclude": ["supabase/functions/**/*"],
   "compilerOptions": {
     "types": ["node", "vitest"],
     "baseUrl": ".",

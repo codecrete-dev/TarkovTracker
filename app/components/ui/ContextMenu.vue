@@ -21,8 +21,8 @@
   </Teleport>
 </template>
 <script setup lang="ts">
-  import { onClickOutside } from "@vueuse/core";
-  import { nextTick, ref } from "vue";
+  import { onClickOutside } from '@vueuse/core';
+  import { nextTick, ref } from 'vue';
   const visible = ref(false);
   const x = ref(0);
   const y = ref(0);
@@ -59,15 +59,15 @@
   onClickOutside(menuRef, close);
   // Close on escape key
   const handleKeydown = (event: KeyboardEvent) => {
-    if (event.key === "Escape" && visible.value) {
+    if (event.key === 'Escape' && visible.value) {
       close();
     }
   };
   onMounted(() => {
-    document.addEventListener("keydown", handleKeydown);
+    document.addEventListener('keydown', handleKeydown);
   });
   onUnmounted(() => {
-    document.removeEventListener("keydown", handleKeydown);
+    document.removeEventListener('keydown', handleKeydown);
   });
   defineExpose({ open, close });
 </script>

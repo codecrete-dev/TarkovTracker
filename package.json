@@ -11,7 +11,7 @@
     "deps": "npx taze --r --I",
     "lint": "eslint app --max-warnings=0",
     "lint:fix": "eslint app --fix",
-    "format": "prettier --write \"app/**/*.{js,ts,tsx,vue,json,json5,css,scss,md}\" \"nuxt.config.ts\" \"app.config.ts\" \"vitest.config.ts\" \"test-setup.ts\" && eslint app --fix"
+    "format": "prettier --write \"app/**/*.{js,ts,tsx,vue,json,json5,css,scss,md}\" \"docs/**/*.{md,markdown}\" \"nuxt.config.ts\" \"app.config.ts\" \"vitest.config.ts\" \"test-setup.ts\" && eslint app --fix"
   },
   "dependencies": {
     "@iconify-json/mdi": "^1.2.3",
@@ -51,10 +51,10 @@
     "autoprefixer": "^10.4.22",
     "eslint-plugin-import-x": "^4.16.1",
     "eslint-plugin-simple-import-sort": "^12.1.1",
-    "happy-dom": "^20.0.10",
+    "happy-dom": "^20.0.11",
     "jsdom": "^27.2.0",
     "postcss": "^8.5.6",
-    "prettier": "^3.7.1",
+    "prettier": "^3.7.2",
     "prettier-plugin-tailwindcss": "^0.7.1",
     "supabase": "^2.63.1",
     "tailwindcss": "^4.1.17",

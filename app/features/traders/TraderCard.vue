@@ -45,14 +45,14 @@
   </GenericCard>
 </template>
 <script setup lang="ts">
-  import GenericCard from "@/components/ui/GenericCard.vue";
-  import type { Trader } from "@/types/tarkov";
+  import GenericCard from '@/components/ui/GenericCard.vue';
+  import type { Trader } from '@/types/tarkov';
   defineProps<{
     trader: Trader;
     level: number;
     reputation: number;
   }>();
   defineEmits<{
-    (e: "update:level" | "update:reputation", value: number): void;
+    (e: 'update:level' | 'update:reputation', value: number): void;
   }>();
 </script>

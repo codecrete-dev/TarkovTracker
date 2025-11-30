@@ -26,11 +26,11 @@
   </div>
 </template>
 <script setup lang="ts">
-  import { useBreakpoints } from "@vueuse/core";
-  import { computed } from "vue";
-  import { useRouter } from "vue-router";
-  import { useTarkovStore } from "@/stores/useTarkov";
-  import { getEditionName, PMC_FACTIONS } from "@/utils/constants";
+  import { useBreakpoints } from '@vueuse/core';
+  import { computed } from 'vue';
+  import { useRouter } from 'vue-router';
+  import { useTarkovStore } from '@/stores/useTarkov';
+  import { getEditionName, PMC_FACTIONS } from '@/utils/constants';
   defineProps({
     isCollapsed: {
       type: Boolean,
@@ -44,12 +44,12 @@
     mobile: 0,
     md: 960,
   });
-  const mdAndDown = breakpoints.smaller("md");
+  const mdAndDown = breakpoints.smaller('md');
   function navigateToSettings() {
-    router.push("/settings");
+    router.push('/settings');
   }
   const currentFaction = computed(() => tarkovStore.getPMCFaction());
-  function setFaction(faction: "USEC" | "BEAR") {
+  function setFaction(faction: 'USEC' | 'BEAR') {
     if (faction !== currentFaction.value) {
       tarkovStore.setPMCFaction(faction);
     }

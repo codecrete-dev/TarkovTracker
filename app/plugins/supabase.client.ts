@@ -1,5 +1,5 @@
-import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
-import { reactive } from "vue";
+import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
+import { reactive } from 'vue';
 type SupabaseUser = {
   id: string | null;
   loggedIn: boolean;
@@ -45,16 +45,16 @@ export default defineNuxtPlugin(() => {
       client: stubClient,
       user: stubUser,
       signInWithOAuth: async () => {
-        throw new Error("Supabase env not configured (VITE_SUPABASE_URL/ANON_KEY)");
+        throw new Error('Supabase env not configured (VITE_SUPABASE_URL/ANON_KEY)');
       },
       signOut: async () => {},
     };
   };
   if (!supabaseUrl || !supabaseKey) {
-    console.error("[Supabase] Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY");
+    console.error('[Supabase] Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY');
     // Fail fast in production to avoid silent bad deploys
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("Supabase configuration missing");
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Supabase configuration missing');
     }
     const stub = buildStub();
     return { provide: { supabase: stub } };
@@ -79,23 +79,23 @@ export default defineNuxtPlugin(() => {
       user.loggedIn = true;
       user.email = sessionUser.email || null;
       user.provider = provider;
-      if (provider === "discord") {
+      if (provider === 'discord') {
         user.username =
           sessionUser.user_metadata?.full_name ||
-          sessionUser.user_metadata?.name?.split("#")[0] ||
+          sessionUser.user_metadata?.name?.split('#')[0] ||
           sessionUser.user_metadata?.custom_claims?.global_name ||
-          sessionUser.email?.split("@")[0] ||
+          sessionUser.email?.split('@')[0] ||
           null;
         user.displayName = user.username;
-      } else if (provider === "twitch") {
+      } else if (provider === 'twitch') {
         user.username =
           sessionUser.user_metadata?.preferred_username ||
           sessionUser.user_metadata?.name ||
-          sessionUser.email?.split("@")[0] ||
+          sessionUser.email?.split('@')[0] ||
           null;
         user.displayName = sessionUser.user_metadata?.full_name || user.username;
       } else {
-        user.username = sessionUser.user_metadata?.name || sessionUser.email?.split("@")[0] || null;
+        user.username = sessionUser.user_metadata?.name || sessionUser.email?.split('@')[0] || null;
         user.displayName = sessionUser.user_metadata?.full_name || user.username;
       }
       const avatarUrl =
@@ -120,21 +120,21 @@ export default defineNuxtPlugin(() => {
   supabase.auth.getSession().then(({ data: { session } }) => {
     updateUserState(session?.user || null);
     // Clean up OAuth hash after session is established
-    if (session && window.location.hash.includes("access_token")) {
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
-      console.log("[Supabase] Cleaned OAuth hash from URL after session established");
+    if (session && window.location.hash.includes('access_token')) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      console.log('[Supabase] Cleaned OAuth hash from URL after session established');
     }
   });
   supabase.auth.onAuthStateChange((_event, session) => {
     updateUserState(session?.user || null);
     // Clean up OAuth hash on auth state change
-    if (session && window.location.hash.includes("access_token")) {
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
-      console.log("[Supabase] Cleaned OAuth hash from URL on auth state change");
+    if (session && window.location.hash.includes('access_token')) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      console.log('[Supabase] Cleaned OAuth hash from URL on auth state change');
     }
   });
   const signInWithOAuth = async (
-    provider: "twitch" | "discord",
+    provider: 'twitch' | 'discord',
     options?: { skipBrowserRedirect?: boolean; redirectTo?: string }
   ) => {
     const { data, error } = await supabase.auth.signInWithOAuth({
@@ -150,9 +150,9 @@ export default defineNuxtPlugin(() => {
   const signOut = async () => {
     // Clear game progress from localStorage to prevent cross-user contamination
     // This prevents User A's data from being migrated to User B's account
-    if (typeof window !== "undefined") {
-      console.log("[Supabase] Clearing game progress localStorage on logout");
-      localStorage.removeItem("progress");
+    if (typeof window !== 'undefined') {
+      console.log('[Supabase] Clearing game progress localStorage on logout');
+      localStorage.removeItem('progress');
       // Keep UI preferences (user store) but you may want to clear user-specific data
       // localStorage.removeItem("user"); // Uncomment if user data should also be cleared
     }

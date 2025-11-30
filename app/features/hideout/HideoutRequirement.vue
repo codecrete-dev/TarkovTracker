@@ -94,9 +94,9 @@
   </div>
 </template>
 <script setup lang="ts">
-  import { computed, nextTick, ref } from "vue";
-  import GameItem from "@/components/ui/GameItem.vue";
-  import { useTarkovStore } from "@/stores/useTarkov";
+  import { computed, nextTick, ref } from 'vue';
+  import GameItem from '@/components/ui/GameItem.vue';
+  import { useTarkovStore } from '@/stores/useTarkov';
   interface Props {
     requirement: {
       id: string;

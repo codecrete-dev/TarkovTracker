@@ -79,7 +79,7 @@
   </div>
 </template>
 <script setup lang="ts">
-  import { computed } from "vue";
+  import { computed } from 'vue';
   interface Props {
     // Header props
     title?: string;
@@ -90,7 +90,7 @@
     titleClasses?: string;
     headerClasses?: string;
     // Styling props
-    highlightColor?: "green" | "blue" | "red" | "tan" | "purple" | "secondary" | "accent";
+    highlightColor?: 'green' | 'blue' | 'red' | 'tan' | 'purple' | 'secondary' | 'accent';
     fillHeight?: boolean;
     showDivider?: boolean;
     // Layout props
@@ -102,21 +102,21 @@
     avatarClass?: string;
   }
   const props = withDefaults(defineProps<Props>(), {
-    title: "",
-    subtitle: "",
-    icon: "",
-    avatar: "",
-    iconColor: "white",
-    titleClasses: "",
-    headerClasses: "",
-    highlightColor: "accent",
+    title: '',
+    subtitle: '',
+    icon: '',
+    avatar: '',
+    iconColor: 'white',
+    titleClasses: '',
+    headerClasses: '',
+    highlightColor: 'accent',
     fillHeight: true,
     showDivider: true,
-    contentClasses: "",
-    footerClasses: "",
-    cardClass: "",
+    contentClasses: '',
+    footerClasses: '',
+    cardClass: '',
     avatarHeight: 50,
-    avatarClass: "",
+    avatarClass: '',
   });
   // Compute slot existence
   const slots = useSlots();
@@ -127,37 +127,37 @@
     const classes: Record<string, boolean> = {};
     // Map highlight colors to Tailwind gradient classes
     switch (props.highlightColor) {
-      case "green":
+      case 'green':
         classes[
-          "bg-gradient-to-r from-[rgba(1,36,0,0.15)] via-[rgba(15,121,9,0.15)] to-[rgba(0,83,0,0.15)]"
+          'bg-gradient-to-r from-[rgba(1,36,0,0.15)] via-[rgba(15,121,9,0.15)] to-[rgba(0,83,0,0.15)]'
         ] = true;
         break;
-      case "blue":
+      case 'blue':
         classes[
-          "bg-gradient-to-r from-[rgba(0,0,36,0.15)] via-[rgba(0,0,121,0.15)] to-[rgba(0,0,83,0.15)]"
+          'bg-gradient-to-r from-[rgba(0,0,36,0.15)] via-[rgba(0,0,121,0.15)] to-[rgba(0,0,83,0.15)]'
         ] = true;
         break;
-      case "red":
+      case 'red':
         classes[
-          "bg-gradient-to-r from-[rgba(36,0,0,0.15)] via-[rgba(121,0,0,0.15)] to-[rgba(83,0,0,0.15)]"
+          'bg-gradient-to-r from-[rgba(36,0,0,0.15)] via-[rgba(121,0,0,0.15)] to-[rgba(83,0,0,0.15)]'
         ] = true;
         break;
-      case "tan":
+      case 'tan':
         classes[
-          "bg-gradient-to-r from-[rgba(36,36,0,0.15)] via-[rgba(121,121,0,0.15)] to-[rgba(83,83,0,0.15)]"
+          'bg-gradient-to-r from-[rgba(36,36,0,0.15)] via-[rgba(121,121,0,0.15)] to-[rgba(83,83,0,0.15)]'
         ] = true;
         break;
-      case "purple":
+      case 'purple':
         classes[
-          "bg-gradient-to-r from-[rgba(36,0,36,0.15)] via-[rgba(121,0,121,0.15)] to-[rgba(83,0,83,0.15)]"
+          'bg-gradient-to-r from-[rgba(36,0,36,0.15)] via-[rgba(121,0,121,0.15)] to-[rgba(83,0,83,0.15)]'
         ] = true;
         break;
-      case "secondary":
-        classes["bg-gradient-to-br from-brand-700 via-brand-300 to-brand-500"] = true;
+      case 'secondary':
+        classes['bg-gradient-to-br from-brand-700 via-brand-300 to-brand-500'] = true;
         break;
-      case "accent":
+      case 'accent':
       default:
-        classes["bg-gradient-to-br from-accent-800 via-accent-700 to-accent-600"] = true;
+        classes['bg-gradient-to-br from-accent-800 via-accent-700 to-accent-600'] = true;
         break;
     }
     return classes;

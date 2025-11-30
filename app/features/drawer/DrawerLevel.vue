@@ -3,7 +3,7 @@
     <template v-if="isCollapsed">
       <div class="text-center">
         <div class="mb-1 text-[0.7em] text-gray-400">
-          {{ t("navigation_drawer.level") }}
+          {{ t('navigation_drawer.level') }}
         </div>
         <h1 class="text-center text-2xl leading-tight font-bold">
           {{ tarkovStore.playerLevel() }}
@@ -32,7 +32,7 @@
           </span>
           <span class="mx-0.5">
             <div class="mb-0.5 text-center text-[0.65em] text-gray-300">
-              {{ t("navigation_drawer.level") }}
+              {{ t('navigation_drawer.level') }}
             </div>
             <div class="text-center">
               <h1
@@ -82,18 +82,18 @@
   </div>
 </template>
 <script setup>
-  import { useBreakpoints } from "@vueuse/core";
-  import { computed, nextTick, ref } from "vue";
-  import { useI18n } from "vue-i18n";
-  import { useMetadataStore } from "@/stores/useMetadata";
-  import { useTarkovStore } from "@/stores/useTarkov";
-  const { t } = useI18n({ useScope: "global" });
+  import { useBreakpoints } from '@vueuse/core';
+  import { computed, nextTick, ref } from 'vue';
+  import { useI18n } from 'vue-i18n';
+  import { useMetadataStore } from '@/stores/useMetadata';
+  import { useTarkovStore } from '@/stores/useTarkov';
+  const { t } = useI18n({ useScope: 'global' });
   // Define breakpoints (matching Vuetify's md breakpoint at 960px)
   const breakpoints = useBreakpoints({
     mobile: 0,
     md: 960,
   });
-  const mdAndDown = breakpoints.smaller("md");
+  const mdAndDown = breakpoints.smaller('md');
   defineProps({
     isCollapsed: {
       type: Boolean,
@@ -111,7 +111,7 @@
   const groupIcon = computed(() => {
     const level = tarkovStore.playerLevel();
     const entry = playerLevels.value.find((pl) => pl.level === level);
-    return entry?.levelBadgeImageLink ?? "";
+    return entry?.levelBadgeImageLink ?? '';
   });
   // Manual level editing logic
   const editingLevel = ref(false);
@@ -150,12 +150,12 @@
 </script>
 <style>
   /* Hide spin buttons for number input */
-  input[type="number"]::-webkit-inner-spin-button,
-  input[type="number"]::-webkit-outer-spin-button {
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
     -webkit-appearance: none !important;
     margin: 0;
   }
-  input[type="number"] {
+  input[type='number'] {
     appearance: textfield !important;
     -moz-appearance: textfield !important;
   }

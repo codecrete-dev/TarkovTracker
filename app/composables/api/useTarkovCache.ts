@@ -1,6 +1,6 @@
-import { computed, onMounted, ref } from "vue";
-import { useMetadataStore } from "@/stores/useMetadata";
-import { API_GAME_MODES, GAME_MODES } from "@/utils/constants";
+import { computed, onMounted, ref } from 'vue';
+import { useMetadataStore } from '@/stores/useMetadata';
+import { API_GAME_MODES, GAME_MODES } from '@/utils/constants';
 import {
   CACHE_CONFIG,
   type CacheStats,
@@ -10,8 +10,7 @@ import {
   clearCacheByGameMode,
   clearCacheEntry,
   getCacheStats,
-} from "@/utils/tarkovCache";
-
+} from '@/utils/tarkovCache';
 /**
  * Composable for managing Tarkov data cache
  * Provides utilities for viewing cache status, clearing cache, and forcing refreshes
@@ -25,7 +24,7 @@ export function useTarkovCache() {
     if (!stats.value) {
       return {
         totalEntries: 0,
-        totalSizeMB: "0",
+        totalSizeMB: '0',
         entries: [],
         hasCache: false,
       };
@@ -44,7 +43,7 @@ export function useTarkovCache() {
   });
   // Helper to format minutes to human readable
   function formatAge(minutes: number): string {
-    if (minutes < 0) return "Expired";
+    if (minutes < 0) return 'Expired';
     if (minutes < 60) return `${minutes}m`;
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
@@ -52,20 +51,20 @@ export function useTarkovCache() {
   }
   // Refresh cache statistics
   async function refreshStats() {
-    if (typeof window === "undefined") return;
+    if (typeof window === 'undefined') return;
     isLoading.value = true;
     try {
       stats.value = await getCacheStats();
       lastRefresh.value = new Date();
     } catch (error) {
-      console.error("[TarkovCache] Error refreshing stats:", error);
+      console.error('[TarkovCache] Error refreshing stats:', error);
     } finally {
       isLoading.value = false;
     }
   }
   // Clear all cached Tarkov data
   async function clearAll() {
-    if (typeof window === "undefined") return;
+    if (typeof window === 'undefined') return;
     isLoading.value = true;
     try {
       await clearAllCache();
@@ -74,14 +73,14 @@ export function useTarkovCache() {
       await metadataStore.fetchAllData(true);
       await refreshStats();
     } catch (error) {
-      console.error("[TarkovCache] Error clearing all cache:", error);
+      console.error('[TarkovCache] Error clearing all cache:', error);
     } finally {
       isLoading.value = false;
     }
   }
   // Clear cache for a specific game mode
   async function clearByGameMode(gameMode: keyof typeof GAME_MODES) {
-    if (typeof window === "undefined") return;
+    if (typeof window === 'undefined') return;
     const apiGameMode = API_GAME_MODES[GAME_MODES[gameMode]];
     isLoading.value = true;
     try {
@@ -94,8 +93,8 @@ export function useTarkovCache() {
     }
   }
   // Clear a specific cache entry
-  async function clearEntry(type: CacheType, gameMode: string, lang: string = "en") {
-    if (typeof window === "undefined") return;
+  async function clearEntry(type: CacheType, gameMode: string, lang: string = 'en') {
+    if (typeof window === 'undefined') return;
     isLoading.value = true;
     try {
       await clearCacheEntry(type, gameMode, lang);
@@ -108,7 +107,7 @@ export function useTarkovCache() {
   }
   // Force refresh all Tarkov data (clear cache and refetch)
   async function forceRefreshAll() {
-    if (typeof window === "undefined") return;
+    if (typeof window === 'undefined') return;
     isLoading.value = true;
     try {
       // Clear all cache
@@ -118,14 +117,14 @@ export function useTarkovCache() {
       await metadataStore.fetchAllData(true);
       await refreshStats();
     } catch (error) {
-      console.error("[TarkovCache] Error forcing refresh:", error);
+      console.error('[TarkovCache] Error forcing refresh:', error);
     } finally {
       isLoading.value = false;
     }
   }
   // Cleanup expired entries
   async function cleanup() {
-    if (typeof window === "undefined") return;
+    if (typeof window === 'undefined') return;
     isLoading.value = true;
     try {
       const deletedCount = await cleanupExpiredCache();
@@ -133,7 +132,7 @@ export function useTarkovCache() {
       await refreshStats();
       return deletedCount;
     } catch (error) {
-      console.error("[TarkovCache] Error cleaning up:", error);
+      console.error('[TarkovCache] Error cleaning up:', error);
       return 0;
     } finally {
       isLoading.value = false;

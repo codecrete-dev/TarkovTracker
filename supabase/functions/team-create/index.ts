@@ -1,11 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import {
-  authenticateUser,
-  handleCorsPrefligh,
-  validateMethod,
-  validateRequiredFields,
-  createErrorResponse,
-  createSuccessResponse
+    authenticateUser,
+    handleCorsPrefligh,
+    validateMethod,
+    validateRequiredFields,
+    createErrorResponse,
+    createSuccessResponse
 } from "../_shared/auth.ts"
 
 const MAX_TEAM_MEMBERS = 5
@@ -23,7 +23,7 @@ serve(async (req) => {
     // Authenticate user
     const authResult = await authenticateUser(req)
     if ("error" in authResult) {
-      return createErrorResponse(authResult.error, authResult.status)
+      return createErrorResponse(authResult.error, authResult.status, req)
     }
 
     const { user, supabase } = authResult
@@ -38,7 +38,7 @@ serve(async (req) => {
           ? (body as { password: string }).password
           : undefined
 
-    const fieldsError = validateRequiredFields({ ...body, join_code: joinCode }, ["name", "join_code"])
+    const fieldsError = validateRequiredFields(req, { ...body, join_code: joinCode }, ["name", "join_code"])
     if (fieldsError) return fieldsError
 
     const { name, maxMembers = MAX_TEAM_MEMBERS } = body
@@ -46,23 +46,23 @@ serve(async (req) => {
 
     // Validate team name length
     if (typeof name !== "string" || name.trim().length === 0) {
-      return createErrorResponse("Team name cannot be empty", 400)
+      return createErrorResponse("Team name cannot be empty", 400, req)
     }
     if (name.length > 100) {
-      return createErrorResponse("Team name cannot exceed 100 characters", 400)
+      return createErrorResponse("Team name cannot exceed 100 characters", 400, req)
     }
 
     // Validate join_code length
     if (typeof join_code !== "string" || join_code.length < 4) {
-      return createErrorResponse("Join code must be at least 4 characters", 400)
+      return createErrorResponse("Join code must be at least 4 characters", 400, req)
     }
     if (join_code.length > 255) {
-      return createErrorResponse("Join code cannot exceed 255 characters", 400)
+      return createErrorResponse("Join code cannot exceed 255 characters", 400, req)
     }
 
     // Validate maxMembers
     if (typeof maxMembers !== "number" || maxMembers < 2 || maxMembers > 10) {
-      return createErrorResponse("Max members must be between 2 and 10", 400)
+      return createErrorResponse("Max members must be between 2 and 10", 400, req)
     }
 
     // Check if user is already in a team
@@ -74,7 +74,7 @@ serve(async (req) => {
 
     if (membershipCheckError) {
       console.error("Membership check failed:", membershipCheckError)
-      return createErrorResponse("Failed to check existing team membership", 500)
+      return createErrorResponse("Failed to check existing team membership", 500, req)
     }
 
     if (existingMembership && existingMembership.length > 0) {
@@ -92,7 +92,7 @@ serve(async (req) => {
           console.error("user_system heal failed:", systemHealError)
         }
       }
-      return createErrorResponse("You are already a member of a team. Leave your current team first.", 400)
+      return createErrorResponse("You are already a member of a team. Leave your current team first.", 400, req)
     }
 
     // Create the team
@@ -113,10 +113,10 @@ serve(async (req) => {
 
       // Check for unique constraint violation
       if (teamError.code === "23505") {
-        return createErrorResponse("A team with this name or join code already exists", 409)
+        return createErrorResponse("A team with this name or join code already exists", 409, req)
       }
 
-      return createErrorResponse("Failed to create team", 500)
+      return createErrorResponse("Failed to create team", 500, req)
     }
 
     // Add creator as owner to team_memberships
@@ -138,7 +138,7 @@ serve(async (req) => {
         .delete()
         .eq("id", team.id)
 
-      return createErrorResponse("Failed to create team membership", 500)
+      return createErrorResponse("Failed to create team membership", 500, req)
     }
 
     // Upsert user_system team_id for the creator
@@ -152,7 +152,7 @@ serve(async (req) => {
 
     if (systemError) {
       console.error("user_system upsert failed:", systemError)
-      return createErrorResponse("Failed to update user system state", 500)
+      return createErrorResponse("Failed to update user system state", 500, req)
     }
 
     // Log team creation event
@@ -176,10 +176,10 @@ serve(async (req) => {
         ownerId: team.owner_id,
         createdAt: team.created_at
       }
-    }, 201)
+    }, 201, req)
 
   } catch (error) {
     console.error("Team creation error:", error)
-    return createErrorResponse("Internal server error", 500)
+    return createErrorResponse("Internal server error", 500, req)
   }
 })

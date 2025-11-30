@@ -7,7 +7,7 @@ import type {
   ObjectiveMapInfo,
   Task,
   TaskRequirement,
-} from "@/types/tarkov";
+} from '@/types/tarkov';
 import {
   createGraph,
   getChildren,
@@ -16,8 +16,8 @@ import {
   getSuccessors,
   safeAddEdge,
   safeAddNode,
-} from "@/utils/graphHelpers";
-import type { AbstractGraph } from "graphology-types";
+} from '@/utils/graphHelpers';
+import type { AbstractGraph } from 'graphology-types';
 /**
  * Composable for building task and hideout dependency graphs
  * Extracts complex graph algorithms from the metadata store
@@ -34,7 +34,7 @@ export function useGraphBuilder() {
       safeAddNode(newGraph, task.id);
       task.taskRequirements?.forEach((requirement) => {
         if (requirement?.task?.id) {
-          if (requirement.status?.includes("active")) {
+          if (requirement.status?.includes('active')) {
             activeRequirements.push({ task, requirement });
           } else {
             // Ensure the required task exists before adding edge
@@ -72,8 +72,8 @@ export function useGraphBuilder() {
       if (Array.isArray(task.finishRewards)) {
         task.finishRewards.forEach((reward) => {
           if (
-            reward?.__typename === "QuestStatusReward" &&
-            reward.status === "Fail" &&
+            reward?.__typename === 'QuestStatusReward' &&
+            reward.status === 'Fail' &&
             reward.quest?.id
           ) {
             if (!tempAlternativeTasks[reward.quest.id]) {
@@ -116,10 +116,10 @@ export function useGraphBuilder() {
         // Item requirements
         // Exclude "findItem" objectives as they are passive checks that auto-complete
         // when the player acquires the items for the corresponding "giveItem" objective
-        if ((objective?.item?.id || objective?.markerItem?.id) && objective.type !== "findItem") {
+        if ((objective?.item?.id || objective?.markerItem?.id) && objective.type !== 'findItem') {
           tempNeededObjectives.push({
             id: objective.id,
-            needType: "taskObjective",
+            needType: 'taskObjective',
             taskId: task.id,
             type: objective.type,
             item: objective.item!,
@@ -211,7 +211,7 @@ export function useGraphBuilder() {
         if (req?.item?.id) {
           neededItems.push({
             id: req.id,
-            needType: "hideoutModule",
+            needType: 'hideoutModule',
             hideoutModule: { ...module },
             item: req.item,
             count: req.count,

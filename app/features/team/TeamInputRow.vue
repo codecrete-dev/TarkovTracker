@@ -19,12 +19,12 @@
 </template>
 <script setup>
   defineProps({
-    modelValue: { type: String, default: "" },
+    modelValue: { type: String, default: '' },
     label: { type: String, required: true },
     icon: { type: String, required: true },
     maxlength: { type: Number, default: undefined },
     counter: { type: Boolean, default: false },
     readonly: { type: Boolean, default: false },
   });
-  defineEmits(["update:modelValue", "action"]);
+  defineEmits(['update:modelValue', 'action']);
 </script>

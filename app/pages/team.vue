@@ -17,13 +17,13 @@
   </div>
 </template>
 <script setup>
-  import { defineAsyncComponent } from "vue";
-  import { useRoute } from "vue-router";
-  import { useSystemStoreWithSupabase } from "@/stores/useSystemStore";
-  const TeamMembers = defineAsyncComponent(() => import("@/features/team/TeamMembers"));
-  const TeamOptions = defineAsyncComponent(() => import("@/features/team/TeamOptions"));
-  const MyTeam = defineAsyncComponent(() => import("@/features/team/MyTeam"));
-  const TeamInvite = defineAsyncComponent(() => import("@/features/team/TeamInvite"));
+  import { defineAsyncComponent } from 'vue';
+  import { useRoute } from 'vue-router';
+  import { useSystemStoreWithSupabase } from '@/stores/useSystemStore';
+  const TeamMembers = defineAsyncComponent(() => import('@/features/team/TeamMembers'));
+  const TeamOptions = defineAsyncComponent(() => import('@/features/team/TeamOptions'));
+  const MyTeam = defineAsyncComponent(() => import('@/features/team/MyTeam'));
+  const TeamInvite = defineAsyncComponent(() => import('@/features/team/TeamInvite'));
   const { systemStore } = useSystemStoreWithSupabase();
   const route = useRoute();
 </script>

@@ -1,10 +1,8 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { corsHeaders } from "./cors.ts"
-
+import { createClient } from "@supabase/supabase-js"
+import { corsHeadersFor } from "./cors.ts"
+import type { SupabaseClient } from "@supabase/supabase-js"
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-
 /**
  * Response type for authentication errors
  */
@@ -12,7 +10,6 @@ export interface AuthErrorResponse {
   error: string
   status: number
 }
-
 /**
  * Successful authentication result
  */
@@ -23,7 +20,6 @@ export interface AuthSuccess {
   }
   supabase: SupabaseClient
 }
-
 /**
  * Validate authorization header and authenticate user
  *
@@ -41,21 +37,17 @@ export async function authenticateUser(
       status: 401
     }
   }
-
   // Create Supabase client with service role key for admin operations
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
   // Verify user JWT token
   const token = authHeader.replace("Bearer ", "")
   const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-
   if (authError || !user) {
     return {
       error: "Invalid authentication token",
       status: 401
     }
   }
-
   return {
     user: {
       id: user.id,
@@ -64,7 +56,6 @@ export async function authenticateUser(
     supabase
   }
 }
-
 /**
  * Create a standardized error response
  *
@@ -72,18 +63,16 @@ export async function authenticateUser(
  * @param status - HTTP status code (default: 500)
  * @returns HTTP Response with JSON error
  */
-export function createErrorResponse(error: string | Error, status = 500): Response {
+export function createErrorResponse(error: string | Error, status = 500, req?: Request): Response {
   const errorMessage = typeof error === "string" ? error : error.message
-
   return new Response(
     JSON.stringify({ error: errorMessage }),
     {
       status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
+      headers: { ...(req ? corsHeadersFor(req) : {}), "Content-Type": "application/json" }
     }
   )
 }
-
 /**
  * Create a standardized success response
  *
@@ -91,16 +80,15 @@ export function createErrorResponse(error: string | Error, status = 500): Respon
  * @param status - HTTP status code (default: 200)
  * @returns HTTP Response with JSON data
  */
-export function createSuccessResponse(data: unknown, status = 200): Response {
+export function createSuccessResponse(data: unknown, status = 200, req?: Request): Response {
   return new Response(
     JSON.stringify(data),
     {
       status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
+      headers: { ...(req ? corsHeadersFor(req) : {}), "Content-Type": "application/json" }
     }
   )
 }
-
 /**
  * Handle CORS preflight requests
  *
@@ -109,11 +97,10 @@ export function createSuccessResponse(data: unknown, status = 200): Response {
  */
 export function handleCorsPrefligh(req: Request): Response | null {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders })
+    return new Response("ok", { headers: corsHeadersFor(req) })
   }
   return null
 }
-
 /**
  * Validate HTTP method
  *
@@ -125,12 +112,12 @@ export function validateMethod(req: Request, allowedMethods: string[]): Response
   if (!allowedMethods.includes(req.method)) {
     return createErrorResponse(
       `Method not allowed. Allowed methods: ${allowedMethods.join(", ")}`,
-      405
+      405,
+      req
     )
   }
   return null
 }
-
 /**
  * Validate required fields in request body
  *
@@ -139,17 +126,17 @@ export function validateMethod(req: Request, allowedMethods: string[]): Response
  * @returns null if valid, error Response if missing fields
  */
 export function validateRequiredFields(
+  req: Request,
   body: Record<string, unknown>,
   requiredFields: string[]
 ): Response | null {
   const missingFields = requiredFields.filter(field => !body[field])
-
   if (missingFields.length > 0) {
     return createErrorResponse(
       `Missing required fields: ${missingFields.join(", ")}`,
-      400
+      400,
+      req
     )
   }
-
   return null
 }

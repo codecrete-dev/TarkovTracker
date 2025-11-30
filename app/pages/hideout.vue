@@ -22,7 +22,7 @@
       <div v-if="isStoreLoading" class="text-surface-200 flex flex-col items-center gap-3 py-10">
         <UIcon name="i-heroicons-arrow-path" class="text-primary-500 h-8 w-8 animate-spin" />
         <div class="flex items-center gap-2 text-sm">
-          {{ $t("page.hideout.loading") }}
+          {{ $t('page.hideout.loading') }}
           <RefreshButton />
         </div>
       </div>
@@ -46,35 +46,35 @@
     </div>
   </div>
 </template>
-<script setup>
-  import { defineAsyncComponent } from "vue";
-  import { useI18n } from "vue-i18n";
-  import { useHideoutFiltering } from "@/composables/useHideoutFiltering";
-  const HideoutCard = defineAsyncComponent(() => import("@/features/hideout/HideoutCard.vue"));
-  const RefreshButton = defineAsyncComponent(() => import("@/components/ui/RefreshButton.vue"));
-  const { t } = useI18n({ useScope: "global" });
+<script setup lang="ts">
+  import { defineAsyncComponent } from 'vue';
+  import { useI18n } from 'vue-i18n';
+  import { useHideoutFiltering } from '@/composables/useHideoutFiltering';
+  const HideoutCard = defineAsyncComponent(() => import('@/features/hideout/HideoutCard.vue'));
+  const RefreshButton = defineAsyncComponent(() => import('@/components/ui/RefreshButton.vue'));
+  const { t } = useI18n({ useScope: 'global' });
   // Hideout filtering composable
   const { activePrimaryView, isStoreLoading, visibleStations } = useHideoutFiltering();
   const primaryViews = [
     {
-      title: t("page.hideout.primaryviews.available"),
-      icon: "mdi-tag-arrow-up-outline",
-      view: "available",
+      title: t('page.hideout.primaryviews.available'),
+      icon: 'mdi-tag-arrow-up-outline',
+      view: 'available',
     },
     {
-      title: t("page.hideout.primaryviews.maxed"),
-      icon: "mdi-arrow-collapse-up",
-      view: "maxed",
+      title: t('page.hideout.primaryviews.maxed'),
+      icon: 'mdi-arrow-collapse-up',
+      view: 'maxed',
     },
     {
-      title: t("page.hideout.primaryviews.locked"),
-      icon: "mdi-lock",
-      view: "locked",
+      title: t('page.hideout.primaryviews.locked'),
+      icon: 'mdi-lock',
+      view: 'locked',
     },
     {
-      title: t("page.hideout.primaryviews.all"),
-      icon: "mdi-clipboard-check",
-      view: "all",
+      title: t('page.hideout.primaryviews.all'),
+      icon: 'mdi-clipboard-check',
+      view: 'all',
     },
   ];
 </script>

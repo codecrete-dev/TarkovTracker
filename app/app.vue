@@ -9,7 +9,7 @@
   </UApp>
 </template>
 <script setup lang="ts">
-  import { useAppInitialization } from "@/composables/useAppInitialization";
+  import { useAppInitialization } from '@/composables/useAppInitialization';
   // Initialize app (auth, locale, migrations)
   useAppInitialization();
 </script>

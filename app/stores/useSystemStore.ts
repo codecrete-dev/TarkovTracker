@@ -1,11 +1,11 @@
-import { defineStore } from "pinia";
-import { computed } from "vue";
-import { useSupabaseListener } from "@/composables/supabase/useSupabaseListener";
-import type { SystemGetters, SystemState } from "@/types/tarkov";
+import { defineStore } from 'pinia';
+import { computed } from 'vue';
+import { useSupabaseListener } from '@/composables/supabase/useSupabaseListener';
+import type { SystemGetters, SystemState } from '@/types/tarkov';
 /**
  * System store definition with getters for user tokens and team info
  */
-export const useSystemStore = defineStore<string, SystemState, SystemGetters>("system", {
+export const useSystemStore = defineStore<string, SystemState, SystemGetters>('system', {
   state: (): SystemState => ({}),
   getters: {
     userTokens(state) {
@@ -27,7 +27,7 @@ export function useSystemStoreWithSupabase() {
   const systemStore = useSystemStore();
   const { $supabase } = useNuxtApp();
   const handleSystemSnapshot = (data: Record<string, unknown> | null) => {
-    if (data && "team_id" in data) {
+    if (data && 'team_id' in data) {
       systemStore.$patch({
         team: (data as { team_id: string | null }).team_id,
       } as Partial<SystemState>);
@@ -35,26 +35,20 @@ export function useSystemStoreWithSupabase() {
       systemStore.$patch({ team: null } as Partial<SystemState>);
     }
   };
-  // Computed reference to the system document
+  // Computed reference to the system document - passed as ref for reactivity
   const systemFilter = computed(() => {
     if ($supabase.user.loggedIn && $supabase.user.id) {
       return `user_id=eq.${$supabase.user.id}`;
     }
     return undefined;
   });
-  // Setup Supabase listener
+  // Setup Supabase listener with reactive filter ref
   const { cleanup, isSubscribed } = useSupabaseListener({
     store: systemStore,
-    table: "user_system",
-    filter: systemFilter.value,
-    storeId: "system",
+    table: 'user_system',
+    filter: systemFilter, // Pass the ref, not the value
+    storeId: 'system',
     onData: handleSystemSnapshot,
-  });
-  // Watch for filter changes to update listener
-  watch(systemFilter, (newFilter) => {
-    if (newFilter) {
-      // Re-initialize listener if needed, handled by useSupabaseListener internal watch
-    }
   });
   return {
     systemStore,

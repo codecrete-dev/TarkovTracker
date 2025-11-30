@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "lib": ["deno.ns", "deno.unstable", "dom", "dom.iterable", "esnext"]
+  },
+  "imports": {
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2",
+    "std/http/server": "https://deno.land/std@0.168.0/http/server.ts",
+    "shared/auth": "./_shared/auth.ts"
+  }
+}

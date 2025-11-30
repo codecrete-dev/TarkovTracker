@@ -396,3 +396,33 @@ export const TARKOV_DATA_QUERY = `
     }
   }
 `;
+// Query to fetch all items - used for complete item reference data
+export const TARKOV_ITEMS_QUERY = `
+  query TarkovItems($lang: LanguageCode) {
+    items(lang: $lang) {
+      id
+      shortName
+      name
+      normalizedName
+      link
+      wikiLink
+      image512pxLink
+      gridImageLink
+      baseImageLink
+      iconLink
+      image8xLink
+      backgroundColor
+      types
+      category {
+        id
+        name
+        normalizedName
+      }
+      categories {
+        id
+        name
+        normalizedName
+      }
+    }
+  }
+`;

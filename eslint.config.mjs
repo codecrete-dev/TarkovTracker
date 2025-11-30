@@ -2,9 +2,13 @@
 import importX from 'eslint-plugin-import-x'
 import withNuxt from './.nuxt/eslint.config.mjs'
 // import-x targets ESLint v8; its rule typings don't line up with ESLint v9 flat config types.
-// Cast to Plugin so @ts-check doesn't complain while keeping runtime behaviour the same.
-const importXPlugin = /** @type {import('eslint').ESLint.Plugin} */ (importX)
+// Cast via unknown to Plugin so @ts-check doesn't complain while keeping runtime behaviour the same.
+// The intermediate unknown avoids TS2352 about structural mismatch.
+const importXPlugin = /** @type {import('eslint').ESLint.Plugin} */ (/** @type {unknown} */ (importX))
 export default withNuxt({
+  ignores: [
+    'supabase/functions/**', // Deno code, not Node.js - different linting rules apply
+  ],
   plugins: {
     'import-x': importXPlugin,
   },

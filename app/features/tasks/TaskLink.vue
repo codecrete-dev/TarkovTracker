@@ -25,13 +25,13 @@
       class="text-primary-400 hover:text-primary-300 flex items-center text-xs whitespace-nowrap"
     >
       <UIcon name="i-mdi-information-outline" class="mr-1 h-6 w-6" />
-      <span>{{ t("page.tasks.questcard.wiki") }}</span>
+      <span>{{ t('page.tasks.questcard.wiki') }}</span>
     </a>
   </div>
 </template>
 <script setup>
-  import { computed } from "vue";
-  import { useI18n } from "vue-i18n";
+  import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
   // Define the props for the component
   const props = defineProps({
     task: {
@@ -44,10 +44,10 @@
       default: false,
     },
   });
-  const { t } = useI18n({ useScope: "global" });
+  const { t } = useI18n({ useScope: 'global' });
   // Check if there are two faction tasks for this task
   const isFactionTask = computed(() => {
-    return props.task?.factionName != "Any";
+    return props.task?.factionName != 'Any';
   });
   const factionImage = computed(() => {
     return `/img/factions/${props.task.factionName}.webp`;

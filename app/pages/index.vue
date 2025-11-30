@@ -38,7 +38,7 @@
               <div class="absolute inset-0 flex flex-col items-center justify-center">
                 <div class="text-5xl font-bold text-white">{{ totalTasksPercentage }}%</div>
                 <div class="text-surface-400 text-sm tracking-wider uppercase">
-                  {{ $t("page.dashboard.hero.overall") }}
+                  {{ $t('page.dashboard.hero.overall') }}
                 </div>
               </div>
             </div>
@@ -47,10 +47,10 @@
           <div class="space-y-6 lg:col-span-2">
             <div>
               <h1 class="mb-2 text-4xl font-bold text-white">
-                {{ $t("page.dashboard.hero.welcome") }}
+                {{ $t('page.dashboard.hero.welcome') }}
               </h1>
               <p class="text-surface-400 text-lg">
-                {{ $t("page.dashboard.hero.subtitle") }}
+                {{ $t('page.dashboard.hero.subtitle') }}
               </p>
             </div>
             <!-- Quick Stats Grid -->
@@ -60,7 +60,7 @@
                   {{ dashboardStats.completedTasks }}
                 </div>
                 <div class="text-surface-400 mt-1 text-xs tracking-wide uppercase">
-                  {{ $t("page.dashboard.hero.tasksComplete") }}
+                  {{ $t('page.dashboard.hero.tasksComplete') }}
                 </div>
               </div>
               <div class="bg-surface-800/50 border-surface-700/50 rounded-xl border p-4">
@@ -68,7 +68,7 @@
                   {{ dashboardStats.availableTasksCount }}
                 </div>
                 <div class="text-surface-400 mt-1 text-xs tracking-wide uppercase">
-                  {{ $t("page.dashboard.hero.available") }}
+                  {{ $t('page.dashboard.hero.available') }}
                 </div>
               </div>
               <div class="bg-surface-800/50 border-surface-700/50 rounded-xl border p-4">
@@ -76,7 +76,7 @@
                   {{ dashboardStats.failedTasksCount }}
                 </div>
                 <div class="text-surface-400 mt-1 text-xs tracking-wide uppercase">
-                  {{ $t("page.dashboard.hero.failed") }}
+                  {{ $t('page.dashboard.hero.failed') }}
                 </div>
               </div>
               <div class="bg-surface-800/50 border-surface-700/50 rounded-xl border p-4">
@@ -84,7 +84,7 @@
                   {{ currentLevel }}
                 </div>
                 <div class="text-surface-400 mt-1 text-xs tracking-wide uppercase">
-                  {{ $t("page.dashboard.hero.level") }}
+                  {{ $t('page.dashboard.hero.level') }}
                 </div>
               </div>
             </div>
@@ -96,7 +96,7 @@
     <div class="mb-6">
       <h2 class="mb-4 flex items-center text-2xl font-bold text-white">
         <UIcon name="i-mdi-chart-line" class="text-primary-500 mr-2 h-6 w-6" />
-        {{ $t("page.dashboard.progress.title") }}
+        {{ $t('page.dashboard.progress.title') }}
       </h2>
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         <!-- Tasks Progress -->
@@ -115,7 +115,7 @@
               </div>
               <div>
                 <div class="text-surface-400 text-sm tracking-wider uppercase">
-                  {{ $t("page.dashboard.progress.tasks") }}
+                  {{ $t('page.dashboard.progress.tasks') }}
                 </div>
                 <div class="text-2xl font-bold text-white">
                   {{ dashboardStats.completedTasks }}/{{ dashboardStats.totalTasks }}
@@ -144,7 +144,7 @@
               </div>
               <div>
                 <div class="text-surface-400 text-sm tracking-wider uppercase">
-                  {{ $t("page.dashboard.progress.objectives") }}
+                  {{ $t('page.dashboard.progress.objectives') }}
                 </div>
                 <div class="text-2xl font-bold text-white">
                   {{ dashboardStats.completedObjectives }}/{{ dashboardStats.totalObjectives }}
@@ -173,7 +173,7 @@
               </div>
               <div>
                 <div class="text-surface-400 text-sm tracking-wider uppercase">
-                  {{ $t("page.dashboard.progress.items") }}
+                  {{ $t('page.dashboard.progress.items') }}
                 </div>
                 <div class="text-2xl font-bold text-white">
                   {{ dashboardStats.completedTaskItems }}/{{ dashboardStats.totalTaskItems }}
@@ -202,7 +202,7 @@
               </div>
               <div>
                 <div class="text-surface-400 text-sm tracking-wider uppercase">
-                  {{ $t("page.dashboard.progress.kappa") }}
+                  {{ $t('page.dashboard.progress.kappa') }}
                 </div>
                 <div class="text-2xl font-bold text-white">
                   {{ dashboardStats.completedKappaTasks }}/{{ dashboardStats.totalKappaTasks }}
@@ -231,7 +231,7 @@
               </div>
               <div>
                 <div class="text-surface-400 text-sm tracking-wider uppercase">
-                  {{ $t("page.dashboard.progress.lightkeeper") }}
+                  {{ $t('page.dashboard.progress.lightkeeper') }}
                 </div>
                 <div class="text-2xl font-bold text-white">
                   {{ dashboardStats.completedLightkeeperTasks }}/{{
@@ -257,7 +257,7 @@
     <div class="mb-6">
       <h2 class="mb-4 flex items-center text-2xl font-bold text-white">
         <UIcon name="i-mdi-account-group" class="text-primary-500 mr-2 h-6 w-6" />
-        {{ $t("page.dashboard.traders.title") }}
+        {{ $t('page.dashboard.traders.title') }}
       </h2>
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
         <div
@@ -297,7 +297,7 @@
     <div>
       <h2 class="mb-4 flex items-center text-2xl font-bold text-white">
         <UIcon name="i-mdi-star-circle" class="text-primary-500 mr-2 h-6 w-6" />
-        {{ $t("page.dashboard.milestones.title") }}
+        {{ $t('page.dashboard.milestones.title') }}
       </h2>
       <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
         <!-- 25% Milestone -->
@@ -323,7 +323,7 @@
             />
             <div class="mb-1 text-3xl font-bold text-white">25%</div>
             <div class="text-surface-400 text-xs tracking-wider uppercase">
-              {{ $t("page.dashboard.milestones.starter") }}
+              {{ $t('page.dashboard.milestones.starter') }}
             </div>
           </div>
         </div>
@@ -350,7 +350,7 @@
             />
             <div class="mb-1 text-3xl font-bold text-white">50%</div>
             <div class="text-surface-400 text-xs tracking-wider uppercase">
-              {{ $t("page.dashboard.milestones.halfway") }}
+              {{ $t('page.dashboard.milestones.halfway') }}
             </div>
           </div>
         </div>
@@ -377,7 +377,7 @@
             />
             <div class="mb-1 text-3xl font-bold text-white">75%</div>
             <div class="text-surface-400 text-xs tracking-wider uppercase">
-              {{ $t("page.dashboard.milestones.veteran") }}
+              {{ $t('page.dashboard.milestones.veteran') }}
             </div>
           </div>
         </div>
@@ -405,10 +405,10 @@
               ]"
             />
             <div class="mb-1 text-3xl font-bold text-white">
-              {{ $t("page.dashboard.milestones.kappa.title") }}
+              {{ $t('page.dashboard.milestones.kappa.title') }}
             </div>
             <div class="text-surface-400 text-xs tracking-wider uppercase">
-              {{ $t("page.dashboard.milestones.kappa.subtitle") }}
+              {{ $t('page.dashboard.milestones.kappa.subtitle') }}
             </div>
           </div>
         </div>
@@ -436,10 +436,10 @@
               ]"
             />
             <div class="mb-1 text-3xl font-bold text-white">
-              {{ $t("page.dashboard.milestones.lightkeeper.title") }}
+              {{ $t('page.dashboard.milestones.lightkeeper.title') }}
             </div>
             <div class="text-surface-400 text-xs tracking-wider uppercase">
-              {{ $t("page.dashboard.milestones.lightkeeper.subtitle") }}
+              {{ $t('page.dashboard.milestones.lightkeeper.subtitle') }}
             </div>
           </div>
         </div>
@@ -448,9 +448,9 @@
   </div>
 </template>
 <script setup lang="ts">
-  import { computed } from "vue";
-  import { useDashboardStats } from "@/composables/useDashboardStats";
-  import { useTarkovStore } from "@/stores/useTarkov";
+  import { computed } from 'vue';
+  import { useDashboardStats } from '@/composables/useDashboardStats';
+  import { useTarkovStore } from '@/stores/useTarkov';
   // Dashboard statistics composable
   const dashboardStats = useDashboardStats();
   const tarkovStore = useTarkovStore();
@@ -463,7 +463,7 @@
   const traderStats = computed(() => dashboardStats.traderStats.value || []);
   // Helper function to calculate percentage
   const calculatePercentage = (completed: number, total: number): string => {
-    return total > 0 ? ((completed / total) * 100).toFixed(1) : "0.0";
+    return total > 0 ? ((completed / total) * 100).toFixed(1) : '0.0';
   };
   // Percentage calculations
   const totalTasksPercentage = computed(() =>

@@ -11,7 +11,7 @@
     >
       <UIcon name="i-mdi-twitch" class="mr-3 h-6 w-6 shrink-0 text-white" />
       <span class="font-medium whitespace-nowrap text-white">
-        {{ $t("page.login.continue_twitch") }}
+        {{ $t('page.login.continue_twitch') }}
       </span>
     </UButton>
     <UButton
@@ -25,14 +25,14 @@
     >
       <UIcon name="i-mdi-controller" class="mr-3 h-6 w-6 shrink-0 text-white" />
       <span class="font-medium whitespace-nowrap text-white">
-        {{ $t("page.login.continue_discord") }}
+        {{ $t('page.login.continue_discord') }}
       </span>
     </UButton>
   </div>
 </template>
 <script setup lang="ts">
-  import { nextTick, onMounted, ref } from "vue";
-  import DataMigrationService from "@/utils/dataMigrationService";
+  import { nextTick, onMounted, ref } from 'vue';
+  import DataMigrationService from '@/utils/dataMigrationService';
   const { $supabase } = useNuxtApp();
   const loading = ref({
     google: false, // Kept for compatibility if needed, but we'll use Twitch/Discord
@@ -50,13 +50,13 @@
       // Check for local data
       hasLocalData.value = DataMigrationService.hasLocalData();
     } catch (error) {
-      console.error("Error in onMounted:", error);
+      console.error('Error in onMounted:', error);
     }
   });
   const buildCallbackUrl = () => {
     const config = useRuntimeConfig();
     // Prefer the actual browser origin at runtime; fall back to configured appUrl
-    const origin = typeof window !== "undefined" ? window.location.origin : config.public.appUrl;
+    const origin = typeof window !== 'undefined' ? window.location.origin : config.public.appUrl;
     return `${origin}/auth/callback`;
   };
   const signInWithTwitch = async () => {
@@ -64,7 +64,7 @@
       loading.value.twitch = true;
       const callbackUrl = buildCallbackUrl();
       // Get OAuth URL - we'll handle redirect in a popup
-      const data = await $supabase.signInWithOAuth("twitch", {
+      const data = await $supabase.signInWithOAuth('twitch', {
         skipBrowserRedirect: true,
         redirectTo: callbackUrl,
       });
@@ -76,13 +76,13 @@
         const top = window.screenY + (window.outerHeight - height) / 2;
         const popup = window.open(
           data.url,
-          "oauth-popup",
+          'oauth-popup',
           `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,location=no,status=no`
         );
         if (popup) {
           // Listen for messages from popup
           const messageHandler = (event: MessageEvent) => {
-            if (event.origin === window.location.origin && event.data?.type === "OAUTH_SUCCESS") {
+            if (event.origin === window.location.origin && event.data?.type === 'OAUTH_SUCCESS') {
               // Authentication successful - existing onAuthStateChange listener will handle session update
               loading.value.twitch = false;
               cleanup();
@@ -98,21 +98,21 @@
           }, 500);
           const cleanup = () => {
             clearInterval(pollTimer);
-            window.removeEventListener("message", messageHandler);
+            window.removeEventListener('message', messageHandler);
             if (popup && !popup.closed) {
               popup.close();
             }
           };
-          window.addEventListener("message", messageHandler);
+          window.addEventListener('message', messageHandler);
         } else {
           // Popup blocked - fallback to redirect
-          console.warn("Popup was blocked, falling back to redirect");
+          console.warn('Popup was blocked, falling back to redirect');
           loading.value.twitch = false;
-          alert("Please allow popups for this site to use OAuth authentication.");
+          alert('Please allow popups for this site to use OAuth authentication.');
         }
       }
     } catch (error) {
-      console.error("Twitch sign in error:", error);
+      console.error('Twitch sign in error:', error);
       loading.value.twitch = false;
     }
   };
@@ -121,7 +121,7 @@
       loading.value.discord = true;
       const callbackUrl = buildCallbackUrl();
       // Get OAuth URL - we'll handle redirect in a popup
-      const data = await $supabase.signInWithOAuth("discord", {
+      const data = await $supabase.signInWithOAuth('discord', {
         skipBrowserRedirect: true,
         redirectTo: callbackUrl,
       });
@@ -133,13 +133,13 @@
         const top = window.screenY + (window.outerHeight - height) / 2;
         const popup = window.open(
           data.url,
-          "oauth-popup",
+          'oauth-popup',
           `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,location=no,status=no`
         );
         if (popup) {
           // Listen for messages from popup
           const messageHandler = (event: MessageEvent) => {
-            if (event.origin === window.location.origin && event.data?.type === "OAUTH_SUCCESS") {
+            if (event.origin === window.location.origin && event.data?.type === 'OAUTH_SUCCESS') {
               // Authentication successful - existing onAuthStateChange listener will handle session update
               loading.value.discord = false;
               cleanup();
@@ -155,21 +155,21 @@
           }, 500);
           const cleanup = () => {
             clearInterval(pollTimer);
-            window.removeEventListener("message", messageHandler);
+            window.removeEventListener('message', messageHandler);
             if (popup && !popup.closed) {
               popup.close();
             }
           };
-          window.addEventListener("message", messageHandler);
+          window.addEventListener('message', messageHandler);
         } else {
           // Popup blocked - fallback to redirect
-          console.warn("Popup was blocked, falling back to redirect");
+          console.warn('Popup was blocked, falling back to redirect');
           loading.value.discord = false;
-          alert("Please allow popups for this site to use OAuth authentication.");
+          alert('Please allow popups for this site to use OAuth authentication.');
         }
       }
     } catch (error) {
-      console.error("Discord sign in error:", error);
+      console.error('Discord sign in error:', error);
       loading.value.discord = false;
     }
   };

@@ -88,10 +88,10 @@
     },
   });
   defineEmits([
-    "cancel",
-    "confirm",
-    "show-objectives-details",
-    "show-failed-tasks-details",
-    "update:show",
+    'cancel',
+    'confirm',
+    'show-objectives-details',
+    'show-failed-tasks-details',
+    'update:show',
   ]);
 </script>

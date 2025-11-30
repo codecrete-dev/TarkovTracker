@@ -12,7 +12,7 @@
         @click="setPrimaryView('all')"
       >
         <UIcon name="i-mdi-checkbox-multiple-marked" class="mr-2 h-5 w-5" />
-        {{ t("page.tasks.primaryviews.all").toUpperCase() }}
+        {{ t('page.tasks.primaryviews.all').toUpperCase() }}
       </UButton>
       <UButton
         :variant="'ghost'"
@@ -24,7 +24,7 @@
         @click="setPrimaryView('maps')"
       >
         <UIcon name="i-mdi-map" class="mr-2 h-5 w-5" />
-        {{ t("page.tasks.primaryviews.maps").toUpperCase() }}
+        {{ t('page.tasks.primaryviews.maps').toUpperCase() }}
       </UButton>
       <UButton
         :variant="'ghost'"
@@ -36,7 +36,7 @@
         @click="setPrimaryView('traders')"
       >
         <UIcon name="i-mdi-account-group" class="mr-2 h-5 w-5" />
-        {{ t("page.tasks.primaryviews.traders").toUpperCase() }}
+        {{ t('page.tasks.primaryviews.traders').toUpperCase() }}
       </UButton>
     </div>
     <!-- Secondary filters container - responsive stacking -->
@@ -53,7 +53,7 @@
           @click="setSecondaryView('available')"
         >
           <UIcon name="i-mdi-clipboard-text" class="mr-1 h-4 w-4" />
-          {{ t("page.tasks.secondaryviews.available").toUpperCase() }}
+          {{ t('page.tasks.secondaryviews.available').toUpperCase() }}
           <span
             class="bg-primary-500 ml-2 inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-sm font-bold text-white"
           >
@@ -70,7 +70,7 @@
           @click="setSecondaryView('locked')"
         >
           <UIcon name="i-mdi-lock" class="mr-1 h-4 w-4" />
-          {{ t("page.tasks.secondaryviews.locked").toUpperCase() }}
+          {{ t('page.tasks.secondaryviews.locked').toUpperCase() }}
           <span
             class="ml-2 inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-gray-600 px-1.5 text-sm font-bold text-white"
           >
@@ -87,7 +87,7 @@
           @click="setSecondaryView('completed')"
         >
           <UIcon name="i-mdi-check-circle" class="mr-1 h-4 w-4" />
-          {{ t("page.tasks.secondaryviews.completed").toUpperCase() }}
+          {{ t('page.tasks.secondaryviews.completed').toUpperCase() }}
           <span
             class="ml-2 inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-green-600 px-1.5 text-sm font-bold text-white"
           >
@@ -115,7 +115,7 @@
           "
         >
           <UIcon name="i-mdi-account-outline" class="mr-1 h-4 w-4" />
-          {{ t("page.tasks.userviews.yourself").toUpperCase() }}
+          {{ t('page.tasks.userviews.yourself').toUpperCase() }}
         </UButton>
         <UButton
           :variant="'ghost'"
@@ -133,7 +133,7 @@
           "
         >
           <UIcon name="i-mdi-account-multiple" class="mr-1 h-4 w-4" />
-          {{ t("page.tasks.userviews.all").toUpperCase() }}
+          {{ t('page.tasks.userviews.all').toUpperCase() }}
         </UButton>
       </div>
       <!-- Section 3: Settings button - fixed width -->
@@ -198,12 +198,12 @@
   </div>
 </template>
 <script setup lang="ts">
-  import { computed } from "vue";
-  import { useI18n } from "vue-i18n";
-  import { useTaskFiltering } from "@/composables/useTaskFiltering";
-  import { useMetadataStore } from "@/stores/useMetadata";
-  import { usePreferencesStore } from "@/stores/usePreferences";
-  const { t } = useI18n({ useScope: "global" });
+  import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
+  import { useTaskFiltering } from '@/composables/useTaskFiltering';
+  import { useMetadataStore } from '@/stores/useMetadata';
+  import { usePreferencesStore } from '@/stores/usePreferences';
+  const { t } = useI18n({ useScope: 'global' });
   const preferencesStore = usePreferencesStore();
   const metadataStore = useMetadataStore();
   const { calculateStatusCounts, calculateTraderCounts } = useTaskFiltering();
@@ -223,7 +223,7 @@
   const setPrimaryView = (view: string) => {
     preferencesStore.setTaskPrimaryView(view);
     // When switching to maps, ensure a map is selected
-    if (view === "maps" && maps.value.length > 0 && preferencesStore.getTaskMapView === "all") {
+    if (view === 'maps' && maps.value.length > 0 && preferencesStore.getTaskMapView === 'all') {
       const firstMap = maps.value[0];
       if (firstMap?.id) {
         preferencesStore.setTaskMapView(firstMap.id);
@@ -231,9 +231,9 @@
     }
     // When switching to traders, ensure a trader is selected
     if (
-      view === "traders" &&
+      view === 'traders' &&
       traders.value.length > 0 &&
-      preferencesStore.getTaskTraderView === "all"
+      preferencesStore.getTaskTraderView === 'all'
     ) {
       const firstTrader = traders.value[0];
       if (firstTrader?.id) {

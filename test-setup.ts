@@ -1,5 +1,5 @@
-import { beforeAll, afterEach } from "vitest";
-import { cleanup } from "@vue/test-utils";
+import { beforeAll, afterEach } from 'vitest';
+import { cleanup } from '@vue/test-utils';
 
 // Cleanup after each test
 afterEach(() => {

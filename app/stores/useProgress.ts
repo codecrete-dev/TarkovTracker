@@ -1,13 +1,13 @@
-import { defineStore } from "pinia";
-import { computed } from "vue";
-import { GAME_EDITIONS, GAME_MODES, SPECIAL_STATIONS } from "@/utils/constants";
-import { useTeammateStores } from "./useTeamStore";
-import type { Store } from "pinia";
-import type { UserProgressData, UserState } from "~/stores/progressState";
-import type { Task } from "~/types/tarkov";
-import { useMetadataStore } from "~/stores/useMetadata";
-import { usePreferencesStore } from "~/stores/usePreferences";
-import { useTarkovStore } from "~/stores/useTarkov";
+import { defineStore } from 'pinia';
+import { computed } from 'vue';
+import { GAME_EDITIONS, GAME_MODES, SPECIAL_STATIONS } from '@/utils/constants';
+import { useTeammateStores } from './useTeamStore';
+import type { Store } from 'pinia';
+import type { UserProgressData, UserState } from '~/stores/progressState';
+import type { Task } from '~/types/tarkov';
+import { useMetadataStore } from '~/stores/useMetadata';
+import { usePreferencesStore } from '~/stores/usePreferences';
+import { useTarkovStore } from '~/stores/useTarkov';
 function getGameModeData(store: Store<string, UserState> | undefined): UserProgressData {
   if (!store) return {} as UserProgressData;
   const currentGameMode = store.$state.currentGameMode || GAME_MODES.PVP;
@@ -38,7 +38,7 @@ type ProgressGetters = {
   getFaction: (teamId: string) => string;
 };
 */
-export const useProgressStore = defineStore("progress", () => {
+export const useProgressStore = defineStore('progress', () => {
   const preferencesStore = usePreferencesStore();
   const metadataStore = useMetadataStore();
   const { teammateStores } = useTeammateStores();
@@ -47,7 +47,7 @@ export const useProgressStore = defineStore("progress", () => {
   const teamStores = computed(() => {
     const stores: TeamStoresMap = {};
     // Source the "self" key directly from useTarkovStore() instead of maintaining local state
-    stores["self"] = tarkovStore as Store<string, UserState>;
+    stores['self'] = tarkovStore as Store<string, UserState>;
     for (const teammate of Object.keys(teammateStores.value)) {
       if (teammateStores.value[teammate]) {
         stores[teammate] = teammateStores.value[teammate];
@@ -97,30 +97,60 @@ export const useProgressStore = defineStore("progress", () => {
     for (const teamId of Object.keys(visibleTeamStores.value)) {
       const store = visibleTeamStores.value[teamId];
       const currentData = getGameModeData(store);
-      faction[teamId] = currentData?.pmcFaction ?? "Unknown";
+      faction[teamId] = currentData?.pmcFaction ?? 'Unknown';
     }
     return faction;
   });
+  /**
+   * Optimized unlockedTasks computation.
+   * Pre-collects team data once, then iterates tasks with early exits.
+   * This reduces redundant store lookups that were happening per-task-per-team.
+   */
   const unlockedTasks = computed(() => {
     const available: TaskAvailabilityMap = {};
-    if (!metadataStore.tasks.length || !visibleTeamStores.value) return {};
-    for (const task of metadataStore.tasks as Task[]) {
+    const tasks = metadataStore.tasks as Task[];
+    if (!tasks.length || !visibleTeamStores.value) return {};
+    const teamIds = Object.keys(visibleTeamStores.value);
+    if (!teamIds.length) return {};
+    // Pre-collect all team data once (avoid repeated getGameModeData calls)
+    const teamDataCache = new Map<
+      string,
+      {
+        level: number;
+        faction: string;
+        completions: Record<string, { complete?: boolean; failed?: boolean }>;
+        traderLevels: Record<string, number>;
+      }
+    >();
+    for (const teamId of teamIds) {
+      const store = visibleTeamStores.value[teamId];
+      const currentData = getGameModeData(store);
+      const traderLevels: Record<string, number> = {};
+      for (const trader of metadataStore.traders) {
+        traderLevels[trader.id] = currentData?.level ?? 0;
+      }
+      teamDataCache.set(teamId, {
+        level: currentData?.level ?? 0,
+        faction: currentData?.pmcFaction ?? 'Unknown',
+        completions: currentData?.taskCompletions ?? {},
+        traderLevels,
+      });
+    }
+    // Now iterate tasks once with all data pre-cached
+    for (const task of tasks) {
       available[task.id] = {};
-      for (const teamId of Object.keys(visibleTeamStores.value)) {
-        const store = visibleTeamStores.value[teamId];
-        const currentData = getGameModeData(store);
-        const playerLevel = currentData?.level ?? 0;
-        const currentPlayerFaction = playerFaction.value[teamId];
-        const isTaskComplete = tasksCompletions.value[task.id]?.[teamId] ?? false;
-        if (isTaskComplete) {
+      for (const teamId of teamIds) {
+        const teamData = teamDataCache.get(teamId)!;
+        // Early exit: already complete
+        if (teamData.completions[task.id]?.complete) {
           available[task.id]![teamId] = false;
           continue;
         }
+        // Check failed requirements
         let failedReqsMet = true;
         if (task.failedRequirements) {
           for (const req of task.failedRequirements) {
-            const failed = currentData?.taskCompletions?.[req.task.id]?.failed ?? false;
-            if (failed) {
+            if (teamData.completions[req.task.id]?.failed) {
               failedReqsMet = false;
               break;
             }
@@ -130,15 +160,16 @@ export const useProgressStore = defineStore("progress", () => {
           available[task.id]![teamId] = false;
           continue;
         }
-        if (task.minPlayerLevel && playerLevel < task.minPlayerLevel) {
+        // Level check
+        if (task.minPlayerLevel && teamData.level < task.minPlayerLevel) {
           available[task.id]![teamId] = false;
           continue;
         }
+        // Trader levels check
         let traderLevelsMet = true;
         if (task.traderLevelRequirements) {
           for (const req of task.traderLevelRequirements) {
-            const currentTraderLevel = traderLevelsAchieved.value[teamId]?.[req.trader.id] ?? 0;
-            if (currentTraderLevel < req.level) {
+            if ((teamData.traderLevels[req.trader.id] ?? 0) < req.level) {
               traderLevelsMet = false;
               break;
             }
@@ -148,11 +179,11 @@ export const useProgressStore = defineStore("progress", () => {
           available[task.id]![teamId] = false;
           continue;
         }
+        // Prerequisites check
         let prereqsMet = true;
         if (task.taskRequirements) {
           for (const req of task.taskRequirements) {
-            const isPrereqComplete = tasksCompletions.value[req.task.id]?.[teamId] ?? false;
-            if (!isPrereqComplete) {
+            if (!teamData.completions[req.task.id]?.complete) {
               prereqsMet = false;
               break;
             }
@@ -162,10 +193,11 @@ export const useProgressStore = defineStore("progress", () => {
           available[task.id]![teamId] = false;
           continue;
         }
+        // Faction check
         if (
           task.factionName &&
-          task.factionName !== "Any" &&
-          task.factionName !== currentPlayerFaction
+          task.factionName !== 'Any' &&
+          task.factionName !== teamData.faction
         ) {
           available[task.id]![teamId] = false;
           continue;
@@ -202,7 +234,7 @@ export const useProgressStore = defineStore("progress", () => {
         let maxManuallyCompletedLevel = 0;
         if (station.levels && Array.isArray(station.levels)) {
           for (const lvl of station.levels) {
-            if (lvl && lvl.id && modulesState[lvl.id]?.complete && typeof lvl.level === "number") {
+            if (lvl && lvl.id && modulesState[lvl.id]?.complete && typeof lvl.level === 'number') {
               maxManuallyCompletedLevel = Math.max(maxManuallyCompletedLevel, lvl.level);
             }
           }
@@ -278,7 +310,7 @@ export const useProgressStore = defineStore("progress", () => {
   });
   const getTeamIndex = (teamId: string): string => {
     const { $supabase } = useNuxtApp();
-    return teamId === $supabase.user?.id ? "self" : teamId;
+    return teamId === $supabase.user?.id ? 'self' : teamId;
   };
   const getDisplayName = (teamId: string): string => {
     const storeKey = getTeamIndex(teamId);
@@ -299,7 +331,7 @@ export const useProgressStore = defineStore("progress", () => {
   const getFaction = (teamId: string): string => {
     const store = visibleTeamStores.value[teamId];
     const currentData = getGameModeData(store);
-    return currentData?.pmcFaction ?? "Unknown";
+    return currentData?.pmcFaction ?? 'Unknown';
   };
   const getTeammateStore = (teamId: string): Store<string, UserState> | null => {
     return teammateStores.value[teamId] || null;
@@ -311,14 +343,14 @@ export const useProgressStore = defineStore("progress", () => {
     const taskCompletion = currentData?.taskCompletions?.[taskId];
     return taskCompletion?.complete === true;
   };
-  const getTaskStatus = (teamId: string, taskId: string): "completed" | "failed" | "incomplete" => {
+  const getTaskStatus = (teamId: string, taskId: string): 'completed' | 'failed' | 'incomplete' => {
     const storeKey = getTeamIndex(teamId);
     const store = teamStores.value[storeKey];
     const currentData = getGameModeData(store);
     const taskCompletion = currentData?.taskCompletions?.[taskId];
-    if (taskCompletion?.complete) return "completed";
-    if (taskCompletion?.failed) return "failed";
-    return "incomplete";
+    if (taskCompletion?.complete) return 'completed';
+    if (taskCompletion?.failed) return 'failed';
+    return 'incomplete';
   };
   const getProgressPercentage = (teamId: string, category: string): number => {
     const storeKey = getTeamIndex(teamId);
@@ -328,14 +360,14 @@ export const useProgressStore = defineStore("progress", () => {
     const currentGameMode = store.$state.currentGameMode || GAME_MODES.PVP;
     const currentData = store.$state[currentGameMode] || store.$state;
     switch (category) {
-      case "tasks": {
+      case 'tasks': {
         const totalTasks = Object.keys(currentData.taskCompletions || {}).length;
         const completedTasks = Object.values(currentData.taskCompletions || {}).filter(
           (completion) => completion?.complete === true
         ).length;
         return totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
       }
-      case "hideout": {
+      case 'hideout': {
         const totalModules = Object.keys(currentData.hideoutModules || {}).length;
         const completedModules = Object.values(currentData.hideoutModules || {}).filter(
           (module) => module?.complete === true

@@ -1,4 +1,4 @@
-import type { API_PERMISSIONS, type GameMode } from "@/utils/constants";
+import type { API_PERMISSIONS, GameMode } from '@/utils/constants';
 export type TokenPermission = keyof typeof API_PERMISSIONS;
 export interface TokenRow {
   id: string;

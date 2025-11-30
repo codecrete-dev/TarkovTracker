@@ -117,8 +117,16 @@
                         @decrease="$emit('decreaseCount')"
                         @increase="$emit('increaseCount')"
                         @toggle="$emit('toggleCount')"
+                        @set-count="(count) => $emit('setCount', count)"
                       />
                     </div>
+                    <!-- Show static count for completed parent items (Completed tab) -->
+                    <div v-else-if="isParentCompleted" class="mx-2 mt-2 mb-2 flex h-full items-center justify-center self-stretch">
+                      <span class="text-sm font-semibold text-success-400">
+                        {{ currentCount.toLocaleString() }}/{{ neededCount.toLocaleString() }}
+                      </span>
+                    </div>
+                    <!-- Show team needs for items where self is done but parent isn't -->
                     <div v-else class="mx-2 mt-2 mb-2 flex h-full justify-center self-stretch">
                       <TeamNeedsDisplay :team-needs="teamNeeds" :needed-count="neededCount" />
                     </div>
@@ -137,16 +145,6 @@
                   />
                 </template>
                 <template v-else-if="props.need.needType == 'hideoutModule'">
-                  <div class="mr-2 flex items-center">
-                    <div class="mt-1 mb-1 flex justify-center">
-                      <div class="text-center">
-                        <station-link :station="relatedStation" class="justify-center" />
-                      </div>
-                      <div class="ml-1">
-                        {{ props.need.hideoutModule.level }}
-                      </div>
-                    </div>
-                  </div>
                   <RequirementInfo
                     :need-type="props.need.needType"
                     :level-required="levelRequired"
@@ -164,8 +162,16 @@
                   @decrease="$emit('decreaseCount')"
                   @increase="$emit('increaseCount')"
                   @toggle="$emit('toggleCount')"
+                  @set-count="(count) => $emit('setCount', count)"
                 />
               </div>
+              <!-- Show static count for completed parent items (Completed tab) -->
+              <div v-else-if="isParentCompleted" class="mr-2 flex items-center justify-center self-center">
+                <span class="text-sm font-semibold text-success-400">
+                  {{ currentCount.toLocaleString() }}/{{ neededCount.toLocaleString() }}
+                </span>
+              </div>
+              <!-- Show team needs for items where self is done but parent isn't -->
               <div v-else class="mr-2 flex h-full justify-center self-stretch">
                 <TeamNeedsDisplay :team-needs="teamNeeds" :needed-count="neededCount" />
               </div>
@@ -177,14 +183,14 @@
   </KeepAlive>
 </template>
 <script setup>
-  import { useBreakpoints } from "@vueuse/core";
-  import { computed, defineAsyncComponent, inject, onMounted, onUnmounted, ref } from "vue";
-  import { useTarkovStore } from "@/stores/useTarkov";
-  import ItemCountControls from "./ItemCountControls.vue";
-  import RequirementInfo from "./RequirementInfo.vue";
-  import TeamNeedsDisplay from "./TeamNeedsDisplay.vue";
-  const TaskLink = defineAsyncComponent(() => import("@/features/tasks/TaskLink"));
-  const StationLink = defineAsyncComponent(() => import("@/features/hideout/StationLink"));
+  import { useBreakpoints } from '@vueuse/core';
+import { computed, defineAsyncComponent, inject, onMounted, onUnmounted, ref } from 'vue';
+import { useTarkovStore } from '@/stores/useTarkov';
+import ItemCountControls from './ItemCountControls.vue';
+import RequirementInfo from './RequirementInfo.vue';
+import TeamNeedsDisplay from './TeamNeedsDisplay.vue';
+  const TaskLink = defineAsyncComponent(() => import('@/features/tasks/TaskLink'));
+  const StationLink = defineAsyncComponent(() => import('@/features/hideout/StationLink'));
   const props = defineProps({
     need: {
       type: Object,
@@ -197,12 +203,13 @@
     sm: 600,
     md: 960,
   });
-  const smAndDown = breakpoints.smaller("sm");
-  const mdAndUp = breakpoints.greaterOrEqual("md");
+  const smAndDown = breakpoints.smaller('sm');
+  const mdAndUp = breakpoints.greaterOrEqual('md');
   const tarkovStore = useTarkovStore();
   const smallDialog = ref(false);
   const {
     selfCompletedNeed,
+    isParentCompleted,
     relatedTask,
     relatedStation,
     lockedBefore,
@@ -212,7 +219,7 @@
     item,
     teamNeeds,
     imageItem,
-  } = inject("neededitem");
+  } = inject('neededitem');
   // Intersection observer for lazy loading
   const cardRef = ref(null);
   const isVisible = ref(false);
@@ -227,7 +234,7 @@
           }
         },
         {
-          rootMargin: "50px",
+          rootMargin: '50px',
           threshold: 0.1,
         }
       );
@@ -239,10 +246,10 @@
   });
   const itemRowClasses = computed(() => {
     return {
-      "bg-gradient-to-l from-complete to-surface":
+      'bg-gradient-to-l from-complete to-surface':
         selfCompletedNeed.value || currentCount.value >= neededCount.value,
-      "bg-gray-800": !(selfCompletedNeed.value || currentCount.value >= neededCount.value),
+      'bg-gray-800': !(selfCompletedNeed.value || currentCount.value >= neededCount.value),
     };
   });
-  defineEmits(["decreaseCount", "increaseCount", "toggleCount"]);
+  defineEmits(['decreaseCount', 'increaseCount', 'toggleCount', 'setCount']);
 </script>

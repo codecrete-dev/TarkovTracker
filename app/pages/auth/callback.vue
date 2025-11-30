@@ -13,7 +13,7 @@
   </div>
 </template>
 <script setup lang="ts">
-  import { onMounted } from "vue";
+  import { onMounted } from 'vue';
   onMounted(async () => {
     // Check if this is a popup window (has opener)
     const isPopup = window.opener && !window.opener.closed;
@@ -23,7 +23,7 @@
       // We just need to wait a moment for it to complete
       await new Promise((resolve) => setTimeout(resolve, 500));
       // Send success message to opener window
-      window.opener.postMessage({ type: "OAUTH_SUCCESS" }, window.location.origin);
+      window.opener.postMessage({ type: 'OAUTH_SUCCESS' }, window.location.origin);
       // Close this popup after a short delay to ensure the message is sent
       setTimeout(() => {
         window.close();
@@ -33,7 +33,7 @@
       // Wait a moment for the session to be established
       await new Promise((resolve) => setTimeout(resolve, 500));
       // Navigate to dashboard
-      await navigateTo("/", { replace: true });
+      await navigateTo('/', { replace: true });
     }
   });
 </script>

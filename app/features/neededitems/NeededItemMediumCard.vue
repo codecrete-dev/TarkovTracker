@@ -67,8 +67,16 @@
             @decrease="$emit('decreaseCount')"
             @increase="$emit('increaseCount')"
             @toggle="$emit('toggleCount')"
+            @set-count="(count) => $emit('setCount', count)"
           />
         </div>
+        <!-- Show static count for completed parent items (Completed tab) -->
+        <div v-else-if="isParentCompleted" class="mx-2 mt-2 mb-2 flex h-full items-center justify-center self-stretch">
+          <span class="text-sm font-semibold text-success-400">
+            {{ currentCount.toLocaleString() }}/{{ neededCount.toLocaleString() }}
+          </span>
+        </div>
+        <!-- Show team needs for items where self is done but parent isn't -->
         <div v-else class="mx-2 mt-2 mb-2 flex h-full justify-center self-stretch">
           <TeamNeedsDisplay :team-needs="teamNeeds" :needed-count="neededCount" />
         </div>
@@ -77,23 +85,24 @@
   </div>
 </template>
 <script setup>
-  import { computed, defineAsyncComponent, inject } from "vue";
-  import { useTarkovStore } from "@/stores/useTarkov";
-  import ItemCountControls from "./ItemCountControls.vue";
-  import RequirementInfo from "./RequirementInfo.vue";
-  import TeamNeedsDisplay from "./TeamNeedsDisplay.vue";
-  const TaskLink = defineAsyncComponent(() => import("@/features/tasks/TaskLink"));
-  const StationLink = defineAsyncComponent(() => import("@/features/hideout/StationLink"));
+  import { computed, defineAsyncComponent, inject } from 'vue';
+import { useTarkovStore } from '@/stores/useTarkov';
+import ItemCountControls from './ItemCountControls.vue';
+import RequirementInfo from './RequirementInfo.vue';
+import TeamNeedsDisplay from './TeamNeedsDisplay.vue';
+  const TaskLink = defineAsyncComponent(() => import('@/features/tasks/TaskLink'));
+  const StationLink = defineAsyncComponent(() => import('@/features/hideout/StationLink'));
   const props = defineProps({
     need: {
       type: Object,
       required: true,
     },
   });
-  defineEmits(["increaseCount", "decreaseCount", "toggleCount"]);
+  defineEmits(['increaseCount', 'decreaseCount', 'toggleCount', 'setCount']);
   const tarkovStore = useTarkovStore();
   const {
     selfCompletedNeed,
+    isParentCompleted,
     relatedTask,
     relatedStation,
     lockedBefore,
@@ -103,13 +112,13 @@
     item,
     teamNeeds,
     imageItem,
-  } = inject("neededitem");
+  } = inject('neededitem');
   const itemCardClasses = computed(() => {
     return {
-      "bg-gradient-to-t from-complete to-surface":
+      'bg-gradient-to-t from-complete to-surface':
         selfCompletedNeed.value || currentCount.value >= neededCount.value,
-      "bg-gray-800": !(selfCompletedNeed.value || currentCount.value >= neededCount.value),
-      "shadow-md": true,
+      'bg-gray-800': !(selfCompletedNeed.value || currentCount.value >= neededCount.value),
+      'shadow-md': true,
     };
   });
 </script>

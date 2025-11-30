@@ -88,13 +88,13 @@
   </span>
 </template>
 <script setup>
-  import { computed, defineAsyncComponent, ref, watch } from "vue";
-  import { useMetadataStore } from "@/stores/useMetadata";
-  import { useProgressStore } from "@/stores/useProgress";
-  import { useSystemStoreWithSupabase } from "@/stores/useSystemStore";
-  import { useTarkovStore } from "@/stores/useTarkov";
+  import { computed, defineAsyncComponent, ref, watch } from 'vue';
+  import { useMetadataStore } from '@/stores/useMetadata';
+  import { useProgressStore } from '@/stores/useProgress';
+  import { useSystemStoreWithSupabase } from '@/stores/useSystemStore';
+  import { useTarkovStore } from '@/stores/useTarkov';
   const ItemCountControls = defineAsyncComponent(
-    () => import("@/features/neededitems/ItemCountControls.vue")
+    () => import('@/features/neededitems/ItemCountControls.vue')
   );
   const { systemStore } = useSystemStoreWithSupabase();
   // Define the props for the component
@@ -119,19 +119,19 @@
     if (!fullObjective.value?.taskId) return null;
     return tasks.value.find((t) => t.id === fullObjective.value.taskId);
   });
-  const itemObjectiveTypes = ["giveItem", "mark", "buildWeapon", "plantItem"];
+  const itemObjectiveTypes = ['giveItem', 'mark', 'buildWeapon', 'plantItem'];
   // Objective types that should show a counter (for kill tracking, etc.)
-  const showCounterTypes = ["shoot"];
+  const showCounterTypes = ['shoot'];
   const relatedItem = computed(() => {
     if (!fullObjective.value) {
       return null;
     }
     switch (fullObjective.value.type) {
-      case "giveItem":
+      case 'giveItem':
         return fullObjective.value.item;
-      case "mark":
+      case 'mark':
         return fullObjective.value.markerItem;
-      case "buildWeapon": {
+      case 'buildWeapon': {
         // Prefer the defaultPreset (full build) if available
         const item = fullObjective.value.item;
         if (item?.properties?.defaultPreset) {
@@ -139,7 +139,7 @@
         }
         return item;
       }
-      case "plantItem":
+      case 'plantItem':
         return fullObjective.value.item;
       default:
         return null;
@@ -172,34 +172,34 @@
   const objectiveIcon = computed(() => {
     if (isHovered.value) {
       if (isComplete.value) {
-        return "mdi-close-circle";
+        return 'mdi-close-circle';
       } else {
-        return "mdi-check-circle";
+        return 'mdi-check-circle';
       }
     }
     const iconMap = {
-      key: "mdi-key",
-      shoot: "mdi-target-account",
-      giveItem: "mdi-close-circle-outline",
-      findItem: "mdi-checkbox-marked-circle-outline",
-      findQuestItem: "mdi-alert-circle-outline",
-      giveQuestItem: "mdi-alert-circle-check-outline",
-      plantQuestItem: "mdi-arrow-down-thin-circle-outline",
-      plantItem: "mdi-arrow-down-thin-circle-outline",
-      taskStatus: "mdi-account-child-circle",
-      extract: "mdi-heart-circle-outline",
-      mark: "mdi-remote",
-      place: "mdi-arrow-down-drop-circle-outline",
-      traderLevel: "mdi-thumb-up",
-      traderStanding: "mdi-thumb-up",
-      skill: "mdi-dumbbell",
-      visit: "mdi-crosshairs-gps",
-      buildWeapon: "mdi-progress-wrench",
-      playerLevel: "mdi-crown-circle-outline",
-      experience: "mdi-eye-circle-outline",
-      warning: "mdi-alert-circle",
+      key: 'mdi-key',
+      shoot: 'mdi-target-account',
+      giveItem: 'mdi-close-circle-outline',
+      findItem: 'mdi-checkbox-marked-circle-outline',
+      findQuestItem: 'mdi-alert-circle-outline',
+      giveQuestItem: 'mdi-alert-circle-check-outline',
+      plantQuestItem: 'mdi-arrow-down-thin-circle-outline',
+      plantItem: 'mdi-arrow-down-thin-circle-outline',
+      taskStatus: 'mdi-account-child-circle',
+      extract: 'mdi-heart-circle-outline',
+      mark: 'mdi-remote',
+      place: 'mdi-arrow-down-drop-circle-outline',
+      traderLevel: 'mdi-thumb-up',
+      traderStanding: 'mdi-thumb-up',
+      skill: 'mdi-dumbbell',
+      visit: 'mdi-crosshairs-gps',
+      buildWeapon: 'mdi-progress-wrench',
+      playerLevel: 'mdi-crown-circle-outline',
+      experience: 'mdi-eye-circle-outline',
+      warning: 'mdi-alert-circle',
     };
-    return iconMap[props.objective.type] || "mdi-help-circle";
+    return iconMap[props.objective.type] || 'mdi-help-circle';
   });
   const toggleObjectiveCompletion = () => {
     if (isComplete.value) {

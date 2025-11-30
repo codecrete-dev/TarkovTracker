@@ -1,4 +1,4 @@
-import { onMounted, onUnmounted, type Ref, ref, watch } from "vue";
+import { onMounted, onUnmounted, type Ref, ref, watch } from 'vue';
 export function useInfiniteScroll(
   sentinelRef: Ref<HTMLElement | null>,
   onLoadMore: () => void,
@@ -8,7 +8,7 @@ export function useInfiniteScroll(
     enabled?: boolean;
   } = {}
 ) {
-  const { rootMargin = "100px", threshold = 0.1, enabled = true } = options;
+  const { rootMargin = '100px', threshold = 0.1, enabled = true } = options;
   let observer: IntersectionObserver | null = null;
   const isLoading = ref(false);
   const handleIntersection = (entries: IntersectionObserverEntry[]) => {

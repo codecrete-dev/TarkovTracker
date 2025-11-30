@@ -17,10 +17,10 @@
   </div>
 </template>
 <script setup>
-  import { computed, defineAsyncComponent, ref } from "vue";
-  import { useMetadataStore } from "@/stores/useMetadata";
-  const TaskObjective = defineAsyncComponent(() => import("@/features/tasks/TaskObjective"));
-  const TaskLink = defineAsyncComponent(() => import("@/features/tasks/TaskLink"));
+  import { computed, defineAsyncComponent, ref } from 'vue';
+  import { useMetadataStore } from '@/stores/useMetadata';
+  const TaskObjective = defineAsyncComponent(() => import('@/features/tasks/TaskObjective'));
+  const TaskLink = defineAsyncComponent(() => import('@/features/tasks/TaskLink'));
   const metadataStore = useMetadataStore();
   const objectives = computed(() => metadataStore.objectives);
   const tasks = computed(() => metadataStore.tasks);
@@ -36,7 +36,7 @@
     selectedFloor: {
       type: String,
       required: false,
-      default: "",
+      default: '',
     },
     map: {
       type: Object,
@@ -65,8 +65,8 @@
     return tasks.value.find((task) => task.id == relatedObjective.value?.taskId);
   });
   const zoneColor = computed(() => {
-    if (tooltipVisible.value) return "text-success-500";
-    return props.mark.users.includes("self") ? "text-error-500" : "text-warning-500";
+    if (tooltipVisible.value) return 'text-success-500';
+    return props.mark.users.includes('self') ? 'text-error-500' : 'text-warning-500';
   });
   const relativeLocation = computed(() => {
     // Determine the leftmost x position in the array of zone positions
@@ -148,35 +148,35 @@
   });
   const zoneStyle = computed(() => {
     return {
-      position: "absolute",
-      top: relativeLocation.value.topPercent + "%",
-      left: relativeLocation.value.leftPercent + "%",
-      width: relativeLocation.value.rightPercent - relativeLocation.value.leftPercent + "%",
-      height: relativeLocation.value.bottomPercent - relativeLocation.value.topPercent + "%",
-      "clip-path":
-        "polygon(" +
+      position: 'absolute',
+      top: relativeLocation.value.topPercent + '%',
+      left: relativeLocation.value.leftPercent + '%',
+      width: relativeLocation.value.rightPercent - relativeLocation.value.leftPercent + '%',
+      height: relativeLocation.value.bottomPercent - relativeLocation.value.topPercent + '%',
+      'clip-path':
+        'polygon(' +
         relativeLocation.value.internalPercents
           .map((point) => {
-            return point.leftPercent + "% " + point.topPercent + "%";
+            return point.leftPercent + '% ' + point.topPercent + '%';
           })
-          .join(", ") +
-        ")",
+          .join(', ') +
+        ')',
       background: tooltipVisible.value
-        ? "linear-gradient(90deg, rgba(155, 165, 0, 0.5) 0%, rgba(155, 165, 0, 0.5) 100%)"
-        : "linear-gradient(90deg, rgba(255, 165, 0, 0.2) 0%, rgba(255, 165, 0, 0.2) 100%)",
-      "border-style": "dashed",
+        ? 'linear-gradient(90deg, rgba(155, 165, 0, 0.5) 0%, rgba(155, 165, 0, 0.5) 100%)'
+        : 'linear-gradient(90deg, rgba(255, 165, 0, 0.2) 0%, rgba(255, 165, 0, 0.2) 100%)',
+      'border-style': 'dashed',
       // cursor: props.mark.floor === props.selectedFloor ? "pointer" : "inherit",
       // opacity: props.mark.floor === props.selectedFloor ? 1 : 0.2,
-      cursor: "pointer",
+      cursor: 'pointer',
       opacity: 1,
     };
   });
   const tooltipStyle = computed(() => {
     return {
-      position: "absolute",
-      top: relativeLocation.value.topPercent + "%",
-      left: relativeLocation.value.leftPercent + "%",
-      transform: "translate(-50%, -125%)",
+      position: 'absolute',
+      top: relativeLocation.value.topPercent + '%',
+      left: relativeLocation.value.leftPercent + '%',
+      transform: 'translate(-50%, -125%)',
       zIndex: 100,
     };
   });

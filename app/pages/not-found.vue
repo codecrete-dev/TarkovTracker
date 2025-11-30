@@ -4,7 +4,7 @@
       class="text-surface-50 w-full max-w-xl border border-white/10 bg-transparent"
       :ui="{ body: 'p-6' }"
     >
-      {{ $t("page.not_found.not_found_description") }}
+      {{ $t('page.not_found.not_found_description') }}
     </UCard>
   </div>
 </template>

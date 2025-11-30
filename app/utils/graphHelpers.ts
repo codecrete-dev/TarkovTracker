@@ -1,41 +1,41 @@
-import Graph from "graphology";
-export function getPredecessors(graph: Graph, nodeId: string, visited: string[] = []): string[] {
-  let predecessors: string[] = [];
-  try {
-    predecessors = graph.inNeighbors(nodeId);
-    visited.push(nodeId);
-  } catch (error) {
-    console.error(`Error getting predecessors for node ${nodeId}:`, error);
-    return [];
-  }
-  if (predecessors.length > 0) {
-    for (const predecessor of predecessors) {
-      if (visited.includes(predecessor)) {
-        continue;
+import Graph from 'graphology';
+export function getPredecessors(graph: Graph, nodeId: string): string[] {
+  const allPredecessors = new Set<string>();
+  const visited = new Set<string>();
+  function traverse(id: string): void {
+    if (visited.has(id)) return;
+    visited.add(id);
+    try {
+      const parents = graph.inNeighbors(id);
+      for (const parent of parents) {
+        allPredecessors.add(parent);
+        traverse(parent);
       }
-      predecessors = predecessors.concat(getPredecessors(graph, predecessor, [...visited]));
+    } catch (error) {
+      console.error(`Error getting predecessors for node ${id}:`, error);
     }
   }
-  return [...new Set(predecessors)];
+  traverse(nodeId);
+  return Array.from(allPredecessors);
 }
-export function getSuccessors(graph: Graph, nodeId: string, visited: string[] = []): string[] {
-  let successors: string[] = [];
-  try {
-    successors = graph.outNeighbors(nodeId);
-    visited.push(nodeId);
-  } catch (error) {
-    console.error(`Error getting successors for node ${nodeId}:`, error);
-    return [];
-  }
-  if (successors.length > 0) {
-    for (const successor of successors) {
-      if (visited.includes(successor)) {
-        continue;
+export function getSuccessors(graph: Graph, nodeId: string): string[] {
+  const allSuccessors = new Set<string>();
+  const visited = new Set<string>();
+  function traverse(id: string): void {
+    if (visited.has(id)) return;
+    visited.add(id);
+    try {
+      const children = graph.outNeighbors(id);
+      for (const child of children) {
+        allSuccessors.add(child);
+        traverse(child);
       }
-      successors = successors.concat(getSuccessors(graph, successor, [...visited]));
+    } catch (error) {
+      console.error(`Error getting successors for node ${id}:`, error);
     }
   }
-  return [...new Set(successors)];
+  traverse(nodeId);
+  return Array.from(allSuccessors);
 }
 export function getParents(graph: Graph, nodeId: string): string[] {
   try {
@@ -60,15 +60,34 @@ export function safeAddNode(graph: Graph, nodeId: string): void {
     console.error(`Error adding node ${nodeId} to graph:`, error);
   }
 }
+/**
+ * Check if adding an edge would create a cycle in the graph.
+ * Returns true if adding sourceId -> targetId would create a cycle.
+ */
+export function wouldCreateCycle(graph: Graph, sourceId: string, targetId: string): boolean {
+  if (sourceId === targetId) return true;
+  // If targetId can already reach sourceId, adding sourceId -> targetId creates a cycle
+  const successorsOfTarget = getSuccessors(graph, targetId);
+  return successorsOfTarget.includes(sourceId);
+}
 export function safeAddEdge(graph: Graph, sourceId: string, targetId: string): void {
   try {
-    if (graph.hasNode(sourceId) && graph.hasNode(targetId)) {
-      graph.mergeEdge(sourceId, targetId);
-    } else {
-      console.warn(
-        `Cannot add edge from ${sourceId} to ${targetId}: one or both nodes don't exist`
-      );
+    if (!graph.hasNode(sourceId) || !graph.hasNode(targetId)) {
+      if (import.meta.dev) {
+        console.warn(
+          `Cannot add edge from ${sourceId} to ${targetId}: one or both nodes don't exist`
+        );
+      }
+      return;
     }
+    // Check for cycles before adding
+    if (wouldCreateCycle(graph, sourceId, targetId)) {
+      console.warn(
+        `[Graph] Cycle detected: Cannot add edge from ${sourceId} to ${targetId}. Skipping.`
+      );
+      return;
+    }
+    graph.mergeEdge(sourceId, targetId);
   } catch (error) {
     console.error(`Error adding edge from ${sourceId} to ${targetId}:`, error);
   }
@@ -88,7 +107,7 @@ export function getAllNodes(graph: Graph): string[] {
   try {
     return graph.nodes();
   } catch (error) {
-    console.error("Error getting all nodes:", error);
+    console.error('Error getting all nodes:', error);
     return [];
   }
 }
@@ -96,6 +115,6 @@ export function clearGraph(graph: Graph): void {
   try {
     graph.clear();
   } catch (error) {
-    console.error("Error clearing graph:", error);
+    console.error('Error clearing graph:', error);
   }
 }

@@ -9,16 +9,16 @@
   </div>
 </template>
 <script setup>
-  import { defineAsyncComponent } from "vue";
-  import { useI18n } from "vue-i18n";
-  const TaskLink = defineAsyncComponent(() => import("./TaskLink"));
+  import { defineAsyncComponent } from 'vue';
+  import { useI18n } from 'vue-i18n';
+  const TaskLink = defineAsyncComponent(() => import('./TaskLink'));
   defineProps({
     alternatives: { type: Array, required: true },
     tasks: { type: Object, required: true },
     xs: { type: Boolean, default: false },
-    label: { type: String, default: "" },
+    label: { type: String, default: '' },
   });
-  const { t } = useI18n({ useScope: "global" });
+  const { t } = useI18n({ useScope: 'global' });
   // Use default label if not provided
-  const defaultLabel = t("page.tasks.questcard.alternatives");
+  const defaultLabel = t('page.tasks.questcard.alternatives');
 </script>

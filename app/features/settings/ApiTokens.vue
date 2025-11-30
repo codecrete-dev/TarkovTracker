@@ -3,12 +3,12 @@
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div class="space-y-1">
         <p class="text-surface-50 text-base font-semibold">
-          {{ t("page.settings.card.apitokens.title") }}
+          {{ t('page.settings.card.apitokens.title') }}
         </p>
         <p class="text-surface-400 max-w-3xl text-sm">
           {{
-            t("page.settings.card.apitokens.description", {
-              openAPI_documentation: t("page.settings.card.apitokens.openAPI_documentation"),
+            t('page.settings.card.apitokens.description', {
+              openAPI_documentation: t('page.settings.card.apitokens.openAPI_documentation'),
             })
           }}
         </p>
@@ -20,7 +20,7 @@
         :disabled="!userLoggedIn || creating"
         @click="showCreateDialog = true"
       >
-        {{ t("page.settings.card.apitokens.new_token_expand") }}
+        {{ t('page.settings.card.apitokens.new_token_expand') }}
       </UButton>
     </div>
     <div class="space-y-3">
@@ -47,7 +47,7 @@
               <div class="flex items-center gap-2">
                 <UIcon name="i-mdi-key-variant" class="text-primary-400 h-5 w-5" />
                 <span class="text-surface-50 font-medium">
-                  {{ token.note || t("page.settings.card.apitokens.default_note") }}
+                  {{ token.note || t('page.settings.card.apitokens.default_note') }}
                 </span>
               </div>
               <div class="flex flex-wrap gap-2 text-xs">
@@ -66,20 +66,20 @@
               </div>
               <div class="text-surface-400 flex flex-wrap gap-3 text-xs">
                 <span>
-                  {{ t("page.settings.card.apitokens.list.created") }}:
+                  {{ t('page.settings.card.apitokens.list.created') }}:
                   {{ formatDate(token.createdAt) }}
                 </span>
                 <span>
-                  {{ t("page.settings.card.apitokens.list.last_used") }}:
+                  {{ t('page.settings.card.apitokens.list.last_used') }}:
                   {{
                     token.lastUsedAt
                       ? formatDate(token.lastUsedAt)
-                      : t("page.settings.card.apitokens.list.never")
+                      : t('page.settings.card.apitokens.list.never')
                   }}
                 </span>
                 <span>
                   {{
-                    t("page.settings.card.apitokens.list.usage_count", {
+                    t('page.settings.card.apitokens.list.usage_count', {
                       count: token.usageCount ?? 0,
                     })
                   }}
@@ -88,7 +88,7 @@
             </div>
             <div class="flex items-center gap-2">
               <UBadge v-if="!token.isActive" color="warning" variant="subtle" size="xs">
-                {{ t("page.settings.card.apitokens.list.revoked") }}
+                {{ t('page.settings.card.apitokens.list.revoked') }}
               </UBadge>
               <UButton
                 color="error"
@@ -98,7 +98,7 @@
                 :loading="revokingId === token.id"
                 @click="revokeToken(token.id)"
               >
-                {{ t("page.settings.card.apitokens.revoke_button") }}
+                {{ t('page.settings.card.apitokens.revoke_button') }}
               </UButton>
             </div>
           </div>
@@ -111,14 +111,14 @@
           <div class="flex items-center gap-2 px-4 py-3">
             <UIcon name="i-mdi-key-plus" class="text-primary-400 h-5 w-5" />
             <h3 class="text-lg font-semibold">
-              {{ t("page.settings.card.apitokens.new_token_expand") }}
+              {{ t('page.settings.card.apitokens.new_token_expand') }}
             </h3>
           </div>
         </template>
         <div class="space-y-4 px-4 pb-2">
           <div class="space-y-2">
             <p class="text-surface-200 text-sm font-semibold">
-              {{ t("page.settings.card.apitokens.form.gamemode_title") }}
+              {{ t('page.settings.card.apitokens.form.gamemode_title') }}
             </p>
             <URadio
               v-for="mode in gameModes"
@@ -130,7 +130,7 @@
           </div>
           <div class="space-y-2">
             <p class="text-surface-200 text-sm font-semibold">
-              {{ t("page.settings.card.apitokens.form.permissions_title") }}
+              {{ t('page.settings.card.apitokens.form.permissions_title') }}
             </p>
             <UCheckbox
               v-for="permission in permissionOptions"
@@ -138,16 +138,18 @@
               :model-value="selectedPermissions.includes(permission.value)"
               :label="permission.label"
               name="permissions"
-              @update:model-value="(checked) => togglePermission(permission.value, checked as boolean)"
+              @update:model-value="
+                (checked) => togglePermission(permission.value, checked as boolean)
+              "
             >
               <template #description>
-                <span class="text-xs text-surface-400">{{ permission.description }}</span>
+                <span class="text-surface-400 text-xs">{{ permission.description }}</span>
               </template>
             </UCheckbox>
           </div>
           <div class="space-y-2">
             <p class="text-surface-200 text-sm font-semibold">
-              {{ t("page.settings.card.apitokens.form.note_label") }}
+              {{ t('page.settings.card.apitokens.form.note_label') }}
             </p>
             <UInput
               v-model="note"
@@ -164,7 +166,7 @@
         <template #footer>
           <div class="flex justify-end gap-2 px-4 pb-4">
             <UButton color="neutral" variant="ghost" @click="closeCreateDialog">
-              {{ t("page.settings.card.apitokens.form.cancel") }}
+              {{ t('page.settings.card.apitokens.form.cancel') }}
             </UButton>
             <UButton
               color="primary"
@@ -173,7 +175,7 @@
               :loading="creating"
               @click="createToken"
             >
-              {{ t("page.settings.card.apitokens.submit_new_token") }}
+              {{ t('page.settings.card.apitokens.submit_new_token') }}
             </UButton>
           </div>
         </template>
@@ -185,13 +187,13 @@
           <div class="flex items-center gap-2 px-4 py-3">
             <UIcon name="i-mdi-check-circle" class="h-5 w-5 text-green-400" />
             <h3 class="text-lg font-semibold">
-              {{ t("page.settings.card.apitokens.token_created") }}
+              {{ t('page.settings.card.apitokens.token_created') }}
             </h3>
           </div>
         </template>
         <div class="space-y-3 px-4 pb-4">
           <p class="text-surface-300 text-sm">
-            {{ t("page.settings.card.apitokens.token_created_description") }}
+            {{ t('page.settings.card.apitokens.token_created_description') }}
           </p>
           <UInput v-model="generatedToken" readonly>
             <template #trailing>
@@ -208,7 +210,7 @@
         <template #footer>
           <div class="flex justify-end gap-2 px-4 pb-4">
             <UButton color="primary" variant="solid" @click="showTokenCreatedDialog = false">
-              {{ t("page.settings.card.apitokens.token_created_close") }}
+              {{ t('page.settings.card.apitokens.token_created_close') }}
             </UButton>
           </div>
         </template>
@@ -217,11 +219,11 @@
   </div>
 </template>
 <script setup lang="ts">
-  import { computed, onMounted, ref, watch } from "vue";
-  import { useI18n } from "vue-i18n";
-  import { useEdgeFunctions } from "@/composables/api/useEdgeFunctions";
-  import type { RawTokenRow, TokenPermission, TokenRow } from "@/types/api";
-  import { API_PERMISSIONS, GAME_MODE_OPTIONS, GAME_MODES, type GameMode } from "@/utils/constants";
+  import { computed, onMounted, ref, watch } from 'vue';
+  import { useI18n } from 'vue-i18n';
+  import { useEdgeFunctions } from '@/composables/api/useEdgeFunctions';
+  import type { RawTokenRow, TokenPermission, TokenRow } from '@/types/api';
+  import { API_PERMISSIONS, GAME_MODE_OPTIONS, GAME_MODES, type GameMode } from '@/utils/constants';
   interface SupabaseTable {
     select: (query: string) => SupabaseTable;
     insert: (data: Record<string, unknown>) => SupabaseTable;
@@ -244,9 +246,9 @@
   const revokingId = ref<string | null>(null);
   const tokens = ref<TokenRow[]>([]);
   const selectedGameMode = ref<GameMode>(GAME_MODES.PVP);
-  const selectedPermissions = ref<TokenPermission[]>(["GP"]);
-  const note = ref("");
-  const generatedToken = ref("");
+  const selectedPermissions = ref<TokenPermission[]>(['GP']);
+  const note = ref('');
+  const generatedToken = ref('');
   const userLoggedIn = computed(() => $supabase.user.loggedIn);
   const permissionOptions = computed(() =>
     Object.entries(API_PERMISSIONS).map(([key, value]) => ({
@@ -263,19 +265,21 @@
     () => userLoggedIn.value && selectedPermissions.value.length > 0 && !!selectedGameMode.value
   );
   const formatDate = (date: string | null) => {
-    if (!date) return "";
+    if (!date) return '';
     return new Date(date).toLocaleString();
   };
   const formatGameMode = (mode: GameMode) => {
-    return mode === GAME_MODES.PVE ? "PvE" : "PvP";
+    return mode === GAME_MODES.PVE ? 'PvE' : 'PvP';
   };
   const permissionLabel = (value: TokenPermission) => {
     return permissionOptions.value.find((perm) => perm.value === value)?.label || value;
   };
   const tableClient = (): SupabaseTable | null => {
-    return (($supabase.client as unknown) as { from?: (name: string) => SupabaseTable })?.from?.(
-      "api_tokens"
-    ) || null;
+    return (
+      ($supabase.client as unknown as { from?: (name: string) => SupabaseTable })?.from?.(
+        'api_tokens'
+      ) || null
+    );
   };
   const loadTokens = async () => {
     const table = tableClient();
@@ -287,29 +291,27 @@
     try {
       const { data, error } = await table
         .select(
-          "token_id, note, permissions, game_mode, created_at, last_used_at, usage_count, is_active"
+          'token_id, note, permissions, game_mode, created_at, last_used_at, usage_count, is_active'
         )
-        .eq("user_id", $supabase.user.id)
-        .order("created_at", { ascending: false });
+        .eq('user_id', $supabase.user.id)
+        .order('created_at', { ascending: false });
       if (error) throw error;
       tokens.value =
-        (data as RawTokenRow[])?.map(
-          (row: RawTokenRow) => ({
-            id: row.token_id,
-            note: row.note,
-            permissions: row.permissions || [],
-            gameMode: row.game_mode,
-            createdAt: row.created_at,
-            lastUsedAt: row.last_used_at,
-            usageCount: row.usage_count ?? 0,
-            isActive: row.is_active ?? true,
-          })
-        ) || [];
+        (data as RawTokenRow[])?.map((row: RawTokenRow) => ({
+          id: row.token_id,
+          note: row.note,
+          permissions: row.permissions || [],
+          gameMode: row.game_mode,
+          createdAt: row.created_at,
+          lastUsedAt: row.last_used_at,
+          usageCount: row.usage_count ?? 0,
+          isActive: row.is_active ?? true,
+        })) || [];
     } catch (error) {
-      console.error("[ApiTokens] Failed to load tokens", error);
+      console.error('[ApiTokens] Failed to load tokens', error);
       toast.add({
-        title: t("page.settings.card.apitokens.create_token_error"),
-        color: "error",
+        title: t('page.settings.card.apitokens.create_token_error'),
+        color: 'error',
       });
     } finally {
       loading.value = false;
@@ -317,22 +319,22 @@
   };
   const generateToken = () => {
     const bytes = crypto.getRandomValues(new Uint8Array(32));
-    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
     return `tt_${hex}`;
   };
   const hashToken = async (token: string) => {
-    const buffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+    const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
     return Array.from(new Uint8Array(buffer))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
   };
   const closeCreateDialog = () => {
     showCreateDialog.value = false;
   };
   const resetForm = () => {
     selectedGameMode.value = GAME_MODES.PVP;
-    selectedPermissions.value = ["GP"];
-    note.value = "";
+    selectedPermissions.value = ['GP'];
+    note.value = '';
   };
   const togglePermission = (value: TokenPermission, checked: boolean) => {
     if (checked) {
@@ -358,23 +360,23 @@
           game_mode: selectedGameMode.value,
           note: note.value || null,
         })
-        .select("token_id")
+        .select('token_id')
         .single();
       if (error) throw error;
       generatedToken.value = rawToken;
       toast.add({
-        title: t("page.settings.card.apitokens.create_token_success"),
-        color: "success",
+        title: t('page.settings.card.apitokens.create_token_success'),
+        color: 'success',
       });
       showCreateDialog.value = false;
       showTokenCreatedDialog.value = true;
       await loadTokens();
       resetForm();
     } catch (error) {
-      console.error("[ApiTokens] Failed to create token", error);
+      console.error('[ApiTokens] Failed to create token', error);
       toast.add({
-        title: t("page.settings.card.apitokens.create_token_error"),
-        color: "error",
+        title: t('page.settings.card.apitokens.create_token_error'),
+        color: 'error',
       });
     } finally {
       creating.value = false;
@@ -385,11 +387,11 @@
     try {
       await navigator.clipboard.writeText(generatedToken.value);
       toast.add({
-        title: t("page.settings.card.apitokens.token_copied"),
-        color: "success",
+        title: t('page.settings.card.apitokens.token_copied'),
+        color: 'success',
       });
     } catch (error) {
-      console.error("[ApiTokens] Failed to copy token", error);
+      console.error('[ApiTokens] Failed to copy token', error);
     }
   };
   const revokeToken = async (tokenId: string) => {
@@ -398,15 +400,15 @@
     try {
       await edgeFunctions.revokeToken(tokenId);
       toast.add({
-        title: t("page.settings.card.apitokens.token_revoked"),
-        color: "success",
+        title: t('page.settings.card.apitokens.token_revoked'),
+        color: 'success',
       });
       await loadTokens();
     } catch (error) {
-      console.error("[ApiTokens] Failed to revoke token", error);
+      console.error('[ApiTokens] Failed to revoke token', error);
       toast.add({
-        title: t("page.settings.card.apitokens.token_revoke_error"),
-        color: "error",
+        title: t('page.settings.card.apitokens.token_revoke_error'),
+        color: 'error',
       });
     } finally {
       revokingId.value = null;

@@ -1,6 +1,6 @@
-import type { UserProgressData } from "@/stores/progressState";
-import type { GameMode } from "@/utils/constants";
-import { GAME_EDITION_STRING_VALUES, normalizePMCFaction } from "@/utils/constants";
+import type { UserProgressData } from '@/stores/progressState';
+import type { GameMode } from '@/utils/constants';
+import { GAME_EDITION_STRING_VALUES, normalizePMCFaction } from '@/utils/constants';
 // import { defaultState, migrateToGameModeStructure } from "@/stores/progressState";
 // Define a basic interface for the progress data structure
 export interface ProgressData {
@@ -38,7 +38,7 @@ export interface ProgressData {
   sourceDomain?: string;
   [key: string]: unknown;
 }
-const LOCAL_PROGRESS_KEY = "progress";
+const LOCAL_PROGRESS_KEY = 'progress';
 /**
  * Service to handle migration of local data to a user's Supabase account
  */
@@ -50,9 +50,9 @@ export default class DataMigrationService {
    * @returns Transformed task objectives compatible with UserProgressData
    */
   private static transformTaskObjectives(
-    taskObjectives: ProgressData["taskObjectives"]
-  ): UserProgressData["taskObjectives"] {
-    const transformed: UserProgressData["taskObjectives"] = {};
+    taskObjectives: ProgressData['taskObjectives']
+  ): UserProgressData['taskObjectives'] {
+    const transformed: UserProgressData['taskObjectives'] = {};
     if (taskObjectives) {
       for (const [id, objective] of Object.entries(taskObjectives)) {
         const transformedObjective: Record<string, unknown> = {
@@ -74,9 +74,9 @@ export default class DataMigrationService {
    * @returns Transformed hideout parts compatible with UserProgressData
    */
   private static transformHideoutParts(
-    hideoutParts: ProgressData["hideoutParts"]
-  ): UserProgressData["hideoutParts"] {
-    const transformed: UserProgressData["hideoutParts"] = {};
+    hideoutParts: ProgressData['hideoutParts']
+  ): UserProgressData['hideoutParts'] {
+    const transformed: UserProgressData['hideoutParts'] = {};
     if (hideoutParts) {
       for (const [id, part] of Object.entries(hideoutParts)) {
         const transformedPart: Record<string, unknown> = {
@@ -99,7 +99,7 @@ export default class DataMigrationService {
   static hasLocalData(): boolean {
     try {
       const progressData = localStorage.getItem(LOCAL_PROGRESS_KEY);
-      if (!progressData || progressData === "{}") {
+      if (!progressData || progressData === '{}') {
         return false;
       }
       const parsedData: ProgressData = JSON.parse(progressData);
@@ -111,7 +111,7 @@ export default class DataMigrationService {
         Object.keys(parsedData.hideoutModules || {}).length > 0;
       return hasKeys && hasProgress;
     } catch (error) {
-      console.warn("[DataMigrationService] Error in hasLocalData:", error);
+      console.warn('[DataMigrationService] Error in hasLocalData:', error);
       return false;
     }
   }
@@ -131,7 +131,7 @@ export default class DataMigrationService {
       }
       return null;
     } catch (error) {
-      console.warn("[DataMigrationService] Error in getLocalData:", error);
+      console.warn('[DataMigrationService] Error in getLocalData:', error);
       return null;
     }
   }
@@ -149,9 +149,9 @@ export default class DataMigrationService {
     try {
       const { $supabase } = useNuxtApp();
       const { data, error } = await $supabase.client
-        .from("user_progress")
-        .select("level, task_completions, task_objectives, hideout_modules")
-        .eq("user_id", uid)
+        .from('user_progress')
+        .select('level, task_completions, task_objectives, hideout_modules')
+        .eq('user_id', uid)
         .single();
       if (error || !data) return false;
       const hasProgress =
@@ -161,7 +161,7 @@ export default class DataMigrationService {
         (data.hideout_modules && Object.keys(data.hideout_modules).length > 0);
       return !!hasProgress;
     } catch (error) {
-      console.warn("[DataMigrationService] Error in hasUserData:", error);
+      console.warn('[DataMigrationService] Error in hasUserData:', error);
       return false;
     }
   }
@@ -178,7 +178,7 @@ export default class DataMigrationService {
       const { $supabase } = useNuxtApp();
       const hasExisting = await this.hasUserData(uid);
       if (hasExisting) {
-        console.warn("[DataMigrationService] User already has data, aborting automatic migration.");
+        console.warn('[DataMigrationService] User already has data, aborting automatic migration.');
         return false;
       }
       // Prepare data for Supabase (map to snake_case columns)
@@ -186,7 +186,7 @@ export default class DataMigrationService {
         user_id: uid,
         level: localData.level,
         game_edition:
-          typeof localData.gameEdition === "string"
+          typeof localData.gameEdition === 'string'
             ? parseInt(localData.gameEdition)
             : localData.gameEdition,
         pmc_faction: localData.pmcFaction,
@@ -200,9 +200,9 @@ export default class DataMigrationService {
         // For now, we'll assume the schema handles the main fields.
         // If we need to store migration metadata, we might need a metadata column or just ignore it for now as it's less critical.
       };
-      const { error } = await $supabase.client.from("user_progress").upsert(supabaseData);
+      const { error } = await $supabase.client.from('user_progress').upsert(supabaseData);
       if (error) {
-        console.error("[DataMigrationService] Error migrating data to Supabase:", error);
+        console.error('[DataMigrationService] Error migrating data to Supabase:', error);
         return false;
       }
       // Backup local data
@@ -210,11 +210,11 @@ export default class DataMigrationService {
       try {
         localStorage.setItem(backupKey, JSON.stringify(localData));
       } catch (backupError) {
-        console.warn("[DataMigrationService] Could not backup local data:", backupError);
+        console.warn('[DataMigrationService] Could not backup local data:', backupError);
       }
       return true;
     } catch (error) {
-      console.error("[DataMigrationService] General error in migrateDataToUser:", error);
+      console.error('[DataMigrationService] General error in migrateDataToUser:', error);
       return false;
     }
   }
@@ -238,7 +238,7 @@ export default class DataMigrationService {
         user_id: uid,
         level: importedData.level || 1,
         game_edition:
-          typeof importedData.gameEdition === "string"
+          typeof importedData.gameEdition === 'string'
             ? parseInt(importedData.gameEdition) || 1
             : importedData.gameEdition || 1,
         pmc_faction: normalizePMCFaction(importedData.pmcFaction),
@@ -249,7 +249,7 @@ export default class DataMigrationService {
         hideout_parts: this.transformHideoutParts(importedData.hideoutParts || {}),
         last_updated: new Date().toISOString(),
       };
-      const { error } = await $supabase.client.from("user_progress").upsert(supabaseData);
+      const { error } = await $supabase.client.from('user_progress').upsert(supabaseData);
       if (error) {
         console.error(
           `[DataMigrationService] Supabase error importing data for user ${uid}:`,
@@ -279,7 +279,7 @@ export default class DataMigrationService {
    */
   static async fetchDataWithApiToken(
     apiToken: string,
-    oldDomain: string = "https://tarkovtracker.io/api/v2/progress"
+    oldDomain: string = 'https://tarkovtracker.io/api/v2/progress'
   ): Promise<ProgressData | null> {
     if (!apiToken) {
       return null;
@@ -288,10 +288,10 @@ export default class DataMigrationService {
       const apiUrl = oldDomain; // The default parameter already includes the path
       const headers = {
         Authorization: `Bearer ${apiToken}`,
-        Accept: "application/json",
+        Accept: 'application/json',
       };
       const response = await fetch(apiUrl, {
-        method: "GET",
+        method: 'GET',
         headers,
       });
       if (!response.ok) {
@@ -314,10 +314,10 @@ export default class DataMigrationService {
       }
       const apiJsonResponse = (await response.json()) as unknown;
       let dataFromApi: OldApiRawData;
-      if (typeof apiJsonResponse === "object" && apiJsonResponse !== null) {
+      if (typeof apiJsonResponse === 'object' && apiJsonResponse !== null) {
         if (
-          "data" in apiJsonResponse &&
-          typeof (apiJsonResponse as { data: unknown }).data === "object" &&
+          'data' in apiJsonResponse &&
+          typeof (apiJsonResponse as { data: unknown }).data === 'object' &&
           (apiJsonResponse as { data: unknown }).data !== null
         ) {
           dataFromApi = (apiJsonResponse as { data: OldApiRawData }).data;
@@ -325,7 +325,7 @@ export default class DataMigrationService {
           dataFromApi = apiJsonResponse as OldApiRawData;
         }
       } else {
-        console.error("[DataMigrationService] API response is not a valid object.");
+        console.error('[DataMigrationService] API response is not a valid object.');
         return null;
       }
       // Type definitions for the expected array elements from the old API
@@ -348,7 +348,7 @@ export default class DataMigrationService {
         complete?: boolean;
         count?: number;
       }
-      const taskCompletions: ProgressData["taskCompletions"] = {};
+      const taskCompletions: ProgressData['taskCompletions'] = {};
       if (Array.isArray(dataFromApi.tasksProgress)) {
         dataFromApi.tasksProgress.forEach((task: OldTaskProgress) => {
           if (task.complete === true || task.failed === true) {
@@ -362,7 +362,7 @@ export default class DataMigrationService {
           }
         });
       }
-      const hideoutModules: ProgressData["hideoutModules"] = {};
+      const hideoutModules: ProgressData['hideoutModules'] = {};
       if (Array.isArray(dataFromApi.hideoutModulesProgress)) {
         dataFromApi.hideoutModulesProgress.forEach((module: OldHideoutModuleProgress) => {
           if (module.complete === true) {
@@ -374,7 +374,7 @@ export default class DataMigrationService {
           }
         });
       }
-      const hideoutParts: ProgressData["hideoutParts"] = {};
+      const hideoutParts: ProgressData['hideoutParts'] = {};
       if (Array.isArray(dataFromApi.hideoutPartsProgress)) {
         dataFromApi.hideoutPartsProgress.forEach((part: OldHideoutPartProgress) => {
           hideoutParts![part.id] = {
@@ -385,7 +385,7 @@ export default class DataMigrationService {
           };
         });
       }
-      const taskObjectives: ProgressData["taskObjectives"] = {};
+      const taskObjectives: ProgressData['taskObjectives'] = {};
       if (Array.isArray(dataFromApi.taskObjectivesProgress)) {
         dataFromApi.taskObjectivesProgress.forEach((objective: OldTaskObjectiveProgress) => {
           taskObjectives![objective.id] = {
@@ -400,7 +400,7 @@ export default class DataMigrationService {
         level: dataFromApi.playerLevel || dataFromApi.level || 1,
         gameEdition: dataFromApi.gameEdition || GAME_EDITION_STRING_VALUES[0],
         pmcFaction: normalizePMCFaction(dataFromApi.pmcFaction).toLowerCase(),
-        displayName: dataFromApi.displayName || "",
+        displayName: dataFromApi.displayName || '',
         taskCompletions: taskCompletions,
         taskObjectives: taskObjectives,
         hideoutModules: hideoutModules,
@@ -412,7 +412,7 @@ export default class DataMigrationService {
       };
       return migrationData;
     } catch (error) {
-      console.error("[DataMigrationService] Error fetching data with API token:", error);
+      console.error('[DataMigrationService] Error fetching data with API token:', error);
       return null;
     }
   }

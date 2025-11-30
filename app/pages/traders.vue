@@ -25,23 +25,23 @@
   </div>
 </template>
 <script setup lang="ts">
-  import { storeToRefs } from "pinia";
-  import { computed } from "vue";
-  import TraderCard from "@/features/traders/TraderCard.vue";
-  import { useMetadataStore } from "@/stores/useMetadata";
-  import { useTarkovStore } from "@/stores/useTarkov";
+  import { storeToRefs } from 'pinia';
+  import { computed } from 'vue';
+  import TraderCard from '@/features/traders/TraderCard.vue';
+  import { useMetadataStore } from '@/stores/useMetadata';
+  import { useTarkovStore } from '@/stores/useTarkov';
   const tarkovStore = useTarkovStore();
   const metadataStore = useMetadataStore();
   const { sortedTraders: traders, loading } = storeToRefs(metadataStore);
   const gameMode = computed(() => {
     const mode = tarkovStore.getCurrentGameMode();
-    return mode === "pvp" ? "PvP" : "PvE";
+    return mode === 'pvp' ? 'PvP' : 'PvE';
   });
   const sortedTraders = computed(() => {
     if (!traders.value) return [];
     // Filter out internal/system traders if they appear in the list
     // Keeping Fence, Lightkeeper, etc.
-    return traders.value.filter((t) => t.name && !["System", "Unheard"].includes(t.name));
+    return traders.value.filter((t) => t.name && !['System', 'Unheard'].includes(t.name));
   });
   const updateLevel = (traderId: string, level: number) => {
     tarkovStore.setTraderLevel(traderId, level);

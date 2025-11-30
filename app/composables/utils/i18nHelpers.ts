@@ -1,5 +1,6 @@
-import { computed, getCurrentInstance } from "vue";
-import { useI18n } from "vue-i18n";
+import { computed, getCurrentInstance } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { logger } from '@/utils/logger';
 // Global flag to track i18n readiness
 let i18nReady = false;
 /**
@@ -13,17 +14,17 @@ export function markI18nReady() {
  */
 export function useSafeLocale() {
   const instance = getCurrentInstance();
-  console.log("[useSafeLocale] instance:", !!instance, "i18nReady:", i18nReady);
+  logger.debug('[useSafeLocale] instance:', !!instance, 'i18nReady:', i18nReady);
   if (instance && i18nReady) {
     try {
       // Use useI18n with explicit global scope to avoid parent scope warnings
       const { locale } = useI18n({
-        useScope: "global",
+        useScope: 'global',
         inheritLocale: true,
       });
       return computed(() => locale.value);
     } catch (error) {
-      console.warn("[useSafeLocale] Could not access i18n context:", error);
+      logger.warn('[useSafeLocale] Could not access i18n context:', error);
     }
   }
   // Fallback to browser language or English if not in component context or i18n not ready
@@ -33,13 +34,13 @@ export function useSafeLocale() {
 /**
  * Extracts language code from locale, falling back to 'en'
  */
-export function extractLanguageCode(locale: string, availableLanguages: string[] = ["en"]): string {
+export function extractLanguageCode(locale: string, availableLanguages: string[] = ['en']): string {
   const browserLocale = locale.split(/[-_]/)[0];
-  return browserLocale && availableLanguages.includes(browserLocale) ? browserLocale : "en";
+  return browserLocale && availableLanguages.includes(browserLocale) ? browserLocale : 'en';
 }
 /**
  * Gets the browser's language preference as a fallback
  */
 export function getBrowserLanguage(): string {
-  return navigator.language.split(/[-_]/)[0] || "en";
+  return navigator.language.split(/[-_]/)[0] || 'en';
 }

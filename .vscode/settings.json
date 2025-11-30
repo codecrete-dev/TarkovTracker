@@ -1,3 +1,12 @@
 {
-  "typescript.tsdk": "node_modules/typescript/lib"
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.tsserver.enableTracing": false,
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "deno.path": "/home/lab/.deno/bin/deno",
+  "deno.enable": false,
+  "deno.enablePaths": ["./supabase/functions"],
+  "deno.unstable": true
 }

@@ -14,8 +14,8 @@
  *
  * @module stores/userProgressState
  */
-import { GAME_MODES, type GameMode } from "@/utils/constants";
-import type { _GettersTree } from "pinia";
+import { GAME_MODES, type GameMode } from '@/utils/constants';
+import type { _GettersTree } from 'pinia';
 // State interfaces
 interface TaskObjective {
   count?: number;
@@ -42,7 +42,7 @@ export interface TraderProgress {
 }
 export interface UserProgressData {
   level: number;
-  pmcFaction: "USEC" | "BEAR";
+  pmcFaction: 'USEC' | 'BEAR';
   displayName: string | null;
   taskObjectives: { [objectiveId: string]: TaskObjective };
   taskCompletions: { [taskId: string]: TaskCompletion };
@@ -58,7 +58,7 @@ export interface UserState {
 }
 const defaultProgressData: UserProgressData = {
   level: 1,
-  pmcFaction: "USEC",
+  pmcFaction: 'USEC',
   displayName: null,
   taskObjectives: {},
   taskCompletions: {},
@@ -77,10 +77,10 @@ export function migrateToGameModeStructure(legacyData: unknown): UserState {
   // If already in new format and properly structured, return as-is
   if (
     legacyData &&
-    typeof legacyData === "object" &&
-    "currentGameMode" in legacyData &&
-    "pvp" in legacyData &&
-    "pve" in legacyData
+    typeof legacyData === 'object' &&
+    'currentGameMode' in legacyData &&
+    'pvp' in legacyData &&
+    'pve' in legacyData
   ) {
     const data = legacyData as Record<string, unknown>;
     // Ensure the structure is complete
@@ -102,21 +102,21 @@ export function migrateToGameModeStructure(legacyData: unknown): UserState {
   // Handle partial migration case - has currentGameMode but missing pvp/pve structure
   if (
     legacyData &&
-    typeof legacyData === "object" &&
-    "currentGameMode" in legacyData &&
-    !("pvp" in legacyData && !("pve" in legacyData))
+    typeof legacyData === 'object' &&
+    'currentGameMode' in legacyData &&
+    !('pvp' in legacyData && !('pve' in legacyData))
   ) {
     const data = legacyData as Record<string, unknown>;
     // This is a partially migrated state, use the existing data as legacy format
     const migratedProgressData: UserProgressData = {
       level: (data.level as number) || defaultProgressData.level,
-      pmcFaction: (data.pmcFaction as "USEC" | "BEAR") || defaultProgressData.pmcFaction,
+      pmcFaction: (data.pmcFaction as 'USEC' | 'BEAR') || defaultProgressData.pmcFaction,
       displayName: (data.displayName as string) || defaultProgressData.displayName,
-      taskCompletions: (data.taskCompletions as UserProgressData["taskCompletions"]) || {},
-      taskObjectives: (data.taskObjectives as UserProgressData["taskObjectives"]) || {},
-      hideoutParts: (data.hideoutParts as UserProgressData["hideoutParts"]) || {},
-      hideoutModules: (data.hideoutModules as UserProgressData["hideoutModules"]) || {},
-      traders: (data.traders as UserProgressData["traders"]) || {},
+      taskCompletions: (data.taskCompletions as UserProgressData['taskCompletions']) || {},
+      taskObjectives: (data.taskObjectives as UserProgressData['taskObjectives']) || {},
+      hideoutParts: (data.hideoutParts as UserProgressData['hideoutParts']) || {},
+      hideoutModules: (data.hideoutModules as UserProgressData['hideoutModules']) || {},
+      traders: (data.traders as UserProgressData['traders']) || {},
     };
     return {
       currentGameMode: data.currentGameMode as GameMode,
@@ -129,13 +129,13 @@ export function migrateToGameModeStructure(legacyData: unknown): UserState {
   const data = (legacyData as Record<string, unknown>) || {};
   const migratedProgressData: UserProgressData = {
     level: (data.level as number) || defaultProgressData.level,
-    pmcFaction: (data.pmcFaction as "USEC" | "BEAR") || defaultProgressData.pmcFaction,
+    pmcFaction: (data.pmcFaction as 'USEC' | 'BEAR') || defaultProgressData.pmcFaction,
     displayName: (data.displayName as string) || defaultProgressData.displayName,
-    taskCompletions: (data.taskCompletions as UserProgressData["taskCompletions"]) || {},
-    taskObjectives: (data.taskObjectives as UserProgressData["taskObjectives"]) || {},
-    hideoutParts: (data.hideoutParts as UserProgressData["hideoutParts"]) || {},
-    hideoutModules: (data.hideoutModules as UserProgressData["hideoutModules"]) || {},
-    traders: (data.traders as UserProgressData["traders"]) || {},
+    taskCompletions: (data.taskCompletions as UserProgressData['taskCompletions']) || {},
+    taskObjectives: (data.taskObjectives as UserProgressData['taskObjectives']) || {},
+    hideoutParts: (data.hideoutParts as UserProgressData['hideoutParts']) || {},
+    hideoutModules: (data.hideoutModules as UserProgressData['hideoutModules']) || {},
+    traders: (data.traders as UserProgressData['traders']) || {},
   };
   return {
     currentGameMode: GAME_MODES.PVP, // Default to PvP for existing users
@@ -160,7 +160,7 @@ const getCurrentData = (state: UserState): UserProgressData => {
     // Otherwise return default structure
     return {
       level: 1,
-      pmcFaction: "USEC",
+      pmcFaction: 'USEC',
       displayName: null,
       taskCompletions: {},
       taskObjectives: {},
@@ -176,10 +176,10 @@ export const getters = {
   getCurrentGameMode: (state: UserState) => () => state.currentGameMode || GAME_MODES.PVP,
   playerLevel: (state: UserState) => () => getCurrentData(state).level ?? 1,
   getGameEdition: (state: UserState) => () => state.gameEdition ?? 1,
-  getPMCFaction: (state: UserState) => () => getCurrentData(state).pmcFaction ?? "USEC",
+  getPMCFaction: (state: UserState) => () => getCurrentData(state).pmcFaction ?? 'USEC',
   getDisplayName: (state: UserState) => () => {
     const currentData = getCurrentData(state);
-    return currentData.displayName === "" ? null : (currentData.displayName ?? null);
+    return currentData.displayName === '' ? null : (currentData.displayName ?? null);
   },
   getObjectiveCount: (state: UserState) => (objectiveId: string) =>
     getCurrentData(state)?.taskObjectives?.[objectiveId]?.count ?? 0,
@@ -217,13 +217,13 @@ const updateObjective = (
 ) => {
   const currentData = getCurrentData(state);
   const stateValue = currentData[key];
-  if (!stateValue || typeof stateValue !== "object") {
+  if (!stateValue || typeof stateValue !== 'object') {
     (currentData[key] as Record<string, unknown>) = {};
   }
   const stateObj = currentData[key] as Record<string, unknown>;
   const existing = stateObj[objectiveId];
   stateObj[objectiveId] = {
-    ...(existing && typeof existing === "object" ? existing : {}),
+    ...(existing && typeof existing === 'object' ? existing : {}),
     ...updates,
   };
 };
@@ -247,41 +247,41 @@ export const actions = {
   setGameEdition(this: UserState, edition: number) {
     this.gameEdition = edition;
   },
-  setPMCFaction(this: UserState, faction: "USEC" | "BEAR") {
+  setPMCFaction(this: UserState, faction: 'USEC' | 'BEAR') {
     const currentData = getCurrentData(this);
     currentData.pmcFaction = faction;
   },
   setDisplayName(this: UserState, name: string | null) {
     const currentData = getCurrentData(this);
-    currentData.displayName = typeof name === "string" ? name : null;
+    currentData.displayName = typeof name === 'string' ? name : null;
   },
   setObjectiveCount(this: UserState, objectiveId: string, count: number) {
-    updateObjective(this, "taskObjectives", objectiveId, {
+    updateObjective(this, 'taskObjectives', objectiveId, {
       count: Math.max(0, count),
     });
   },
   setHideoutPartCount(this: UserState, objectiveId: string, count: number) {
-    updateObjective(this, "hideoutParts", objectiveId, {
+    updateObjective(this, 'hideoutParts', objectiveId, {
       count: Math.max(0, count),
     });
   },
   setTaskComplete(this: UserState, taskId: string) {
-    updateObjective(this, "taskCompletions", taskId, createCompletion(true, false));
+    updateObjective(this, 'taskCompletions', taskId, createCompletion(true, false));
   },
   setTaskFailed(this: UserState, taskId: string) {
-    updateObjective(this, "taskCompletions", taskId, createCompletion(true, true));
+    updateObjective(this, 'taskCompletions', taskId, createCompletion(true, true));
   },
   setTaskUncompleted(this: UserState, taskId: string) {
-    updateObjective(this, "taskCompletions", taskId, createCompletion(false, false));
+    updateObjective(this, 'taskCompletions', taskId, createCompletion(false, false));
   },
   setTaskObjectiveComplete(this: UserState, objectiveId: string) {
-    updateObjective(this, "taskObjectives", objectiveId, {
+    updateObjective(this, 'taskObjectives', objectiveId, {
       complete: true,
       timestamp: Date.now(),
     });
   },
   setTaskObjectiveUncomplete(this: UserState, objectiveId: string) {
-    updateObjective(this, "taskObjectives", objectiveId, { complete: false });
+    updateObjective(this, 'taskObjectives', objectiveId, { complete: false });
   },
   toggleTaskObjectiveComplete(this: UserState, objectiveId: string) {
     const isComplete = getters.isTaskObjectiveComplete(this)(objectiveId);
@@ -292,13 +292,13 @@ export const actions = {
     }
   },
   setHideoutPartComplete(this: UserState, objectiveId: string) {
-    updateObjective(this, "hideoutParts", objectiveId, {
+    updateObjective(this, 'hideoutParts', objectiveId, {
       complete: true,
       timestamp: Date.now(),
     });
   },
   setHideoutPartUncomplete(this: UserState, objectiveId: string) {
-    updateObjective(this, "hideoutParts", objectiveId, { complete: false });
+    updateObjective(this, 'hideoutParts', objectiveId, { complete: false });
   },
   toggleHideoutPartComplete(this: UserState, objectiveId: string) {
     const isComplete = getters.isHideoutPartComplete(this)(objectiveId);
@@ -309,13 +309,13 @@ export const actions = {
     }
   },
   setHideoutModuleComplete(this: UserState, hideoutId: string) {
-    updateObjective(this, "hideoutModules", hideoutId, {
+    updateObjective(this, 'hideoutModules', hideoutId, {
       complete: true,
       timestamp: Date.now(),
     });
   },
   setHideoutModuleUncomplete(this: UserState, hideoutId: string) {
-    updateObjective(this, "hideoutModules", hideoutId, { complete: false });
+    updateObjective(this, 'hideoutModules', hideoutId, { complete: false });
   },
   toggleHideoutModuleComplete(this: UserState, hideoutId: string) {
     const isComplete = getters.isHideoutModuleComplete(this)(hideoutId);
@@ -326,10 +326,10 @@ export const actions = {
     }
   },
   setTraderLevel(this: UserState, traderId: string, level: number) {
-    updateObjective(this, "traders", traderId, { level: Math.max(1, level) });
+    updateObjective(this, 'traders', traderId, { level: Math.max(1, level) });
   },
   setTraderReputation(this: UserState, traderId: string, reputation: number) {
-    updateObjective(this, "traders", traderId, { reputation: reputation });
+    updateObjective(this, 'traders', traderId, { reputation: reputation });
   },
 } as const;
 export type UserActions = typeof actions;

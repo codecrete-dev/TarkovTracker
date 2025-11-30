@@ -1,7 +1,7 @@
-import type { UserState } from "@/stores/progressState";
-import type Graph from "graphology";
-import type { _GettersTree, StateTree, Store } from "pinia";
-import type { ComputedRef, Ref } from "vue";
+import type { UserState } from '@/stores/progressState';
+import type Graph from 'graphology';
+import type { _GettersTree, StateTree, Store } from 'pinia';
+import type { ComputedRef, Ref } from 'vue';
 /**
  * Type definitions for Tarkov data structures
  * This file defines the structure for:
@@ -10,10 +10,16 @@ import type { ComputedRef, Ref } from "vue";
  * - Game objectives and quest data
  */
 // Core Tarkov Data Types
+export interface ItemCategory {
+  id: string;
+  name: string;
+  normalizedName?: string;
+}
 export interface TarkovItem {
   id: string;
   shortName?: string;
   name?: string;
+  normalizedName?: string;
   link?: string;
   wikiLink?: string;
   image512pxLink?: string;
@@ -22,6 +28,9 @@ export interface TarkovItem {
   iconLink?: string;
   image8xLink?: string;
   backgroundColor?: string;
+  types?: string[];
+  category?: ItemCategory;
+  categories?: ItemCategory[];
 }
 export interface ItemRequirement {
   id: string;
@@ -104,6 +113,10 @@ export interface FinishReward {
   status?: string;
   quest?: { id: string };
 }
+export interface NeededKey {
+  keys: TarkovItem[];
+  map?: { id: string; name?: string };
+}
 export interface Task {
   id: string;
   tarkovDataId?: number;
@@ -128,6 +141,9 @@ export interface Task {
   children?: string[];
   neededBy?: string[];
   type?: string;
+  wikiLink?: string;
+  neededKeys?: NeededKey[];
+  alternatives?: string[];
 }
 export interface TarkovMap {
   id: string;
@@ -167,6 +183,9 @@ export interface TarkovDataQueryResult {
 export interface TarkovHideoutQueryResult {
   hideoutStations: HideoutStation[];
 }
+export interface TarkovItemsQueryResult {
+  items: TarkovItem[];
+}
 // Needed Items Types
 export interface NeededItemBase {
   id: string;
@@ -175,13 +194,13 @@ export interface NeededItemBase {
   foundInRaid?: boolean;
 }
 export interface NeededItemTaskObjective extends NeededItemBase {
-  needType: "taskObjective";
+  needType: 'taskObjective';
   taskId: string;
   type?: string;
   markerItem?: TarkovItem;
 }
 export interface NeededItemHideoutModule extends NeededItemBase {
-  needType: "hideoutModule";
+  needType: 'hideoutModule';
   hideoutModule: HideoutModule;
 }
 // Lookup Types

@@ -1,30 +1,30 @@
 <script setup lang="ts">
-  const lastUpdated = "November 28, 2025";
+  const lastUpdated = 'November 28, 2025';
   const toc = [
-    { id: "top", title: "1. Acceptance of Terms" },
-    { id: "eligibility", title: "2. Eligibility and Account Requirements" },
-    { id: "service", title: "3. Service Description and Scope" },
-    { id: "non-affiliation", title: "4. Non-Affiliation and Trademark Disclaimer" },
-    { id: "conduct", title: "5. User Conduct and Obligations" },
-    { id: "ip", title: "6. Intellectual Property Rights" },
-    { id: "privacy", title: "7. Privacy and Data Handling" },
-    { id: "third-parties", title: "8. Third-Party Services and Integrations" },
-    { id: "disclaimers", title: "9. Disclaimers and Warranties" },
-    { id: "liability", title: "10. Limitation of Liability" },
-    { id: "indemnification", title: "11. Indemnification" },
-    { id: "modifications", title: "12. Modifications to Service and Terms" },
-    { id: "termination", title: "13. Termination" },
-    { id: "disputes", title: "14. Dispute Resolution and Governing Law" },
-    { id: "misc", title: "15. Miscellaneous Provisions" },
-    { id: "contact", title: "16. Contact Information" },
-    { id: "acknowledgment", title: "17. Acknowledgment" },
+    { id: 'top', title: '1. Acceptance of Terms' },
+    { id: 'eligibility', title: '2. Eligibility and Account Requirements' },
+    { id: 'service', title: '3. Service Description and Scope' },
+    { id: 'non-affiliation', title: '4. Non-Affiliation and Trademark Disclaimer' },
+    { id: 'conduct', title: '5. User Conduct and Obligations' },
+    { id: 'ip', title: '6. Intellectual Property Rights' },
+    { id: 'privacy', title: '7. Privacy and Data Handling' },
+    { id: 'third-parties', title: '8. Third-Party Services and Integrations' },
+    { id: 'disclaimers', title: '9. Disclaimers and Warranties' },
+    { id: 'liability', title: '10. Limitation of Liability' },
+    { id: 'indemnification', title: '11. Indemnification' },
+    { id: 'modifications', title: '12. Modifications to Service and Terms' },
+    { id: 'termination', title: '13. Termination' },
+    { id: 'disputes', title: '14. Dispute Resolution and Governing Law' },
+    { id: 'misc', title: '15. Miscellaneous Provisions' },
+    { id: 'contact', title: '16. Contact Information' },
+    { id: 'acknowledgment', title: '17. Acknowledgment' },
   ];
-  const activeId = ref(toc[0]?.id || "top");
+  const activeId = ref(toc[0]?.id || 'top');
   let observer: IntersectionObserver | null = null;
   const scrollTo = (id: string) => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     activeId.value = id;
   };
   onMounted(() => {
@@ -35,7 +35,7 @@
         });
       },
       {
-        rootMargin: "-30% 0px -60% 0px",
+        rootMargin: '-30% 0px -60% 0px',
         threshold: 0.1,
       }
     );

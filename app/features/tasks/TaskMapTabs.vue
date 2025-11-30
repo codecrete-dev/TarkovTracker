@@ -27,7 +27,7 @@
   </div>
 </template>
 <script setup lang="ts">
-  import { computed } from "vue";
+  import { computed } from 'vue';
   interface MapData {
     id: string;
     name: string;
@@ -40,7 +40,7 @@
     activeMapView: string;
   }
   interface Emits {
-    (e: "update:activeMapView", value: string): void;
+    (e: 'update:activeMapView', value: string): void;
   }
   const props = defineProps<Props>();
   const emit = defineEmits<Emits>();
@@ -62,7 +62,7 @@
     const index = Number(val);
     const item = tabItems.value[index];
     if (item) {
-      emit("update:activeMapView", item.id);
+      emit('update:activeMapView', item.id);
     }
   };
 </script>

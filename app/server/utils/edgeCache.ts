@@ -4,8 +4,8 @@
  * This utility provides a centralized way to handle Cloudflare Cache API logic
  * with fallback for development environments where caches might not be available.
  */
-import type { H3Event } from "h3";
-import { useRuntimeConfig } from "#imports";
+import type { H3Event } from 'h3';
+import { useRuntimeConfig } from '#imports';
 interface CacheOptions {
   ttl?: number;
   cacheKeyPrefix?: string;
@@ -26,11 +26,11 @@ export async function edgeCache<T>(
   ttl: number = 43200,
   options: CacheOptions = {}
 ): Promise<T> {
-  const { cacheKeyPrefix = "tarkovtracker" } = options;
+  const { cacheKeyPrefix = 'tarkovtracker' } = options;
   // Cloudflare Workers have a special caches.default property not in standard types
   // In Node.js dev mode, caches is not defined at all
   const isCacheAvailable =
-    typeof globalThis.caches !== "undefined" &&
+    typeof globalThis.caches !== 'undefined' &&
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (globalThis.caches as any).default;
   const fullCacheKey = `${cacheKeyPrefix}-${key}`;
@@ -43,9 +43,9 @@ export async function edgeCache<T>(
       const runtimeConfig = useRuntimeConfig();
       const appUrl = runtimeConfig?.public?.appUrl;
       const configuredHost = appUrl ? new URL(appUrl).host : null;
-      const protocol = appUrl ? new URL(appUrl).protocol : "https:";
+      const protocol = appUrl ? new URL(appUrl).protocol : 'https:';
       const requestHost = event.node?.req?.headers?.host;
-      const cacheHost = configuredHost || requestHost || "tarkovtracker.org";
+      const cacheHost = configuredHost || requestHost || 'tarkovtracker.org';
       const cacheUrl = new URL(`${protocol}//${cacheHost}/__edge-cache/${cacheKeyPrefix}/${key}`);
       const cacheKeyRequest = new Request(cacheUrl.toString());
       // Check cache first
@@ -54,9 +54,9 @@ export async function edgeCache<T>(
         // CACHE HIT - Return immediately
         const data = await cachedResponse.json();
         setResponseHeaders(event, {
-          "X-Cache-Status": "HIT",
-          "X-Cache-Key": fullCacheKey,
-          "Cache-Control": `public, max-age=${ttl}, s-maxage=${ttl}`,
+          'X-Cache-Status': 'HIT',
+          'X-Cache-Key': fullCacheKey,
+          'Cache-Control': `public, max-age=${ttl}, s-maxage=${ttl}`,
         });
         return data;
       }
@@ -66,10 +66,10 @@ export async function edgeCache<T>(
       // Store in edge cache with TTL
       const cacheResponse = new Response(JSON.stringify(response), {
         headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": `public, max-age=${ttl}, s-maxage=${ttl}`,
-          "X-Cache-Status": "MISS",
-          "X-Cache-Key": fullCacheKey,
+          'Content-Type': 'application/json',
+          'Cache-Control': `public, max-age=${ttl}, s-maxage=${ttl}`,
+          'X-Cache-Status': 'MISS',
+          'X-Cache-Key': fullCacheKey,
         },
       });
       // Non-blocking cache write if waitUntil available
@@ -81,9 +81,9 @@ export async function edgeCache<T>(
         await cache.put(cacheKeyRequest, cacheResponse.clone());
       }
       setResponseHeaders(event, {
-        "X-Cache-Status": "MISS",
-        "X-Cache-Key": fullCacheKey,
-        "Cache-Control": `public, max-age=${ttl}, s-maxage=${ttl}`,
+        'X-Cache-Status': 'MISS',
+        'X-Cache-Key': fullCacheKey,
+        'Cache-Control': `public, max-age=${ttl}, s-maxage=${ttl}`,
       });
       return response;
     } else {
@@ -91,9 +91,9 @@ export async function edgeCache<T>(
       console.log(`[DEV] Fetching data for ${fullCacheKey}`);
       const response = await fetcher();
       setResponseHeaders(event, {
-        "X-Cache-Status": "DEV",
-        "X-Cache-Key": fullCacheKey,
-        "Cache-Control": "no-cache",
+        'X-Cache-Status': 'DEV',
+        'X-Cache-Key': fullCacheKey,
+        'Cache-Control': 'no-cache',
       });
       return response;
     }
@@ -110,10 +110,10 @@ export async function edgeCache<T>(
  */
 export function createTarkovFetcher(query: string, variables: Record<string, unknown> = {}) {
   return async () => {
-    return await $fetch("https://api.tarkov.dev/graphql", {
-      method: "POST",
+    return await $fetch('https://api.tarkov.dev/graphql', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       body: {
         query,

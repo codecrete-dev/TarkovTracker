@@ -12,6 +12,6 @@
 </template>
 <script setup>
   defineProps({
-    icon: { type: String, default: "" },
+    icon: { type: String, default: '' },
   });
 </script>

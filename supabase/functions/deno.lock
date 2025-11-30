@@ -1,0 +1,33 @@
+{
+  "version": "5",
+  "specifiers": {
+    "npm:@types/node@*": "24.2.0"
+  },
+  "npm": {
+    "@types/node@24.2.0": {
+      "integrity": "sha512-3xyG3pMCq3oYCNg7/ZP+E1ooTaGB4cG8JWRsqqOYQdbWNY4zbaV0Ennrd7stjiJEFZCaybcIgpTjJWHRfBSIDw==",
+      "dependencies": [
+        "undici-types"
+      ]
+    },
+    "undici-types@7.10.0": {
+      "integrity": "sha512-t5Fy/nfn+14LuOc2KNYg75vZqClpAiqscVvMygNnlsHBFpSXdJaYtXMcdNLpl/Qvc3P2cB3s6lOV51nqsFq4ag=="
+    }
+  },
+  "redirects": {
+    "https://esm.sh/@supabase/supabase-js@2": "https://esm.sh/@supabase/supabase-js@2.86.0",
+    "https://esm.sh/iceberg-js@^0.8.0?target=denonext": "https://esm.sh/iceberg-js@0.8.0?target=denonext"
+  },
+  "remote": {
+    "https://esm.sh/@supabase/auth-js@2.86.0/denonext/auth-js.mjs": "9462cda0680690050508771f079907cb94e14f904fbcf4b07f5ae0dd3d61e345",
+    "https://esm.sh/@supabase/functions-js@2.86.0/denonext/functions-js.mjs": "e3c069a396ec89d9d3efc7d3bf443b5688780b13e744d110d00570c80bbeca4e",
+    "https://esm.sh/@supabase/postgrest-js@2.86.0/denonext/postgrest-js.mjs": "a7512edf33b261a4ae269a3c6403690849408b66146b96c069aea70c4998053a",
+    "https://esm.sh/@supabase/realtime-js@2.86.0/denonext/realtime-js.mjs": "195fc54b95415cc874b56d77b369e439006bee5d7218a34293c770ae23c5ce1f",
+    "https://esm.sh/@supabase/storage-js@2.86.0/denonext/storage-js.mjs": "7112d8ea92b752e6297f98f87bb6a9a7d0cc5a2063d7e7b94f1cc42106317cc0",
+    "https://esm.sh/@supabase/supabase-js@2.86.0": "03cff32ee9cd57294c4fbaef936d61d1842ebeb0e4c72c01667524c7f1e23912",
+    "https://esm.sh/@supabase/supabase-js@2.86.0/denonext/supabase-js.mjs": "b4c3a746a435ddbdcdbf5916b058f0ea40e2295e5e589529fe8e91cdd3689800",
+    "https://esm.sh/iceberg-js@0.8.0/denonext/iceberg-js.mjs": "2d0a0e39653ba07a6831f3c50498f92419e4ce09ee43514e69831267bd58c1cb",
+    "https://esm.sh/iceberg-js@0.8.0?target=denonext": "486642887657e92676b5a8a8a18bee7daa8abfdfb1256173fd8d983302ccf066",
+    "https://esm.sh/tslib@2.8.1/denonext/tslib.mjs": "ebce3cd5facb654623020337f867b426ba95f71596ba87acc9e6c6f4e55905ca"
+  }
+}

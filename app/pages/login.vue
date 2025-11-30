@@ -12,10 +12,10 @@
       <div class="flex flex-col items-center px-10 pt-12 pb-8 text-center">
         <tracker-logo class="mb-8 scale-150" :is-collapsed="false" />
         <h1 class="mb-4 text-4xl font-bold tracking-tight text-white">
-          {{ $t("page.login.title") }}
+          {{ $t('page.login.title') }}
         </h1>
         <p class="text-lg text-gray-400">
-          {{ $t("page.login.subtitle") }}
+          {{ $t('page.login.subtitle') }}
         </p>
       </div>
       <!-- Auth Buttons -->
@@ -33,7 +33,7 @@
             size="sm"
             class="text-gray-500 transition-colors hover:text-gray-300"
           >
-            {{ $t("page.login.privacy_policy") }}
+            {{ $t('page.login.privacy_policy') }}
           </UButton>
           <UButton
             to="/terms-of-service"
@@ -43,7 +43,7 @@
             size="sm"
             class="text-gray-500 transition-colors hover:text-gray-300"
           >
-            {{ $t("page.login.terms_of_service") }}
+            {{ $t('page.login.terms_of_service') }}
           </UButton>
         </div>
       </div>
@@ -51,8 +51,8 @@
   </div>
 </template>
 <script setup lang="ts">
-  import AuthButtons from "@/features/auth/AuthButtons.vue";
-  import TrackerLogo from "@/features/drawer/TrackerLogo.vue";
+  import AuthButtons from '@/features/auth/AuthButtons.vue';
+  import TrackerLogo from '@/features/drawer/TrackerLogo.vue';
 </script>
 <style scoped>
   /* Scoped styles removed as we use Tailwind utility classes */

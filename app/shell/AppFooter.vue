@@ -38,7 +38,7 @@
                     c0 1.17-.83 2.12-1.89 2.12z"
                   />
                 </svg>
-                {{ t("footer.call_to_action.discord") }}
+                {{ t('footer.call_to_action.discord') }}
               </a>
             </template>
           </i18n-t>
@@ -50,7 +50,7 @@
                 class="footer-link flex items-center gap-1"
               >
                 <UIcon name="i-mdi-github" class="h-3.5 w-3.5 opacity-80" />
-                {{ t("footer.call_to_action.github") }}
+                {{ t('footer.call_to_action.github') }}
               </a>
             </template>
           </i18n-t>
@@ -108,8 +108,8 @@
   </footer>
 </template>
 <script setup>
-  import { useI18n } from "vue-i18n";
-  const { t } = useI18n({ useScope: "global" });
+  import { useI18n } from 'vue-i18n';
+  const { t } = useI18n({ useScope: 'global' });
 </script>
 <style lang="scss" scoped>
   .footer-link {

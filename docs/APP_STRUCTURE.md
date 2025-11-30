@@ -9,18 +9,14 @@ This document explains the organization and separation of concerns between `app.
 1. **Keep it flat** - Avoid deep nesting unless absolutely necessary
    - ✅ `/app/shell/AppBar.vue` (2 levels)
    - ❌ `/app/features/layout/components/AppBar.vue` (4 levels)
-
 2. **Avoid over-abstraction** - Don't create layers "just in case"
    - ✅ Extract when you have actual duplication or complexity
    - ❌ Create wrappers and abstractions speculatively
-
 3. **Minimize indirection** - Code should be easy to trace and find
    - ✅ Direct imports and clear paths
    - ❌ Multiple wrapper components with no clear purpose
-
-**Guiding question:** "Does this abstraction solve a real problem I have right now?"
-
-If the answer is "it might be useful someday" → **don't do it yet**.
+     **Guiding question:** "Does this abstraction solve a real problem I have right now?"
+     If the answer is "it might be useful someday" → **don't do it yet**.
 
 ## Overview
 
@@ -38,23 +34,21 @@ app.vue (Root wrapper)
 ### `app.vue` - Root Application Wrapper
 
 **Location:** `/app/app.vue`
-
 **Purpose:** Global app wrapper that runs once and stays mounted for the entire session.
-
 **Should contain:**
+
 - ✅ Global providers (`<UApp>`, error boundaries)
 - ✅ App-wide initialization (via composables like `useAppInitialization`)
 - ✅ Portal targets for modals/toasts (`<div id="modals">`)
 - ✅ Components needed on **EVERY** page/layout
 - ✅ Root-level routing components (`<NuxtLayout>`, `<NuxtPage>`)
-
-**Should NOT contain:**
+  **Should NOT contain:**
 - ❌ Layout-specific structure (headers, footers, navigation)
 - ❌ Styling classes (backgrounds, text colors, spacing)
 - ❌ Complex initialization logic (extract to composables)
 - ❌ Business logic or state management
+  **Example:**
 
-**Example:**
 ```vue
 <template>
   <UApp>
@@ -66,12 +60,13 @@ app.vue (Root wrapper)
   </UApp>
 </template>
 <script setup lang="ts">
-  import { useAppInitialization } from "@/composables/useAppInitialization";
+  import { useAppInitialization } from '@/composables/useAppInitialization';
   useAppInitialization();
 </script>
 ```
 
 **Why keep it minimal?**
+
 - `app.vue` cannot be changed without reloading the entire app
 - Complex logic here is harder to test and debug
 - Layout concerns should be in layouts, not the root wrapper
@@ -81,21 +76,19 @@ app.vue (Root wrapper)
 ### `layouts/default.vue` - Page Layout Structure
 
 **Location:** `/app/layouts/default.vue`
-
 **Purpose:** Defines the visual structure and layout for pages (header, navigation, content area, footer).
-
 **Should contain:**
+
 - ✅ Shell components (AppBar, NavDrawer, AppFooter)
 - ✅ Layout-specific styling (backgrounds, spacing, responsive behavior)
 - ✅ Layout state management (drawer open/closed, breakpoints)
 - ✅ Main content slot (`<slot />`) for page content
-
-**Should NOT contain:**
+  **Should NOT contain:**
 - ❌ Global providers (those go in `app.vue`)
 - ❌ Page-specific content (that goes in pages)
 - ❌ Business logic (use stores/composables)
+  **Example:**
 
-**Example:**
 ```vue
 <template>
   <div class="bg-background text-surface-200 flex min-h-screen flex-col">
@@ -110,36 +103,32 @@ app.vue (Root wrapper)
 ```
 
 **When to create additional layouts:**
+
 - Authentication pages (no header/footer)
 - Admin dashboard (different navigation)
 - Public marketing pages (different header)
-
-**Don't create extra layouts** unless you have genuinely different page structures.
+  **Don't create extra layouts** unless you have genuinely different page structures.
 
 ---
 
 ### `shell/*` - App Shell Components
 
 **Location:** `/app/shell/`
-
 **Purpose:** Reusable structural components that form the app's "chrome" (header, navigation, footer).
-
 **Current components:**
+
 - `AppBar.vue` - Top header with title, game mode toggle, language selector
 - `NavDrawer.vue` - Side navigation drawer with menu items
 - `AppFooter.vue` - Bottom footer with links and info
-
-**Should contain:**
+  **Should contain:**
 - ✅ Layout structural elements (headers, footers, navigation)
 - ✅ Components used in layouts (not feature-specific)
 - ✅ Responsive behavior for layout elements
-
-**Should NOT contain:**
+  **Should NOT contain:**
 - ❌ Feature-specific components (those go in `features/`)
 - ❌ Form inputs or business logic components
 - ❌ Page content
-
-**Why separate from `layouts/`?**
+  **Why separate from `layouts/`?**
 - Layouts compose shell components
 - Shell components can be lazy-loaded for performance
 - Easier to test components in isolation
@@ -150,15 +139,13 @@ app.vue (Root wrapper)
 ### `composables/useAppInitialization.ts` - App Initialization Logic
 
 **Location:** `/app/composables/useAppInitialization.ts`
-
 **Purpose:** Handles one-time app initialization when the app mounts.
-
 **Responsibilities:**
+
 - Locale setup from user preferences
 - Supabase sync initialization for authenticated users
 - Legacy data migration
-
-**Why extract from `app.vue`?**
+  **Why extract from `app.vue`?**
 - ✅ Keeps `app.vue` clean and focused
 - ✅ Logic is testable in isolation
 - ✅ Self-documenting with JSDoc comments
@@ -205,47 +192,49 @@ Do I need a COMPLETELY different page structure?
 ## Anti-Patterns to Avoid
 
 ### ❌ Over-abstraction
+
 **Bad:**
+
 ```
 app.vue → StandardLayout.vue → LayoutWrapper.vue → ActualLayout.vue
 ```
 
 **Good:**
+
 ```
 app.vue → layouts/default.vue → shell components
 ```
 
-**Why?** Unnecessary layers make code harder to follow with no benefit.
-
----
+## **Why?** Unnecessary layers make code harder to follow with no benefit.
 
 ### ❌ Duplicate styling
+
 **Bad:**
+
 ```vue
 <!-- app.vue -->
 <div class="bg-background text-surface-200 flex min-h-screen">
-
 <!-- layouts/default.vue -->
 <div class="bg-background text-surface-200 flex min-h-screen">
 ```
 
 **Good:**
+
 ```vue
 <!-- app.vue -->
 <UApp>
   <NuxtLayout><NuxtPage /></NuxtLayout>
 </UApp>
-
 <!-- layouts/default.vue -->
 <div class="bg-background text-surface-200 flex min-h-screen">
 ```
 
-**Why?** Styling belongs in layouts, not the root wrapper.
-
----
+## **Why?** Styling belongs in layouts, not the root wrapper.
 
 ### ❌ Complex logic in app.vue
+
 **Bad:**
+
 ```vue
 <script setup lang="ts">
   onMounted(async () => {
@@ -255,36 +244,36 @@ app.vue → layouts/default.vue → shell components
 ```
 
 **Good:**
+
 ```vue
 <script setup lang="ts">
-  import { useAppInitialization } from "@/composables/useAppInitialization";
+  import { useAppInitialization } from '@/composables/useAppInitialization';
   useAppInitialization();
 </script>
 ```
 
-**Why?** Keeps app.vue clean, logic testable.
-
----
+## **Why?** Keeps app.vue clean, logic testable.
 
 ### ❌ Shell components in wrong folder
+
 **Bad:**
+
 ```
 features/layout/AppBar.vue  ❌ (layout is not a "feature")
 components/AppBar.vue       ❌ (not generic enough)
 ```
 
 **Good:**
+
 ```
 shell/AppBar.vue            ✅ (app structural component)
 ```
 
-**Why?** Clear semantic separation improves discoverability.
-
----
+## **Why?** Clear semantic separation improves discoverability.
 
 ## Current Structure
 
-```
+```tree
 app/
 ├── app.vue                          # Root wrapper (minimal)
 ├── layouts/
@@ -328,5 +317,4 @@ Consider refactoring when:
 - ✅ `app.vue` exceeds 20 lines → Extract logic to composables
 - ✅ Components are hard to find → Review folder organization
 - ❌ "Just in case" → Don't abstract until you need it
-
-**Remember:** Premature abstraction is worse than a bit of duplication. Refactor when the pain is real, not hypothetical.
+  **Remember:** Premature abstraction is worse than a bit of duplication. Refactor when the pain is real, not hypothetical.

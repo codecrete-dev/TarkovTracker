@@ -1,14 +1,16 @@
-import { defineStore } from "pinia";
-import { computed, nextTick, ref, watch } from "vue";
-import { useSupabaseListener } from "@/composables/supabase/useSupabaseListener";
-import type { UserState } from "@/stores/progressState";
-import { useSystemStoreWithSupabase } from "@/stores/useSystemStore";
-import type { TeamGetters, TeamState } from "@/types/tarkov";
-import type { Store } from "pinia";
+import { defineStore } from 'pinia';
+import { computed, nextTick, ref, watch } from 'vue';
+import { useSupabaseListener } from '@/composables/supabase/useSupabaseListener';
+import type { UserState } from '@/stores/progressState';
+import { useSystemStoreWithSupabase } from '@/stores/useSystemStore';
+import type { TeamGetters, TeamState } from '@/types/tarkov';
+import { logger } from '@/utils/logger';
+import type { Store } from 'pinia';
+import { useToast } from '#imports';
 /**
  * Team store definition with getters for team info and members
  */
-export const useTeamStore = defineStore<string, TeamState, TeamGetters>("team", {
+export const useTeamStore = defineStore<string, TeamState, TeamGetters>('team', {
   state: (): TeamState => ({}),
   getters: {
     teamOwner(state) {
@@ -46,7 +48,7 @@ export function useTeamStoreWithSupabase() {
     if (
       $supabase.user.loggedIn &&
       currentSystemStateTeam &&
-      typeof currentSystemStateTeam === "string"
+      typeof currentSystemStateTeam === 'string'
     ) {
       return `id=eq.${currentSystemStateTeam}`;
     }
@@ -55,10 +57,10 @@ export function useTeamStoreWithSupabase() {
   const handleTeamSnapshot = (data: Record<string, unknown> | null) => {
     if (data) {
       const patch: Record<string, unknown> = { ...data };
-      if ("owner_id" in data) {
+      if ('owner_id' in data) {
         patch.owner = (data as { owner_id: string }).owner_id;
       }
-      if ("join_code" in data) {
+      if ('join_code' in data) {
         patch.password = (data as { join_code: string }).join_code;
       }
       teamStore.$patch(patch as Partial<TeamState>);
@@ -69,9 +71,9 @@ export function useTeamStoreWithSupabase() {
   // Setup Supabase listener
   const { cleanup, isSubscribed } = useSupabaseListener({
     store: teamStore,
-    table: "teams",
+    table: 'teams',
     filter: teamFilter.value,
-    storeId: "team",
+    storeId: 'team',
     onData: handleTeamSnapshot,
   });
   // Watch for filter changes handled by useSupabaseListener
@@ -117,7 +119,23 @@ export function useTeammateStores() {
           }
         }
       } catch (error) {
-        console.error("Error managing teammate stores:", error);
+        logger.error('Error managing teammate stores:', error);
+        const toast = useToast();
+        toast.add({ title: 'Failed to load teammate data. Retrying…', color: 'warning' });
+        // Basic retry once after a short delay for transient issues
+        setTimeout(async () => {
+          try {
+            for (const teammate of newTeammatesArray) {
+              if (!teammateStores.value[teammate]) {
+                await createTeammateStore(teammate);
+              }
+            }
+            toast.add({ title: 'Teammate data loaded on retry', color: 'primary' });
+          } catch (e) {
+            logger.error('Retry failed for teammate stores:', e);
+            toast.add({ title: 'Could not load teammate data', color: 'error' });
+          }
+        }, 1500);
       }
     },
     {
@@ -129,8 +147,8 @@ export function useTeammateStores() {
   const createTeammateStore = async (teammateId: string) => {
     try {
       // Import required dependencies
-      const { defineStore } = await import("pinia");
-      const { getters, actions, defaultState } = await import("@/stores/progressState");
+      const { defineStore } = await import('pinia');
+      const { getters, actions, defaultState } = await import('@/stores/progressState');
       // Define the teammate store
       const storeDefinition = defineStore(`teammate-${teammateId}`, {
         state: () => JSON.parse(JSON.stringify(defaultState)),
@@ -143,13 +161,13 @@ export function useTeammateStores() {
       // Note: We need to store the cleanup function, not the unsubscribe function directly
       const { cleanup } = useSupabaseListener({
         store: storeInstance,
-        table: "user_progress",
+        table: 'user_progress',
         filter: `user_id=eq.${teammateId}`,
         storeId: `teammate-${teammateId}`,
       });
       teammateUnsubscribes.value[teammateId] = cleanup;
     } catch (error) {
-      console.error(`Error creating store for teammate ${teammateId}:`, error);
+      logger.error(`Error creating store for teammate ${teammateId}:`, error);
     }
   };
   // Cleanup all teammate stores

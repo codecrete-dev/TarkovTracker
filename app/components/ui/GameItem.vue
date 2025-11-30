@@ -140,11 +140,11 @@
   </div>
 </template>
 <script setup lang="ts">
-  import { computed, defineAsyncComponent, ref } from "vue";
-  import ContextMenu from "./ContextMenu.vue";
-  import ContextMenuItem from "./ContextMenuItem.vue";
+  import { computed, defineAsyncComponent, ref } from 'vue';
+  import ContextMenu from './ContextMenu.vue';
+  import ContextMenuItem from './ContextMenuItem.vue';
   const ItemCountControls = defineAsyncComponent(
-    () => import("@/features/neededitems/ItemCountControls.vue")
+    () => import('@/features/neededitems/ItemCountControls.vue')
   );
   interface Props {
     // Basic item identification
@@ -163,7 +163,7 @@
     taskWikiLink?: string | null;
     // Display options
     count?: number | null;
-    size?: "small" | "medium" | "large";
+    size?: 'small' | 'medium' | 'large';
     simpleMode?: boolean;
     showActions?: boolean;
     isVisible?: boolean;
@@ -182,22 +182,22 @@
     };
   }
   const props = withDefaults(defineProps<Props>(), {
-    itemId: "",
+    itemId: '',
     itemName: null,
-    src: "",
-    iconLink: "",
-    image512pxLink: "",
+    src: '',
+    iconLink: '',
+    image512pxLink: '',
     devLink: null,
     wikiLink: null,
     taskId: null,
     taskName: null,
     taskWikiLink: null,
     count: null,
-    size: "medium",
+    size: 'medium',
     simpleMode: false,
     showActions: true,
     isVisible: true,
-    backgroundColor: "",
+    backgroundColor: '',
     clickable: false,
     showCounter: false,
     currentCount: 0,
@@ -218,63 +218,63 @@
     if (props.src) return props.src;
     if (props.iconLink) return props.iconLink;
     if (props.imageItem?.iconLink) return props.imageItem.iconLink;
-    if (props.imageItem?.image512pxLink && props.size === "large")
+    if (props.imageItem?.image512pxLink && props.size === 'large')
       return props.imageItem.image512pxLink;
     if (props.itemId) return `https://assets.tarkov.dev/${props.itemId}-icon.webp`;
-    return "";
+    return '';
   });
   // Compute display properties based on size
   const imageSize = computed(() => {
     switch (props.size) {
-      case "small":
+      case 'small':
         return 24;
-      case "large":
+      case 'large':
         return 64;
-      case "medium":
+      case 'medium':
       default:
         return 32;
     }
   });
   const containerClasses = computed(() => {
     if (props.simpleMode) {
-      return "d-block";
+      return 'd-block';
     }
-    return "";
+    return '';
   });
   const imageContainerClasses = computed(() => {
-    const classes = ["d-block", "relative", "overflow-hidden"];
-    if (props.size === "small") {
-      classes.push("item-row-image");
-    } else if (props.size === "large") {
-      classes.push("item-dialog-image");
+    const classes = ['d-block', 'relative', 'overflow-hidden'];
+    if (props.size === 'small') {
+      classes.push('item-row-image');
+    } else if (props.size === 'large') {
+      classes.push('item-dialog-image');
     }
     return classes;
   });
   const imageClasses = computed(() => {
     const classes: Record<string, boolean> = {};
     // Background color styling
-    const bgColor = props.backgroundColor || props.imageItem?.backgroundColor || "default";
+    const bgColor = props.backgroundColor || props.imageItem?.backgroundColor || 'default';
     classes[`item-bg-${bgColor}`] = true;
     // Size-specific styling
-    classes["p-1"] = props.simpleMode;
+    classes['p-1'] = props.simpleMode;
     // Base styling
-    classes["rounded"] = true;
+    classes['rounded'] = true;
     return classes;
   });
   // Image error handling
   const handleImgError = () => {
     // Log error for debugging if needed
-    console.warn(`Failed to load image for item: ${props.itemId || "unknown"}`);
+    console.warn(`Failed to load image for item: ${props.itemId || 'unknown'}`);
   };
   // Action methods
   const openTarkovDevLink = () => {
     if (props.devLink) {
-      window.open(props.devLink, "_blank");
+      window.open(props.devLink, '_blank');
     }
   };
   const openWikiLink = () => {
     if (props.wikiLink) {
-      window.open(props.wikiLink, "_blank");
+      window.open(props.wikiLink, '_blank');
     }
   };
   const copyItemName = () => {
@@ -284,7 +284,7 @@
   };
   const handleClick = (event: MouseEvent) => {
     if (props.clickable) {
-      emit("click", event);
+      emit('click', event);
     }
   };
   const handleContextMenu = (event: MouseEvent) => {
@@ -295,7 +295,7 @@
   };
   const openTaskWiki = () => {
     if (props.taskWikiLink) {
-      window.open(props.taskWikiLink, "_blank");
+      window.open(props.taskWikiLink, '_blank');
     }
   };
 </script>

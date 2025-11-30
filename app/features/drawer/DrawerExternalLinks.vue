@@ -38,7 +38,7 @@
   </div>
 </template>
 <script setup>
-  import DrawerItem from "@/features/drawer/DrawerItem.vue";
+  import DrawerItem from '@/features/drawer/DrawerItem.vue';
   const props = defineProps({
     isCollapsed: {
       type: Boolean,

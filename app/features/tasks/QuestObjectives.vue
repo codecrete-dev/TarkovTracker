@@ -21,7 +21,7 @@
   </div>
 </template>
 <script setup>
-  import TaskObjective from "./TaskObjective.vue";
+  import TaskObjective from './TaskObjective.vue';
   defineProps({
     objectives: { type: Array, required: true },
     irrelevantCount: { type: Number, required: true },

@@ -44,7 +44,7 @@
                   color="primary"
                   @click="undoLastAction"
                 >
-                  {{ t("page.tasks.questcard.undo") }}
+                  {{ t('page.tasks.questcard.undo') }}
                 </UButton>
                 <UButton
                   size="xs"
@@ -52,7 +52,7 @@
                   color="secondary"
                   @click="taskStatusUpdated = false"
                 >
-                  {{ t("page.tasks.filters.close") }}
+                  {{ t('page.tasks.filters.close') }}
                 </UButton>
               </div>
             </div>
@@ -63,19 +63,19 @@
   </div>
 </template>
 <script setup lang="ts">
-  import { storeToRefs } from "pinia";
-  import { computed, ref, watch } from "vue";
-  import { useI18n } from "vue-i18n";
-  import { useTaskFiltering } from "@/composables/useTaskFiltering";
-  import TaskCard from "@/features/tasks/TaskCard.vue";
-  import TaskEmptyState from "@/features/tasks/TaskEmptyState.vue";
-  import TaskLoadingState from "@/features/tasks/TaskLoadingState.vue";
-  import { useMetadataStore } from "@/stores/useMetadata";
-  import { usePreferencesStore } from "@/stores/usePreferences";
-  import { useProgressStore } from "@/stores/useProgress";
-  import { useTarkovStore } from "@/stores/useTarkov";
-  import type { Task, TaskObjective } from "@/types/tarkov";
-  const { t } = useI18n({ useScope: "global" });
+  import { storeToRefs } from 'pinia';
+  import { computed, ref, watch } from 'vue';
+  import { useI18n } from 'vue-i18n';
+  import { useTaskFiltering } from '@/composables/useTaskFiltering';
+  import TaskCard from '@/features/tasks/TaskCard.vue';
+  import TaskEmptyState from '@/features/tasks/TaskEmptyState.vue';
+  import TaskLoadingState from '@/features/tasks/TaskLoadingState.vue';
+  import { useMetadataStore } from '@/stores/useMetadata';
+  import { usePreferencesStore } from '@/stores/usePreferences';
+  import { useProgressStore } from '@/stores/useProgress';
+  import { useTarkovStore } from '@/stores/useTarkov';
+  import type { Task, TaskObjective } from '@/types/tarkov';
+  const { t } = useI18n({ useScope: 'global' });
   const preferencesStore = usePreferencesStore();
   const {
     getTaskPrimaryView,
@@ -92,7 +92,7 @@
   const tarkovStore = useTarkovStore();
   // Toast / Undo State
   const taskStatusUpdated = ref(false);
-  const taskStatus = ref("");
+  const taskStatus = ref('');
   const undoData = ref<{
     taskId: string;
     taskName: string;
@@ -116,7 +116,7 @@
       mergedMaps.value,
       tasksLoading.value
     ).catch((error) => {
-      console.error("Failed to refresh tasks", error);
+      console.error('Failed to refresh tasks', error);
     });
   };
   watch(
@@ -142,10 +142,10 @@
   // Helper Methods for Undo
   const handleTaskObjectives = (
     objectives: TaskObjective[],
-    action: "setTaskObjectiveComplete" | "setTaskObjectiveUncomplete"
+    action: 'setTaskObjectiveComplete' | 'setTaskObjectiveUncomplete'
   ) => {
     objectives.forEach((o) => {
-      if (action === "setTaskObjectiveComplete") {
+      if (action === 'setTaskObjectiveComplete') {
         tarkovStore.setTaskObjectiveComplete(o.id);
       } else {
         tarkovStore.setTaskObjectiveUncomplete(o.id);
@@ -154,16 +154,16 @@
   };
   const handleAlternatives = (
     alternatives: string[] | undefined,
-    taskAction: "setTaskComplete" | "setTaskUncompleted" | "setTaskFailed",
-    objectiveAction: "setTaskObjectiveComplete" | "setTaskObjectiveUncomplete"
+    taskAction: 'setTaskComplete' | 'setTaskUncompleted' | 'setTaskFailed',
+    objectiveAction: 'setTaskObjectiveComplete' | 'setTaskObjectiveUncomplete'
   ) => {
     if (!Array.isArray(alternatives)) return;
     alternatives.forEach((a: string) => {
-      if (taskAction === "setTaskComplete") {
+      if (taskAction === 'setTaskComplete') {
         tarkovStore.setTaskComplete(a);
-      } else if (taskAction === "setTaskUncompleted") {
+      } else if (taskAction === 'setTaskUncompleted') {
         tarkovStore.setTaskUncompleted(a);
-      } else if (taskAction === "setTaskFailed") {
+      } else if (taskAction === 'setTaskFailed') {
         tarkovStore.setTaskFailed(a);
       }
       const alternativeTask = tasks.value.find((task) => task.id === a);
@@ -198,33 +198,33 @@
   const undoLastAction = () => {
     if (!undoData.value) return;
     const { taskId, taskName, action } = undoData.value;
-    if (action === "complete") {
+    if (action === 'complete') {
       // Undo completion by setting task as uncompleted
       tarkovStore.setTaskUncompleted(taskId);
       // Find the task to handle objectives and alternatives
       const taskToUndo = tasks.value.find((task) => task.id === taskId);
       if (taskToUndo?.objectives) {
-        handleTaskObjectives(taskToUndo.objectives, "setTaskObjectiveUncomplete");
+        handleTaskObjectives(taskToUndo.objectives, 'setTaskObjectiveUncomplete');
         // Using taskToUndo with optional alternatives property
         handleAlternatives(
           (taskToUndo as Task & { alternatives?: string[] }).alternatives,
-          "setTaskUncompleted",
-          "setTaskObjectiveUncomplete"
+          'setTaskUncompleted',
+          'setTaskObjectiveUncomplete'
         );
       }
-      updateTaskStatus("page.tasks.questcard.undocomplete", taskName);
-    } else if (action === "uncomplete") {
+      updateTaskStatus('page.tasks.questcard.undocomplete', taskName);
+    } else if (action === 'uncomplete') {
       // Undo uncompleting by setting task as completed
       tarkovStore.setTaskComplete(taskId);
       // Find the task to handle objectives and alternatives
       const taskToUndo = tasks.value.find((task) => task.id === taskId);
       if (taskToUndo?.objectives) {
-        handleTaskObjectives(taskToUndo.objectives, "setTaskObjectiveComplete");
+        handleTaskObjectives(taskToUndo.objectives, 'setTaskObjectiveComplete');
         // Using taskToUndo with optional alternatives property
         handleAlternatives(
           (taskToUndo as Task & { alternatives?: string[] }).alternatives,
-          "setTaskFailed",
-          "setTaskObjectiveComplete"
+          'setTaskFailed',
+          'setTaskObjectiveComplete'
         );
         // Ensure min level for completion
         const minLevel = taskToUndo.minPlayerLevel;
@@ -232,7 +232,7 @@
           tarkovStore.setLevel(minLevel);
         }
       }
-      updateTaskStatus("page.tasks.questcard.undouncomplete", taskName);
+      updateTaskStatus('page.tasks.questcard.undouncomplete', taskName);
     }
     showUndoButton.value = false;
     undoData.value = null;

@@ -1,8 +1,9 @@
-import { defineStore } from "pinia";
-import { useGraphBuilder } from "@/composables/useGraphBuilder";
-import { extractLanguageCode, useSafeLocale } from "@/composables/utils/i18nHelpers";
-import mapsData from "@/data/maps.json";
-import { useTarkovStore } from "@/stores/useTarkov";
+import { defineStore } from 'pinia';
+import { markRaw, ref } from 'vue';
+import { useGraphBuilder } from '@/composables/useGraphBuilder';
+import { extractLanguageCode, useSafeLocale } from '@/composables/utils/i18nHelpers';
+import mapsData from '@/data/maps.json';
+import { useTarkovStore } from '@/stores/useTarkov';
 import type {
   HideoutModule,
   HideoutStation,
@@ -14,11 +15,13 @@ import type {
   StaticMapData,
   TarkovDataQueryResult,
   TarkovHideoutQueryResult,
+  TarkovItem,
+  TarkovItemsQueryResult,
   TarkovMap,
   Task,
   TaskObjective,
   Trader,
-} from "@/types/tarkov";
+} from '@/types/tarkov';
 import {
   API_GAME_MODES,
   API_SUPPORTED_LANGUAGES,
@@ -26,28 +29,35 @@ import {
   GAME_MODES,
   LOCALE_TO_API_MAPPING,
   MAP_NAME_MAPPING,
-} from "@/utils/constants";
-import { createGraph } from "@/utils/graphHelpers";
+} from '@/utils/constants';
+import { createGraph } from '@/utils/graphHelpers';
+import { logger } from '@/utils/logger';
 import {
   CACHE_CONFIG,
   type CacheType,
   cleanupExpiredCache,
   getCachedData,
   setCachedData,
-} from "@/utils/tarkovCache";
-import type { AbstractGraph } from "graphology-types";
+} from '@/utils/tarkovCache';
+import type { AbstractGraph } from 'graphology-types';
+// Initialization guard to prevent race conditions
+let initPromise: Promise<void> | null = null;
+const isInitializing = ref(false);
 interface MetadataState {
   // Loading states
   loading: boolean;
   hideoutLoading: boolean;
+  itemsLoading: boolean;
   error: Error | null;
   hideoutError: Error | null;
+  itemsError: Error | null;
   // Raw data from API
   tasks: Task[];
   hideoutStations: HideoutStation[];
   maps: TarkovMap[];
   traders: Trader[];
   playerLevels: PlayerLevel[];
+  items: TarkovItem[];
   staticMapData: StaticMapData | null;
   // Processed data
   taskGraph: AbstractGraph;
@@ -64,20 +74,23 @@ interface MetadataState {
   languageCode: string;
   currentGameMode: string;
 }
-export const useMetadataStore = defineStore("metadata", {
+export const useMetadataStore = defineStore('metadata', {
   state: (): MetadataState => ({
     loading: false,
     hideoutLoading: false,
+    itemsLoading: false,
     error: null,
     hideoutError: null,
+    itemsError: null,
     tasks: [],
     hideoutStations: [],
     maps: [],
     traders: [],
     playerLevels: [],
+    items: [],
     staticMapData: null,
-    taskGraph: createGraph(),
-    hideoutGraph: createGraph(),
+    taskGraph: markRaw(createGraph()),
+    hideoutGraph: markRaw(createGraph()),
     hideoutModules: [],
     objectiveMaps: {},
     alternativeTasks: {},
@@ -85,7 +98,7 @@ export const useMetadataStore = defineStore("metadata", {
     mapTasks: {},
     neededItemTaskObjectives: [],
     neededItemHideoutModules: [],
-    languageCode: "en",
+    languageCode: 'en',
     currentGameMode: GAME_MODES.PVP,
   }),
   getters: {
@@ -112,7 +125,7 @@ export const useMetadataStore = defineStore("metadata", {
       }
       const mergedMaps = state.maps.map((map) => {
         const lowerCaseName = map.name.toLowerCase();
-        const mapKey = MAP_NAME_MAPPING[lowerCaseName] || lowerCaseName.replace(/\s+|\+/g, "");
+        const mapKey = MAP_NAME_MAPPING[lowerCaseName] || lowerCaseName.replace(/\s+|\+/g, '');
         const staticData = state.staticMapData?.[mapKey];
         if (staticData?.svg) {
           return {
@@ -176,12 +189,39 @@ export const useMetadataStore = defineStore("metadata", {
         state.hideoutStations.length > 0
       );
     },
+    // Items getters
+    itemsById: (state): Map<string, TarkovItem> => {
+      const map = new Map<string, TarkovItem>();
+      state.items.forEach((item) => {
+        map.set(item.id, item);
+      });
+      return map;
+    },
+    isItemsLoaded: (state): boolean => {
+      return !state.itemsLoading && state.items.length > 0;
+    },
   },
   actions: {
     async initialize() {
-      this.updateLanguageAndGameMode();
-      await this.loadStaticMapData();
-      await this.fetchAllData();
+      // Guard against concurrent initialization calls
+      if (initPromise) {
+        return initPromise;
+      }
+      if (isInitializing.value) {
+        return;
+      }
+      isInitializing.value = true;
+      initPromise = (async () => {
+        try {
+          this.updateLanguageAndGameMode();
+          await this.loadStaticMapData();
+          await this.fetchAllData();
+        } finally {
+          isInitializing.value = false;
+          initPromise = null;
+        }
+      })();
+      return initPromise;
     },
     /**
      * Update language code and game mode based on current state
@@ -190,7 +230,7 @@ export const useMetadataStore = defineStore("metadata", {
     updateLanguageAndGameMode(localeOverride?: string) {
       const store = useTarkovStore();
       const effectiveLocale = localeOverride || useSafeLocale().value;
-      console.log("[MetadataStore] updateLanguageAndGameMode - raw locale:", effectiveLocale);
+      logger.debug('[MetadataStore] updateLanguageAndGameMode - raw locale:', effectiveLocale);
       // Update language code
       const mappedCode = LOCALE_TO_API_MAPPING[effectiveLocale];
       if (mappedCode) {
@@ -215,7 +255,7 @@ export const useMetadataStore = defineStore("metadata", {
      */
     async fetchAllData(forceRefresh = false) {
       // Run cleanup once per session
-      if (typeof window !== "undefined") {
+      if (typeof window !== 'undefined') {
         cleanupExpiredCache().catch(console.error);
       }
       await Promise.all([this.fetchTasksData(forceRefresh), this.fetchHideoutData(forceRefresh)]);
@@ -232,14 +272,14 @@ export const useMetadataStore = defineStore("metadata", {
           API_GAME_MODES[this.currentGameMode as keyof typeof API_GAME_MODES] ||
           API_GAME_MODES[GAME_MODES.PVP];
         // Step 1: Check IndexedDB cache (unless forcing refresh)
-        if (!forceRefresh && typeof window !== "undefined") {
+        if (!forceRefresh && typeof window !== 'undefined') {
           const cached = await getCachedData<TarkovDataQueryResult>(
-            "data" as CacheType,
+            'data' as CacheType,
             apiGameMode,
             this.languageCode
           );
           if (cached) {
-            console.log(
+            logger.debug(
               `[MetadataStore] Tasks loaded from cache: ${this.languageCode}-${apiGameMode}`
             );
             this.processTasksData(cached);
@@ -248,12 +288,12 @@ export const useMetadataStore = defineStore("metadata", {
           }
         }
         // Step 2: Fetch from server API
-        console.log(
+        logger.debug(
           `[MetadataStore] Fetching tasks from server: ${this.languageCode}-${apiGameMode}`
         );
         const response = (await $fetch<{
           data: TarkovDataQueryResult;
-        }>("/api/tarkov/data", {
+        }>('/api/tarkov/data', {
           query: {
             lang: this.languageCode,
             gameMode: apiGameMode,
@@ -265,9 +305,9 @@ export const useMetadataStore = defineStore("metadata", {
         if (response?.data) {
           this.processTasksData(response.data);
           // Step 3: Store in IndexedDB for future visits
-          if (typeof window !== "undefined") {
+          if (typeof window !== 'undefined') {
             setCachedData(
-              "data" as CacheType,
+              'data' as CacheType,
               apiGameMode,
               this.languageCode,
               response.data,
@@ -278,7 +318,7 @@ export const useMetadataStore = defineStore("metadata", {
           this.resetTasksData();
         }
       } catch (err) {
-        console.error("Error fetching tasks data:", err);
+        console.error('Error fetching tasks data:', err);
         this.error = err as Error;
         this.resetTasksData();
       } finally {
@@ -298,24 +338,24 @@ export const useMetadataStore = defineStore("metadata", {
           API_GAME_MODES[GAME_MODES.PVP];
         // Step 1: Check IndexedDB cache (unless forcing refresh)
         // Hideout data is not language-specific
-        if (!forceRefresh && typeof window !== "undefined") {
+        if (!forceRefresh && typeof window !== 'undefined') {
           const cached = await getCachedData<TarkovHideoutQueryResult>(
-            "hideout" as CacheType,
+            'hideout' as CacheType,
             apiGameMode,
-            "en"
+            'en'
           );
           if (cached) {
-            console.log(`[MetadataStore] Hideout loaded from cache: ${apiGameMode}`);
+            logger.debug(`[MetadataStore] Hideout loaded from cache: ${apiGameMode}`);
             this.processHideoutData(cached);
             this.hideoutLoading = false;
             return;
           }
         }
         // Step 2: Fetch from server API
-        console.log(`[MetadataStore] Fetching hideout from server: ${apiGameMode}`);
+        logger.debug(`[MetadataStore] Fetching hideout from server: ${apiGameMode}`);
         const response = (await $fetch<{
           data: TarkovHideoutQueryResult;
-        }>("/api/tarkov/hideout", {
+        }>('/api/tarkov/hideout', {
           query: {
             gameMode: apiGameMode,
           },
@@ -326,11 +366,11 @@ export const useMetadataStore = defineStore("metadata", {
         if (response?.data) {
           this.processHideoutData(response.data);
           // Step 3: Store in IndexedDB for future visits
-          if (typeof window !== "undefined") {
+          if (typeof window !== 'undefined') {
             setCachedData(
-              "hideout" as CacheType,
+              'hideout' as CacheType,
               apiGameMode,
-              "en",
+              'en',
               response.data,
               CACHE_CONFIG.DEFAULT_TTL
             ).catch(console.error);
@@ -339,11 +379,69 @@ export const useMetadataStore = defineStore("metadata", {
           this.resetHideoutData();
         }
       } catch (err) {
-        console.error("Error fetching hideout data:", err);
+        console.error('Error fetching hideout data:', err);
         this.hideoutError = err as Error;
         this.resetHideoutData();
       } finally {
         this.hideoutLoading = false;
+      }
+    },
+    /**
+     * Fetch all items data
+     * Uses IndexedDB cache for client-side persistence
+     * Items are language-specific but not game-mode specific
+     */
+    async fetchItemsData(forceRefresh = false) {
+      this.itemsLoading = true;
+      this.itemsError = null;
+      try {
+        // Step 1: Check IndexedDB cache (unless forcing refresh)
+        if (!forceRefresh && typeof window !== 'undefined') {
+          const cached = await getCachedData<TarkovItemsQueryResult>(
+            'items' as CacheType,
+            'all',
+            this.languageCode
+          );
+          if (cached) {
+            logger.debug(`[MetadataStore] Items loaded from cache: ${this.languageCode}`);
+            this.items = cached.items || [];
+            this.itemsLoading = false;
+            return;
+          }
+        }
+        // Step 2: Fetch from server API
+        logger.debug(`[MetadataStore] Fetching items from server: ${this.languageCode}`);
+        const response = (await $fetch<{
+          data: TarkovItemsQueryResult;
+        }>('/api/tarkov/items', {
+          query: {
+            lang: this.languageCode,
+          },
+        })) as { data: TarkovItemsQueryResult; error?: unknown };
+        if (response.error) {
+          throw new Error(response.error as string);
+        }
+        if (response?.data?.items) {
+          this.items = response.data.items;
+          // Step 3: Store in IndexedDB for future visits (24 hour TTL for items)
+          if (typeof window !== 'undefined') {
+            setCachedData(
+              'items' as CacheType,
+              'all',
+              this.languageCode,
+              response.data,
+              CACHE_CONFIG.MAX_TTL
+            ).catch(console.error);
+          }
+        } else {
+          this.items = [];
+        }
+      } catch (err) {
+        console.error('Error fetching items data:', err);
+        this.itemsError = err as Error;
+        this.items = [];
+      } finally {
+        this.itemsLoading = false;
       }
     },
     /**
@@ -394,7 +492,7 @@ export const useMetadataStore = defineStore("metadata", {
       this.maps = [];
       this.traders = [];
       this.playerLevels = [];
-      this.taskGraph = createGraph();
+      this.taskGraph = markRaw(createGraph());
       this.objectiveMaps = {};
       this.alternativeTasks = {};
       this.objectiveGPS = {};
@@ -407,7 +505,7 @@ export const useMetadataStore = defineStore("metadata", {
     resetHideoutData() {
       this.hideoutStations = [];
       this.hideoutModules = [];
-      this.hideoutGraph = createGraph();
+      this.hideoutGraph = markRaw(createGraph());
       this.neededItemHideoutModules = [];
     },
     // Task utility functions
@@ -451,7 +549,7 @@ export const useMetadataStore = defineStore("metadata", {
     },
     getStaticMapKey(mapName: string): string {
       const lowerCaseName = mapName.toLowerCase();
-      return MAP_NAME_MAPPING[lowerCaseName] || lowerCaseName.replace(/\s+|\+/g, "");
+      return MAP_NAME_MAPPING[lowerCaseName] || lowerCaseName.replace(/\s+|\+/g, '');
     },
     hasMapSvg(mapId: string): boolean {
       const map = this.getMapById(mapId);

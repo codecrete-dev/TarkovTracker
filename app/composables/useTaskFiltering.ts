@@ -1,8 +1,8 @@
-import { ref, shallowRef } from "vue";
-import { useMetadataStore } from "@/stores/useMetadata";
-import { useProgressStore } from "@/stores/useProgress";
-import type { Task } from "@/types/tarkov";
-import { EXCLUDED_SCAV_KARMA_TASKS } from "@/utils/constants";
+import { ref, shallowRef } from 'vue';
+import { useMetadataStore } from '@/stores/useMetadata';
+import { useProgressStore } from '@/stores/useProgress';
+import type { Task } from '@/types/tarkov';
+import { EXCLUDED_SCAV_KARMA_TASKS } from '@/utils/constants';
 interface MergedMap {
   id: string;
   mergedIds?: string[];
@@ -13,15 +13,15 @@ export function useTaskFiltering() {
   const reloadingTasks = ref(false);
   const visibleTasks = shallowRef<Task[]>([]);
   const mapObjectiveTypes = [
-    "mark",
-    "zone",
-    "extract",
-    "visit",
-    "findItem",
-    "findQuestItem",
-    "plantItem",
-    "plantQuestItem",
-    "shoot",
+    'mark',
+    'zone',
+    'extract',
+    'visit',
+    'findItem',
+    'findQuestItem',
+    'plantItem',
+    'plantQuestItem',
+    'shoot',
   ];
   /**
    * Filter tasks by primary view (all, maps, traders)
@@ -33,9 +33,9 @@ export function useTaskFiltering() {
     traderView: string,
     mergedMaps: MergedMap[]
   ) => {
-    if (primaryView === "maps") {
+    if (primaryView === 'maps') {
       return filterTasksByMap(taskList, mapView, mergedMaps);
-    } else if (primaryView === "traders") {
+    } else if (primaryView === 'traders') {
       return taskList.filter((task) => task.trader?.id === traderView);
     }
     return taskList;
@@ -57,7 +57,7 @@ export function useTaskFiltering() {
             (obj) =>
               Array.isArray(obj.maps) &&
               obj.maps.some((map) => ids.includes(map.id)) &&
-              mapObjectiveTypes.includes(obj.type || "")
+              mapObjectiveTypes.includes(obj.type || '')
           );
         }
         return hasMap;
@@ -68,7 +68,7 @@ export function useTaskFiltering() {
         task.objectives?.some(
           (obj) =>
             obj.maps?.some((map) => map.id === mapView) &&
-            mapObjectiveTypes.includes(obj.type || "")
+            mapObjectiveTypes.includes(obj.type || '')
         )
       );
     }
@@ -77,7 +77,7 @@ export function useTaskFiltering() {
    * Filter tasks by status (available, locked, completed) and user view
    */
   const filterTasksByStatus = (taskList: Task[], secondaryView: string, userView: string) => {
-    if (userView === "all") {
+    if (userView === 'all') {
       return filterTasksForAllUsers(taskList, secondaryView);
     } else {
       return filterTasksForUser(taskList, secondaryView, userView);
@@ -94,10 +94,10 @@ export function useTaskFiltering() {
       const relevantTeamIds = teamIds.filter((teamId) => {
         const userFaction = progressStore.playerFaction[teamId];
         const taskFaction = task.factionName;
-        return taskFaction === "Any" || taskFaction === userFaction;
+        return taskFaction === 'Any' || taskFaction === userFaction;
       });
       if (relevantTeamIds.length === 0) continue;
-      if (secondaryView === "available") {
+      if (secondaryView === 'available') {
         // Tasks available for at least one team member
         const usersWhoNeedTask = [];
         let taskIsNeededBySomeone = false;
@@ -112,7 +112,7 @@ export function useTaskFiltering() {
         if (taskIsNeededBySomeone) {
           tempVisibleTasks.push({ ...task, neededBy: usersWhoNeedTask });
         }
-      } else if (secondaryView === "locked") {
+      } else if (secondaryView === 'locked') {
         // Tasks locked for ALL team members (not available to anyone)
         let isAvailableForAny = false;
         let isCompletedByAll = true;
@@ -129,7 +129,7 @@ export function useTaskFiltering() {
         if (!isAvailableForAny && !isCompletedByAll) {
           tempVisibleTasks.push({ ...task, neededBy: [] });
         }
-      } else if (secondaryView === "completed") {
+      } else if (secondaryView === 'completed') {
         // Tasks completed by ALL team members
         const isCompletedByAll = relevantTeamIds.every((teamId) => {
           return progressStore.tasksCompletions?.[task.id]?.[teamId] === true;
@@ -146,17 +146,17 @@ export function useTaskFiltering() {
    */
   const filterTasksForUser = (taskList: Task[], secondaryView: string, userView: string) => {
     let filtered = taskList;
-    if (secondaryView === "available") {
+    if (secondaryView === 'available') {
       filtered = filtered.filter(
         (task) => progressStore.unlockedTasks?.[task.id]?.[userView] === true
       );
-    } else if (secondaryView === "locked") {
+    } else if (secondaryView === 'locked') {
       filtered = filtered.filter((task) => {
         const taskCompletions = progressStore.tasksCompletions?.[task.id];
         const unlockedTasks = progressStore.unlockedTasks?.[task.id];
         return taskCompletions?.[userView] !== true && unlockedTasks?.[userView] !== true;
       });
-    } else if (secondaryView === "completed") {
+    } else if (secondaryView === 'completed') {
       filtered = filtered.filter(
         (task) => progressStore.tasksCompletions?.[task.id]?.[userView] === true
       );
@@ -164,7 +164,7 @@ export function useTaskFiltering() {
     // Filter by faction
     return filtered.filter(
       (task) =>
-        task.factionName === "Any" || task.factionName === progressStore.playerFaction[userView]
+        task.factionName === 'Any' || task.factionName === progressStore.playerFaction[userView]
     );
   };
   /**
@@ -205,7 +205,7 @@ export function useTaskFiltering() {
         if (ids.some((id: string) => taskLocations.includes(id))) {
           // Check if task is available for the user
           const unlocked =
-            activeUserView === "all"
+            activeUserView === 'all'
               ? Object.values(progressStore.unlockedTasks[task.id] || {}).some(Boolean)
               : progressStore.unlockedTasks[task.id]?.[activeUserView];
           if (unlocked) {
@@ -214,7 +214,7 @@ export function useTaskFiltering() {
               if (Array.isArray(objective.maps) && objective.maps.some((m) => ids.includes(m.id))) {
                 const completions = progressStore.objectiveCompletions[objective.id] || {};
                 const isComplete =
-                  activeUserView === "all"
+                  activeUserView === 'all'
                     ? Object.values(completions).every(Boolean)
                     : completions[activeUserView] === true;
                 if (!isComplete) {
@@ -278,13 +278,13 @@ export function useTaskFiltering() {
     for (const task of taskList) {
       // Skip excluded tasks
       if (EXCLUDED_SCAV_KARMA_TASKS.includes(task.id)) continue;
-      if (userView === "all") {
+      if (userView === 'all') {
         // For "all" view
         const teamIds = Object.keys(progressStore.visibleTeamStores || {});
         const relevantTeamIds = teamIds.filter((teamId) => {
           const teamFaction = progressStore.playerFaction[teamId];
           const taskFaction = task.factionName;
-          return taskFaction === "Any" || taskFaction === teamFaction;
+          return taskFaction === 'Any' || taskFaction === teamFaction;
         });
         if (relevantTeamIds.length === 0) continue;
         const isAvailableForAny = relevantTeamIds.some((teamId) => {
@@ -306,7 +306,7 @@ export function useTaskFiltering() {
         // For single user view
         const taskFaction = task.factionName;
         const userFaction = progressStore.playerFaction[userView];
-        if (taskFaction !== "Any" && taskFaction !== userFaction) continue;
+        if (taskFaction !== 'Any' && taskFaction !== userFaction) continue;
         const isUnlocked = progressStore.unlockedTasks?.[task.id]?.[userView] === true;
         const isCompleted = progressStore.tasksCompletions?.[task.id]?.[userView] === true;
         if (isCompleted) {
@@ -335,14 +335,14 @@ export function useTaskFiltering() {
       if (!counts[traderId]) counts[traderId] = 0;
       // Filter by faction
       const taskFaction = task.factionName;
-      if (userView === "all") {
+      if (userView === 'all') {
         // For "all" view, check if available for any team member
         const isAvailableForAny = Object.keys(progressStore.visibleTeamStores || {}).some(
           (teamId) => {
             const isUnlocked = progressStore.unlockedTasks?.[task.id]?.[teamId] === true;
             const isCompleted = progressStore.tasksCompletions?.[task.id]?.[teamId] === true;
             const teamFaction = progressStore.playerFaction[teamId];
-            const factionMatch = taskFaction === "Any" || taskFaction === teamFaction;
+            const factionMatch = taskFaction === 'Any' || taskFaction === teamFaction;
             return isUnlocked && !isCompleted && factionMatch;
           }
         );
@@ -350,7 +350,7 @@ export function useTaskFiltering() {
       } else {
         // For single user view, only count available (unlocked but not completed)
         const userFaction = progressStore.playerFaction[userView];
-        const factionMatch = taskFaction === "Any" || taskFaction === userFaction;
+        const factionMatch = taskFaction === 'Any' || taskFaction === userFaction;
         if (!factionMatch) continue;
         const isUnlocked = progressStore.unlockedTasks?.[task.id]?.[userView] === true;
         const isCompleted = progressStore.tasksCompletions?.[task.id]?.[userView] === true;

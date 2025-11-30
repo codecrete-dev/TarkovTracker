@@ -45,7 +45,7 @@
                   </i18n-t>
                 </template>
                 <template v-else>
-                  {{ $t("page.hideout.stationcard.levelnotready") }}
+                  {{ $t('page.hideout.stationcard.levelnotready') }}
                 </template>
               </span>
             </div>
@@ -69,10 +69,10 @@
         class="mb-3 rounded-lg bg-gray-700 p-3 text-center"
       >
         <div class="mb-2 text-sm">
-          {{ $t("page.hideout.stationcard.gameeditiondescription") }}
+          {{ $t('page.hideout.stationcard.gameeditiondescription') }}
         </div>
         <UButton variant="soft" to="/settings" color="white">
-          {{ $t("page.hideout.stationcard.settingsbutton") }}
+          {{ $t('page.hideout.stationcard.settingsbutton') }}
         </UButton>
       </div>
       <!-- Next level requirements -->
@@ -81,7 +81,7 @@
         <div v-if="hasItemRequirements" class="rounded-lg bg-gray-800 p-3">
           <div class="mb-3 flex items-center text-base font-medium">
             <UIcon name="i-mdi-package-variant-closed-check" class="mr-2 h-5 w-5 text-green-500" />
-            {{ $t("page.hideout.stationcard.nextlevel") }}
+            {{ $t('page.hideout.stationcard.nextlevel') }}
           </div>
           <!-- Item Requirements Grid -->
           <div class="mb-3 grid grid-cols-1 gap-3">
@@ -96,7 +96,7 @@
           <!-- Prerequisites Section -->
           <div v-if="hasPrerequisites" class="space-y-2 border-t border-gray-700 pt-3">
             <div class="mb-2 text-xs font-medium tracking-wider text-gray-400 uppercase">
-              {{ $t("page.hideout.stationcard.prerequisites") || "Prerequisites" }}
+              {{ $t('page.hideout.stationcard.prerequisites') || 'Prerequisites' }}
             </div>
             <!-- Station Level Requirements -->
             <div
@@ -170,7 +170,7 @@
           class="flex items-center justify-center text-center text-base font-medium text-yellow-500"
         >
           <UIcon name="i-mdi-star-check" class="mr-2 h-6 w-6" />
-          {{ $t("page.hideout.stationcard.maxlevel") }}
+          {{ $t('page.hideout.stationcard.maxlevel') }}
         </div>
       </div>
     </template>
@@ -235,7 +235,7 @@
             v-if="nextLevel && (!currentLevel || downgradeDisabled)"
             class="text-sm text-gray-400"
           >
-            {{ t("page.hideout.stationcard.upgradeunavailable") }}
+            {{ t('page.hideout.stationcard.upgradeunavailable') }}
           </span>
         </div>
       </div>
@@ -243,13 +243,13 @@
   </GenericCard>
 </template>
 <script setup>
-  import { computed, defineAsyncComponent } from "vue";
-  import { useI18n } from "vue-i18n";
-  import { useProgressStore } from "@/stores/useProgress";
-  import { useTarkovStore } from "@/stores/useTarkov";
-  import { SPECIAL_STATIONS } from "@/utils/constants";
-  const GenericCard = defineAsyncComponent(() => import("@/components/ui/GenericCard.vue"));
-  const HideoutRequirement = defineAsyncComponent(() => import("./HideoutRequirement.vue"));
+  import { computed, defineAsyncComponent } from 'vue';
+  import { useI18n } from 'vue-i18n';
+  import { useProgressStore } from '@/stores/useProgress';
+  import { useTarkovStore } from '@/stores/useTarkov';
+  import { SPECIAL_STATIONS } from '@/utils/constants';
+  const GenericCard = defineAsyncComponent(() => import('@/components/ui/GenericCard.vue'));
+  const HideoutRequirement = defineAsyncComponent(() => import('./HideoutRequirement.vue'));
   const props = defineProps({
     station: {
       type: Object,
@@ -258,42 +258,42 @@
   });
   const progressStore = useProgressStore();
   const tarkovStore = useTarkovStore();
-  const { t } = useI18n({ useScope: "global" });
+  const { t } = useI18n({ useScope: 'global' });
   const toast = useToast();
   const upgradeButtonUi = {
-    base: "bg-success-500 hover:bg-success-600 active:bg-success-700 text-white border border-success-700",
+    base: 'bg-success-500 hover:bg-success-600 active:bg-success-700 text-white border border-success-700',
   };
   const downgradeButtonUi = {
-    base: "bg-red-900/40 hover:bg-red-900/60 active:bg-red-900/80 text-red-300 border border-red-700/50",
+    base: 'bg-red-900/40 hover:bg-red-900/60 active:bg-red-900/80 text-red-300 border border-red-700/50',
   };
   const getHighlightColor = () => {
     if (progressStore.hideoutLevels?.[props.station.id]?.self > 0) {
-      return "secondary";
+      return 'secondary';
     } else if (!prerequisitesMet.value) {
-      return "red";
+      return 'red';
     } else {
-      return "green";
+      return 'green';
     }
   };
   const highlightClasses = computed(() => {
     const color = getHighlightColor();
     const classes = {};
     switch (color) {
-      case "green":
+      case 'green':
         classes[
-          "bg-gradient-to-r from-[rgba(1,36,0,0.15)] via-[rgba(15,121,9,0.15)] to-[rgba(0,83,0,0.15)]"
+          'bg-gradient-to-r from-[rgba(1,36,0,0.15)] via-[rgba(15,121,9,0.15)] to-[rgba(0,83,0,0.15)]'
         ] = true;
         break;
-      case "red":
+      case 'red':
         classes[
-          "bg-gradient-to-r from-[rgba(36,0,0,0.15)] via-[rgba(121,0,0,0.15)] to-[rgba(83,0,0,0.15)]"
+          'bg-gradient-to-r from-[rgba(36,0,0,0.15)] via-[rgba(121,0,0,0.15)] to-[rgba(83,0,0,0.15)]'
         ] = true;
         break;
-      case "secondary":
-        classes["bg-gradient-to-br from-brand-700 via-brand-300 to-brand-500"] = true;
+      case 'secondary':
+        classes['bg-gradient-to-br from-brand-700 via-brand-300 to-brand-500'] = true;
         break;
       default:
-        classes["bg-gradient-to-br from-accent-800 via-accent-700 to-accent-600"] = true;
+        classes['bg-gradient-to-br from-accent-800 via-accent-700 to-accent-600'] = true;
         break;
     }
     return classes;
@@ -307,10 +307,11 @@
     // For now, return true to avoid blocking upgrades based on untracked skills
     return true;
   };
-  const isTraderReqMet = (_requirement) => {
-    // TODO: Implement trader loyalty level and rep tracking in user state
-    // For now, return true to avoid blocking upgrades based on untracked trader levels
-    return true;
+  const isTraderReqMet = (requirement) => {
+    // Check user's current trader loyalty level against requirement
+    if (!requirement?.trader?.id || typeof requirement?.value !== 'number') return true;
+    const currentLevel = progressStore.getTraderLevel(requirement.trader.id);
+    return currentLevel >= requirement.value;
   };
   const prerequisitesMet = computed(() => {
     if (!nextLevel.value) return true;
@@ -389,7 +390,7 @@
     const hasMaxStash = (editionData?.defaultStashLevel ?? 0) >= 5;
     // For editions with max stash, show static description with 10x72
     if (hasMaxStash) {
-      return "Maximum size stash (10x72)";
+      return 'Maximum size stash (10x72)';
     }
     return description;
   };
@@ -402,11 +403,11 @@
       tarkovStore.setHideoutPartComplete(o.id);
     });
     toast.add({
-      title: t("page.hideout.stationcard.statusupgraded", {
+      title: t('page.hideout.stationcard.statusupgraded', {
         name: props.station.name,
         level: upgradeLevel.level,
       }),
-      color: "green",
+      color: 'green',
     });
   };
   const downgradeStation = () => {
@@ -418,11 +419,11 @@
       tarkovStore.setHideoutPartUncomplete(o.id);
     });
     toast.add({
-      title: t("page.hideout.stationcard.statusdowngraded", {
+      title: t('page.hideout.stationcard.statusdowngraded', {
         name: props.station.name,
         level: downgradeLevel.level,
       }),
-      color: "red",
+      color: 'red',
     });
   };
 </script>

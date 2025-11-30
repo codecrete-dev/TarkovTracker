@@ -1,142 +1,142 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import VueI18nPlugin from "@intlify/unplugin-vue-i18n/vite";
-const __dirname = fileURLToPath(new URL(".", import.meta.url));
-const appDir = resolve(__dirname, "app");
+import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
+const appDir = resolve(__dirname, 'app');
 export default defineNuxtConfig({
-  compatibilityDate: "2025-07-15",
+  compatibilityDate: '2025-07-15',
   ssr: false,
-  srcDir: "app",
+  srcDir: 'app',
   runtimeConfig: {
     public: {
-      appUrl: process.env.NUXT_PUBLIC_APP_URL || "http://localhost:3000",
-      teamGatewayUrl: process.env.NUXT_PUBLIC_TEAM_GATEWAY_URL || "",
+      appUrl: process.env.NUXT_PUBLIC_APP_URL || 'http://localhost:3000',
+      teamGatewayUrl: process.env.NUXT_PUBLIC_TEAM_GATEWAY_URL || '',
     },
   },
   devtools: {
-    enabled: process.env.NODE_ENV === "development",
+    enabled: process.env.NODE_ENV === 'development',
 
     timeline: {
       enabled: true,
     },
   },
-  serverDir: resolve(__dirname, "app/server"),
+  serverDir: resolve(__dirname, 'app/server'),
   nitro: {
-    preset: "cloudflare-pages",
+    preset: 'cloudflare-pages',
     cloudflare: {
       pages: {
         routes: {
-          include: ["/*"],
-          exclude: ["/_fonts/*", "/_nuxt/*", "/img/*", "/favicon.ico", "/robots.txt"],
+          include: ['/*'],
+          exclude: ['/_fonts/*', '/_nuxt/*', '/img/*', '/favicon.ico', '/robots.txt'],
         },
       },
     },
   },
   routeRules: {
     // Prerender the index page for zero-invocation loading of the SPA shell
-    "/": { prerender: true },
+    '/': { prerender: true },
     // Explicit long-term caching for build assets
-    "/_nuxt/**": {
-      headers: { "cache-control": "public,max-age=31536000,immutable" },
+    '/_nuxt/**': {
+      headers: { 'cache-control': 'public,max-age=31536000,immutable' },
     },
-    "/_fonts/**": {
-      headers: { "cache-control": "public,max-age=31536000,immutable" },
+    '/_fonts/**': {
+      headers: { 'cache-control': 'public,max-age=31536000,immutable' },
     },
   },
   app: {
-    baseURL: "/",
-    buildAssetsDir: "/_nuxt/",
+    baseURL: '/',
+    buildAssetsDir: '/_nuxt/',
     head: {
       link: [
-        { rel: "preconnect", href: "https://fonts.googleapis.com" },
+        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         {
-          rel: "preconnect",
-          href: "https://fonts.gstatic.com",
-          crossorigin: "",
+          rel: 'preconnect',
+          href: 'https://fonts.gstatic.com',
+          crossorigin: '',
         },
         {
-          rel: "stylesheet",
-          href: "https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap",
+          rel: 'stylesheet',
+          href: 'https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap',
         },
       ],
     },
   },
-  css: ["~/assets/css/tailwind.css"],
+  css: ['~/assets/css/tailwind.css'],
   alias: {
-    "@": appDir,
-    "~": appDir,
+    '@': appDir,
+    '~': appDir,
   },
   modules: [
-    "@nuxt/eslint",
+    '@nuxt/eslint',
     // Only load test utils during local dev/test so production builds don't try to resolve devDependency
-    process.env.NODE_ENV === "development" ? "@nuxt/test-utils/module" : undefined,
-    "@pinia/nuxt",
-    "@nuxt/ui",
-    "@nuxt/image",
+    process.env.NODE_ENV === 'development' ? '@nuxt/test-utils/module' : undefined,
+    '@pinia/nuxt',
+    '@nuxt/ui',
+    '@nuxt/image',
   ].filter(Boolean) as string[],
   ui: {
     theme: {
       colors: [
-        "primary",
-        "secondary",
-        "neutral",
-        "brand",
-        "accent",
-        "pvp",
-        "pve",
-        "info",
-        "success",
-        "warning",
-        "error",
+        'primary',
+        'secondary',
+        'neutral',
+        'brand',
+        'accent',
+        'pvp',
+        'pve',
+        'info',
+        'success',
+        'warning',
+        'error',
       ],
     },
   },
   components: [
     {
-      path: "~/components",
+      path: '~/components',
       pathPrefix: false,
     },
     {
-      path: "~/features",
+      path: '~/features',
       pathPrefix: false,
     },
     {
-      path: "~/shell",
+      path: '~/shell',
       pathPrefix: false,
     },
   ],
   typescript: {
     tsConfig: {
       compilerOptions: {
-        baseUrl: ".",
+        baseUrl: '.',
         paths: {
-          "@/*": ["./app/*"],
-          "~/*": ["./app/*"],
+          '@/*': ['./app/*'],
+          '~/*': ['./app/*'],
         },
       },
     },
   },
   postcss: {
     plugins: {
-      "@tailwindcss/postcss": {},
+      '@tailwindcss/postcss': {},
       autoprefixer: {},
     },
   },
   vite: {
-    base: "/",
+    base: '/',
     optimizeDeps: {
-      exclude: ["better-sqlite3"],
+      exclude: ['better-sqlite3'],
     },
     define: {
       // Suppress Suspense experimental feature warning
-      __VUE_PROD_SUSPENSE__: "false",
+      __VUE_PROD_SUSPENSE__: 'false',
     },
     vue: {
       // Forwarded to @vitejs/plugin-vue
       template: {
         compilerOptions: {
-          isCustomElement: (tag: string) => tag === "suspense",
+          isCustomElement: (tag: string) => tag === 'suspense',
         },
       },
     },
@@ -144,27 +144,27 @@ export default defineNuxtConfig({
       rollupOptions: {
         output: {
           manualChunks: (id) => {
-            if (id.includes("node_modules/d3")) {
-              return "vendor-d3";
+            if (id.includes('node_modules/d3')) {
+              return 'vendor-d3';
             }
-            if (id.includes("node_modules/graphology")) {
-              return "vendor-graphology";
+            if (id.includes('node_modules/graphology')) {
+              return 'vendor-graphology';
             }
-            if (id.includes("node_modules/@supabase")) {
-              return "vendor-supabase";
+            if (id.includes('node_modules/@supabase')) {
+              return 'vendor-supabase';
             }
-            if (id.includes("node_modules/@nuxt/ui") || id.includes("node_modules/@vueuse")) {
-              return "vendor-ui";
+            if (id.includes('node_modules/@nuxt/ui') || id.includes('node_modules/@vueuse')) {
+              return 'vendor-ui';
             }
             if (
-              id.includes("node_modules/vue") ||
-              id.includes("node_modules/pinia") ||
-              id.includes("node_modules/ufo") ||
-              id.includes("node_modules/ofetch") ||
-              id.includes("node_modules/defu") ||
-              id.includes("node_modules/h3")
+              id.includes('node_modules/vue') ||
+              id.includes('node_modules/pinia') ||
+              id.includes('node_modules/ufo') ||
+              id.includes('node_modules/ofetch') ||
+              id.includes('node_modules/defu') ||
+              id.includes('node_modules/h3')
             ) {
-              return "vendor-core";
+              return 'vendor-core';
             }
           },
         },
@@ -172,11 +172,11 @@ export default defineNuxtConfig({
     },
     plugins: [
       VueI18nPlugin({
-        include: [resolve(appDir, "locales/**/*.json5")],
+        include: [resolve(appDir, 'locales/**/*.json5')],
         runtimeOnly: false,
         compositionOnly: false,
         strictMessage: false,
-        escapeHtml: false,
+        escapeHtml: true,
       }),
     ],
   },

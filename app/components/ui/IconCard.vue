@@ -22,17 +22,17 @@
   const props = defineProps({
     icon: {
       type: String,
-      default: "mdi-check-all",
+      default: 'mdi-check-all',
       required: false,
     },
     iconBackground: {
       type: String,
-      default: "accent",
+      default: 'accent',
       required: false,
     },
     iconColor: {
       type: String,
-      default: "secondary",
+      default: 'secondary',
       required: false,
     },
   });

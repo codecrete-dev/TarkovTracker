@@ -1,4 +1,4 @@
-import { useMetadataStore } from "@/stores/useMetadata";
+import { useMetadataStore } from '@/stores/useMetadata';
 /**
  * Plugin to initialize the metadata store
  * This ensures the store is properly initialized and data is fetched

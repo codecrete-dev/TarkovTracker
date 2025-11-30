@@ -111,15 +111,15 @@
   </li>
 </template>
 <script setup>
-  import { computed } from "vue";
-  import { useI18n } from "vue-i18n";
-  import { useRoute } from "vue-router";
-  const { t } = useI18n({ useScope: "global" });
+  import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
+  import { useRoute } from 'vue-router';
+  const { t } = useI18n({ useScope: 'global' });
   const route = useRoute();
   const props = defineProps({
     icon: {
       type: String,
-      default: "mdi-menu-right",
+      default: 'mdi-menu-right',
       required: false,
     },
     avatar: {
@@ -169,13 +169,13 @@
     return false;
   });
   const iconClasses = computed(() => {
-    if (isActive.value) return "text-primary-400";
-    if (props.iconColor) return [`text-${props.iconColor}`, "group-hover:text-white"].join(" ");
-    return "text-white/70 group-hover:text-white";
+    if (isActive.value) return 'text-primary-400';
+    if (props.iconColor) return [`text-${props.iconColor}`, 'group-hover:text-white'].join(' ');
+    return 'text-white/70 group-hover:text-white';
   });
   const visitHref = () => {
     if (props.href !== null) {
-      window.open(props.href, "_blank");
+      window.open(props.href, '_blank');
     }
   };
 </script>

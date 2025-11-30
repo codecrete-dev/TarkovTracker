@@ -1,9 +1,9 @@
 <template>
   <UCard
     :id="`task-${task.id}`"
-    class="relative overflow-hidden bg-[hsl(240,5%,5%)]!"
+    class="border-primary-700/45 relative overflow-hidden border bg-[hsl(240,5%,5%)]! shadow-none"
     :class="taskClasses"
-    :ui="{ base: 'border border-primary-700/45 shadow-none', body: 'p-4' }"
+    :ui="{ body: 'p-4' }"
     @contextmenu="handleTaskContextMenu"
   >
     <div
@@ -71,31 +71,29 @@
     </ContextMenu>
   </UCard>
 </template>
-<script setup>
-  import { useBreakpoints } from "@vueuse/core";
-  import { computed, defineAsyncComponent, ref } from "vue";
-  import ContextMenu from "@/components/ui/ContextMenu.vue";
-  import ContextMenuItem from "@/components/ui/ContextMenuItem.vue";
-  import { useMetadataStore } from "@/stores/useMetadata";
-  import { usePreferencesStore } from "@/stores/usePreferences";
-  import { useProgressStore } from "@/stores/useProgress";
-  import { useTarkovStore } from "@/stores/useTarkov";
-  const TaskInfo = defineAsyncComponent(() => import("./TaskInfo.vue"));
-  const QuestKeys = defineAsyncComponent(() => import("./QuestKeys.vue"));
-  const QuestObjectives = defineAsyncComponent(() => import("./QuestObjectives.vue"));
-  const TaskActions = defineAsyncComponent(() => import("./TaskActions.vue"));
-  const props = defineProps({
-    task: { type: Object, required: true },
-    activeUserView: { type: String, required: true },
-    neededBy: { type: Array, default: () => [] },
-  });
-  const emit = defineEmits(["on-task-action"]);
-  // Define breakpoints (matching Vuetify's xs/sm breakpoint at 600px)
-  const breakpoints = useBreakpoints({
-    mobile: 0,
-    sm: 600,
-  });
-  const xs = breakpoints.smaller("sm");
+<script setup lang="ts">
+  import { computed, defineAsyncComponent, ref } from 'vue';
+  import ContextMenu from '@/components/ui/ContextMenu.vue';
+  import ContextMenuItem from '@/components/ui/ContextMenuItem.vue';
+  import { useSharedBreakpoints } from '@/composables/useSharedBreakpoints';
+  import { useMetadataStore } from '@/stores/useMetadata';
+  import { usePreferencesStore } from '@/stores/usePreferences';
+  import { useProgressStore } from '@/stores/useProgress';
+  import { useTarkovStore } from '@/stores/useTarkov';
+  import type { Task, TaskObjective } from '@/types/tarkov';
+  import TaskActions from './TaskActions.vue';
+  import TaskInfo from './TaskInfo.vue';
+  // Conditionally rendered components - lazy load
+  const QuestKeys = defineAsyncComponent(() => import('./QuestKeys.vue'));
+  const QuestObjectives = defineAsyncComponent(() => import('./QuestObjectives.vue'));
+  const props = defineProps<{
+    task: Task;
+    activeUserView: string;
+    neededBy: string[];
+  }>();
+  const emit = defineEmits(['on-task-action']);
+  // Shared breakpoints (matching Vuetify's xs/sm breakpoint at 600px)
+  const { xs } = useSharedBreakpoints();
   const tarkovStore = useTarkovStore();
   const progressStore = useProgressStore();
   const preferencesStore = usePreferencesStore();
@@ -111,76 +109,83 @@
   );
   const isOurFaction = computed(() => {
     const taskFaction = props.task.factionName;
-    return taskFaction === "Any" || taskFaction === tarkovStore.getPMCFaction();
+    return taskFaction === 'Any' || taskFaction === tarkovStore.getPMCFaction();
   });
   const taskClasses = computed(() => {
     if (isComplete.value && !isFailed.value) {
-      return "bg-gradient-to-b from-green-900/90 to-transparent";
+      return 'bg-gradient-to-b from-green-900/90 to-transparent';
     }
     if (isLocked.value || isFailed.value) {
-      return "bg-gradient-to-b from-red-900/90 to-transparent";
+      return 'bg-gradient-to-b from-red-900/90 to-transparent';
     }
-    return "";
+    return '';
   });
   const showBackgroundIcon = computed(() => isLocked.value || isFailed.value || isComplete.value);
   const backgroundIcon = computed(() => {
-    if (isComplete.value) return "mdi-check";
-    if (isLocked.value || isFailed.value) return "mdi-lock";
-    return "";
+    if (isComplete.value) return 'mdi-check';
+    if (isLocked.value || isFailed.value) return 'mdi-lock';
+    return '';
   });
   const lockedBehind = computed(
-    () => props.task.successors?.filter((s) => !tarkovStore.isTaskComplete(s.id)).length || 0
+    () => props.task.successors?.filter((s) => !tarkovStore.isTaskComplete(s)).length || 0
   );
   const lockedBefore = computed(
-    () => props.task.predecessors?.filter((s) => !tarkovStore.isTaskComplete(s.id)).length || 0
+    () => props.task.predecessors?.filter((s) => !tarkovStore.isTaskComplete(s)).length || 0
   );
   const nonKappa = computed(() => !props.task.kappaRequired);
   const factionImage = computed(() => `/img/factions/${props.task.factionName}.webp`);
   const mapObjectiveTypes = [
-    "mark",
-    "zone",
-    "extract",
-    "visit",
-    "findItem",
-    "findQuestItem",
-    "plantItem",
-    "plantQuestItem",
-    "shoot",
+    'mark',
+    'zone',
+    'extract',
+    'visit',
+    'findItem',
+    'findQuestItem',
+    'plantItem',
+    'plantQuestItem',
+    'shoot',
   ];
-  const onMapView = computed(() => preferencesStore.getTaskPrimaryView === "maps");
+  const onMapView = computed(() => preferencesStore.getTaskPrimaryView === 'maps');
   const relevantViewObjectives = computed(() => {
-    if (!onMapView.value) return props.task.objectives;
-    return props.task.objectives.filter((o) => {
+    if (!onMapView.value) return props.task.objectives ?? [];
+    return (props.task.objectives ?? []).filter((o) => {
       if (!Array.isArray(o.maps) || !o.maps.length) return true;
       return (
         o.maps.some((m) => m.id === preferencesStore.getTaskMapView) &&
-        mapObjectiveTypes.includes(o.type)
+        mapObjectiveTypes.includes(o.type ?? '')
       );
     });
   });
   const irrelevantObjectives = computed(() => {
     if (!onMapView.value) return [];
-    return props.task.objectives.filter((o) => {
+    return (props.task.objectives ?? []).filter((o) => {
       if (!Array.isArray(o.maps) || !o.maps.length) return false;
       const onSelectedMap = o.maps.some((m) => m.id === preferencesStore.getTaskMapView);
-      const isMapType = mapObjectiveTypes.includes(o.type);
+      const isMapType = mapObjectiveTypes.includes(o.type ?? '');
       return !(onSelectedMap && isMapType);
     });
   });
   const uncompletedIrrelevantObjectives = computed(() =>
-    props.task.objectives
+    (props.task.objectives ?? [])
       .filter((o) => {
         const onCorrectMap = o?.maps?.some((m) => m.id === preferencesStore.getTaskMapView);
-        const isMapObjectiveType = mapObjectiveTypes.includes(o.type);
+        const isMapObjectiveType = mapObjectiveTypes.includes(o.type ?? '');
         return !onCorrectMap || !isMapObjectiveType;
       })
       .filter((o) => !tarkovStore.isTaskObjectiveComplete(o.id))
   );
   // Methods
-  const handleTaskObjectives = (objectives, action) => {
+  const handleTaskObjectives = (
+    objectives: TaskObjective[],
+    action: 'setTaskObjectiveComplete' | 'setTaskObjectiveUncomplete'
+  ) => {
     objectives.forEach((o) => tarkovStore[action](o.id));
   };
-  const handleAlternatives = (alternatives, taskAction, objectiveAction) => {
+  const handleAlternatives = (
+    alternatives: string[] | undefined,
+    taskAction: 'setTaskFailed' | 'setTaskUncompleted',
+    objectiveAction: 'setTaskObjectiveComplete' | 'setTaskObjectiveUncomplete'
+  ) => {
     if (!Array.isArray(alternatives)) return;
     alternatives.forEach((a) => {
       tarkovStore[taskAction](a);
@@ -191,50 +196,55 @@
     });
   };
   const ensureMinLevel = () => {
-    if (tarkovStore.playerLevel() < props.task.minPlayerLevel) {
-      tarkovStore.setLevel(props.task.minPlayerLevel);
+    const minLevel = props.task.minPlayerLevel ?? 0;
+    if (tarkovStore.playerLevel() < minLevel) {
+      tarkovStore.setLevel(minLevel);
     }
   };
   const markTaskComplete = (isUndo = false) => {
     if (!isUndo) {
-      emit("on-task-action", {
+      emit('on-task-action', {
         taskId: props.task.id,
         taskName: props.task.name,
-        action: "complete",
-        statusKey: "page.tasks.questcard.statuscomplete",
+        action: 'complete',
+        statusKey: 'page.tasks.questcard.statuscomplete',
       });
     }
     tarkovStore.setTaskComplete(props.task.id);
-    handleTaskObjectives(props.task.objectives, "setTaskObjectiveComplete");
-    handleAlternatives(props.task.alternatives, "setTaskFailed", "setTaskObjectiveComplete");
+    if (props.task.objectives) {
+      handleTaskObjectives(props.task.objectives, 'setTaskObjectiveComplete');
+    }
+    handleAlternatives(props.task.alternatives, 'setTaskFailed', 'setTaskObjectiveComplete');
     ensureMinLevel();
     if (isUndo) {
-      emit("on-task-action", {
+      emit('on-task-action', {
         taskId: props.task.id,
         taskName: props.task.name,
-        action: "complete",
-        undoKey: "page.tasks.questcard.undocomplete",
+        action: 'complete',
+        undoKey: 'page.tasks.questcard.undocomplete',
       });
     }
   };
   const markTaskUncomplete = (isUndo = false) => {
     if (!isUndo) {
-      emit("on-task-action", {
+      emit('on-task-action', {
         taskId: props.task.id,
         taskName: props.task.name,
-        action: "uncomplete",
-        statusKey: "page.tasks.questcard.statusuncomplete",
+        action: 'uncomplete',
+        statusKey: 'page.tasks.questcard.statusuncomplete',
       });
     }
     tarkovStore.setTaskUncompleted(props.task.id);
-    handleTaskObjectives(props.task.objectives, "setTaskObjectiveUncomplete");
-    handleAlternatives(props.task.alternatives, "setTaskUncompleted", "setTaskObjectiveUncomplete");
+    if (props.task.objectives) {
+      handleTaskObjectives(props.task.objectives, 'setTaskObjectiveUncomplete');
+    }
+    handleAlternatives(props.task.alternatives, 'setTaskUncompleted', 'setTaskObjectiveUncomplete');
     if (isUndo) {
-      emit("on-task-action", {
+      emit('on-task-action', {
         taskId: props.task.id,
         taskName: props.task.name,
-        action: "uncomplete",
-        undoKey: "page.tasks.questcard.undouncomplete",
+        action: 'uncomplete',
+        undoKey: 'page.tasks.questcard.undouncomplete',
       });
     }
   };
@@ -243,26 +253,26 @@
       tarkovStore.setTaskComplete(p);
       const predecessorTask = tasks.value.find((task) => task.id === p);
       if (predecessorTask?.objectives) {
-        handleTaskObjectives(predecessorTask.objectives, "setTaskObjectiveComplete");
+        handleTaskObjectives(predecessorTask.objectives, 'setTaskObjectiveComplete');
       }
     });
     ensureMinLevel();
-    emit("on-task-action", {
+    emit('on-task-action', {
       taskId: props.task.id,
       taskName: props.task.name,
-      action: "available",
-      undoKey: "page.tasks.questcard.statusavailable",
+      action: 'available',
+      undoKey: 'page.tasks.questcard.statusavailable',
     });
   };
   // Context menu handlers
-  const handleTaskContextMenu = (event) => {
+  const handleTaskContextMenu = (event: MouseEvent) => {
     if (props.task.wikiLink) {
       taskContextMenu.value?.open(event);
     }
   };
   const openTaskWiki = () => {
     if (props.task.wikiLink) {
-      window.open(props.task.wikiLink, "_blank");
+      window.open(props.task.wikiLink, '_blank');
     }
   };
 </script>

@@ -36,16 +36,16 @@
         class="h-12 justify-center"
       >
         <span v-if="!isCollapsed" class="truncate text-base font-medium">
-          {{ t("navigation_drawer.login") }}
+          {{ t('navigation_drawer.login') }}
         </span>
       </UButton>
     </template>
   </ul>
 </template>
 <script setup>
-  import { computed } from "vue";
-  import { useI18n } from "vue-i18n";
-  import { usePreferencesStore } from "@/stores/usePreferences";
+  import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
+  import { usePreferencesStore } from '@/stores/usePreferences';
   defineProps({
     isCollapsed: {
       type: Boolean,
@@ -58,16 +58,16 @@
   const isLoggedIn = computed(() => $supabase.user?.loggedIn ?? false);
   const avatarSrc = computed(() => {
     return preferencesStore.getStreamerMode || !$supabase.user.photoURL
-      ? "/img/default-avatar.svg"
+      ? '/img/default-avatar.svg'
       : $supabase.user.photoURL;
   });
   const userDisplayName = computed(() => {
-    return preferencesStore.getStreamerMode ? "User" : $supabase.user.displayName || "User";
+    return preferencesStore.getStreamerMode ? 'User' : $supabase.user.displayName || 'User';
   });
   const accountItems = computed(() => [
     {
-      label: t("navigation_drawer.logout"),
-      icon: "i-mdi-lock",
+      label: t('navigation_drawer.logout'),
+      icon: 'i-mdi-lock',
       onSelect: logout,
     },
   ]);

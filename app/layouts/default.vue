@@ -32,23 +32,23 @@
   </div>
 </template>
 <script setup lang="ts">
-  import { useBreakpoints } from "@vueuse/core";
-  import { computed, defineAsyncComponent } from "vue";
-  import { useAppStore } from "@/stores/useApp";
+  import { useBreakpoints } from '@vueuse/core';
+  import { computed, defineAsyncComponent } from 'vue';
+  import { useAppStore } from '@/stores/useApp';
   const appStore = useAppStore();
   // Define breakpoints (matching Vuetify's md breakpoint at 960px)
   const breakpoints = useBreakpoints({
     mobile: 0,
     md: 960,
   });
-  const mdAndDown = breakpoints.smaller("md");
+  const mdAndDown = breakpoints.smaller('md');
   // Calculate margin-left based on sidebar state
   const mainMarginLeft = computed(() => {
-    if (mdAndDown.value) return "0px";
-    return appStore.drawerRail ? "56px" : "224px";
+    if (mdAndDown.value) return '0px';
+    return appStore.drawerRail ? '56px' : '224px';
   });
   // Lazy-load shell components
-  const NavDrawer = defineAsyncComponent(() => import("@/shell/NavDrawer.vue"));
-  const AppFooter = defineAsyncComponent(() => import("@/shell/AppFooter.vue"));
-  const AppBar = defineAsyncComponent(() => import("@/shell/AppBar.vue"));
+  const NavDrawer = defineAsyncComponent(() => import('@/shell/NavDrawer.vue'));
+  const AppFooter = defineAsyncComponent(() => import('@/shell/AppFooter.vue'));
+  const AppBar = defineAsyncComponent(() => import('@/shell/AppBar.vue'));
 </script>

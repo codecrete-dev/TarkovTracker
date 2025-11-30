@@ -37,7 +37,7 @@
         <div v-if="nonKappa" class="mb-1 flex">
           <div class="mr-1">
             <UBadge size="xs" color="error" variant="outline">
-              {{ t("page.tasks.questcard.nonkappa") }}
+              {{ t('page.tasks.questcard.nonkappa') }}
             </UBadge>
           </div>
         </div>
@@ -47,7 +47,7 @@
           class="mb-1 text-sm text-gray-400"
         >
           <i18n-t keypath="page.tasks.questcard.neededby" scope="global">
-            <template #names>{{ neededBy.join(", ") }}</template>
+            <template #names>{{ neededBy.join(', ') }}</template>
           </i18n-t>
         </InfoRow>
       </div>
@@ -58,16 +58,10 @@
   </div>
 </template>
 <script setup lang="ts">
-  import { useI18n } from "vue-i18n";
-  import InfoRow from "./InfoRow.vue";
-  import TaskLink from "./TaskLink.vue";
-  interface Task {
-    minPlayerLevel: number;
-    predecessors?: unknown[];
-    successors?: unknown[];
-    factionName: string;
-    wikiLink: string;
-  }
+  import { useI18n } from 'vue-i18n';
+  import type { Task } from '@/types/tarkov';
+  import InfoRow from './InfoRow.vue';
+  import TaskLink from './TaskLink.vue';
   defineProps<{
     task: Task;
     xs: boolean;
@@ -78,5 +72,5 @@
     neededBy: string[];
     activeUserView: string;
   }>();
-  const { t } = useI18n({ useScope: "global" });
+  const { t } = useI18n({ useScope: 'global' });
 </script>

@@ -31,7 +31,7 @@
       />
     </template>
     <template v-else-if="!isOurFaction">
-      {{ t("page.tasks.questcard.differentfaction") }}
+      {{ t('page.tasks.questcard.differentfaction') }}
     </template>
     <template v-else-if="isLocked">
       <div :class="xs ? 'flex justify-center' : ''">
@@ -59,12 +59,12 @@
   </div>
 </template>
 <script setup>
-  import { defineAsyncComponent } from "vue";
-  import { useI18n } from "vue-i18n";
-  const ActionButton = defineAsyncComponent(() => import("./ActionButton"));
-  const AlternativesList = defineAsyncComponent(() => import("./AlternativesList"));
+  import { defineAsyncComponent } from 'vue';
+  import { useI18n } from 'vue-i18n';
+  const ActionButton = defineAsyncComponent(() => import('./ActionButton'));
+  const AlternativesList = defineAsyncComponent(() => import('./AlternativesList'));
   const completeButtonUi = {
-    base: "bg-success-500 hover:bg-success-600 active:bg-success-700 text-white border border-success-700",
+    base: 'bg-success-500 hover:bg-success-600 active:bg-success-700 text-white border border-success-700',
   };
   defineProps({
     task: { type: Object, required: true },
@@ -74,6 +74,6 @@
     isLocked: { type: Boolean, required: true },
     isOurFaction: { type: Boolean, required: true },
   });
-  defineEmits(["complete", "uncomplete", "unlock"]);
-  const { t } = useI18n({ useScope: "global" });
+  defineEmits(['complete', 'uncomplete', 'unlock']);
+  const { t } = useI18n({ useScope: 'global' });
 </script>

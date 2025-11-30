@@ -13,7 +13,7 @@
               class="mx-2"
               @click="setFloor(floor)"
             >
-              {{ floor.replace("_", " ") }}
+              {{ floor.replace('_', ' ') }}
             </UButton>
           </template>
         </template>
@@ -49,9 +49,9 @@
   </div>
 </template>
 <script setup lang="ts">
-  import { select, xml } from "d3";
-  import { computed, defineAsyncComponent, onMounted, ref, watch, withDefaults } from "vue";
-  import type { TarkovMap } from "~/types/tarkov";
+  import { select, xml } from 'd3';
+  import { computed, defineAsyncComponent, onMounted, ref, watch, withDefaults } from 'vue';
+  import type { TarkovMap } from '~/types/tarkov';
   interface Props {
     map: TarkovMap;
     marks?: MapMark[];
@@ -64,8 +64,8 @@
   const props = withDefaults(defineProps<Props>(), {
     marks: () => [],
   });
-  const MapMarker = defineAsyncComponent(() => import("~/features/maps/MapMarker.vue"));
-  const MapZone = defineAsyncComponent(() => import("~/features/maps/MapZone.vue"));
+  const MapMarker = defineAsyncComponent(() => import('~/features/maps/MapMarker.vue'));
+  const MapZone = defineAsyncComponent(() => import('~/features/maps/MapZone.vue'));
   // Type guard to check if svg is an object with floors property
   const isSvgObject = (
     svg: unknown
@@ -76,7 +76,7 @@
     coordinateRotation: number;
     bounds: number[][];
   } => {
-    return svg !== null && svg !== undefined && typeof svg === "object" && "floors" in svg;
+    return svg !== null && svg !== undefined && typeof svg === 'object' && 'floors' in svg;
   };
   const selectedFloor = ref<string | undefined>(
     (() => {
@@ -120,7 +120,7 @@
   const setFloor = (floor: string) => {
     selectedFloor.value = floor;
     // For Factory, just toggle visibility instead of full redraw
-    if (props.map.name?.toLowerCase() === "factory" && isFactoryLoaded.value) {
+    if (props.map.name?.toLowerCase() === 'factory' && isFactoryLoaded.value) {
       updateFactoryFloorVisibility();
     } else {
       draw();
@@ -146,17 +146,17 @@
     // Add check for map svg data before proceeding
     const svg = props.map?.svg;
     if (!svg || !isSvgObject(svg) || !svg.file) {
-      console.warn("Map SVG file info missing, skipping draw.");
+      console.warn('Map SVG file info missing, skipping draw.');
       // Clear existing SVG if any
-      select(document.getElementById(randomMapId.value)).selectAll("svg").remove();
+      select(document.getElementById(randomMapId.value)).selectAll('svg').remove();
       return;
     }
     const mapContainer = document.getElementById(randomMapId.value);
     if (!mapContainer) return;
     // Clear existing content
-    select(mapContainer).selectAll("svg").remove();
+    select(mapContainer).selectAll('svg').remove();
     // Check if this is Factory - handle multi-file floor stacking
-    if (props.map.name?.toLowerCase() === "factory") {
+    if (props.map.name?.toLowerCase() === 'factory') {
       await drawFactoryFloors(mapContainer);
     } else {
       // Handle other maps with single SVG file containing all floors
@@ -170,10 +170,10 @@
     }
     const floors = svg.floors;
     // Create a single main SVG container (like other maps do)
-    const mainSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    mainSvg.style.width = "100%";
-    mainSvg.style.height = "100%";
-    mainSvg.id = "factory-main-svg";
+    const mainSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    mainSvg.style.width = '100%';
+    mainSvg.style.height = '100%';
+    mainSvg.id = 'factory-main-svg';
     // Load all floors if not cached, or use cached versions
     let viewBoxSet = false;
     for (let i = 0; i < floors.length; i++) {
@@ -191,15 +191,15 @@
         }
         if (floorSvg && floorSvg.documentElement) {
           // Set the viewBox from the first floor SVG to ensure proper scaling
-          if (!viewBoxSet && floorSvg.documentElement.getAttribute("viewBox")) {
-            const viewBox = floorSvg.documentElement.getAttribute("viewBox");
+          if (!viewBoxSet && floorSvg.documentElement.getAttribute('viewBox')) {
+            const viewBox = floorSvg.documentElement.getAttribute('viewBox');
             if (viewBox) {
-              mainSvg.setAttribute("viewBox", viewBox);
+              mainSvg.setAttribute('viewBox', viewBox);
             }
             viewBoxSet = true;
           }
           // Create a group for this floor
-          const floorGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          const floorGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
           floorGroup.id = floor;
           // Copy all children from the loaded SVG to our group
           const svgChildren = Array.from(floorSvg.documentElement.children) as Element[];
@@ -227,17 +227,17 @@
     if (selectedFloorIndex === -1) return;
     const mapContainer = document.getElementById(randomMapId.value);
     if (!mapContainer) return;
-    const svgElement = mapContainer.querySelector("#factory-main-svg");
+    const svgElement = mapContainer.querySelector('#factory-main-svg');
     if (!svgElement) return;
     // Show floors from basement up to selected floor, hide floors above
     floors.forEach((floor: string, index: number) => {
       const floorGroup = svgElement.querySelector(`#${floor}`);
       if (floorGroup && floorGroup instanceof SVGGElement) {
         if (index <= selectedFloorIndex) {
-          floorGroup.style.display = "block";
-          floorGroup.style.opacity = "1";
+          floorGroup.style.display = 'block';
+          floorGroup.style.opacity = '1';
         } else {
-          floorGroup.style.display = "none";
+          floorGroup.style.display = 'none';
         }
       }
     });
@@ -251,8 +251,8 @@
       const svgDoc = await xml(svgUrl);
       if (!svgDoc?.documentElement) return;
       mapContainer.appendChild(svgDoc.documentElement);
-      select(mapContainer).select("svg").style("width", "100%");
-      select(mapContainer).select("svg").style("height", "100%");
+      select(mapContainer).select('svg').style('width', '100%');
+      select(mapContainer).select('svg').style('height', '100%');
     } catch (error) {
       console.error(`Failed to load map SVG: ${svgUrl}`, error);
       return;
@@ -265,7 +265,7 @@
       if (selectedFloorIndex !== -1) {
         floors.forEach((floor: string, index: number) => {
           if (index > selectedFloorIndex) {
-            select(mapContainer).select("svg").select(`#${floor}`).style("opacity", 0.02);
+            select(mapContainer).select('svg').select(`#${floor}`).style('opacity', 0.02);
           }
         });
       }

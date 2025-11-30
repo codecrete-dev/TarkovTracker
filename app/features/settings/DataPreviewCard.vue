@@ -6,11 +6,11 @@
         <div class="space-y-2 px-2">
           <div class="flex items-center p-2">
             <UIcon name="i-mdi-account" class="mr-3 h-6 w-6 text-gray-400" />
-            <span>Level: {{ data?.level || "N/A" }}</span>
+            <span>Level: {{ data?.level || 'N/A' }}</span>
           </div>
           <div class="flex items-center p-2">
             <UIcon name="i-mdi-shield" class="mr-3 h-6 w-6 text-gray-400" />
-            <span>Faction: {{ data?.pmcFaction || "N/A" }}</span>
+            <span>Faction: {{ data?.pmcFaction || 'N/A' }}</span>
           </div>
           <div class="flex items-center p-2">
             <UIcon name="i-mdi-package-variant" class="mr-3 h-6 w-6 text-gray-400" />
@@ -74,8 +74,8 @@
   </div>
 </template>
 <script setup lang="ts">
-  import { computed } from "vue";
-  import { getEditionName } from "@/utils/constants";
+  import { computed } from 'vue';
+  import { getEditionName } from '@/utils/constants';
   const props = defineProps({
     data: {
       type: Object,
@@ -102,6 +102,6 @@
       default: 0,
     },
   });
-  defineEmits(["show-objectives-details", "show-failed-tasks-details"]);
+  defineEmits(['show-objectives-details', 'show-failed-tasks-details']);
   const editionName = computed(() => getEditionName(props.data?.gameEdition));
 </script>

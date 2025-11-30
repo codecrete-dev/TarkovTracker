@@ -12,7 +12,7 @@
   </NuxtLink>
 </template>
 <script setup>
-  import { computed } from "vue";
+  import { computed } from 'vue';
   const props = defineProps({
     isCollapsed: {
       type: Boolean,
@@ -21,7 +21,7 @@
   });
   const logo = computed(() => {
     return props.isCollapsed
-      ? "/img/logos/tarkovtrackerlogo-mini.webp"
-      : "/img/logos/tarkovtrackerlogo-light.webp";
+      ? '/img/logos/tarkovtrackerlogo-mini.webp'
+      : '/img/logos/tarkovtrackerlogo-light.webp';
   });
 </script>

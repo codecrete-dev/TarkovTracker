@@ -1,15 +1,15 @@
 <template>
   <UButton v-if="refreshEnabled" variant="soft" color="primary" @click="refresh()">
-    {{ t("common.refreshbutton") }}
+    {{ t('common.refreshbutton') }}
   </UButton>
 </template>
 <script setup>
-  import { storeToRefs } from "pinia";
-  import { ref } from "vue";
-  import { useI18n } from "vue-i18n";
-  import { useRouter } from "vue-router";
-  import { useMetadataStore } from "@/stores/useMetadata";
-  const { t } = useI18n({ useScope: "global" });
+  import { storeToRefs } from 'pinia';
+  import { ref } from 'vue';
+  import { useI18n } from 'vue-i18n';
+  import { useRouter } from 'vue-router';
+  import { useMetadataStore } from '@/stores/useMetadata';
+  const { t } = useI18n({ useScope: 'global' });
   const metadataStore = useMetadataStore();
   const { loading, hideoutLoading } = storeToRefs(metadataStore);
   const router = useRouter();

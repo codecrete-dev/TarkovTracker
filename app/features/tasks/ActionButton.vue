@@ -24,44 +24,44 @@
   </UButton>
 </template>
 <script setup lang="ts">
-  import { computed } from "vue";
+  import { computed } from 'vue';
   const props = defineProps({
     xs: { type: Boolean, required: true },
-    color: { type: String, default: "primary" },
+    color: { type: String, default: 'primary' },
     icon: { type: String, required: true },
     text: { type: String, required: true },
-    size: { type: String, default: "x-large" },
+    size: { type: String, default: 'x-large' },
     ui: { type: Object, default: null },
   });
-  defineEmits(["click"]);
+  defineEmits(['click']);
   const sizeMap: Record<string, string> = {
-    "x-small": "xs",
-    small: "sm",
-    default: "md",
-    large: "lg",
-    "x-large": "xl",
+    'x-small': 'xs',
+    small: 'sm',
+    default: 'md',
+    large: 'lg',
+    'x-large': 'xl',
   };
   const colorMap: Record<string, string> = {
-    accent: "primary",
-    primary: "primary",
-    secondary: "neutral",
-    success: "success",
-    failure: "error",
-    error: "error",
-    complete: "success",
+    accent: 'primary',
+    primary: 'primary',
+    secondary: 'neutral',
+    success: 'success',
+    failure: 'error',
+    error: 'error',
+    complete: 'success',
   };
-  type ButtonSize = "xs" | "sm" | "md" | "lg" | "xl" | undefined;
+  type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | undefined;
   type ButtonColor =
-    | "primary"
-    | "secondary"
-    | "success"
-    | "info"
-    | "warning"
-    | "error"
-    | "neutral"
+    | 'primary'
+    | 'secondary'
+    | 'success'
+    | 'info'
+    | 'warning'
+    | 'error'
+    | 'neutral'
     | undefined;
-  const buttonSize = computed(() => (sizeMap[props.size] || props.size || "md") as ButtonSize);
+  const buttonSize = computed(() => (sizeMap[props.size] || props.size || 'md') as ButtonSize);
   const buttonColor = computed(
-    () => (colorMap[props.color] || props.color || "primary") as ButtonColor
+    () => (colorMap[props.color] || props.color || 'primary') as ButtonColor
   );
 </script>

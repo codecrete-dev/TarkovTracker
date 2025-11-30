@@ -1,8 +1,9 @@
-import { defineStore, type StoreDefinition } from "pinia";
-import { watch } from "vue";
-import { useSupabaseSync } from "@/composables/supabase/useSupabaseSync";
-import { pinia as pluginPinia } from "@/plugins/01.pinia.client";
-import { useNuxtApp } from "#imports";
+import { defineStore, type StoreDefinition } from 'pinia';
+import { watch } from 'vue';
+import { useSupabaseSync } from '@/composables/supabase/useSupabaseSync';
+import { pinia as pluginPinia } from '@/plugins/01.pinia.client';
+import { logger } from '@/utils/logger';
+import { useNuxtApp } from '#imports';
 // Define the state structure
 interface PreferencesState {
   streamerMode: boolean;
@@ -112,12 +113,12 @@ type PreferencesActions = {
 };
 // Define the store type
 type PreferencesStoreDefinition = StoreDefinition<
-  "preferences",
+  'preferences',
   PreferencesState,
   PreferencesGetters,
   PreferencesActions
 >;
-export const usePreferencesStore: PreferencesStoreDefinition = defineStore("preferences", {
+export const usePreferencesStore: PreferencesStoreDefinition = defineStore('preferences', {
   state: (): PreferencesState => {
     const state = JSON.parse(JSON.stringify(preferencesDefaultState));
     // Always reset saving state on store creation
@@ -132,7 +133,7 @@ export const usePreferencesStore: PreferencesStoreDefinition = defineStore("pref
       return (teamId: string): boolean => {
         // Always show self unless explicitly hidden (though self shouldn't be hidden usually)
         // But definitely don't let "Hide All" hide self
-        if (teamId === "self") {
+        if (teamId === 'self') {
           return state.teamHide?.[teamId] || false;
         }
         return state.taskTeamHideAll || state.teamHide?.[teamId] || false;
@@ -155,22 +156,22 @@ export const usePreferencesStore: PreferencesStoreDefinition = defineStore("pref
     },
     // Add default values for views using nullish coalescing
     getTaskPrimaryView: (state) => {
-      return state.taskPrimaryView ?? "all";
+      return state.taskPrimaryView ?? 'all';
     },
     getTaskMapView: (state) => {
-      return state.taskMapView ?? "all";
+      return state.taskMapView ?? 'all';
     },
     getTaskTraderView: (state) => {
-      return state.taskTraderView ?? "all";
+      return state.taskTraderView ?? 'all';
     },
     getTaskSecondaryView: (state) => {
-      return state.taskSecondaryView ?? "available";
+      return state.taskSecondaryView ?? 'available';
     },
     getTaskUserView: (state) => {
-      return state.taskUserView ?? "self";
+      return state.taskUserView ?? 'self';
     },
     getNeededTypeView: (state) => {
-      return state.neededTypeView ?? "all";
+      return state.neededTypeView ?? 'all';
     },
     itemsNeededHideNonFIR: (state) => {
       return state.itemsHideNonFIR ?? false;
@@ -182,10 +183,10 @@ export const usePreferencesStore: PreferencesStoreDefinition = defineStore("pref
       return state.hideNonKappaTasks ?? false;
     },
     getNeededItemsStyle: (state) => {
-      return state.neededitemsStyle ?? "mediumCard";
+      return state.neededitemsStyle ?? 'mediumCard';
     },
     getHideoutPrimaryView: (state) => {
-      return state.hideoutPrimaryView ?? "available";
+      return state.hideoutPrimaryView ?? 'available';
     },
     getLocaleOverride: (state) => {
       return state.localeOverride ?? null;
@@ -267,8 +268,8 @@ export const usePreferencesStore: PreferencesStoreDefinition = defineStore("pref
   },
   // Enable automatic localStorage persistence
   persist: {
-    key: "preferences", // LocalStorage key for user preference data
-    storage: typeof window !== "undefined" ? localStorage : undefined,
+    key: 'preferences', // LocalStorage key for user preference data
+    storage: typeof window !== 'undefined' ? localStorage : undefined,
     // Use serializer instead of paths for selective persistence
     serializer: {
       serialize: JSON.stringify,
@@ -276,29 +277,30 @@ export const usePreferencesStore: PreferencesStoreDefinition = defineStore("pref
     },
     // Pick specific properties to persist (excluding transient state)
     pick: [
-      "streamerMode",
-      "teamHide",
-      "taskTeamHideAll",
-      "itemsTeamHideAll",
-      "itemsTeamHideNonFIR",
-      "itemsTeamHideHideout",
-      "mapTeamHideAll",
-      "taskPrimaryView",
-      "taskMapView",
-      "taskTraderView",
-      "taskSecondaryView",
-      "taskUserView",
-      "neededTypeView",
-      "itemsHideNonFIR",
-      "hideGlobalTasks",
-      "hideNonKappaTasks",
-      "neededitemsStyle",
-      "hideoutPrimaryView",
-      "localeOverride",
+      'streamerMode',
+      'teamHide',
+      'taskTeamHideAll',
+      'itemsTeamHideAll',
+      'itemsTeamHideNonFIR',
+      'itemsTeamHideHideout',
+      'mapTeamHideAll',
+      'taskPrimaryView',
+      'taskMapView',
+      'taskTraderView',
+      'taskSecondaryView',
+      'taskUserView',
+      'neededTypeView',
+      'itemsHideNonFIR',
+      'hideGlobalTasks',
+      'hideNonKappaTasks',
+      'neededitemsStyle',
+      'hideoutPrimaryView',
+      'localeOverride',
     ],
   },
 }) as PreferencesStoreDefinition;
 // Watch for Supabase user state changing
+let stopUserWatch: (() => void) | null = null;
 if (import.meta.client) {
   setTimeout(() => {
     try {
@@ -306,7 +308,12 @@ if (import.meta.client) {
       // Ensure Supabase plugin is initialized before accessing
       if (nuxtApp.$supabase) {
         const { $supabase } = nuxtApp;
-        watch(
+        // Stop any existing watcher to avoid duplicates (HMR/login churn)
+        if (stopUserWatch) {
+          stopUserWatch();
+          stopUserWatch = null;
+        }
+        stopUserWatch = watch(
           () => $supabase.user.loggedIn,
           async (newValue: boolean) => {
             // User store data now managed through Supabase listeners
@@ -317,15 +324,15 @@ if (import.meta.client) {
               if (newValue && $supabase.user.id) {
                 // Load user preferences from Supabase
                 const { data, error } = await $supabase.client
-                  .from("user_preferences")
-                  .select("*")
-                  .eq("user_id", $supabase.user.id)
+                  .from('user_preferences')
+                  .select('*')
+                  .eq('user_id', $supabase.user.id)
                   .single();
                 if (data && !error) {
-                  console.log("[PreferencesStore] Loading preferences from Supabase:", data);
+                  logger.debug('[PreferencesStore] Loading preferences from Supabase:', data);
                   // Update store with server data
                   Object.keys(data).forEach((key) => {
-                    if (key !== "user_id" && key !== "created_at" && key !== "updated_at") {
+                    if (key !== 'user_id' && key !== 'created_at' && key !== 'updated_at') {
                       const camelKey = key.replace(/_([a-z])/g, (_, letter) =>
                         letter.toUpperCase()
                       );
@@ -340,12 +347,12 @@ if (import.meta.client) {
                 // Set up sync to Supabase
                 useSupabaseSync({
                   store: preferencesStore,
-                  table: "user_preferences",
+                  table: 'user_preferences',
                   debounceMs: 500,
                   transform: (state: unknown) => {
                     const preferencesState = state as PreferencesState;
-                    console.log(
-                      "[PreferencesStore] Transform called - preparing preferences for sync"
+                    logger.debug(
+                      '[PreferencesStore] Transform called - preparing preferences for sync'
                     );
                     // Convert camelCase to snake_case for Supabase
                     return {
@@ -374,14 +381,23 @@ if (import.meta.client) {
                 });
               }
             } catch (_error) {
-              console.error("Error in preferencesStore watch for user.loggedIn:", _error);
+              console.error('Error in preferencesStore watch for user.loggedIn:', _error);
             }
           },
           { immediate: true }
         );
+        // HMR/route cleanup
+        if (import.meta.hot) {
+          import.meta.hot.dispose(() => {
+            if (stopUserWatch) {
+              stopUserWatch();
+              stopUserWatch = null;
+            }
+          });
+        }
       }
     } catch (error) {
-      console.error("Error setting up preferences store watchers:", error);
+      console.error('Error setting up preferences store watchers:', error);
     }
   }, 100);
 }

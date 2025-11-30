@@ -31,9 +31,9 @@
   </div>
 </template>
 <script setup lang="ts">
-  import { computed } from "vue";
-  import { useTarkovStore } from "@/stores/useTarkov";
-  import { GAME_MODE_OPTIONS, type GameMode } from "@/utils/constants";
+  import { computed } from 'vue';
+  import { useTarkovStore } from '@/stores/useTarkov';
+  import { GAME_MODE_OPTIONS, type GameMode } from '@/utils/constants';
   const store = useTarkovStore();
   const gameModeOptions = GAME_MODE_OPTIONS;
   const selectedGameMode = computed({
@@ -47,7 +47,7 @@
   const currentModeIcon = computed(() => {
     const currentMode = store.getCurrentGameMode();
     return (
-      gameModeOptions.find((option) => option.value === currentMode)?.icon || "mdi-sword-cross"
+      gameModeOptions.find((option) => option.value === currentMode)?.icon || 'mdi-sword-cross'
     );
   });
 </script>

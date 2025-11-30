@@ -1,5 +1,5 @@
-import { type _GettersTree, defineStore, type StateTree } from "pinia";
-import { useSupabaseSync } from "@/composables/supabase/useSupabaseSync";
+import { type _GettersTree, defineStore, type StateTree } from 'pinia';
+import { useSupabaseSync } from '@/composables/supabase/useSupabaseSync';
 import {
   actions,
   defaultState,
@@ -7,8 +7,9 @@ import {
   migrateToGameModeStructure,
   type UserActions,
   type UserState,
-} from "@/stores/progressState";
-import { GAME_MODES, type GameMode } from "@/utils/constants";
+} from '@/stores/progressState';
+import { GAME_MODES, type GameMode } from '@/utils/constants';
+import { logger } from '@/utils/logger';
 // Create a type that extends UserState with Pinia store methods
 type TarkovStoreInstance = UserState & {
   $state: UserState;
@@ -34,9 +35,9 @@ const tarkovActions = {
           pvp_data: this.pvp,
           pve_data: this.pve,
         };
-        await $supabase.client.from("user_progress").upsert(completeState);
+        await $supabase.client.from('user_progress').upsert(completeState);
       } catch (error) {
-        console.error("Error syncing gamemode to backend:", error);
+        console.error('Error syncing gamemode to backend:', error);
       }
     }
   },
@@ -47,14 +48,14 @@ const tarkovActions = {
       !this.pve ||
       ((this as unknown as Record<string, unknown>).level !== undefined && !this.pvp?.level);
     if (needsMigration) {
-      console.log("Migrating legacy data structure to gamemode-aware structure");
+      logger.debug('Migrating legacy data structure to gamemode-aware structure');
       const currentState = JSON.parse(JSON.stringify(this.$state));
       const migratedData = migrateToGameModeStructure(currentState);
       this.$patch(migratedData);
       const { $supabase } = useNuxtApp();
       if ($supabase.user.loggedIn && $supabase.user.id) {
         try {
-          $supabase.client.from("user_progress").upsert({
+          $supabase.client.from('user_progress').upsert({
             user_id: $supabase.user.id,
             current_game_mode: migratedData.currentGameMode,
             game_edition: migratedData.gameEdition,
@@ -62,7 +63,7 @@ const tarkovActions = {
             pve_data: migratedData.pve,
           });
         } catch (error) {
-          console.error("Error saving migrated data to Supabase:", error);
+          console.error('Error saving migrated data to Supabase:', error);
         }
       }
     }
@@ -70,12 +71,12 @@ const tarkovActions = {
   async resetOnlineProfile(this: TarkovStoreInstance) {
     const { $supabase } = useNuxtApp();
     if (!$supabase.user.loggedIn || !$supabase.user.id) {
-      console.error("User not logged in. Cannot reset online profile.");
+      console.error('User not logged in. Cannot reset online profile.');
       return;
     }
     try {
       const freshDefaultState = JSON.parse(JSON.stringify(defaultState));
-      await $supabase.client.from("user_progress").upsert({
+      await $supabase.client.from('user_progress').upsert({
         user_id: $supabase.user.id,
         current_game_mode: freshDefaultState.currentGameMode,
         game_edition: freshDefaultState.gameEdition,
@@ -85,7 +86,7 @@ const tarkovActions = {
       localStorage.clear();
       this.$patch(JSON.parse(JSON.stringify(defaultState)));
     } catch (error) {
-      console.error("Error resetting online profile:", error);
+      console.error('Error resetting online profile:', error);
     }
   },
   async resetCurrentGameModeData(this: TarkovStoreInstance) {
@@ -101,7 +102,7 @@ const tarkovActions = {
   },
   async resetPvPData(this: TarkovStoreInstance) {
     const { $supabase } = useNuxtApp();
-    console.log("[TarkovStore] Resetting PvP data...");
+    logger.debug('[TarkovStore] Resetting PvP data...');
     try {
       // Pause sync to prevent re-sync loops
       const controller = getSyncController();
@@ -111,15 +112,15 @@ const tarkovActions = {
       const freshPvPData = JSON.parse(JSON.stringify(defaultState.pvp));
       if ($supabase.user.loggedIn && $supabase.user.id) {
         // User is logged in - reset both Supabase and localStorage
-        console.log("[TarkovStore] Resetting PvP data in Supabase");
-        await $supabase.client.from("user_progress").upsert({
+        logger.debug('[TarkovStore] Resetting PvP data in Supabase');
+        await $supabase.client.from('user_progress').upsert({
           user_id: $supabase.user.id,
           pvp_data: freshPvPData,
         });
       }
       // Clear localStorage and update store
-      console.log("[TarkovStore] Clearing localStorage and updating store");
-      localStorage.removeItem("progress");
+      logger.debug('[TarkovStore] Clearing localStorage and updating store');
+      localStorage.removeItem('progress');
       this.$patch({ pvp: freshPvPData });
       // Small delay to ensure all operations complete
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -127,9 +128,9 @@ const tarkovActions = {
       if (controller) {
         controller.resume();
       }
-      console.log("[TarkovStore] PvP data reset complete");
+      logger.debug('[TarkovStore] PvP data reset complete');
     } catch (error) {
-      console.error("[TarkovStore] Error resetting PvP data:", error);
+      console.error('[TarkovStore] Error resetting PvP data:', error);
       // Resume sync even on error
       const controller = getSyncController();
       if (controller) {
@@ -140,7 +141,7 @@ const tarkovActions = {
   },
   async resetPvEData(this: TarkovStoreInstance) {
     const { $supabase } = useNuxtApp();
-    console.log("[TarkovStore] Resetting PvE data...");
+    logger.debug('[TarkovStore] Resetting PvE data...');
     try {
       // Pause sync to prevent re-sync loops
       const controller = getSyncController();
@@ -150,15 +151,15 @@ const tarkovActions = {
       const freshPvEData = JSON.parse(JSON.stringify(defaultState.pve));
       if ($supabase.user.loggedIn && $supabase.user.id) {
         // User is logged in - reset both Supabase and localStorage
-        console.log("[TarkovStore] Resetting PvE data in Supabase");
-        await $supabase.client.from("user_progress").upsert({
+        logger.debug('[TarkovStore] Resetting PvE data in Supabase');
+        await $supabase.client.from('user_progress').upsert({
           user_id: $supabase.user.id,
           pve_data: freshPvEData,
         });
       }
       // Clear localStorage and update store
-      console.log("[TarkovStore] Clearing localStorage and updating store");
-      localStorage.removeItem("progress");
+      logger.debug('[TarkovStore] Clearing localStorage and updating store');
+      localStorage.removeItem('progress');
       this.$patch({ pve: freshPvEData });
       // Small delay to ensure all operations complete
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -166,9 +167,9 @@ const tarkovActions = {
       if (controller) {
         controller.resume();
       }
-      console.log("[TarkovStore] PvE data reset complete");
+      logger.debug('[TarkovStore] PvE data reset complete');
     } catch (error) {
-      console.error("[TarkovStore] Error resetting PvE data:", error);
+      console.error('[TarkovStore] Error resetting PvE data:', error);
       // Resume sync even on error
       const controller = getSyncController();
       if (controller) {
@@ -179,7 +180,7 @@ const tarkovActions = {
   },
   async resetAllData(this: TarkovStoreInstance) {
     const { $supabase } = useNuxtApp();
-    console.log("[TarkovStore] Resetting all data (both PvP and PvE)...");
+    logger.debug('[TarkovStore] Resetting all data (both PvP and PvE)...');
     try {
       // Pause sync to prevent re-sync loops
       const controller = getSyncController();
@@ -189,8 +190,8 @@ const tarkovActions = {
       const freshDefaultState = JSON.parse(JSON.stringify(defaultState));
       if ($supabase.user.loggedIn && $supabase.user.id) {
         // User is logged in - reset both Supabase and localStorage
-        console.log("[TarkovStore] Resetting all data in Supabase");
-        await $supabase.client.from("user_progress").upsert({
+        logger.debug('[TarkovStore] Resetting all data in Supabase');
+        await $supabase.client.from('user_progress').upsert({
           user_id: $supabase.user.id,
           current_game_mode: freshDefaultState.currentGameMode,
           game_edition: freshDefaultState.gameEdition,
@@ -200,7 +201,7 @@ const tarkovActions = {
         });
       }
       // Clear localStorage and reset entire store
-      console.log("[TarkovStore] Clearing localStorage and resetting store");
+      logger.debug('[TarkovStore] Clearing localStorage and resetting store');
       localStorage.clear();
       this.$patch(freshDefaultState);
       // Small delay to ensure all operations complete
@@ -209,9 +210,9 @@ const tarkovActions = {
       if (controller) {
         controller.resume();
       }
-      console.log("[TarkovStore] All data reset complete");
+      logger.debug('[TarkovStore] All data reset complete');
     } catch (error) {
-      console.error("[TarkovStore] Error resetting all data:", error);
+      console.error('[TarkovStore] Error resetting all data:', error);
       // Resume sync even on error
       const controller = getSyncController();
       if (controller) {
@@ -229,7 +230,7 @@ const tarkovActions = {
   resetPvEData(): Promise<void>;
   resetAllData(): Promise<void>;
 };
-export const useTarkovStore = defineStore("swapTarkov", {
+export const useTarkovStore = defineStore('swapTarkov', {
   state: () => {
     return JSON.parse(JSON.stringify(defaultState)) as UserState;
   },
@@ -237,8 +238,8 @@ export const useTarkovStore = defineStore("swapTarkov", {
   actions: tarkovActions,
   // Enable automatic localStorage persistence with user scoping
   persist: {
-    key: "progress", // LocalStorage key for user progress data
-    storage: typeof window !== "undefined" ? localStorage : undefined,
+    key: 'progress', // LocalStorage key for user progress data
+    storage: typeof window !== 'undefined' ? localStorage : undefined,
     // Add userId to serialized data to prevent cross-user contamination
     serializer: {
       serialize: (state: StateTree) => {
@@ -248,15 +249,8 @@ export const useTarkovStore = defineStore("swapTarkov", {
           const nuxtApp = useNuxtApp();
           currentUserId = nuxtApp.$supabase?.user?.id || null;
         } catch {
-          // console.warn("[TarkovStore] Nuxt app not available during serialize");
+          // Nuxt app may not be available during SSR serialize
         }
-        // const userState = state as UserState;
-        // console.log("[TarkovStore] Serializing state", {
-        //   userId: currentUserId,
-        //   level: userState.pvp?.level,
-        //   tasksCompleted: Object.keys(userState.pvp?.taskCompletions || {})
-        //     .length,
-        // });
         // Wrap state with userId for validation on restore
         const wrappedState = {
           _userId: currentUserId,
@@ -266,12 +260,11 @@ export const useTarkovStore = defineStore("swapTarkov", {
         return JSON.stringify(wrappedState);
       },
       deserialize: (value: string) => {
-        // console.log("[TarkovStore] Deserializing from localStorage");
         try {
           const parsed = JSON.parse(value);
           // Old format without wrapper (migrate)
           if (!parsed._userId && !parsed.data) {
-            console.log("[TarkovStore] Migrating old localStorage format");
+            console.log('[TarkovStore] Migrating old localStorage format');
             return parsed as UserState;
           }
           // New format with wrapper - validate userId
@@ -294,14 +287,14 @@ export const useTarkovStore = defineStore("swapTarkov", {
                 `Backing up and clearing localStorage to prevent data corruption.`
             );
             // Backup the corrupted/mismatching localStorage
-            if (typeof window !== "undefined") {
+            if (typeof window !== 'undefined') {
               try {
                 const backupKey = `progress_backup_${storedUserId}_${Date.now()}`;
                 localStorage.setItem(backupKey, value);
                 console.log(`[TarkovStore] Data backed up to ${backupKey}`);
-                localStorage.removeItem("progress");
+                localStorage.removeItem('progress');
               } catch (e) {
-                console.error("[TarkovStore] Error backing up/clearing localStorage:", e);
+                console.error('[TarkovStore] Error backing up/clearing localStorage:', e);
               }
             }
             return JSON.parse(JSON.stringify(defaultState)) as UserState;
@@ -309,18 +302,13 @@ export const useTarkovStore = defineStore("swapTarkov", {
           // UserId matches or user not logged in - safe to restore
           return parsed.data as UserState;
         } catch (e) {
-          console.error("[TarkovStore] Error deserializing localStorage:", e);
+          console.error('[TarkovStore] Error deserializing localStorage:', e);
           return JSON.parse(JSON.stringify(defaultState)) as UserState;
         }
       },
     },
   },
 });
-// console.log("[TarkovStore] Store defined with persist config:", {
-//   storeId: "swapTarkov",
-//   persistKey: "progress",
-//   hasCustomSerializer: true,
-// });
 // Export type for future typing
 export type TarkovStore = ReturnType<typeof useTarkovStore>;
 // Store reference to sync controller for pause/resume during resets
@@ -332,7 +320,7 @@ export async function initializeTarkovSync() {
   const tarkovStore = useTarkovStore();
   const { $supabase } = useNuxtApp();
   if (import.meta.client && $supabase.user.loggedIn) {
-    console.log("[TarkovStore] Setting up Supabase sync and listener");
+    logger.debug('[TarkovStore] Setting up Supabase sync and listener');
     // Helper to check if data has meaningful progress
     const hasProgress = (data: unknown) => {
       const state = data as UserState;
@@ -353,30 +341,30 @@ export async function initializeTarkovSync() {
       // Get current localStorage state (loaded by persist plugin)
       const localState = tarkovStore.$state;
       const hasLocalProgress = hasProgress(localState);
-      console.log("[TarkovStore] Initial load starting...", {
+      logger.debug('[TarkovStore] Initial load starting...', {
         userId: $supabase.user.id,
         hasLocalProgress,
       });
       // Try to load from Supabase
       const { data, error } = await $supabase.client
-        .from("user_progress")
-        .select("*")
-        .eq("user_id", $supabase.user.id)
+        .from('user_progress')
+        .select('*')
+        .eq('user_id', $supabase.user.id)
         .single();
-      console.log("[TarkovStore] Supabase query result:", {
+      logger.debug('[TarkovStore] Supabase query result:', {
         hasData: !!data,
         error: error?.code,
         errorMessage: error?.message,
       });
       // Handle query errors (but not "no rows" which is expected for new users)
-      if (error && error.code !== "PGRST116") {
-        console.error("[TarkovStore] Error loading data from Supabase:", error);
+      if (error && error.code !== 'PGRST116') {
+        console.error('[TarkovStore] Error loading data from Supabase:', error);
         return;
       }
       // If Supabase has ANY data (even if "empty"), use it as source of truth
       // This prevents overwriting existing Supabase data
       if (data) {
-        console.log("[TarkovStore] Loading data from Supabase (user exists in DB)");
+        logger.debug('[TarkovStore] Loading data from Supabase (user exists in DB)');
         tarkovStore.$patch({
           currentGameMode: data.current_game_mode || GAME_MODES.PVP,
           gameEdition: data.game_edition || 1,
@@ -385,7 +373,7 @@ export async function initializeTarkovSync() {
         });
       } else if (hasLocalProgress) {
         // No Supabase record at all, but localStorage has progress - migrate it
-        console.log("[TarkovStore] Migrating localStorage data to Supabase");
+        logger.debug('[TarkovStore] Migrating localStorage data to Supabase');
         const migrateData = {
           user_id: $supabase.user.id,
           current_game_mode: localState.currentGameMode || GAME_MODES.PVP,
@@ -393,29 +381,28 @@ export async function initializeTarkovSync() {
           pvp_data: localState.pvp || {},
           pve_data: localState.pve || {},
         };
-        await $supabase.client.from("user_progress").upsert(migrateData);
-        console.log("[TarkovStore] Migration complete");
+        await $supabase.client.from('user_progress').upsert(migrateData);
+        logger.debug('[TarkovStore] Migration complete');
       } else {
         // Truly new user - no data anywhere
-        console.log("[TarkovStore] New user - no existing progress found");
+        logger.debug('[TarkovStore] New user - no existing progress found');
       }
-      console.log("[TarkovStore] Initial load complete, sync enabled");
+      logger.debug('[TarkovStore] Initial load complete, sync enabled');
     };
     // Wait for data load to complete BEFORE enabling sync
     // This prevents race conditions and overwriting server data with empty local state
     await loadData();
     syncController = useSupabaseSync({
       store: tarkovStore,
-      table: "user_progress",
+      table: 'user_progress',
       debounceMs: 250,
       transform: (state: unknown) => {
         const userState = state as UserState;
-        // console.log("[TarkovStore] Transform called - preparing data for sync");
         return {
           user_id: $supabase.user.id,
           current_game_mode: userState.currentGameMode || GAME_MODES.PVP,
           game_edition:
-            typeof userState.gameEdition === "string"
+            typeof userState.gameEdition === 'string'
               ? parseInt(userState.gameEdition)
               : userState.gameEdition,
           pvp_data: userState.pvp || {},

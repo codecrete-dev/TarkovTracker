@@ -15,14 +15,14 @@
                   <UIcon name="i-mdi-account" class="mr-2 h-4.5 w-4.5 text-gray-400" />
                   <span class="text-sm">
                     <span class="text-gray-400">Username:</span>
-                    <span class="ml-1 font-medium">{{ $supabase.user.username || "N/A" }}</span>
+                    <span class="ml-1 font-medium">{{ $supabase.user.username || 'N/A' }}</span>
                   </span>
                 </div>
                 <div class="mb-2 flex items-center">
                   <UIcon name="i-mdi-email" class="mr-2 h-4.5 w-4.5 text-gray-400" />
                   <span class="text-sm">
                     <span class="text-gray-400">Email:</span>
-                    <span class="ml-1 font-medium">{{ $supabase.user.email || "N/A" }}</span>
+                    <span class="ml-1 font-medium">{{ $supabase.user.email || 'N/A' }}</span>
                   </span>
                 </div>
               </div>
@@ -47,7 +47,7 @@
                         $supabase.user.provider
                           ? $supabase.user.provider.charAt(0).toUpperCase() +
                             $supabase.user.provider.slice(1)
-                          : "Unknown"
+                          : 'Unknown'
                       }}
                     </UBadge>
                   </span>
@@ -217,10 +217,10 @@
   </UModal>
 </template>
 <script setup>
-  import { computed, ref } from "vue";
-  import { useRouter } from "vue-router";
-  import GenericCard from "@/components/ui/GenericCard.vue";
-  import { useTeamStoreWithSupabase } from "@/stores/useTeamStore";
+  import { computed, ref } from 'vue';
+  import { useRouter } from 'vue-router';
+  import GenericCard from '@/components/ui/GenericCard.vue';
+  import { useTeamStoreWithSupabase } from '@/stores/useTeamStore';
   defineOptions({
     inheritAttrs: false,
   });
@@ -229,9 +229,9 @@
   const { teamStore } = useTeamStoreWithSupabase();
   const showConfirmationDialog = ref(false);
   const showSuccessDialog = ref(false);
-  const confirmationText = ref("");
+  const confirmationText = ref('');
   const confirmationError = ref(false);
-  const deleteError = ref("");
+  const deleteError = ref('');
   const isDeleting = ref(false);
   const accountIdCopied = ref(false);
   const hasOwnedTeams = computed(() => {
@@ -241,10 +241,10 @@
     return hasOwnedTeams.value ? 1 : 0;
   });
   const canDelete = computed(() => {
-    return confirmationText.value === "DELETE MY ACCOUNT";
+    return confirmationText.value === 'DELETE MY ACCOUNT';
   });
   const formatDate = (dateString) => {
-    if (!dateString) return "Unknown";
+    if (!dateString) return 'Unknown';
     return new Date(dateString).toLocaleDateString();
   };
   const copyAccountId = async () => {
@@ -255,14 +255,14 @@
         accountIdCopied.value = false;
       }, 2000);
     } catch (error) {
-      console.error("Failed to copy account ID:", error);
+      console.error('Failed to copy account ID:', error);
     }
   };
   const closeDialog = () => {
     showConfirmationDialog.value = false;
-    confirmationText.value = "";
+    confirmationText.value = '';
     confirmationError.value = false;
-    deleteError.value = "";
+    deleteError.value = '';
   };
   const deleteAccount = async () => {
     if (!canDelete.value) {
@@ -270,16 +270,25 @@
       return;
     }
     isDeleting.value = true;
-    deleteError.value = "";
+    deleteError.value = '';
     try {
-      // TODO: Implement Supabase account deletion (likely via RPC or Edge Function)
-      console.warn("Account deletion not yet implemented for Supabase");
-      deleteError.value = "Account deletion is currently disabled during migration.";
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      throw new Error("Account deletion is currently disabled.");
+      const { data: sessionData } = await $supabase.client.auth.getSession();
+      if (!sessionData.session) {
+        throw new Error('You must be logged in to delete your account.');
+      }
+      const { data, error } = await $supabase.client.functions.invoke('account-delete');
+      if (error) {
+        throw error;
+      }
+      if (data?.success) {
+        showConfirmationDialog.value = false;
+        showSuccessDialog.value = true;
+      } else {
+        throw new Error('Failed to delete account.');
+      }
     } catch (error) {
-      console.error("Account deletion error:", error);
-      deleteError.value = error.message || "Failed to delete account. Please try again.";
+      console.error('Account deletion error:', error);
+      deleteError.value = error.message || 'Failed to delete account. Please try again.';
     } finally {
       isDeleting.value = false;
     }
@@ -287,14 +296,14 @@
   const redirectToHome = async () => {
     try {
       showSuccessDialog.value = false;
-      console.log("Signing out user and redirecting to dashboard...");
+      console.log('Signing out user and redirecting to dashboard...');
       localStorage.clear();
       await $supabase.signOut();
-      await router.push("/");
-      console.log("Successfully signed out and redirected to dashboard");
+      await router.push('/');
+      console.log('Successfully signed out and redirected to dashboard');
     } catch (error) {
-      console.error("Failed to sign out and redirect:", error);
-      window.location.href = "/";
+      console.error('Failed to sign out and redirect:', error);
+      window.location.href = '/';
     }
   };
 </script>

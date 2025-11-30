@@ -37,23 +37,23 @@
             </div>
             <div>
               <span class="font-semibold">ID:</span>
-              {{ user.id || "N/A" }}
+              {{ user.id || 'N/A' }}
             </div>
             <div>
               <span class="font-semibold">Email:</span>
-              {{ user.email || "N/A" }}
+              {{ user.email || 'N/A' }}
             </div>
             <div>
               <span class="font-semibold">Provider:</span>
-              {{ user.app_metadata?.provider || "N/A" }}
+              {{ user.app_metadata?.provider || 'N/A' }}
             </div>
             <div>
               <span class="font-semibold">Last Sign In:</span>
-              {{ user.last_sign_in_at || "N/A" }}
+              {{ user.last_sign_in_at || 'N/A' }}
             </div>
             <div>
               <span class="font-semibold">Created At:</span>
-              {{ user.created_at || "N/A" }}
+              {{ user.created_at || 'N/A' }}
             </div>
           </div>
         </div>
@@ -62,11 +62,11 @@
           <div class="text-surface-300 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
             <div>
               <span class="font-semibold">ID from Store:</span>
-              {{ user.id || "N/A" }}
+              {{ user.id || 'N/A' }}
             </div>
             <div>
               <span class="font-semibold">Store Initialized:</span>
-              {{ preferencesStore ? "Yes" : "No" }}
+              {{ preferencesStore ? 'Yes' : 'No' }}
             </div>
           </div>
         </div>
@@ -91,7 +91,7 @@
   </div>
 </template>
 <script setup lang="ts">
-  import { usePreferencesStore } from "@/stores/usePreferences";
+  import { usePreferencesStore } from '@/stores/usePreferences';
   const { $supabase } = useNuxtApp();
   const user = $supabase.user;
   const preferencesStore = usePreferencesStore();
@@ -99,7 +99,7 @@
     try {
       await $supabase.signOut();
     } catch (error) {
-      console.error("Logout error:", error);
+      console.error('Logout error:', error);
     }
   };
 </script>

@@ -39,15 +39,15 @@
   </aside>
 </template>
 <script setup>
-  import { useBreakpoints } from "@vueuse/core";
-  import { computed, defineAsyncComponent } from "vue";
-  import { useAppStore } from "@/stores/useApp";
+  import { useBreakpoints } from '@vueuse/core';
+  import { computed, defineAsyncComponent } from 'vue';
+  import { useAppStore } from '@/stores/useApp';
   // Define breakpoints (matching Vuetify's md breakpoint at 960px)
   const breakpoints = useBreakpoints({
     mobile: 0,
     md: 960,
   });
-  const mdAndDown = breakpoints.smaller("md");
+  const mdAndDown = breakpoints.smaller('md');
   const appStore = useAppStore();
   const isRailActive = computed(() => !mdAndDown.value && appStore.drawerRail);
   const drawerOpen = computed({
@@ -56,15 +56,15 @@
       appStore.drawerShow = val;
     },
   });
-  const TrackerLogo = defineAsyncComponent(() => import("@/features/drawer/TrackerLogo.vue"));
-  const DrawerLinks = defineAsyncComponent(() => import("@/features/drawer/DrawerLinks.vue"));
-  const DrawerAccount = defineAsyncComponent(() => import("@/features/drawer/DrawerAccount.vue"));
-  const DrawerLevel = defineAsyncComponent(() => import("@/features/drawer/DrawerLevel.vue"));
+  const TrackerLogo = defineAsyncComponent(() => import('@/features/drawer/TrackerLogo.vue'));
+  const DrawerLinks = defineAsyncComponent(() => import('@/features/drawer/DrawerLinks.vue'));
+  const DrawerAccount = defineAsyncComponent(() => import('@/features/drawer/DrawerAccount.vue'));
+  const DrawerLevel = defineAsyncComponent(() => import('@/features/drawer/DrawerLevel.vue'));
   const DrawerExternalLinks = defineAsyncComponent(
-    () => import("@/features/drawer/DrawerExternalLinks.vue")
+    () => import('@/features/drawer/DrawerExternalLinks.vue')
   );
   const DrawerCharacter = defineAsyncComponent(
-    () => import("@/features/drawer/DrawerCharacter.vue")
+    () => import('@/features/drawer/DrawerCharacter.vue')
   );
 </script>
 <style scoped>

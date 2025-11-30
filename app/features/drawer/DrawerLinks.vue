@@ -43,13 +43,6 @@
       :is-collapsed="props.isCollapsed"
     ></DrawerItem>
     <DrawerItem
-      icon="i-heroicons-code-bracket"
-      icon-color="accent-400"
-      locale-key="api"
-      to="/api"
-      :is-collapsed="props.isCollapsed"
-    ></DrawerItem>
-    <DrawerItem
       icon="i-heroicons-cog-6-tooth"
       locale-key="settings"
       to="/settings"
@@ -58,7 +51,7 @@
   </ul>
 </template>
 <script setup>
-  import DrawerItem from "@/features/drawer/DrawerItem.vue";
+  import DrawerItem from '@/features/drawer/DrawerItem.vue';
   const props = defineProps({
     isCollapsed: {
       type: Boolean,

@@ -2,42 +2,42 @@
  * Composable for calling Supabase Edge Functions
  * Provides typed methods for common edge function operations
  */
-import type { UpdateProgressPayload } from "@/types/api";
+import type { UpdateProgressPayload } from '@/types/api';
 import type {
   CreateTeamResponse,
   JoinTeamResponse,
   KickMemberResponse,
   LeaveTeamResponse,
-} from "@/types/team";
-type GameMode = "pvp" | "pve";
+} from '@/types/team';
+type GameMode = 'pvp' | 'pve';
 export const useEdgeFunctions = () => {
   const { $supabase } = useNuxtApp();
   const runtimeConfig = useRuntimeConfig();
   const rawGatewayUrl = String(
     runtimeConfig?.public?.teamGatewayUrl ||
       runtimeConfig?.public?.team_gateway_url || // safety for snake_case envs
-      ""
+      ''
   );
-  const gatewayUrl = rawGatewayUrl.replace(/\/+$/, ""); // trim trailing slashes to avoid //team paths
+  const gatewayUrl = rawGatewayUrl.replace(/\/+$/, ''); // trim trailing slashes to avoid //team paths
   const getAuthToken = async () => {
     const { data, error } = await $supabase.client.auth.getSession();
     if (error) throw error;
     const token = data.session?.access_token;
     if (!token) {
-      throw new Error("User not authenticated");
+      throw new Error('User not authenticated');
     }
     return token;
   };
   const callGateway = async <T>(action: string, body: Record<string, unknown>): Promise<T> => {
     if (!gatewayUrl) {
-      throw new Error("Gateway URL not configured");
+      throw new Error('Gateway URL not configured');
     }
     const token = await getAuthToken();
     const response = await $fetch<T>(`${gatewayUrl}/team/${action}`, {
-      method: "POST",
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       body,
     });
@@ -46,7 +46,7 @@ export const useEdgeFunctions = () => {
   const callSupabaseFunction = async <T>(fnName: string, body: Record<string, unknown>) => {
     const { data, error } = await $supabase.client.functions.invoke<T>(fnName, {
       body,
-      method: "POST",
+      method: 'POST',
     });
     if (error) {
       throw error;
@@ -70,12 +70,12 @@ export const useEdgeFunctions = () => {
    * @param progressData The progress data to update
    */
   const updateProgress = async (gameMode: GameMode, progressData: UpdateProgressPayload) => {
-    const { data, error } = await $supabase.client.functions.invoke("progress-update", {
+    const { data, error } = await $supabase.client.functions.invoke('progress-update', {
       body: { gameMode, progressData },
-      method: "POST",
+      method: 'POST',
     });
     if (error) {
-      console.error("Progress update failed:", error);
+      console.error('Progress update failed:', error);
       throw error;
     }
     return data;
@@ -91,7 +91,7 @@ export const useEdgeFunctions = () => {
     password: string,
     maxMembers = 5
   ): Promise<CreateTeamResponse> => {
-    return await preferGateway<CreateTeamResponse>("create", {
+    return await preferGateway<CreateTeamResponse>('create', {
       name,
       join_code: password,
       maxMembers,
@@ -103,14 +103,14 @@ export const useEdgeFunctions = () => {
    * @param password The team password
    */
   const joinTeam = async (teamId: string, password: string): Promise<JoinTeamResponse> => {
-    return await preferGateway<JoinTeamResponse>("join", { teamId, join_code: password });
+    return await preferGateway<JoinTeamResponse>('join', { teamId, join_code: password });
   };
   /**
    * Leave a team
    * @param teamId The ID of the team to leave
    */
   const leaveTeam = async (teamId: string): Promise<LeaveTeamResponse> => {
-    return await preferGateway<LeaveTeamResponse>("leave", { teamId });
+    return await preferGateway<LeaveTeamResponse>('leave', { teamId });
   };
   /**
    * Kick a member from a team (owner only)
@@ -118,19 +118,19 @@ export const useEdgeFunctions = () => {
    * @param memberId The ID of the member to kick
    */
   const kickTeamMember = async (teamId: string, memberId: string): Promise<KickMemberResponse> => {
-    return await preferGateway<KickMemberResponse>("kick", { teamId, memberId });
+    return await preferGateway<KickMemberResponse>('kick', { teamId, memberId });
   };
   /**
    * Revoke an API token
    * @param tokenId The ID of the token to revoke
    */
   const revokeToken = async (tokenId: string) => {
-    const { data, error } = await $supabase.client.functions.invoke("token-revoke", {
+    const { data, error } = await $supabase.client.functions.invoke('token-revoke', {
       body: { tokenId },
-      method: "DELETE",
+      method: 'DELETE',
     });
     if (error) {
-      console.error("Token revocation failed:", error);
+      console.error('Token revocation failed:', error);
       throw error;
     }
     return data;

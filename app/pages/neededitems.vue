@@ -58,7 +58,7 @@
       </div>
       <!-- Items Container -->
       <div v-if="filteredItems.length === 0" class="text-surface-400 p-8 text-center">
-        {{ $t("page.neededitems.empty", "No items match your search.") }}
+        {{ $t('page.neededitems.empty', 'No items match your search.') }}
       </div>
       <!-- List View -->
       <div v-else-if="viewMode === 'list'" class="divide-y divide-white/5">
@@ -90,31 +90,32 @@
   </div>
 </template>
 <script setup lang="ts">
-  import { storeToRefs } from "pinia";
-  import { computed, ref, watch } from "vue";
-  import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
-  import NeededItem from "@/features/neededitems/NeededItem.vue";
-  import { useMetadataStore } from "@/stores/useMetadata";
-  import { useProgressStore } from "@/stores/useProgress";
-  import type { NeededItemHideoutModule, NeededItemTaskObjective } from "@/types/tarkov";
+  import { storeToRefs } from 'pinia';
+import { computed, ref, watch } from 'vue';
+import { useInfiniteScroll } from '@/composables/useInfiniteScroll';
+import NeededItem from '@/features/neededitems/NeededItem.vue';
+import { useMetadataStore } from '@/stores/useMetadata';
+import { useProgressStore } from '@/stores/useProgress';
+import type { NeededItemHideoutModule, NeededItemTaskObjective } from '@/types/tarkov';
   const inputUi = {
-    base: "w-full",
+    base: 'w-full',
     input:
-      "h-11 bg-surface-900 border border-white/15 text-surface-50 placeholder:text-surface-500 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-white/20",
-    leadingIcon: "text-surface-300",
+      'h-11 bg-surface-900 border border-white/15 text-surface-50 placeholder:text-surface-500 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-white/20',
+    leadingIcon: 'text-surface-300',
   };
   const metadataStore = useMetadataStore();
   const progressStore = useProgressStore();
   const { neededItemTaskObjectives, neededItemHideoutModules } = storeToRefs(metadataStore);
   // View mode state: 'list', 'bigGrid', or 'smallGrid'
-  const viewMode = ref<"list" | "bigGrid" | "smallGrid">("list");
+  const viewMode = ref<'list' | 'bigGrid' | 'smallGrid'>('list');
   // Filter state
-  type FilterType = "all" | "tasks" | "hideout";
-  const activeFilter = ref<FilterType>("all");
+  type FilterType = 'all' | 'tasks' | 'hideout' | 'completed';
+  const activeFilter = ref<FilterType>('all');
   const filterTabs: { label: string; value: FilterType }[] = [
-    { label: "All", value: "all" },
-    { label: "Tasks", value: "tasks" },
-    { label: "Hideout", value: "hideout" },
+    { label: 'All', value: 'all' },
+    { label: 'Tasks', value: 'tasks' },
+    { label: 'Hideout', value: 'hideout' },
+    { label: 'Completed', value: 'completed' },
   ];
   const allItems = computed(() => {
     const combined = [
@@ -127,11 +128,11 @@
     for (const need of combined) {
       let key: string;
       let itemId: string | undefined;
-      if (need.needType === "taskObjective") {
+      if (need.needType === 'taskObjective') {
         // For tasks: get itemId from either item or markerItem (for mark objectives)
         itemId = need.item?.id || need.markerItem?.id;
         if (!itemId) {
-          console.warn("[NeededItems] Skipping objective without item/markerItem:", need);
+          console.warn('[NeededItems] Skipping objective without item/markerItem:', need);
           continue;
         }
         // Aggregate by taskId + itemId
@@ -141,7 +142,7 @@
         // For hideout: get itemId from item
         itemId = need.item?.id;
         if (!itemId) {
-          console.warn("[NeededItems] Skipping hideout requirement without item:", need);
+          console.warn('[NeededItems] Skipping hideout requirement without item:', need);
           continue;
         }
         // This combines multiple requirements for the same item in the same module
@@ -156,37 +157,42 @@
         aggregated.set(key, { ...need });
       }
     }
-    // Filter out items that nobody needs anymore
-    const aggregatedArray = Array.from(aggregated.values());
-    return aggregatedArray.filter((need) => {
-      if (need.needType === "taskObjective") {
-        // Check if anyone still needs this objective
-        const objectiveCompletions = progressStore.objectiveCompletions?.[need.id];
-        const taskCompletions = progressStore.tasksCompletions?.[need.taskId];
-        if (!objectiveCompletions || !taskCompletions) return true;
-        // Return true if at least one team member hasn't completed the objective and task
-        return Object.keys(objectiveCompletions).some(
-          (user) => !objectiveCompletions[user] && !taskCompletions[user]
-        );
-      } else if (need.needType === "hideoutModule") {
-        // Check if anyone still needs this hideout module part
-        const partCompletions = progressStore.modulePartCompletions?.[need.id];
-        if (!partCompletions) return true;
-        // Return true if at least one team member hasn't completed the part
-        return Object.keys(partCompletions).some((user) => !partCompletions[user]);
-      }
-      return true;
-    });
+    // Return all items - filtering by completion status is done in filteredItems
+    return Array.from(aggregated.values());
   });
-  const search = ref("");
+  const search = ref('');
+
+  // Helper to check if the parent task/module is completed for self
+  const isParentCompleted = (need: NeededItemTaskObjective | NeededItemHideoutModule): boolean => {
+    if (need.needType === 'taskObjective') {
+      // Check if the parent task is completed (turned in)
+      return progressStore.tasksCompletions?.[need.taskId]?.['self'] ?? false;
+    } else if (need.needType === 'hideoutModule') {
+      // Check if the parent module is completed (built)
+      return progressStore.moduleCompletions?.[need.hideoutModule.id]?.['self'] ?? false;
+    }
+    return false;
+  };
+
   const filteredItems = computed(() => {
     let items = allItems.value;
-    // Filter by type (All, Tasks, Hideout)
-    if (activeFilter.value === "tasks") {
-      items = items.filter((item) => item.needType === "taskObjective");
-    } else if (activeFilter.value === "hideout") {
-      items = items.filter((item) => item.needType === "hideoutModule");
+
+    // Filter by completion status first
+    if (activeFilter.value === 'completed') {
+      // Show only items where the parent task/module is completed
+      items = items.filter((item) => isParentCompleted(item));
+    } else {
+      // For All, Tasks, Hideout tabs - hide items where parent is completed
+      items = items.filter((item) => !isParentCompleted(item));
+
+      // Then filter by type (All, Tasks, Hideout)
+      if (activeFilter.value === 'tasks') {
+        items = items.filter((item) => item.needType === 'taskObjective');
+      } else if (activeFilter.value === 'hideout') {
+        items = items.filter((item) => item.needType === 'hideoutModule');
+      }
     }
+
     // Filter by search
     if (search.value) {
       items = items.filter((item) => {
@@ -195,6 +201,7 @@
         return itemName?.toLowerCase().includes(search.value.toLowerCase());
       });
     }
+
     return items;
   });
   const visibleCount = ref(20);
@@ -211,7 +218,7 @@
   const gridSentinel = ref<HTMLElement | null>(null);
   // Determine which sentinel to use based on view mode
   const currentSentinel = computed(() => {
-    return viewMode.value === "list" ? listSentinel.value : gridSentinel.value;
+    return viewMode.value === 'list' ? listSentinel.value : gridSentinel.value;
   });
   // Enable infinite scroll
   const infiniteScrollEnabled = computed(() => {
@@ -219,7 +226,7 @@
   });
   // Set up infinite scroll
   const { stop, start } = useInfiniteScroll(currentSentinel, loadMore, {
-    rootMargin: "100px",
+    rootMargin: '100px',
     threshold: 0.1,
     enabled: infiniteScrollEnabled.value,
   });

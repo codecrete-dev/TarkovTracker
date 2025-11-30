@@ -22,10 +22,10 @@
   </div>
 </template>
 <script setup>
-  import { computed, ref } from "vue";
-  import TaskLink from "@/features/tasks/TaskLink.vue";
-  import TaskObjective from "@/features/tasks/TaskObjective.vue";
-  import { useMetadataStore } from "@/stores/useMetadata";
+  import { computed, ref } from 'vue';
+  import TaskLink from '@/features/tasks/TaskLink.vue';
+  import TaskObjective from '@/features/tasks/TaskObjective.vue';
+  import { useMetadataStore } from '@/stores/useMetadata';
   const metadataStore = useMetadataStore();
   const objectives = computed(() => metadataStore.objectives);
   const tasks = computed(() => metadataStore.tasks);
@@ -41,7 +41,7 @@
     selectedFloor: {
       type: String,
       required: false,
-      default: "",
+      default: '',
     },
     map: {
       type: Object,
@@ -70,7 +70,7 @@
     return tasks.value.find((task) => task.id == relatedObjective.value?.taskId);
   });
   const markerColor = computed(() => {
-    return props.mark.users.includes("self") ? "text-red-500" : "text-orange-500";
+    return props.mark.users.includes('self') ? 'text-red-500' : 'text-orange-500';
   });
   const relativeLocation = computed(() => {
     // Add safety check for bounds
@@ -82,7 +82,7 @@
       !Array.isArray(bounds[0]) ||
       !Array.isArray(bounds[1])
     ) {
-      console.warn("MapMarker: Invalid or missing map bounds for map:", props.map?.name);
+      console.warn('MapMarker: Invalid or missing map bounds for map:', props.map?.name);
       return { leftPercent: 0, topPercent: 0 }; // Return default if bounds are invalid
     }
     // Get original coordinates
@@ -112,7 +112,7 @@
     const mapHeight = Math.max(bounds[0][1], bounds[1][1]) - Math.min(bounds[0][1], bounds[1][1]);
     // Prevent division by zero if width or height is 0
     if (mapWidth === 0 || mapHeight === 0) {
-      console.warn("MapMarker: Map width or height is zero for map:", props.map?.name);
+      console.warn('MapMarker: Map width or height is zero for map:', props.map?.name);
       return { leftPercent: 0, topPercent: 0 };
     }
     const relativeLeft = Math.abs(x - mapLeft);
@@ -126,24 +126,24 @@
   });
   const markerStyle = computed(() => {
     return {
-      position: "absolute",
-      top: relativeLocation.value.topPercent + "%",
-      left: relativeLocation.value.leftPercent + "%",
-      width: "20px",
-      height: "20px",
-      transform: "translate(-50%, -50%)",
+      position: 'absolute',
+      top: relativeLocation.value.topPercent + '%',
+      left: relativeLocation.value.leftPercent + '%',
+      width: '20px',
+      height: '20px',
+      transform: 'translate(-50%, -50%)',
       // cursor: props.mark.floor === props.selectedFloor ? "pointer" : "inherit",
       // opacity: props.mark.floor === props.selectedFloor ? 1 : 0.2,
-      cursor: "pointer",
+      cursor: 'pointer',
       opacity: 1,
     };
   });
   const tooltipStyle = computed(() => {
     return {
-      position: "absolute",
-      top: relativeLocation.value.topPercent + "%",
-      left: relativeLocation.value.leftPercent + "%",
-      transform: "translate(-50%, -125%)",
+      position: 'absolute',
+      top: relativeLocation.value.topPercent + '%',
+      left: relativeLocation.value.leftPercent + '%',
+      transform: 'translate(-50%, -125%)',
       zIndex: 100,
     };
   });

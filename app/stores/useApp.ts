@@ -1,11 +1,11 @@
-import { useStorage } from "@vueuse/core";
-import { defineStore } from "pinia";
+import { useStorage } from '@vueuse/core';
+import { defineStore } from 'pinia';
 const state = () => ({
-  drawerRail: useStorage<boolean>("app_drawerRail", false),
-  drawerShow: useStorage<boolean>("app_drawerShow", true),
-  localeOverride: useStorage<string | null>("app_localeOverride", null),
+  drawerRail: useStorage<boolean>('app_drawerRail', false),
+  drawerShow: useStorage<boolean>('app_drawerShow', true),
+  localeOverride: useStorage<string | null>('app_localeOverride', null),
 });
-export const useAppStore = defineStore("app", {
+export const useAppStore = defineStore('app', {
   state,
   getters: {
     isDrawerRailMode(): boolean {

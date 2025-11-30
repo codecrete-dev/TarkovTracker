@@ -1,9 +1,9 @@
-import { storeToRefs } from "pinia";
-import { computed } from "vue";
-import { useMetadataStore } from "@/stores/useMetadata";
-import { usePreferencesStore } from "@/stores/usePreferences";
-import { useProgressStore } from "@/stores/useProgress";
-import type { HideoutStation } from "@/types/tarkov";
+import { storeToRefs } from 'pinia';
+import { computed } from 'vue';
+import { useMetadataStore } from '@/stores/useMetadata';
+import { usePreferencesStore } from '@/stores/usePreferences';
+import { useProgressStore } from '@/stores/useProgress';
+import type { HideoutStation } from '@/types/tarkov';
 export function useHideoutFiltering() {
   const metadataStore = useMetadataStore();
   const { hideoutStations, hideoutLoading } = storeToRefs(metadataStore);
@@ -34,7 +34,7 @@ export function useHideoutFiltering() {
       // Since we've already verified both are available above, we can proceed
       return false;
     } catch (error) {
-      console.error("Error in hideout loading check:", error);
+      console.error('Error in hideout loading check:', error);
       // Return false to prevent stuck loading state on error
       return false;
     }
@@ -46,9 +46,9 @@ export function useHideoutFiltering() {
       if (isStoreLoading.value) {
         return [];
       }
-      const hideoutStationList = JSON.parse(JSON.stringify(hideoutStations.value));
+      const hideoutStationList = hideoutStations.value as HideoutStation[];
       // Display all upgradeable stations
-      if (activePrimaryView.value === "available") {
+      if (activePrimaryView.value === 'available') {
         return hideoutStationList.filter((station: HideoutStation) => {
           const lvl = progressStore.hideoutLevels?.[station.id]?.self || 0;
           const nextLevelData = station.levels.find((l) => l.level === lvl + 1);
@@ -59,14 +59,14 @@ export function useHideoutFiltering() {
         });
       }
       // Display all maxed stations
-      if (activePrimaryView.value === "maxed") {
+      if (activePrimaryView.value === 'maxed') {
         return hideoutStationList.filter(
           (station: HideoutStation) =>
             (progressStore.hideoutLevels?.[station.id]?.self || 0) === station.levels.length
         );
       }
       // Display all locked stations
-      if (activePrimaryView.value === "locked") {
+      if (activePrimaryView.value === 'locked') {
         return hideoutStationList.filter((station: HideoutStation) => {
           const lvl = progressStore.hideoutLevels?.[station.id]?.self || 0;
           const nextLevelData = station.levels.find((l) => l.level === lvl + 1);
@@ -77,10 +77,10 @@ export function useHideoutFiltering() {
         });
       }
       // Display all stations
-      if (activePrimaryView.value === "all") return hideoutStationList;
+      if (activePrimaryView.value === 'all') return hideoutStationList;
       return hideoutStationList;
     } catch (error) {
-      console.error("Error computing visible stations:", error);
+      console.error('Error computing visible stations:', error);
       // Return empty array on error to prevent stuck states
       return [];
     }

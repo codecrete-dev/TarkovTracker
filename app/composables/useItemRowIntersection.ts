@@ -1,4 +1,4 @@
-import { onMounted, onUnmounted, type Ref, ref } from "vue";
+import { onMounted, onUnmounted, type Ref, ref } from 'vue';
 export function useItemRowIntersection(elementRef: Ref<HTMLElement | null>) {
   const isVisible = ref(false);
   let observer: IntersectionObserver | null = null;
@@ -13,7 +13,7 @@ export function useItemRowIntersection(elementRef: Ref<HTMLElement | null>) {
           }
         },
         {
-          rootMargin: "50px",
+          rootMargin: '50px',
           threshold: 0.1,
         }
       );
