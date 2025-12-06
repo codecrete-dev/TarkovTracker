@@ -7,7 +7,7 @@
     },
   },
   common: {
-    refreshbutton: 'Réactualiser',
+    refreshbutton: 'Actualiser',
   },
   menu: {
     language: 'Langue',
