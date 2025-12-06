@@ -38,7 +38,40 @@
           @update:model-value="$emit('update:search', $event)"
         />
       </div>
-      <!-- Section 2: Team Filters -->
+      <!-- Section 2: Item Filters -->
+      <div class="flex items-center gap-3 rounded-lg bg-[hsl(240,5%,5%)] px-4 py-3">
+        <span class="text-surface-400 mr-1 text-xs font-medium">FILTER:</span>
+        <UButton
+          :variant="firFilter === 'fir' ? 'soft' : 'ghost'"
+          :color="firFilter === 'fir' ? 'success' : 'neutral'"
+          size="sm"
+          @click="$emit('update:firFilter', firFilter === 'fir' ? 'all' : 'fir')"
+        >
+          <UIcon name="i-mdi-checkbox-marked-circle" class="mr-1 h-4 w-4" />
+          FIR
+        </UButton>
+        <UButton
+          :variant="firFilter === 'non-fir' ? 'soft' : 'ghost'"
+          :color="firFilter === 'non-fir' ? 'warning' : 'neutral'"
+          size="sm"
+          @click="$emit('update:firFilter', firFilter === 'non-fir' ? 'all' : 'non-fir')"
+        >
+          <UIcon name="i-mdi-checkbox-blank-circle-outline" class="mr-1 h-4 w-4" />
+          NON-FIR
+        </UButton>
+        <div class="border-l border-white/10 pl-3">
+          <UButton
+            :variant="groupByItem ? 'soft' : 'ghost'"
+            :color="groupByItem ? 'primary' : 'neutral'"
+            size="sm"
+            @click="$emit('update:groupByItem', !groupByItem)"
+          >
+            <UIcon name="i-mdi-group" class="mr-1 h-4 w-4" />
+            GROUP
+          </UButton>
+        </div>
+      </div>
+      <!-- Section 3: Team Filters -->
       <div class="flex items-center gap-3 rounded-lg bg-[hsl(240,5%,5%)] px-4 py-3">
         <span class="text-surface-400 mr-1 text-xs font-medium">TEAM:</span>
         <UButton
@@ -50,33 +83,16 @@
           <UIcon name="i-mdi-account-group-outline" class="mr-1 h-4 w-4" />
           {{ hideTeamItems ? 'HIDDEN' : 'SHOW' }}
         </UButton>
-        <UButton
-          :variant="hideNonFir ? 'soft' : 'ghost'"
-          :color="hideNonFir ? 'warning' : 'neutral'"
-          size="sm"
-          :disabled="hideTeamItems"
-          :class="{ 'opacity-50': hideTeamItems }"
-          @click="$emit('update:hideNonFir', !hideNonFir)"
-        >
-          <UIcon name="i-mdi-checkbox-marked-circle-outline" class="mr-1 h-4 w-4" />
-          FIR ONLY
-        </UButton>
-        <UButton
-          :variant="hideHideout ? 'soft' : 'ghost'"
-          :color="hideHideout ? 'warning' : 'neutral'"
-          size="sm"
-          :disabled="hideTeamItems"
-          :class="{ 'opacity-50': hideTeamItems }"
-          @click="$emit('update:hideHideout', !hideHideout)"
-        >
-          <UIcon name="i-mdi-home-outline" class="mr-1 h-4 w-4" />
-          NO HIDEOUT
-        </UButton>
       </div>
       <!-- Section 3: View Mode & Item Count -->
       <div class="flex items-center gap-3 rounded-lg bg-[hsl(240,5%,5%)] px-4 py-3">
         <UBadge color="neutral" variant="soft" size="md" class="px-3 py-1 text-sm">
-          {{ totalCount }} {{ $t('page.neededitems.items', 'items') }}
+          <template v-if="groupByItem && ungroupedCount !== totalCount">
+            {{ totalCount }} unique ({{ ungroupedCount }} total)
+          </template>
+          <template v-else>
+            {{ totalCount }} {{ $t('page.neededitems.items', 'items') }}
+          </template>
         </UBadge>
         <div class="flex gap-1 border-l border-white/10 pl-3">
           <UButton
@@ -87,18 +103,11 @@
             @click="$emit('update:viewMode', 'list')"
           />
           <UButton
-            icon="i-mdi-view-module"
-            :color="viewMode === 'bigGrid' ? 'primary' : 'neutral'"
-            :variant="viewMode === 'bigGrid' ? 'soft' : 'ghost'"
-            size="sm"
-            @click="$emit('update:viewMode', 'bigGrid')"
-          />
-          <UButton
             icon="i-mdi-view-grid"
-            :color="viewMode === 'smallGrid' ? 'primary' : 'neutral'"
-            :variant="viewMode === 'smallGrid' ? 'soft' : 'ghost'"
+            :color="viewMode === 'grid' ? 'primary' : 'neutral'"
+            :variant="viewMode === 'grid' ? 'soft' : 'ghost'"
             size="sm"
-            @click="$emit('update:viewMode', 'smallGrid')"
+            @click="$emit('update:viewMode', 'grid')"
           />
         </div>
       </div>
@@ -107,7 +116,8 @@
 </template>
 <script setup lang="ts">
   type FilterType = 'all' | 'tasks' | 'hideout' | 'completed';
-  type ViewMode = 'list' | 'bigGrid' | 'smallGrid';
+  type ViewMode = 'list' | 'grid';
+  type FirFilter = 'all' | 'fir' | 'non-fir';
   interface FilterTab {
     label: string;
     value: FilterType;
@@ -120,16 +130,17 @@
     viewMode: ViewMode;
     filterTabs: FilterTab[];
     totalCount: number;
+    ungroupedCount: number;
+    firFilter: FirFilter;
+    groupByItem: boolean;
     hideTeamItems: boolean;
-    hideNonFir: boolean;
-    hideHideout: boolean;
   }>();
   defineEmits<{
     'update:modelValue': [value: FilterType];
     'update:search': [value: string];
     'update:viewMode': [value: ViewMode];
+    'update:firFilter': [value: FirFilter];
+    'update:groupByItem': [value: boolean];
     'update:hideTeamItems': [value: boolean];
-    'update:hideNonFir': [value: boolean];
-    'update:hideHideout': [value: boolean];
   }>();
 </script>

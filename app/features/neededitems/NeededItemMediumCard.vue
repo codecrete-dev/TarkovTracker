@@ -1,97 +1,78 @@
 <template>
-  <div class="h-full rounded" :class="itemCardClasses">
-    <!-- Flexbox display -->
-    <div class="h-full">
-      <div class="flex h-full flex-col items-end">
-        <!-- Item image -->
-        <div class="flex aspect-video min-h-[138px] self-stretch">
-          <GameItem
-            v-if="imageItem"
-            :image-item="imageItem"
-            :src="imageItem.image512pxLink"
-            :is-visible="true"
-            size="large"
-            simple-mode
-            class="h-full w-full"
-          />
-        </div>
-        <!-- Item name, directly below item image -->
-        <div v-if="item" class="mx-2 mt-2 flex self-center">
-          <div class="px-2 text-center whitespace-pre-line">
-            {{ item.name }}
-            <UIcon
-              v-if="props.need.foundInRaid"
-              name="i-mdi-checkbox-marked-circle-outline"
-              class="inline-block h-4 w-4"
-            />
-          </div>
-        </div>
-        <!-- Item need details -->
-        <div class="mx-2 mt-2 flex w-full flex-col self-center">
-          <template v-if="props.need.needType == 'taskObjective'">
-            <div class="flex justify-center">
-              <task-link :task="relatedTask" />
-            </div>
-            <RequirementInfo
-              :need-type="props.need.needType"
-              :level-required="levelRequired"
-              :locked-before="lockedBefore"
-              :player-level="tarkovStore.playerLevel()"
-            />
-          </template>
-          <template v-else-if="props.need.needType == 'hideoutModule'">
-            <div class="mt-1 mb-1 flex justify-center">
-              <div class="text-center">
-                <station-link
-                  v-if="relatedStation"
-                  :station="relatedStation"
-                  class="justify-center"
-                />
-                <span v-else class="text-sm text-gray-300">Unknown station</span>
-              </div>
-              <div class="ml-1">{{ props.need.hideoutModule.level }}</div>
-            </div>
-            <RequirementInfo
-              :need-type="props.need.needType"
-              :level-required="levelRequired"
-              :locked-before="lockedBefore"
-              :player-level="tarkovStore.playerLevel()"
-              :related-station="relatedStation"
-              :hideout-level="props.need.hideoutModule.level"
-            />
-          </template>
-        </div>
-        <!-- Item count actions -->
-        <div
-          v-if="!selfCompletedNeed"
-          class="mx-2 mt-2 mb-2 flex h-full flex-col items-center justify-center self-stretch"
-        >
-          <ItemCountControls
-            :current-count="currentCount"
-            :needed-count="neededCount"
-            @decrease="$emit('decreaseCount')"
-            @increase="$emit('increaseCount')"
-            @toggle="$emit('toggleCount')"
-            @set-count="(count) => $emit('setCount', count)"
-          />
-          <!-- Show team needs alongside controls -->
-          <TeamNeedsDisplay
-            v-if="teamNeeds.length > 0"
-            :team-needs="teamNeeds"
-            :needed-count="neededCount"
-            class="mt-2"
-          />
-        </div>
-        <!-- Show static count for completed parent items -->
-        <div
-          v-else
-          class="mx-2 mt-2 mb-2 flex h-full items-center justify-center self-stretch"
-        >
-          <span class="text-success-400 text-sm font-semibold">
-            {{ currentCount.toLocaleString() }}/{{ neededCount.toLocaleString() }}
-          </span>
-        </div>
+  <div class="flex h-full flex-col rounded" :class="itemCardClasses">
+    <!-- Item image - fixed aspect ratio -->
+    <div class="relative aspect-video w-full shrink-0 overflow-hidden">
+      <GameItem
+        v-if="imageItem"
+        :image-item="imageItem"
+        :src="imageItem.image512pxLink"
+        :is-visible="true"
+        size="large"
+        simple-mode
+        fill
+        class="h-full w-full"
+      />
+    </div>
+    <!-- Item name - fixed height with line clamp -->
+    <div v-if="item" class="flex h-12 shrink-0 items-center justify-center px-2 pt-2">
+      <div class="line-clamp-2 text-center text-sm leading-tight">
+        {{ item.name }}
+        <UIcon
+          v-if="props.need.foundInRaid"
+          name="i-mdi-checkbox-marked-circle-outline"
+          class="ml-0.5 inline-block h-3.5 w-3.5"
+        />
       </div>
+    </div>
+    <!-- Task/Station info - fixed height with line clamp -->
+    <div class="flex h-10 shrink-0 items-center justify-center px-2">
+      <template v-if="props.need.needType == 'taskObjective'">
+        <div class="line-clamp-2 text-center">
+          <task-link :task="relatedTask" />
+        </div>
+      </template>
+      <template v-else-if="props.need.needType == 'hideoutModule'">
+        <div class="flex items-center justify-center text-center">
+          <station-link
+            v-if="relatedStation"
+            :station="relatedStation"
+            class="justify-center"
+          />
+          <span v-else class="text-sm text-gray-300">Unknown station</span>
+          <span class="ml-1 text-sm">{{ props.need.hideoutModule.level }}</span>
+        </div>
+      </template>
+    </div>
+    <!-- Requirements info - fixed height -->
+    <div class="flex h-6 shrink-0 items-center justify-center px-2 text-xs">
+      <RequirementInfo
+        :need-type="props.need.needType"
+        :level-required="levelRequired"
+        :locked-before="lockedBefore"
+        :player-level="tarkovStore.playerLevel()"
+      />
+    </div>
+    <!-- Item count actions - pushed to bottom -->
+    <div class="mt-auto flex flex-col items-center justify-center px-2 pb-2 pt-1">
+      <template v-if="!selfCompletedNeed">
+        <ItemCountControls
+          :current-count="currentCount"
+          :needed-count="neededCount"
+          @decrease="$emit('decreaseCount')"
+          @increase="$emit('increaseCount')"
+          @toggle="$emit('toggleCount')"
+          @set-count="(count) => $emit('setCount', count)"
+        />
+        <TeamNeedsDisplay
+          v-if="teamNeeds.length > 0"
+          :team-needs="teamNeeds"
+          :needed-count="neededCount"
+          class="mt-2"
+        />
+      </template>
+      <span v-else class="text-success-400 text-sm font-semibold">
+        {{ currentCount.toLocaleString() }}/{{ neededCount.toLocaleString() }}
+      </span>
     </div>
   </div>
 </template>

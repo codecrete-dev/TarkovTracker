@@ -2,11 +2,8 @@
   <KeepAlive>
     <div ref="cardRef" class="mb-1 rounded" :class="itemRowClasses">
       <div class="px-3 py-2">
-        <div class="mx-0 flex flex-wrap">
-          <div
-            class="flex w-9/12 items-center p-0 md:w-1/2"
-            style="overflow: -moz-hidden-unscrollable"
-          >
+        <div class="mx-0 flex flex-nowrap items-center">
+          <div class="flex min-w-0 flex-1 items-center p-0">
             <span class="block">
               <GameItem
                 v-if="isVisible"
@@ -17,15 +14,9 @@
                 simple-mode
               />
             </span>
-            <span
-              class="ml-3 flex flex-col"
-              style="
-                -webkit-mask-image: linear-gradient(90deg, #000 100%, transparent);
-                mask-image: linear-gradient(90deg, #000 100%, transparent);
-              "
-            >
-              <span class="flex items-center text-base font-semibold">
-                {{ item.name }}
+            <span class="ml-3 flex min-w-0 flex-1 flex-col overflow-hidden">
+              <span class="flex items-center truncate text-base font-semibold">
+                <span class="truncate">{{ item.name }}</span>
                 <UIcon
                   v-if="props.need.foundInRaid"
                   name="i-mdi-checkbox-marked-circle-outline"
@@ -43,7 +34,7 @@
               </span>
             </span>
           </div>
-          <div class="flex w-3/12 flex-col items-end justify-center md:w-1/2">
+          <div class="ml-2 flex shrink-0 flex-col items-end justify-center">
             <div v-if="belowMd" class="mr-2 block">
               <UButton
                 variant="ghost"

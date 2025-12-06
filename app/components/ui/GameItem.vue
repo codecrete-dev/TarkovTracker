@@ -8,11 +8,14 @@
     @contextmenu="handleContextMenu"
   >
     <!-- Simple image display mode (for ItemImage compatibility) -->
-    <div v-if="simpleMode" :class="['relative overflow-hidden', imageContainerClasses]">
+    <div
+      v-if="simpleMode"
+      :class="['relative overflow-hidden', imageContainerClasses, { 'flex items-center justify-center': fill }]"
+    >
       <img
         v-if="isVisible && computedImageSrc"
         :src="computedImageSrc"
-        :class="['h-full w-full object-contain', imageClasses]"
+        :class="[fill ? 'max-h-full max-w-full object-contain' : 'h-full w-full object-contain', imageClasses]"
         loading="lazy"
         @error="handleImgError"
       />
@@ -176,6 +179,8 @@
     showCounter?: boolean;
     currentCount?: number;
     neededCount?: number;
+    // Fill parent container (for simpleMode)
+    fill?: boolean;
     // Legacy compatibility
     imageItem?: {
       iconLink?: string;
@@ -204,6 +209,7 @@
     showCounter: false,
     currentCount: 0,
     neededCount: 1,
+    fill: false,
     imageItem: undefined,
   });
   const emit = defineEmits<{
@@ -256,13 +262,18 @@
     return '';
   });
   const imageContainerClasses = computed(() => {
-    const classes = ['block', 'shrink-0', 'relative', 'overflow-hidden'];
-    if (props.size === 'small') {
-      classes.push('h-16', 'w-16'); // 64px
-    } else if (props.size === 'large') {
-      classes.push('h-28', 'w-28'); // 112px
+    const classes = ['block', 'relative', 'overflow-hidden'];
+    if (props.fill) {
+      classes.push('h-full', 'w-full');
     } else {
-      classes.push('h-24', 'w-24'); // 96px
+      classes.push('shrink-0');
+      if (props.size === 'small') {
+        classes.push('h-16', 'w-16'); // 64px
+      } else if (props.size === 'large') {
+        classes.push('h-28', 'w-28'); // 112px
+      } else {
+        classes.push('h-24', 'w-24'); // 96px
+      }
     }
     return classes;
   });

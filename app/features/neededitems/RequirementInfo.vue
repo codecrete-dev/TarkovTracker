@@ -14,10 +14,9 @@
         <template #count>{{ lockedBefore }}</template>
       </i18n-t>
     </div>
-    <!-- Station Info for Hideout -->
-    <div v-if="needType === 'hideoutModule'" class="mr-2 flex items-center">
-      <station-link v-if="relatedStation" :station="relatedStation" />
-      <span v-else class="text-sm text-gray-300">Unknown station</span>
+    <!-- Station Info for Hideout (only shown when relatedStation is passed) -->
+    <div v-if="needType === 'hideoutModule' && relatedStation" class="mr-2 flex items-center">
+      <station-link :station="relatedStation" />
       <span class="ml-1">{{ hideoutLevel }}</span>
     </div>
   </div>

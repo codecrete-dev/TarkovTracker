@@ -1,17 +1,6 @@
 <template>
-  <template v-if="props.itemStyle == 'mediumCard'">
-    <div class="w-full p-2 sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/6">
-      <NeededItemMediumCard
-        :need="props.need"
-        @decrease-count="decreaseCount()"
-        @toggle-count="toggleCount()"
-        @increase-count="increaseCount()"
-        @set-count="setCount"
-      />
-    </div>
-  </template>
-  <template v-else-if="props.itemStyle == 'smallCard'">
-    <div class="w-auto p-1">
+  <template v-if="props.itemStyle == 'card'">
+    <div class="h-full">
       <NeededItemSmallCard
         :need="props.need"
         @decrease-count="decreaseCount()"
@@ -39,9 +28,6 @@
   import { usePreferencesStore } from '@/stores/usePreferences';
   import { useProgressStore } from '@/stores/useProgress';
   import { useTarkovStore } from '@/stores/useTarkov';
-  const NeededItemMediumCard = defineAsyncComponent(
-    () => import('@/features/neededitems/NeededItemMediumCard')
-  );
   const NeededItemSmallCard = defineAsyncComponent(
     () => import('@/features/neededitems/NeededItemSmallCard')
   );
