@@ -151,11 +151,13 @@ export const useEdgeFunctions = () => {
    * @param name Team name
    * @param joinCode Team join/invite code
    * @param maxMembers Maximum number of team members (2-10)
+   * @param gameMode Game mode for the team ('pvp' or 'pve')
    */
   const createTeam = async (
     name: string,
     joinCode: string,
-    maxMembers = 5
+    maxMembers = 5,
+    gameMode: GameMode = 'pvp'
   ): Promise<CreateTeamResponse> => {
     if (!joinCode || joinCode.trim().length === 0) {
       throw new Error('Join code cannot be empty');
@@ -164,6 +166,7 @@ export const useEdgeFunctions = () => {
       name,
       join_code: joinCode,
       maxMembers,
+      game_mode: gameMode,
     });
   };
   /**

@@ -41,8 +41,36 @@
     </div>
     <!-- Secondary filters container - responsive stacking -->
     <div class="flex w-full flex-wrap gap-3">
-      <!-- Section 1: Status filters (AVAILABLE / LOCKED / COMPLETED) - minimal width -->
+      <!-- Section 0: Search bar -->
+      <div class="flex min-w-[200px] flex-1 items-center rounded-lg bg-[hsl(240,5%,5%)] px-4 py-3">
+        <UInput
+          :model-value="searchQuery"
+          :placeholder="t('page.tasks.search.placeholder', 'Search tasks...')"
+          icon="i-mdi-magnify"
+          clearable
+          class="w-full"
+          @update:model-value="$emit('update:searchQuery', $event)"
+        />
+      </div>
+      <!-- Section 1: Status filters (ALL / AVAILABLE / LOCKED / COMPLETED) - minimal width -->
       <div class="flex w-auto items-center gap-2 rounded-lg bg-[hsl(240,5%,5%)] px-4 py-3">
+        <UButton
+          :variant="'ghost'"
+          :color="'neutral'"
+          size="sm"
+          :class="{
+            'border-primary-500 rounded-none border-b-2': secondaryView === 'all',
+          }"
+          @click="setSecondaryView('all')"
+        >
+          <UIcon name="i-mdi-format-list-bulleted" class="mr-1 h-4 w-4" />
+          {{ t('page.tasks.secondaryviews.all', 'ALL').toUpperCase() }}
+          <span
+            class="ml-2 inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-blue-600 px-1.5 text-sm font-bold text-white"
+          >
+            {{ statusCounts.all }}
+          </span>
+        </UButton>
         <UButton
           :variant="'ghost'"
           :color="'neutral'"
@@ -230,6 +258,12 @@
   import { usePreferencesStore } from '@/stores/usePreferences';
   import { useProgressStore } from '@/stores/useProgress';
   import { useTeamStore } from '@/stores/useTeamStore';
+  defineProps<{
+    searchQuery: string;
+  }>();
+  defineEmits<{
+    'update:searchQuery': [value: string];
+  }>();
   const { t } = useI18n({ useScope: 'global' });
   const preferencesStore = usePreferencesStore();
   const metadataStore = useMetadataStore();

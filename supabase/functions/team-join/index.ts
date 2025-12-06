@@ -7,6 +7,10 @@ import {
     createErrorResponse,
     createSuccessResponse
 } from "../_shared/auth.ts"
+
+const VALID_GAME_MODES = ["pvp", "pve"] as const
+type GameMode = typeof VALID_GAME_MODES[number]
+
 serve(async (req) => {
   // Handle CORS preflight requests
   const corsResponse = handleCorsPreflight(req)
@@ -33,11 +37,30 @@ serve(async (req) => {
     if (fieldsError) return fieldsError
     const { teamId } = body
     const join_code = joinCode as string
-    // Check if user is already in a team
+    // Get team details first to know the game_mode
+    const { data: team, error: teamError } = await supabase
+      .from("teams")
+      .select("id, name, join_code, max_members, game_mode")
+      .eq("id", teamId)
+      .single()
+    if (teamError || !team) {
+      console.error("Team lookup failed:", teamError)
+      return createErrorResponse("Team not found", 404, req)
+    }
+    // Get the team's game mode
+    const game_mode: GameMode = VALID_GAME_MODES.includes(team.game_mode as GameMode) 
+      ? team.game_mode as GameMode 
+      : "pvp"
+    // Verify join code
+    if (team.join_code !== join_code) {
+      return createErrorResponse("Invalid team join code", 403, req)
+    }
+    // Check if user is already in a team for this game mode
     const { data: existingMembership, error: membershipCheckError } = await supabase
       .from("team_memberships")
-      .select("team_id")
+      .select("team_id, game_mode")
       .eq("user_id", user.id)
+      .eq("game_mode", game_mode)
       .limit(1)
     if (membershipCheckError) {
       console.error("Membership check failed:", membershipCheckError)
@@ -46,32 +69,19 @@ serve(async (req) => {
     if (existingMembership && existingMembership.length > 0) {
       const existingTeamId = existingMembership[0].team_id
       if (existingTeamId) {
+        const teamIdColumn = game_mode === "pve" ? "pve_team_id" : "pvp_team_id"
         const { error: systemHealError } = await supabase
           .from("user_system")
           .upsert({
             user_id: user.id,
-            team_id: existingTeamId,
+            [teamIdColumn]: existingTeamId,
             updated_at: new Date().toISOString()
           })
         if (systemHealError) {
           console.error("user_system heal failed:", systemHealError)
         }
       }
-      return createErrorResponse("You are already a member of a team. Leave your current team first.", 400, req)
-    }
-    // Get team details
-    const { data: team, error: teamError } = await supabase
-      .from("teams")
-      .select("id, name, join_code, max_members")
-      .eq("id", teamId)
-      .single()
-    if (teamError || !team) {
-      console.error("Team lookup failed:", teamError)
-      return createErrorResponse("Team not found", 404, req)
-    }
-    // Verify join code
-    if (team.join_code !== join_code) {
-      return createErrorResponse("Invalid team join code", 403, req)
+      return createErrorResponse(`You are already a member of a ${game_mode.toUpperCase()} team. Leave your current team first.`, 400, req)
     }
     // Check if team is full
     const { data: currentMembers, error: membersError } = await supabase
@@ -85,13 +95,14 @@ serve(async (req) => {
     if (currentMembers && currentMembers.length >= team.max_members) {
       return createErrorResponse("Team is full", 400, req)
     }
-    // Add user to team
+    // Add user to team with game_mode
     const { error: joinError } = await supabase
       .from("team_memberships")
       .insert({
         team_id: teamId,
         user_id: user.id,
         role: "member",
+        game_mode: game_mode,
         joined_at: new Date().toISOString()
       })
     if (joinError) {
@@ -113,12 +124,13 @@ serve(async (req) => {
         event_data: { team_name: team.name },
         created_at: new Date().toISOString()
       })
-    // Update user_system team_id for the joiner
+    // Update user_system with the correct team_id column based on game mode
+    const teamIdColumn = game_mode === "pve" ? "pve_team_id" : "pvp_team_id"
     const { error: systemError } = await supabase
       .from("user_system")
       .upsert({
         user_id: user.id,
-        team_id: teamId,
+        [teamIdColumn]: teamId,
         updated_at: new Date().toISOString()
       })
     if (systemError) {

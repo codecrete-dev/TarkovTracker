@@ -24,5 +24,5 @@
     station: Pick<HideoutStation, 'id' | 'name'>;
   }>();
   const stationIcon = computed(() => `/img/hideout/${props.station.id}.avif`);
-  const stationHref = computed(() => `/hideout#station-${props.station.id}`);
+  const stationHref = computed(() => `/hideout?station=${props.station.id}`);
 </script>

@@ -15,6 +15,52 @@ export function useHideoutFiltering() {
     get: () => preferencesStore.getTaskPrimaryView,
     set: (value) => preferencesStore.setTaskPrimaryView(value),
   });
+  // Helper to determine if a station is available for upgrade
+  const isStationAvailable = (station: HideoutStation): boolean => {
+    const lvl = progressStore.hideoutLevels?.[station.id]?.self || 0;
+    const nextLevelData = station.levels.find((l) => l.level === lvl + 1);
+    if (!nextLevelData) return false;
+    return nextLevelData.stationLevelRequirements.every(
+      (req) => (progressStore.hideoutLevels?.[req.station.id]?.self || 0) >= req.level
+    );
+  };
+  // Helper to determine if a station is maxed
+  const isStationMaxed = (station: HideoutStation): boolean => {
+    return (progressStore.hideoutLevels?.[station.id]?.self || 0) === station.levels.length;
+  };
+  // Helper to determine if a station is locked
+  const isStationLocked = (station: HideoutStation): boolean => {
+    const lvl = progressStore.hideoutLevels?.[station.id]?.self || 0;
+    const nextLevelData = station.levels.find((l) => l.level === lvl + 1);
+    if (!nextLevelData) return false;
+    return !nextLevelData.stationLevelRequirements.every(
+      (req) => (progressStore.hideoutLevels?.[req.station.id]?.self || 0) >= req.level
+    );
+  };
+  // Calculate station counts for each filter
+  const stationCounts = computed(() => {
+    const counts = {
+      available: 0,
+      maxed: 0,
+      locked: 0,
+      all: 0,
+    };
+    if (!hideoutStations.value || hideoutStations.value.length === 0) {
+      return counts;
+    }
+    const stationList = hideoutStations.value as HideoutStation[];
+    counts.all = stationList.length;
+    for (const station of stationList) {
+      if (isStationMaxed(station)) {
+        counts.maxed++;
+      } else if (isStationAvailable(station)) {
+        counts.available++;
+      } else if (isStationLocked(station)) {
+        counts.locked++;
+      }
+    }
+    return counts;
+  });
   // Comprehensive loading check
   const isStoreLoading = computed(() => {
     try {
@@ -50,32 +96,15 @@ export function useHideoutFiltering() {
       const hideoutStationList = hideoutStations.value as HideoutStation[];
       // Display all upgradeable stations
       if (activePrimaryView.value === 'available') {
-        return hideoutStationList.filter((station: HideoutStation) => {
-          const lvl = progressStore.hideoutLevels?.[station.id]?.self || 0;
-          const nextLevelData = station.levels.find((l) => l.level === lvl + 1);
-          if (!nextLevelData) return false;
-          return nextLevelData.stationLevelRequirements.every(
-            (req) => (progressStore.hideoutLevels?.[req.station.id]?.self || 0) >= req.level
-          );
-        });
+        return hideoutStationList.filter(isStationAvailable);
       }
       // Display all maxed stations
       if (activePrimaryView.value === 'maxed') {
-        return hideoutStationList.filter(
-          (station: HideoutStation) =>
-            (progressStore.hideoutLevels?.[station.id]?.self || 0) === station.levels.length
-        );
+        return hideoutStationList.filter(isStationMaxed);
       }
       // Display all locked stations
       if (activePrimaryView.value === 'locked') {
-        return hideoutStationList.filter((station: HideoutStation) => {
-          const lvl = progressStore.hideoutLevels?.[station.id]?.self || 0;
-          const nextLevelData = station.levels.find((l) => l.level === lvl + 1);
-          if (!nextLevelData) return false;
-          return !nextLevelData.stationLevelRequirements.every(
-            (req) => (progressStore.hideoutLevels?.[req.station.id]?.self || 0) >= req.level
-          );
-        });
+        return hideoutStationList.filter(isStationLocked);
       }
       // Display all stations
       if (activePrimaryView.value === 'all') return hideoutStationList;
@@ -90,5 +119,6 @@ export function useHideoutFiltering() {
     activePrimaryView,
     isStoreLoading,
     visibleStations,
+    stationCounts,
   };
 }

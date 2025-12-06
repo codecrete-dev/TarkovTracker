@@ -2,18 +2,51 @@ import { defineStore, type Store } from 'pinia';
 import { computed, type Ref } from 'vue';
 import { useSupabaseListener } from '@/composables/supabase/useSupabaseListener';
 import type { SystemGetters, SystemState } from '@/types/tarkov';
-/**
- * Helper to extract team ID from system store state.
- * Handles both 'team' (canonical) and 'team_id' (from database) fields.
- */
-export function getTeamIdFromState(state: SystemState): string | null {
-  return state.team ?? state.team_id ?? null;
+import { GAME_MODES } from '@/utils/constants';
+// Import useTarkovStore lazily to avoid circular dependency issues
+let _useTarkovStore: (() => { getCurrentGameMode?: () => string }) | null = null;
+async function loadTarkovStore() {
+  if (!_useTarkovStore) {
+    const module = await import('@/stores/useTarkov');
+    _useTarkovStore = module.useTarkovStore;
+  }
+  return _useTarkovStore;
 }
 /**
- * Helper to check if user has a team from system store state.
+ * Helper to get the current game mode from tarkov store.
+ * Returns 'pvp' if not available.
+ * Note: This is synchronous but uses cached import to avoid circular deps.
  */
-export function hasTeamInState(state: SystemState): boolean {
-  return !!(state.team ?? state.team_id);
+function getCurrentGameMode(): 'pvp' | 'pve' {
+  try {
+    if (_useTarkovStore) {
+      const tarkovStore = _useTarkovStore();
+      return (tarkovStore.getCurrentGameMode?.() as 'pvp' | 'pve') || GAME_MODES.PVP;
+    }
+    // Trigger async load for next call
+    loadTarkovStore().catch(() => {});
+    return GAME_MODES.PVP;
+  } catch {
+    return GAME_MODES.PVP;
+  }
+}
+/**
+ * Helper to extract team ID from system store state.
+ * Now handles game-mode-specific team IDs (pvp_team_id, pve_team_id).
+ * Falls back to legacy team/team_id for backwards compatibility.
+ */
+export function getTeamIdFromState(state: SystemState, gameMode?: 'pvp' | 'pve'): string | null {
+  const mode = gameMode || getCurrentGameMode();
+  if (mode === 'pve') {
+    return state.pve_team_id ?? state.team ?? state.team_id ?? null;
+  }
+  return state.pvp_team_id ?? state.team ?? state.team_id ?? null;
+}
+/**
+ * Helper to check if user has a team from system store state for the current game mode.
+ */
+export function hasTeamInState(state: SystemState, gameMode?: 'pvp' | 'pve'): boolean {
+  return !!getTeamIdFromState(state, gameMode);
 }
 /**
  * System store definition with getters for user tokens and team info
@@ -59,14 +92,26 @@ export function useSystemStoreWithSupabase(): SystemStoreInstance {
   const systemStore = useSystemStore();
   const { $supabase } = useNuxtApp();
   const handleSystemSnapshot = (data: Record<string, unknown> | null) => {
-    if (data && 'team_id' in data) {
-      const teamId = (data as { team_id: string | null }).team_id;
+    if (data) {
+      // Handle game-mode-specific team IDs
+      const pvpTeamId = (data as { pvp_team_id?: string | null }).pvp_team_id ?? null;
+      const pveTeamId = (data as { pve_team_id?: string | null }).pve_team_id ?? null;
+      // Legacy team_id field for backwards compatibility
+      const legacyTeamId = (data as { team_id?: string | null }).team_id ?? null;
       systemStore.$patch({
-        team: teamId,
-        team_id: teamId,
+        pvp_team_id: pvpTeamId,
+        pve_team_id: pveTeamId,
+        // Keep legacy fields updated for backwards compatibility
+        team: legacyTeamId || pvpTeamId,
+        team_id: legacyTeamId || pvpTeamId,
       } as Partial<SystemState>);
-    } else if (data === null) {
-      systemStore.$patch({ team: null, team_id: null } as Partial<SystemState>);
+    } else {
+      systemStore.$patch({
+        pvp_team_id: null,
+        pve_team_id: null,
+        team: null,
+        team_id: null,
+      } as Partial<SystemState>);
     }
   };
   // Computed reference to the system document - passed as ref for reactivity

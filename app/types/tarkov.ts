@@ -260,6 +260,9 @@ export interface SystemState extends StateTree {
   team?: string | null;
   // Keep raw team_id from Supabase for backwards/compat and reactivity
   team_id?: string | null;
+  // Game-mode-specific team IDs
+  pvp_team_id?: string | null;
+  pve_team_id?: string | null;
 }
 export interface SystemGetters extends _GettersTree<SystemState> {
   userTokens: (state: SystemState) => string[];

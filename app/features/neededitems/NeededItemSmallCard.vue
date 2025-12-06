@@ -77,7 +77,7 @@
         <!-- Item count actions -->
         <div
           v-if="!selfCompletedNeed"
-          class="mx-2 mt-2 mb-2 flex h-full justify-center self-stretch"
+          class="mx-2 mt-2 mb-2 flex h-full flex-col items-center justify-center self-stretch"
         >
           <ItemCountControls
             :current-count="currentCount"
@@ -87,19 +87,22 @@
             @toggle="$emit('toggleCount')"
             @set-count="(count) => $emit('setCount', count)"
           />
+          <!-- Show team needs alongside controls -->
+          <TeamNeedsDisplay
+            v-if="teamNeeds.length > 0"
+            :team-needs="teamNeeds"
+            :needed-count="neededCount"
+            class="mt-2"
+          />
         </div>
-        <!-- Show static count for completed parent items (Completed tab) -->
+        <!-- Show static count for completed parent items -->
         <div
-          v-else-if="isParentCompleted"
+          v-else
           class="mx-2 mt-2 mb-2 flex h-full items-center justify-center self-stretch"
         >
           <span class="text-success-400 text-sm font-semibold">
             {{ currentCount.toLocaleString() }}/{{ neededCount.toLocaleString() }}
           </span>
-        </div>
-        <!-- Show team needs for items where self is done but parent isn't -->
-        <div v-else class="mx-2 mt-2 mb-2 flex h-full justify-center self-stretch">
-          <TeamNeedsDisplay :team-needs="teamNeeds" :needed-count="neededCount" />
         </div>
       </div>
     </div>
@@ -122,7 +125,6 @@
   const tarkovStore = useTarkovStore();
   const {
     selfCompletedNeed,
-    isParentCompleted,
     relatedTask,
     relatedStation,
     lockedBefore,

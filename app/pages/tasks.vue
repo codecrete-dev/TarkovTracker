@@ -4,19 +4,21 @@
       <TaskLoadingState v-if="isLoading" />
       <div v-else>
         <!-- Task Filter Bar -->
-        <TaskFilterBar />
-        <div v-if="visibleTasks.length === 0" class="py-6">
+        <TaskFilterBar v-model:search-query="searchQuery" />
+        <div v-if="filteredTasks.length === 0" class="py-6">
           <TaskEmptyState />
         </div>
         <div v-else class="space-y-4" data-testid="task-list">
           <TaskCard
-            v-for="task in visibleTasks"
+            v-for="task in paginatedTasks"
             :key="task.id"
             :task="task"
             :active-user-view="activeUserView"
             :needed-by="task.neededBy ?? []"
             @on-task-action="onTaskAction"
           />
+          <!-- Sentinel for infinite scroll -->
+          <div v-if="displayCount < filteredTasks.length" ref="tasksSentinel" class="h-1" />
         </div>
       </div>
     </div>
@@ -64,8 +66,10 @@
 </template>
 <script setup lang="ts">
   import { storeToRefs } from 'pinia';
-  import { computed, ref, watch } from 'vue';
+  import { computed, nextTick, ref, watch } from 'vue';
   import { useI18n } from 'vue-i18n';
+  import { useRoute, useRouter } from 'vue-router';
+  import { useInfiniteScroll } from '@/composables/useInfiniteScroll';
   import { useTaskFiltering } from '@/composables/useTaskFiltering';
   import TaskCard from '@/features/tasks/TaskCard.vue';
   import TaskEmptyState from '@/features/tasks/TaskEmptyState.vue';
@@ -76,6 +80,8 @@
   import { useTarkovStore } from '@/stores/useTarkov';
   import type { Task, TaskObjective } from '@/types/tarkov';
   import { logger } from '@/utils/logger';
+  const route = useRoute();
+  const router = useRouter();
   const { t } = useI18n({ useScope: 'global' });
   const preferencesStore = usePreferencesStore();
   const {
@@ -140,6 +146,102 @@
   );
   const isLoading = computed(() => tasksLoading.value || reloadingTasks.value);
   const activeUserView = computed(() => getTaskUserView.value);
+  // Search state
+  const searchQuery = ref('');
+  // Filter tasks by search query
+  const filteredTasks = computed(() => {
+    if (!searchQuery.value.trim()) {
+      return visibleTasks.value;
+    }
+    const query = searchQuery.value.toLowerCase().trim();
+    return visibleTasks.value.filter((task) => task.name?.toLowerCase().includes(query));
+  });
+  // Pagination state for infinite scroll
+  const displayCount = ref(15);
+  const tasksSentinel = ref<HTMLElement | null>(null);
+  const paginatedTasks = computed(() => {
+    return filteredTasks.value.slice(0, displayCount.value);
+  });
+  const loadMoreTasks = () => {
+    if (displayCount.value < filteredTasks.value.length) {
+      displayCount.value += 15;
+    }
+  };
+  // Setup infinite scroll
+  const infiniteScrollEnabled = computed(() => displayCount.value < filteredTasks.value.length);
+  const { stop: stopInfiniteScroll, start: startInfiniteScroll } = useInfiniteScroll(
+    tasksSentinel,
+    loadMoreTasks,
+    { rootMargin: '200px', threshold: 0.1, enabled: infiniteScrollEnabled.value }
+  );
+  // Reset pagination when filters or search changes
+  watch(
+    [searchQuery, getTaskSecondaryView, getTaskPrimaryView, getTaskMapView, getTaskTraderView],
+    () => {
+      displayCount.value = 15;
+    }
+  );
+  // Handle infinite scroll state changes
+  watch(infiniteScrollEnabled, (newEnabled) => {
+    if (newEnabled) startInfiniteScroll();
+    else stopInfiniteScroll();
+  });
+  // Handle deep linking to a specific task via ?task=taskId query param
+  const getTaskStatus = (taskId: string): 'available' | 'locked' | 'completed' => {
+    const isCompleted = tasksCompletions.value?.[taskId]?.['self'] ?? false;
+    if (isCompleted) return 'completed';
+    const isUnlocked = unlockedTasks.value?.[taskId]?.['self'] ?? false;
+    if (isUnlocked) return 'available';
+    return 'locked';
+  };
+  const scrollToTask = async (taskId: string) => {
+    // Find the task index to ensure it's loaded
+    const taskIndex = filteredTasks.value.findIndex((t) => t.id === taskId);
+    if (taskIndex >= 0 && taskIndex >= displayCount.value) {
+      // Expand to show this task
+      displayCount.value = taskIndex + 5;
+    }
+    await nextTick();
+    // Small delay to ensure DOM is fully rendered after filter change
+    setTimeout(() => {
+      const taskElement = document.getElementById(`task-${taskId}`);
+      if (taskElement) {
+        taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Add a brief highlight effect
+        taskElement.classList.add('ring-2', 'ring-primary-500', 'ring-offset-2', 'ring-offset-surface-900');
+        setTimeout(() => {
+          taskElement.classList.remove('ring-2', 'ring-primary-500', 'ring-offset-2', 'ring-offset-surface-900');
+        }, 2000);
+      }
+    }, 100);
+  };
+  const handleTaskQueryParam = () => {
+    const taskId = route.query.task as string;
+    if (!taskId || tasksLoading.value) return;
+    // Determine task status and set appropriate filter
+    const status = getTaskStatus(taskId);
+    if (preferencesStore.getTaskSecondaryView !== status) {
+      preferencesStore.setTaskSecondaryView(status);
+    }
+    // Set primary view to 'all' to ensure the task is visible regardless of map/trader
+    if (preferencesStore.getTaskPrimaryView !== 'all') {
+      preferencesStore.setTaskPrimaryView('all');
+    }
+    // Scroll to the task after filters are applied
+    scrollToTask(taskId);
+    // Clear the query param to avoid re-triggering on filter changes
+    router.replace({ path: '/tasks', query: {} });
+  };
+  // Watch for task query param and handle it when tasks are loaded
+  watch(
+    [() => route.query.task, tasksLoading, tasksCompletions],
+    ([taskQueryParam, loading]) => {
+      if (taskQueryParam && !loading) {
+        handleTaskQueryParam();
+      }
+    },
+    { immediate: true }
+  );
   // Helper Methods for Undo
   const handleTaskObjectives = (
     objectives: TaskObjective[],

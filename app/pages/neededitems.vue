@@ -1,62 +1,18 @@
 <template>
   <div class="px-4 py-6">
+    <!-- Filter Bar -->
+    <NeededItemsFilterBar
+      v-model="activeFilter"
+      v-model:search="search"
+      v-model:view-mode="viewMode"
+      v-model:hide-team-items="hideTeamItems"
+      v-model:hide-non-fir="hideNonFir"
+      v-model:hide-hideout="hideHideout"
+      :filter-tabs="filterTabsWithCounts"
+      :total-count="filteredItems.length"
+    />
+    <!-- Items Container -->
     <UCard class="bg-contentbackground border border-white/5">
-      <!-- Filter Tabs & Controls -->
-      <div class="flex items-center justify-between border-b border-white/10 px-4 py-3">
-        <!-- Filter Tabs -->
-        <div class="flex gap-2">
-          <UButton
-            v-for="tab in filterTabs"
-            :key="tab.value"
-            :label="tab.label"
-            :variant="activeFilter === tab.value ? 'solid' : 'soft'"
-            :color="activeFilter === tab.value ? 'primary' : 'neutral'"
-            size="lg"
-            @click="activeFilter = tab.value"
-          />
-        </div>
-        <!-- Search Bar -->
-        <div class="mx-4 max-w-md flex-1">
-          <UInput
-            v-model="search"
-            :placeholder="$t('page.neededitems.searchplaceholder')"
-            icon="i-mdi-magnify"
-            clearable
-            :ui="inputUi"
-          />
-        </div>
-        <!-- Item Count & View Mode -->
-        <div class="flex items-center gap-3">
-          <UBadge color="neutral" variant="soft" size="md" class="px-3 py-1 text-sm">
-            {{ filteredItems.length }} items
-          </UBadge>
-          <!-- View Mode Selector -->
-          <div class="flex gap-1">
-            <UButton
-              :icon="'i-mdi-view-list'"
-              :color="viewMode === 'list' ? 'primary' : 'neutral'"
-              :variant="viewMode === 'list' ? 'soft' : 'ghost'"
-              size="md"
-              @click="viewMode = 'list'"
-            />
-            <UButton
-              :icon="'i-mdi-view-module'"
-              :color="viewMode === 'bigGrid' ? 'primary' : 'neutral'"
-              :variant="viewMode === 'bigGrid' ? 'soft' : 'ghost'"
-              size="md"
-              @click="viewMode = 'bigGrid'"
-            />
-            <UButton
-              :icon="'i-mdi-view-grid'"
-              :color="viewMode === 'smallGrid' ? 'primary' : 'neutral'"
-              :variant="viewMode === 'smallGrid' ? 'soft' : 'ghost'"
-              size="md"
-              @click="viewMode = 'smallGrid'"
-            />
-          </div>
-        </div>
-      </div>
-      <!-- Items Container -->
       <div v-if="filteredItems.length === 0" class="text-surface-400 p-8 text-center">
         {{ $t('page.neededitems.empty', 'No items match your search.') }}
       </div>
@@ -92,32 +48,39 @@
 <script setup lang="ts">
   import { storeToRefs } from 'pinia';
   import { computed, ref, watch } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import { useInfiniteScroll } from '@/composables/useInfiniteScroll';
   import NeededItem from '@/features/neededitems/NeededItem.vue';
+  import NeededItemsFilterBar from '@/features/neededitems/NeededItemsFilterBar.vue';
   import { useMetadataStore } from '@/stores/useMetadata';
+  import { usePreferencesStore } from '@/stores/usePreferences';
   import { useProgressStore } from '@/stores/useProgress';
   import type { NeededItemHideoutModule, NeededItemTaskObjective } from '@/types/tarkov';
   import { logger } from '@/utils/logger';
-  const inputUi = {
-    base: 'w-full',
-    input:
-      'h-11 bg-surface-900 border border-white/15 text-surface-50 placeholder:text-surface-500 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-white/20',
-    leadingIcon: 'text-surface-300',
-  };
+  const { t } = useI18n({ useScope: 'global' });
   const metadataStore = useMetadataStore();
   const progressStore = useProgressStore();
+  const preferencesStore = usePreferencesStore();
   const { neededItemTaskObjectives, neededItemHideoutModules } = storeToRefs(metadataStore);
   // View mode state: 'list', 'bigGrid', or 'smallGrid'
   const viewMode = ref<'list' | 'bigGrid' | 'smallGrid'>('list');
   // Filter state
   type FilterType = 'all' | 'tasks' | 'hideout' | 'completed';
   const activeFilter = ref<FilterType>('all');
-  const filterTabs: { label: string; value: FilterType }[] = [
-    { label: 'All', value: 'all' },
-    { label: 'Tasks', value: 'tasks' },
-    { label: 'Hideout', value: 'hideout' },
-    { label: 'Completed', value: 'completed' },
-  ];
+  const search = ref('');
+  // Team filter preferences (two-way binding with preferences store)
+  const hideTeamItems = computed({
+    get: () => preferencesStore.itemsTeamAllHidden,
+    set: (value) => preferencesStore.setItemsTeamHideAll(value),
+  });
+  const hideNonFir = computed({
+    get: () => preferencesStore.itemsTeamNonFIRHidden,
+    set: (value) => preferencesStore.setItemsTeamHideNonFIR(value),
+  });
+  const hideHideout = computed({
+    get: () => preferencesStore.itemsTeamHideoutHidden,
+    set: (value) => preferencesStore.setItemsTeamHideHideout(value),
+  });
   const allItems = computed(() => {
     const combined = [
       ...(neededItemTaskObjectives.value || []),
@@ -161,7 +124,6 @@
     // Return all items - filtering by completion status is done in filteredItems
     return Array.from(aggregated.values());
   });
-  const search = ref('');
   // Helper to check if the parent task/module is completed for self
   const isParentCompleted = (need: NeededItemTaskObjective | NeededItemHideoutModule): boolean => {
     if (need.needType === 'taskObjective') {
@@ -173,6 +135,44 @@
     }
     return false;
   };
+  // Calculate item counts for each filter tab
+  const filterTabsWithCounts = computed(() => {
+    const items = allItems.value;
+    const taskItems = items.filter(
+      (item) => item.needType === 'taskObjective' && !isParentCompleted(item)
+    );
+    const hideoutItems = items.filter(
+      (item) => item.needType === 'hideoutModule' && !isParentCompleted(item)
+    );
+    const completedItems = items.filter((item) => isParentCompleted(item));
+    const allIncomplete = items.filter((item) => !isParentCompleted(item));
+    return [
+      {
+        label: t('page.neededitems.filters.all', 'All'),
+        value: 'all' as FilterType,
+        icon: 'i-mdi-clipboard-list',
+        count: allIncomplete.length,
+      },
+      {
+        label: t('page.neededitems.filters.tasks', 'Tasks'),
+        value: 'tasks' as FilterType,
+        icon: 'i-mdi-checkbox-marked-circle-outline',
+        count: taskItems.length,
+      },
+      {
+        label: t('page.neededitems.filters.hideout', 'Hideout'),
+        value: 'hideout' as FilterType,
+        icon: 'i-mdi-home',
+        count: hideoutItems.length,
+      },
+      {
+        label: t('page.neededitems.filters.completed', 'Completed'),
+        value: 'completed' as FilterType,
+        icon: 'i-mdi-check-all',
+        count: completedItems.length,
+      },
+    ];
+  });
   const filteredItems = computed(() => {
     let items = allItems.value;
     // Filter by completion status first

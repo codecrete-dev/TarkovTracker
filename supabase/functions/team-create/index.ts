@@ -9,6 +9,8 @@ import {
 } from "../_shared/auth.ts"
 
 const MAX_TEAM_MEMBERS = 5
+const VALID_GAME_MODES = ["pvp", "pve"] as const
+type GameMode = typeof VALID_GAME_MODES[number]
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -43,6 +45,10 @@ serve(async (req) => {
 
     const { name, maxMembers = MAX_TEAM_MEMBERS } = body
     const join_code = joinCode as string
+    
+    // Extract and validate game_mode (default to 'pvp' for backwards compatibility)
+    const rawGameMode = typeof body.game_mode === "string" ? body.game_mode.toLowerCase() : "pvp"
+    const game_mode: GameMode = VALID_GAME_MODES.includes(rawGameMode as GameMode) ? rawGameMode as GameMode : "pvp"
 
     // Validate team name length
     if (typeof name !== "string" || name.trim().length === 0) {
@@ -65,11 +71,12 @@ serve(async (req) => {
       return createErrorResponse("Max members must be between 2 and 10", 400, req)
     }
 
-    // Check if user is already in a team
+    // Check if user is already in a team for this specific game mode
     const { data: existingMembership, error: membershipCheckError } = await supabase
       .from("team_memberships")
-      .select("team_id")
+      .select("team_id, game_mode")
       .eq("user_id", user.id)
+      .eq("game_mode", game_mode)
       .limit(1)
 
     if (membershipCheckError) {
@@ -81,21 +88,22 @@ serve(async (req) => {
       // Heal stale state: ensure user_system reflects existing team for UI sync
       const existingTeamId = existingMembership[0].team_id
       if (existingTeamId) {
+        const teamIdColumn = game_mode === "pve" ? "pve_team_id" : "pvp_team_id"
         const { error: systemHealError } = await supabase
           .from("user_system")
           .upsert({
             user_id: user.id,
-            team_id: existingTeamId,
+            [teamIdColumn]: existingTeamId,
             updated_at: new Date().toISOString()
           })
         if (systemHealError) {
           console.error("user_system heal failed:", systemHealError)
         }
       }
-      return createErrorResponse("You are already a member of a team. Leave your current team first.", 400, req)
+      return createErrorResponse(`You are already a member of a ${game_mode.toUpperCase()} team. Leave your current team first.`, 400, req)
     }
 
-    // Create the team
+    // Create the team with game_mode
     const { data: team, error: teamError } = await supabase
       .from("teams")
       .insert({
@@ -103,6 +111,7 @@ serve(async (req) => {
         join_code: join_code,
         max_members: maxMembers,
         owner_id: user.id,
+        game_mode: game_mode,
         created_at: new Date().toISOString()
       })
       .select()
@@ -119,13 +128,14 @@ serve(async (req) => {
       return createErrorResponse("Failed to create team", 500, req)
     }
 
-    // Add creator as owner to team_memberships
+    // Add creator as owner to team_memberships (game_mode is set by trigger)
     const { error: membershipError } = await supabase
       .from("team_memberships")
       .insert({
         team_id: team.id,
         user_id: user.id,
         role: "owner",
+        game_mode: game_mode,
         joined_at: new Date().toISOString()
       })
 
@@ -141,12 +151,13 @@ serve(async (req) => {
       return createErrorResponse("Failed to create team membership", 500, req)
     }
 
-    // Upsert user_system team_id for the creator
+    // Upsert user_system with the correct team_id column based on game mode
+    const teamIdColumn = game_mode === "pve" ? "pve_team_id" : "pvp_team_id"
     const { error: systemError } = await supabase
       .from("user_system")
       .upsert({
         user_id: user.id,
-        team_id: team.id,
+        [teamIdColumn]: team.id,
         updated_at: new Date().toISOString()
       })
 
@@ -175,7 +186,8 @@ serve(async (req) => {
         maxMembers: team.max_members,
         ownerId: team.owner_id,
         createdAt: team.created_at,
-        joinCode: team.join_code
+        joinCode: team.join_code,
+        gameMode: game_mode
       }
     }, 201, req)
 

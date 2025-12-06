@@ -286,16 +286,42 @@ export const useProgressStore = defineStore('progress', () => {
   const moduleCompletions = computed(() => {
     const completions: CompletionsMap = {};
     if (!metadataStore.hideoutStations.length || !visibleTeamStores.value) return {};
-    // Collect all module IDs from all stations
-    const allModuleIds = metadataStore.hideoutStations.flatMap(
-      (station) => station.levels?.map((level) => level.id) || []
-    );
-    for (const moduleId of allModuleIds) {
-      completions[moduleId] = {};
-      for (const teamId of Object.keys(visibleTeamStores.value)) {
-        const store = visibleTeamStores.value[teamId];
-        const currentData = getGameModeData(store);
-        completions[moduleId]![teamId] = currentData?.hideoutModules?.[moduleId]?.complete ?? false;
+    for (const station of metadataStore.hideoutStations) {
+      if (!station || !station.id || !station.levels) continue;
+      for (const level of station.levels) {
+        if (!level || !level.id) continue;
+        completions[level.id] = {};
+        for (const teamId of Object.keys(visibleTeamStores.value)) {
+          const store = visibleTeamStores.value[teamId];
+          const currentData = getGameModeData(store);
+          // Check if manually completed
+          const isManuallyComplete = currentData?.hideoutModules?.[level.id]?.complete ?? false;
+          if (isManuallyComplete) {
+            completions[level.id]![teamId] = true;
+            continue;
+          }
+          // Check if auto-completed by game edition for special stations
+          if (station.normalizedName === SPECIAL_STATIONS.STASH) {
+            const gameEditionVersion = store?.$state.gameEdition ?? 0;
+            const edition = gameEditionData.value.find((e) => e.value === gameEditionVersion);
+            const defaultStashLevel = edition?.defaultStashLevel ?? 0;
+            // Module is complete if its level is <= default stash level from edition
+            if (level.level <= defaultStashLevel) {
+              completions[level.id]![teamId] = true;
+              continue;
+            }
+          } else if (station.normalizedName === SPECIAL_STATIONS.CULTIST_CIRCLE) {
+            const gameEditionVersion = store?.$state.gameEdition ?? 0;
+            const edition = gameEditionData.value.find((e) => e.value === gameEditionVersion);
+            const defaultCultistCircleLevel = edition?.defaultCultistCircleLevel ?? 0;
+            // Module is complete if its level is <= default cultist circle level from edition
+            if (level.level <= defaultCultistCircleLevel) {
+              completions[level.id]![teamId] = true;
+              continue;
+            }
+          }
+          completions[level.id]![teamId] = false;
+        }
       }
     }
     return completions;

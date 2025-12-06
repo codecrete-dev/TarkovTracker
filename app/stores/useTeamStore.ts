@@ -12,14 +12,34 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { Store } from 'pinia';
 import { useToast } from '#imports';
 /**
- * Helper to extract team ID from system store
+ * Helper to get current game mode
+ */
+function getCurrentGameMode(): 'pvp' | 'pve' {
+  try {
+    const tarkovStore = useTarkovStore();
+    return (tarkovStore.getCurrentGameMode?.() as 'pvp' | 'pve') || GAME_MODES.PVP;
+  } catch {
+    return GAME_MODES.PVP;
+  }
+}
+/**
+ * Helper to extract team ID from system store for the current game mode
  * Reads directly from state to avoid getter reactivity issues
  */
 function getTeamIdFromSystemStore(
   systemStore: ReturnType<typeof useSystemStoreWithSupabase>['systemStore']
 ): string | null {
-  const state = systemStore.$state as { team?: string | null; team_id?: string | null };
-  return state.team ?? state.team_id ?? null;
+  const state = systemStore.$state as {
+    team?: string | null;
+    team_id?: string | null;
+    pvp_team_id?: string | null;
+    pve_team_id?: string | null;
+  };
+  const mode = getCurrentGameMode();
+  if (mode === 'pve') {
+    return state.pve_team_id ?? state.team ?? state.team_id ?? null;
+  }
+  return state.pvp_team_id ?? state.team ?? state.team_id ?? null;
 }
 /**
  * Team store definition with getters for team info and members

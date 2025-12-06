@@ -8,6 +8,8 @@ import {
 } from "../_shared/auth.ts"
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 const LEAVE_COOLDOWN_MINUTES = 5
+const VALID_GAME_MODES = ["pvp", "pve"] as const
+type GameMode = typeof VALID_GAME_MODES[number]
 serve(async (req) => {
   // Handle CORS preflight requests
   const corsResponse = handleCorsPreflight(req)
@@ -27,6 +29,20 @@ serve(async (req) => {
     const fieldsError = validateRequiredFields(req, body, ["teamId"])
     if (fieldsError) return fieldsError
     const { teamId } = body
+    // Get the team's game_mode first
+    const { data: team, error: teamError } = await supabase
+      .from("teams")
+      .select("game_mode")
+      .eq("id", teamId)
+      .single()
+    if (teamError || !team) {
+      console.error("Team lookup failed:", teamError)
+      return createErrorResponse("Team not found", 404, req)
+    }
+    const game_mode: GameMode = VALID_GAME_MODES.includes(team.game_mode as GameMode) 
+      ? team.game_mode as GameMode 
+      : "pvp"
+    const teamIdColumn = game_mode === "pve" ? "pve_team_id" : "pvp_team_id"
     // Get user's membership in the team
     const { data: membership, error: membershipError } = await supabase
       .from("team_memberships")
@@ -62,7 +78,7 @@ serve(async (req) => {
         .from("user_system")
         .upsert({
           user_id: user.id,
-          team_id: null,
+          [teamIdColumn]: null,
           updated_at: new Date().toISOString()
         })
       if (systemError) {
@@ -135,12 +151,12 @@ serve(async (req) => {
         initiated_by: user.id,
         created_at: new Date().toISOString()
       })
-    // Clear user_system team_id for the leaver
+    // Clear user_system team_id for the leaver (using correct game mode column)
     const { error: systemError } = await supabase
       .from("user_system")
       .upsert({
         user_id: user.id,
-        team_id: null,
+        [teamIdColumn]: null,
         updated_at: new Date().toISOString()
       })
     if (systemError) {

@@ -1,18 +1,25 @@
 <template>
-  <div class="text-center text-sm">
-    <i18n-t keypath="page.neededitems.neededby" scope="global">
-      <template #users>
-        <div
-          v-for="(userNeed, userIndex) in teamNeeds"
-          :key="userIndex"
-          class="flex items-center justify-center"
-        >
-          <UIcon name="i-mdi-account-child-circle" class="mr-1 h-5 w-5" />
-          {{ getDisplayName(userNeed.user) }}
+  <div v-if="teamNeeds.length > 0" class="flex flex-col items-center text-xs">
+    <div class="text-surface-400 mb-1 flex items-center gap-1">
+      <UIcon name="i-mdi-account-group" class="h-4 w-4" />
+      <span>{{ $t('page.neededitems.teammatesneeded', 'Teammates need this') }}</span>
+    </div>
+    <div class="flex flex-wrap justify-center gap-1">
+      <UBadge
+        v-for="(userNeed, userIndex) in teamNeeds"
+        :key="userIndex"
+        color="primary"
+        variant="soft"
+        size="sm"
+        class="flex items-center gap-1"
+      >
+        <UIcon name="i-mdi-account" class="h-3 w-3" />
+        <span>{{ getDisplayName(userNeed.user) }}</span>
+        <span class="text-surface-300">
           {{ userNeed.count.toLocaleString() }}/{{ neededCount.toLocaleString() }}
-        </div>
-      </template>
-    </i18n-t>
+        </span>
+      </UBadge>
+    </div>
   </div>
 </template>
 <script setup lang="ts">
