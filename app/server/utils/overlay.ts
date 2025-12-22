@@ -41,6 +41,27 @@ const OVERLAY_URL =
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
 }
+/**
+ * Merge ID-keyed patches into an array of entities without mutating the original array.
+ * Iterates the target array and, for each element with an `id`, deep-merges a plain-object
+ * patch from sourcePatches[id]; non-object patches (including arrays) and non-entity elements
+ * are left unchanged. Returns a new array with merged results.
+ */
+export function mergeArrayByIdPatches(
+  sourcePatches: Record<string, unknown>,
+  targetArray: unknown[]
+): unknown[] {
+  return targetArray.map((item) => {
+    if (isPlainObject(item) && 'id' in item) {
+      const itemId = (item as { id: string }).id;
+      const patch = sourcePatches[itemId];
+      if (isPlainObject(patch)) {
+        return deepMerge(item as Record<string, unknown>, patch as Record<string, unknown>);
+      }
+    }
+    return item;
+  });
+}
 function deepMerge<T extends Record<string, unknown>>(
   target: T,
   source: Record<string, unknown>
@@ -60,20 +81,10 @@ function deepMerge<T extends Record<string, unknown>>(
       isPlainObject(sourceValue) &&
       Array.isArray(targetValue) &&
       targetValue.length > 0 &&
-      typeof targetValue[0] === 'object' &&
+      isPlainObject(targetValue[0]) &&
       'id' in targetValue[0]
     ) {
-      // Map over array and merge each element with its corresponding patch from source
-      result[key] = targetValue.map((item) => {
-        if (isPlainObject(item) && 'id' in item) {
-          const itemId = (item as { id: string }).id;
-          const patch = (sourceValue as Record<string, unknown>)[itemId];
-          if (isPlainObject(patch)) {
-            return deepMerge(item as Record<string, unknown>, patch as Record<string, unknown>);
-          }
-        }
-        return item;
-      });
+      result[key] = mergeArrayByIdPatches(sourceValue, targetValue);
     } else {
       // Replace primitive values, arrays, or when target doesn't have the key
       result[key] = sourceValue;
