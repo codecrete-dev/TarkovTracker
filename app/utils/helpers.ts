@@ -224,3 +224,26 @@ export function set(obj: Record<string, unknown>, path: string, value: unknown):
 export function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+/**
+ * Normalizes objectives to always return an array.
+ * Handles cases where objectives might be an object (with numeric or string keys) or already an array.
+ * Filters out any null/undefined entries.
+ *
+ * @param objectives - Objectives in unknown format (array, object, or other)
+ * @returns Array of T, guaranteed to be an array (empty if invalid input)
+ */
+export function normalizeTaskObjectives<T = unknown>(objectives: unknown): T[] {
+  if (Array.isArray(objectives)) {
+    return objectives.filter(Boolean) as T[];
+  }
+  if (objectives && typeof objectives === 'object') {
+    if (import.meta.env.DEV) {
+      console.debug('[DEV] Normalized non-array objectives to array format');
+    }
+    return Object.values(objectives as Record<string, T>).filter(Boolean) as T[];
+  }
+  if (import.meta.env.DEV && objectives !== null && objectives !== undefined) {
+    console.warn('[DEV] Task objectives in unexpected format, returning empty array', objectives);
+  }
+  return [];
+}

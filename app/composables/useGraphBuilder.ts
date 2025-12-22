@@ -18,6 +18,7 @@ import {
   safeAddEdge,
   safeAddNode,
 } from '@/utils/graphHelpers';
+import { normalizeTaskObjectives } from '@/utils/helpers';
 import { logger } from '@/utils/logger';
 import type { AbstractGraph } from 'graphology-types';
 /**
@@ -25,15 +26,6 @@ import type { AbstractGraph } from 'graphology-types';
  * Extracts complex graph algorithms from the metadata store
  */
 export function useGraphBuilder() {
-  const getTaskObjectives = (task: Task): TaskObjective[] => {
-    if (Array.isArray(task.objectives)) {
-      return task.objectives.filter(Boolean);
-    }
-    if (task.objectives && typeof task.objectives === 'object') {
-      return Object.values(task.objectives as Record<string, TaskObjective>).filter(Boolean);
-    }
-    return [];
-  };
   /**
    * Builds the task graph from task requirements
    */
@@ -95,7 +87,7 @@ export function useGraphBuilder() {
         });
       }
       // Process objectives
-      getTaskObjectives(task).forEach((objective) => {
+      normalizeTaskObjectives<TaskObjective>(task.objectives).forEach((objective) => {
         // Map and location data
         if (objective?.location?.id) {
           const mapId = objective.location.id;
