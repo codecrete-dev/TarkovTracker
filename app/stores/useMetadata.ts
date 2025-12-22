@@ -49,6 +49,15 @@ export type CraftSource = { stationId: string; stationName: string; stationLevel
 // Initialization guard to prevent race conditions
 let initPromise: Promise<void> | null = null;
 const isInitializing = ref(false);
+const normalizeTaskObjectives = (objectives: unknown): TaskObjective[] => {
+  if (Array.isArray(objectives)) {
+    return objectives.filter(Boolean);
+  }
+  if (objectives && typeof objectives === 'object') {
+    return Object.values(objectives as Record<string, TaskObjective>).filter(Boolean);
+  }
+  return [];
+};
 interface MetadataState {
   // Initialization and loading states
   initialized: boolean;
@@ -131,7 +140,7 @@ export const useMetadataStore = defineStore('metadata', {
       if (!state.tasks.length) return [];
       const allObjectives: TaskObjective[] = [];
       state.tasks.forEach((task) => {
-        task.objectives?.forEach((obj) => {
+        normalizeTaskObjectives(task.objectives).forEach((obj) => {
           if (obj) {
             allObjectives.push({ ...obj, taskId: task.id });
           }
@@ -632,7 +641,13 @@ export const useMetadataStore = defineStore('metadata', {
       // Filter out scav karma tasks at the source
       // These tasks require Scav Karma validation which isn't yet implemented
       const allTasks = data.tasks || [];
-      this.tasks = allTasks.filter((task) => !EXCLUDED_SCAV_KARMA_TASKS.includes(task.id));
+      const normalizedTasks = allTasks
+        .filter((task): task is Task => Boolean(task))
+        .map((task) => ({
+          ...task,
+          objectives: normalizeTaskObjectives(task.objectives),
+        }));
+      this.tasks = normalizedTasks.filter((task) => !EXCLUDED_SCAV_KARMA_TASKS.includes(task.id));
       this.maps = data.maps || [];
       this.traders = data.traders || [];
       this.playerLevels = this.convertToCumulativeXP(data.playerLevels || []);

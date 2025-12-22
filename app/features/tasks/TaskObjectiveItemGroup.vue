@@ -192,7 +192,11 @@
       // If we have give objectives, use those (find is just a passive check)
       // If we only have find objectives, use those
       const objectivesToCount =
-        giveObjectives.length > 0 ? giveObjectives : findObjectives.length > 0 ? findObjectives : consolidated.objectives;
+        giveObjectives.length > 0
+          ? giveObjectives
+          : findObjectives.length > 0
+            ? findObjectives
+            : consolidated.objectives;
       let totalCurrent = 0;
       let totalNeeded = 0;
       objectivesToCount.forEach((row) => {

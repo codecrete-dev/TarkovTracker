@@ -10,7 +10,7 @@
         :class="
           enabled
             ? 'bg-gradient-to-br from-red-600 to-green-600 ring-2 ring-white/30'
-            : 'bg-surface-800 ring-1 ring-white/10 hover:bg-surface-700'
+            : 'bg-surface-800 hover:bg-surface-700 ring-1 ring-white/10'
         "
         :aria-label="enabled ? 'Disable holiday effects' : 'Enable holiday effects'"
         @click="toggle"

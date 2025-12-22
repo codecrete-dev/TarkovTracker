@@ -174,9 +174,7 @@
             <div
               class="absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ease-out"
               :class="
-                holidayEffectsEnabled
-                  ? 'candy-cane'
-                  : 'from-info-600 to-info-400 bg-linear-to-r'
+                holidayEffectsEnabled ? 'candy-cane' : 'from-info-600 to-info-400 bg-linear-to-r'
               "
               :style="{ width: `${totalObjectivesPercentage}%` }"
             ></div>

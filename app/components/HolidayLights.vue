@@ -62,13 +62,15 @@
   ];
   const lightCount = 25;
   const lights = computed<Light[]>(() => {
+    const fallbackColor = lightColors[0] ?? { colorClass: 'bg-red-500', glowColor: '#ef4444' };
     return Array.from({ length: lightCount }, (_, i) => {
-      const color = lightColors[i % lightColors.length];
+      const color = lightColors[i % lightColors.length] ?? fallbackColor;
       // Create a wave pattern for the drop
       const wavePosition = (i / lightCount) * Math.PI * 4;
       const drop = 4 + Math.sin(wavePosition) * 6;
       return {
-        ...color,
+        colorClass: color.colorClass,
+        glowColor: color.glowColor,
         delay: (i % 8) * 0.15,
         drop,
       };

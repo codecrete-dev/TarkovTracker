@@ -21,7 +21,7 @@
     return x - Math.floor(x);
   }
   const getSnowflakeChar = (index: number): string => {
-    return snowflakeChars[index % snowflakeChars.length];
+    return snowflakeChars[index % snowflakeChars.length] ?? '*';
   };
   const getSnowflakeStyle = (index: number) => {
     const left = seededRandom(index * 1.1) * 100;
