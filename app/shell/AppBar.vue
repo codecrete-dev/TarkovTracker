@@ -119,7 +119,6 @@
     }
     return appStore.drawerRail ? 'i-mdi-menu' : 'i-mdi-menu-open';
   });
-
   const currentGameMode = computed(() => {
     return tarkovStore.getCurrentGameMode();
   });

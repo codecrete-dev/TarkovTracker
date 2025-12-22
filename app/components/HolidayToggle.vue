@@ -28,15 +28,11 @@
     </UTooltip>
   </div>
 </template>
-
 <script setup lang="ts">
   import { computed } from 'vue';
   import { usePreferencesStore } from '@/stores/usePreferences';
-
   const preferencesStore = usePreferencesStore();
-
   const enabled = computed(() => preferencesStore.getEnableHolidayEffects);
-
   function toggle() {
     preferencesStore.setEnableHolidayEffects(!enabled.value);
   }

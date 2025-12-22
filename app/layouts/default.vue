@@ -50,13 +50,10 @@
   import { useSharedBreakpoints } from '@/composables/useSharedBreakpoints';
   import { useAppStore } from '@/stores/useApp';
   import { usePreferencesStore } from '@/stores/usePreferences';
-
   const appStore = useAppStore();
   const preferencesStore = usePreferencesStore();
-
   // Holiday effects
   const holidayEffectsEnabled = computed(() => preferencesStore.getEnableHolidayEffects);
-
   // Use shared breakpoints to avoid duplicate listeners
   const { belowMd } = useSharedBreakpoints();
   // Calculate margin-left based on sidebar state
