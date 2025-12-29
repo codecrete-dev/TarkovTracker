@@ -73,6 +73,7 @@
   import { useMetadataStore } from '@/stores/useMetadata';
   import { usePreferencesStore } from '@/stores/usePreferences';
   import { useProgressStore } from '@/stores/useProgress';
+  import { useTarkovStore } from '@/stores/useTarkov';
   import type { NeededItemHideoutModule, NeededItemTaskObjective } from '@/types/tarkov';
   import { logger } from '@/utils/logger';
   // Page metadata
@@ -85,6 +86,7 @@
   const metadataStore = useMetadataStore();
   const progressStore = useProgressStore();
   const preferencesStore = usePreferencesStore();
+  const tarkovStore = useTarkovStore();
   const { neededItemTaskObjectives, neededItemHideoutModules } = storeToRefs(metadataStore);
   // View mode state: 'list' or 'grid'
   const viewMode = ref<'list' | 'grid'>('grid');
@@ -113,10 +115,15 @@
       link?: string;
     };
     taskFir: number;
+    taskFirCurrent: number;
     taskNonFir: number;
+    taskNonFirCurrent: number;
     hideoutFir: number;
+    hideoutFirCurrent: number;
     hideoutNonFir: number;
+    hideoutNonFirCurrent: number;
     total: number;
+    currentCount: number;
   }
   // Get user's faction for filtering task objectives
   const userFaction = computed(() => progressStore.playerFaction['self'] ?? 'USEC');
@@ -309,27 +316,41 @@
             link: itemData.link,
           },
           taskFir: 0,
+          taskFirCurrent: 0,
           taskNonFir: 0,
+          taskNonFirCurrent: 0,
           hideoutFir: 0,
+          hideoutFirCurrent: 0,
           hideoutNonFir: 0,
+          hideoutNonFirCurrent: 0,
           total: 0,
+          currentCount: 0,
         });
       }
       const group = groups.get(itemId)!;
       const count = need.count || 1;
+      // Get current count for this specific need (capped at needed)
+      let needCurrentCount = 0;
       if (need.needType === 'taskObjective') {
+        needCurrentCount = Math.min(tarkovStore.getObjectiveCount(need.id), count);
         if (need.foundInRaid) {
           group.taskFir += count;
+          group.taskFirCurrent += needCurrentCount;
         } else {
           group.taskNonFir += count;
+          group.taskNonFirCurrent += needCurrentCount;
         }
       } else {
+        needCurrentCount = Math.min(tarkovStore.getHideoutPartCount(need.id), count);
         if (need.foundInRaid) {
           group.hideoutFir += count;
+          group.hideoutFirCurrent += needCurrentCount;
         } else {
           group.hideoutNonFir += count;
+          group.hideoutNonFirCurrent += needCurrentCount;
         }
       }
+      group.currentCount += needCurrentCount;
       group.total += count;
     }
     return Array.from(groups.values()).sort((a, b) => b.total - a.total);
