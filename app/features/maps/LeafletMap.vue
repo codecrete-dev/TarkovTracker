@@ -3,11 +3,11 @@
     <!-- Unavailable map placeholder -->
     <div
       v-if="isMapUnavailable"
-      class="bg-surface-900 flex h-[400px] w-full flex-col items-center justify-center rounded sm:h-[500px] lg:h-[600px]"
+      class="flex h-[400px] w-full flex-col items-center justify-center rounded bg-gray-100 dark:bg-surface-900 sm:h-[500px] lg:h-[600px]"
     >
-      <UIcon name="i-mdi-map-marker-off" class="mb-4 h-16 w-16 text-gray-500" />
-      <h3 class="mb-2 text-lg font-semibold text-gray-300">Map Not Available</h3>
-      <p class="max-w-md text-center text-sm text-gray-500">
+      <UIcon name="i-mdi-map-marker-off" class="mb-4 h-16 w-16 text-gray-400 dark:text-gray-500" />
+      <h3 class="mb-2 text-lg font-semibold text-gray-900 dark:text-gray-300">Map Not Available</h3>
+      <p class="max-w-md text-center text-sm text-gray-600 dark:text-gray-500">
         The interactive map for {{ props.map?.name || 'this location' }} is not yet available. We
         are waiting for a compatible map to be created.
       </p>
@@ -17,7 +17,7 @@
       <!-- Floor selector (positioned below Leaflet zoom controls) -->
       <div
         v-if="hasMultipleFloors"
-        class="bg-surface-800/90 absolute top-20 left-2 z-[1000] flex flex-col gap-1 rounded p-1.5"
+        class="absolute top-20 left-2 z-[1000] flex flex-col gap-1 rounded bg-white/90 p-1.5 dark:bg-surface-800/90"
       >
         <span class="px-1 text-[10px] font-medium tracking-wide text-gray-400 uppercase">
           Floors
@@ -40,12 +40,12 @@
       <!-- Loading indicator -->
       <div
         v-if="isLoading"
-        class="bg-surface-900/50 absolute inset-0 z-[1001] flex items-center justify-center"
+        class="absolute inset-0 z-[1001] flex items-center justify-center bg-gray-100/50 dark:bg-surface-900/50"
       >
         <UIcon name="i-mdi-loading" class="text-primary-500 h-8 w-8 animate-spin" />
       </div>
       <!-- Map controls (top right) -->
-      <div class="bg-surface-800/90 absolute top-2 right-2 z-[1000] flex gap-2 rounded p-1.5">
+      <div class="absolute top-2 right-2 z-[1000] flex gap-2 rounded bg-white/90 p-1.5 dark:bg-surface-800/90">
         <!-- Reset view button -->
         <UButton
           color="primary"
@@ -82,12 +82,12 @@
       <!-- Map container -->
       <div
         ref="mapContainer"
-        class="bg-surface-900 h-[400px] w-full rounded sm:h-[500px] lg:h-[600px]"
+        class="h-[400px] w-full rounded bg-gray-100 dark:bg-surface-900 sm:h-[500px] lg:h-[600px]"
       />
       <!-- Legend -->
       <div
         v-if="props.showLegend"
-        class="mt-2 flex flex-wrap items-center gap-4 text-xs text-gray-400"
+        class="mt-2 flex flex-wrap items-center gap-4 text-xs text-gray-600 dark:text-gray-400"
       >
         <div class="flex items-center gap-1">
           <div class="h-3 w-3 rounded-full bg-red-500" />
@@ -471,32 +471,33 @@
 </script>
 <style>
   /* Override Leaflet default styles for dark theme */
-  .leaflet-container {
+  /* Override Leaflet default styles for dark theme */
+  :root.dark .leaflet-container {
     background-color: rgb(var(--color-surface-900));
     font-family: inherit;
   }
-  .leaflet-popup-content-wrapper {
+  :root.dark .leaflet-popup-content-wrapper {
     background-color: #1a1a1e !important;
     color: #e5e5e5 !important;
     border-radius: 0.5rem;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   }
-  .leaflet-popup-tip {
+  :root.dark .leaflet-popup-tip {
     background-color: #1a1a1e !important;
   }
   .leaflet-popup-content {
     margin: 0.75rem;
   }
-  .leaflet-control-zoom a {
+  :root.dark .leaflet-control-zoom a {
     background-color: rgb(var(--color-surface-800)) !important;
     color: rgb(var(--color-gray-200)) !important;
     border-color: rgb(var(--color-surface-700)) !important;
   }
-  .leaflet-control-zoom a:hover {
+  :root.dark .leaflet-control-zoom a:hover {
     background-color: rgb(var(--color-surface-700)) !important;
   }
   /* Zone hover tooltip styling */
-  .map-zone-tooltip {
+  :root.dark .map-zone-tooltip {
     background-color: #1a1a1e !important;
     color: #e5e5e5 !important;
     border: 1px solid rgba(255, 255, 255, 0.1);

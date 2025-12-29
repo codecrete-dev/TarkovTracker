@@ -28,7 +28,7 @@
           <div
             v-for="skill in visibleSkills"
             :key="skill.name"
-            class="border-surface-700 bg-surface-800/30 rounded-lg border p-3"
+            class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-surface-700 dark:bg-surface-800/30"
           >
             <!-- Skill Header -->
             <div class="mb-2 flex items-center gap-3">
@@ -44,14 +44,14 @@
                 <!-- Fallback placeholder if no image -->
                 <div
                   v-else
-                  class="bg-surface-700 flex h-10 w-10 items-center justify-center rounded text-xs text-gray-400"
+                  class="flex h-10 w-10 items-center justify-center rounded bg-gray-200 text-xs text-gray-400 dark:bg-surface-700"
                 >
                   ?
                 </div>
               </div>
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-1.5">
-                  <span class="text-surface-100 truncate text-base font-semibold">
+                  <span class="truncate text-base font-semibold text-gray-900 dark:text-surface-100">
                     {{ formatSkillName(skill.name) }}
                   </span>
                   <!-- Required Badge -->
@@ -78,7 +78,7 @@
                   </AppTooltip>
                 </div>
                 <!-- Skill Info -->
-                <div class="text-surface-500 truncate text-xs">
+                <div class="truncate text-xs text-gray-500 dark:text-surface-500">
                   <span v-if="skill.requiredByTasks.length > 0">
                     Req: {{ skill.requiredByTasks.length }}
                   </span>
@@ -94,21 +94,21 @@
                 </div>
               </div>
               <!-- Total Level -->
-              <span class="text-primary-400 shrink-0 text-base font-bold">
+              <span class="shrink-0 text-base font-bold text-primary-600 dark:text-primary-400">
                 {{ getSkillLevel(skill.name) }}
               </span>
             </div>
             <!-- Breakdown -->
             <div class="mb-2 flex gap-3 text-xs">
-              <div class="text-surface-400 flex-1">
+              <div class="flex-1 text-gray-500 dark:text-surface-400">
                 Quest:
-                <span class="text-surface-200 font-medium">
+                <span class="font-medium text-gray-700 dark:text-surface-200">
                   {{ getQuestSkillLevel(skill.name) }}
                 </span>
               </div>
-              <div class="text-surface-400 flex-1">
+              <div class="flex-1 text-gray-500 dark:text-surface-400">
                 Offset:
-                <span class="text-surface-200 font-medium">{{ getSkillOffset(skill.name) }}</span>
+                <span class="font-medium text-gray-700 dark:text-surface-200">{{ getSkillOffset(skill.name) }}</span>
               </div>
             </div>
             <!-- Skill Level Input -->
@@ -146,7 +146,7 @@
           />
         </div>
         <!-- No Skills State -->
-        <div v-if="allGameSkills.length === 0" class="text-surface-400 py-6 text-center text-sm">
+        <div v-if="allGameSkills.length === 0" class="py-6 text-center text-sm text-gray-500 dark:text-surface-400">
           {{ $t('settings.skills.no_skills', 'No skills found in game data.') }}
         </div>
       </div>

@@ -1,7 +1,7 @@
 <template>
-  <div class="bg-surface-950 flex min-h-screen items-center justify-center p-4">
+  <div class="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-surface-950">
     <UCard
-      class="bg-surface-900 w-full max-w-xl shadow-2xl ring-1 ring-white/10"
+      class="w-full max-w-xl shadow-2xl ring-1 ring-gray-200 dark:bg-surface-900 dark:ring-white/10"
       :ui="{
         body: 'p-0',
         header: 'p-0',
@@ -10,10 +10,10 @@
     >
       <!-- Header Section -->
       <div class="flex flex-col items-center px-10 pt-10 pb-8 text-center">
-        <h1 class="mb-4 text-4xl font-bold tracking-tight text-white">
+        <h1 class="mb-4 text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
           {{ $t('page.login.title') }}
         </h1>
-        <p class="text-lg text-gray-400">
+        <p class="text-lg text-gray-500 dark:text-gray-400">
           {{ $t('page.login.subtitle') }}
         </p>
       </div>
@@ -51,7 +51,7 @@
         </div>
       </div>
       <!-- Footer Links -->
-      <div class="rounded-b-lg border-t border-white/5 bg-black/20 px-8 py-5">
+      <div class="rounded-b-lg border-t border-gray-100 bg-gray-50/50 px-8 py-5 dark:border-white/5 dark:bg-black/20">
         <div class="flex items-center justify-between">
           <UButton
             to="/privacy"
@@ -59,7 +59,7 @@
             variant="ghost"
             color="neutral"
             size="sm"
-            class="text-gray-500 transition-colors hover:text-gray-300"
+            class="text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
           >
             {{ $t('page.login.privacy_policy') }}
           </UButton>
@@ -69,7 +69,7 @@
             variant="ghost"
             color="neutral"
             size="sm"
-            class="text-gray-500 transition-colors hover:text-gray-300"
+            class="text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
           >
             {{ $t('page.login.terms_of_service') }}
           </UButton>

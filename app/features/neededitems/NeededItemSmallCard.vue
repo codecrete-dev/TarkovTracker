@@ -10,7 +10,7 @@
       "
     >
       <div
-        class="flex h-full flex-col rounded-lg"
+        class="flex h-full flex-col rounded-lg border shadow-sm transition-all duration-200"
         :class="[
           itemCardClasses,
           {
@@ -61,7 +61,7 @@
             <!-- Item name -->
             <div class="flex min-h-10 items-start justify-center">
               <span
-                class="line-clamp-2 text-center text-[clamp(0.7rem,2.5vw,0.875rem)] leading-snug font-medium"
+                class="line-clamp-2 text-center text-[clamp(0.7rem,2.5vw,0.875rem)] leading-snug font-medium text-gray-900 dark:text-gray-100"
               >
                 {{ item?.name ?? '' }}
               </span>
@@ -82,14 +82,14 @@
                   compact
                   class="max-w-full text-[clamp(0.625rem,2vw,0.75rem)]"
                 />
-                <span class="ml-1 text-[clamp(0.625rem,2vw,0.75rem)] text-gray-400">
+                <span class="ml-1 text-[clamp(0.625rem,2vw,0.75rem)] text-gray-500 dark:text-gray-400">
                   {{ props.need.hideoutModule.level }}
                 </span>
               </template>
             </div>
             <!-- Requirements (Level & Tasks Before) -->
             <div
-              class="flex min-h-10 flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-[clamp(0.625rem,1.8vw,0.75rem)] text-gray-400"
+              class="flex min-h-10 flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-[clamp(0.625rem,1.8vw,0.75rem)] text-gray-500 dark:text-gray-400"
             >
               <span
                 v-if="levelRequired > 0 && levelRequired > playerLevel"
@@ -115,7 +115,7 @@
                   @set-count="(count) => $emit('setCount', count)"
                 />
               </template>
-              <span v-else class="text-success-400 text-sm font-bold">
+              <span v-else class="text-sm font-bold text-success-600 dark:text-success-400">
                 {{ currentCount }}/{{ neededCount }} ✓
               </span>
             </div>
@@ -123,21 +123,21 @@
         </template>
         <template v-else>
           <div :class="imageContainerClasses">
-            <div class="bg-surface-700 h-full w-full animate-pulse rounded-t-lg"></div>
+            <div class="h-full w-full animate-pulse rounded-t-lg bg-gray-200 dark:bg-surface-700"></div>
           </div>
           <div class="flex flex-1 flex-col p-2">
             <div class="flex min-h-10 items-start justify-center">
-              <span class="bg-surface-700 h-4 w-3/4 animate-pulse rounded"></span>
+              <span class="h-4 w-3/4 animate-pulse rounded bg-gray-200 dark:bg-surface-700"></span>
             </div>
             <div class="flex min-h-7 w-full items-center justify-center">
-              <span class="bg-surface-700 h-3 w-1/2 animate-pulse rounded"></span>
+              <span class="h-3 w-1/2 animate-pulse rounded bg-gray-200 dark:bg-surface-700"></span>
             </div>
             <div class="flex min-h-10 flex-wrap items-center justify-center gap-x-3 gap-y-0.5">
-              <span class="bg-surface-700 h-3 w-1/3 animate-pulse rounded"></span>
-              <span class="bg-surface-700 h-3 w-1/3 animate-pulse rounded"></span>
+              <span class="h-3 w-1/3 animate-pulse rounded bg-gray-200 dark:bg-surface-700"></span>
+              <span class="h-3 w-1/3 animate-pulse rounded bg-gray-200 dark:bg-surface-700"></span>
             </div>
             <div class="mt-auto flex items-center justify-center pt-2">
-              <span class="bg-surface-700 h-4 w-10 animate-pulse rounded"></span>
+              <span class="h-4 w-10 animate-pulse rounded bg-gray-200 dark:bg-surface-700"></span>
             </div>
           </div>
         </template>
@@ -188,10 +188,12 @@
     }
   };
   const itemCardClasses = computed(() => {
+    const isCompleted = selfCompletedNeed.value || currentCount.value >= neededCount.value;
     return {
-      'bg-gradient-to-t from-complete to-surface':
-        selfCompletedNeed.value || currentCount.value >= neededCount.value,
-      'bg-gray-800': !(selfCompletedNeed.value || currentCount.value >= neededCount.value),
+      'bg-success-50/50 border-success-200 dark:bg-success-900/10 dark:border-success-500/30':
+        isCompleted,
+      'bg-white border-gray-200 hover:border-primary-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-gray-500':
+        !isCompleted,
     };
   });
   const imageContainerClasses = computed(() => {
@@ -199,14 +201,16 @@
       'relative z-0 aspect-[4/3] w-full shrink-0 origin-bottom overflow-hidden rounded-t-lg';
     const transitionClasses = 'transition-transform duration-150 ease-out will-change-transform';
     const hoverClasses =
-      'hover:z-20 hover:-translate-y-1 hover:scale-[1.08] hover:shadow-2xl hover:ring-1 hover:ring-white/10';
+      'hover:z-20 hover:-translate-y-1 hover:scale-[1.08] hover:shadow-2xl hover:ring-1 hover:ring-black/5 dark:hover:ring-white/10';
     return [baseLayoutClasses, transitionClasses, hoverClasses];
   });
   const itemCountTagClasses = computed(() => {
+    const isCompleted = selfCompletedNeed.value || currentCount.value >= neededCount.value;
     return {
       'bg-clip-padding rounded-tl-[5px] rounded-br-[10px]': true,
-      'bg-white text-black': !(selfCompletedNeed.value || currentCount.value >= neededCount.value),
-      'bg-complete': selfCompletedNeed.value || currentCount.value >= neededCount.value,
+      'bg-white text-gray-900 shadow-md ring-1 ring-black/5 dark:bg-white dark:text-black dark:ring-0':
+        !isCompleted,
+      'bg-success-500 text-white shadow-md': isCompleted,
     };
   });
 </script>

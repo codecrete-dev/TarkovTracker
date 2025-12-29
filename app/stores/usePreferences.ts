@@ -26,6 +26,7 @@ export interface PreferencesState {
   neededitemsStyle: string | null;
   hideoutPrimaryView?: string | null;
   localeOverride: string | null;
+  theme: 'system' | 'light' | 'dark';
   // Task filter settings
   showNonSpecialTasks: boolean;
   showEodTasks: boolean;
@@ -72,6 +73,7 @@ export const preferencesDefaultState: PreferencesState = {
   neededitemsStyle: null,
   hideoutPrimaryView: null,
   localeOverride: null,
+  theme: 'dark', // Default to dark mode to match app aesthetic
   // Task filter settings (all shown by default)
   showNonSpecialTasks: true,
   showEodTasks: true,
@@ -184,6 +186,9 @@ export const usePreferencesStore = defineStore('preferences', {
     },
     getLocaleOverride: (state) => {
       return state.localeOverride ?? null;
+    },
+    getTheme: (state) => {
+      return state.theme ?? 'dark';
     },
     // Task filter getters
     getShowNonSpecialTasks: (state) => {
@@ -298,6 +303,9 @@ export const usePreferencesStore = defineStore('preferences', {
     setLocaleOverride(locale: string | null) {
       this.localeOverride = locale;
     },
+    setTheme(theme: 'system' | 'light' | 'dark') {
+      this.theme = theme;
+    },
     // Task filter actions
     setShowNonSpecialTasks(show: boolean) {
       this.showNonSpecialTasks = show;
@@ -371,6 +379,7 @@ export const usePreferencesStore = defineStore('preferences', {
       'neededitemsStyle',
       'hideoutPrimaryView',
       'localeOverride',
+      'theme',
       // Task filter settings
       'showNonSpecialTasks',
       'showEodTasks',

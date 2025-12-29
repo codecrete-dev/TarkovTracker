@@ -6,8 +6,8 @@
       class="group flex cursor-pointer items-center rounded-md px-3 py-2.5 text-base font-medium transition-colors duration-150"
       :class="[
         isActive
-          ? 'bg-surface-700 border-primary-500 border-l-2 text-white'
-          : 'border-l-2 border-transparent text-[rgba(248,248,248,0.65)] hover:bg-white/5 hover:text-white',
+          ? 'border-l-2 border-primary-500 bg-primary-50 text-primary-700 dark:bg-surface-700 dark:text-white'
+          : 'border-l-2 border-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-[rgba(248,248,248,0.65)] dark:hover:bg-white/5 dark:hover:text-white',
         props.isCollapsed ? 'justify-center' : '',
       ]"
     >
@@ -42,7 +42,7 @@
       rel="noopener noreferrer"
       class="group flex cursor-pointer items-center rounded-md px-3 py-2.5 text-sm font-medium transition-colors duration-150"
       :class="[
-        'border-l-2 border-transparent text-[rgba(248,248,248,0.65)] hover:bg-white/5 hover:text-white',
+        'border-l-2 border-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-[rgba(248,248,248,0.65)] dark:hover:bg-white/5 dark:hover:text-white',
         props.isCollapsed ? 'justify-center' : '',
       ]"
       @click="visitHref()"

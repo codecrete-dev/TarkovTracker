@@ -1,7 +1,7 @@
 <template>
   <div class="mb-6 space-y-3">
     <!-- Top Bar: Search (left) | Primary View Tabs (center) | Settings (right) -->
-    <div class="flex items-center gap-3 rounded-lg bg-[hsl(240,5%,5%)] px-4 py-2.5">
+    <div class="flex items-center gap-3 rounded-lg bg-gray-100 px-4 py-2.5 dark:bg-[hsl(240,5%,5%)]">
       <!-- Search - larger width -->
       <div class="w-56 shrink-0 sm:w-64 lg:w-72">
         <UInput
@@ -33,7 +33,7 @@
           color="neutral"
           size="sm"
           :aria-pressed="primaryView === 'all'"
-          :class="primaryView === 'all' ? 'bg-white/10 text-white' : 'text-gray-400'"
+          :class="primaryView === 'all' ? 'bg-white text-gray-900 shadow-sm dark:bg-white/10 dark:text-white dark:shadow-none' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white'"
           @click="setPrimaryView('all')"
         >
           <UIcon name="i-mdi-checkbox-multiple-marked" class="h-4 w-4 sm:mr-1.5" />
@@ -46,7 +46,7 @@
           color="neutral"
           size="sm"
           :aria-pressed="primaryView === 'traders'"
-          :class="primaryView === 'traders' ? 'bg-white/10 text-white' : 'text-gray-400'"
+          :class="primaryView === 'traders' ? 'bg-white text-gray-900 shadow-sm dark:bg-white/10 dark:text-white dark:shadow-none' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white'"
           @click="setPrimaryView('traders')"
         >
           <UIcon name="i-mdi-account-group" class="h-4 w-4 sm:mr-1.5" />
@@ -59,7 +59,7 @@
           color="neutral"
           size="sm"
           :aria-pressed="primaryView === 'maps'"
-          :class="primaryView === 'maps' ? 'bg-white/10 text-white' : 'text-gray-400'"
+          :class="primaryView === 'maps' ? 'bg-white text-gray-900 shadow-sm dark:bg-white/10 dark:text-white dark:shadow-none' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white'"
           @click="setPrimaryView('maps')"
         >
           <UIcon name="i-mdi-map" class="h-4 w-4 sm:mr-1.5" />
@@ -74,7 +74,7 @@
       </div>
     </div>
     <!-- Secondary filters: Status Filters + User View (centered) -->
-    <div class="flex items-center justify-center gap-3 rounded-lg bg-[hsl(240,5%,5%)] px-4 py-2.5">
+    <div class="flex items-center justify-center gap-3 rounded-lg bg-gray-100 px-4 py-2.5 dark:bg-[hsl(240,5%,5%)]">
       <!-- Status filters (ALL / AVAILABLE / LOCKED / COMPLETED) -->
       <div class="flex items-center gap-1">
         <UButton
@@ -82,7 +82,7 @@
           color="neutral"
           size="sm"
           :aria-pressed="secondaryView === 'all'"
-          :class="secondaryView === 'all' ? 'bg-white/10 text-white' : 'text-gray-400'"
+          :class="secondaryView === 'all' ? 'bg-white text-gray-900 shadow-sm dark:bg-white/10 dark:text-white dark:shadow-none' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white'"
           @click="setSecondaryView('all')"
         >
           <UIcon name="i-mdi-format-list-bulleted" class="hidden h-4 w-4 sm:mr-1 sm:block" />
@@ -98,7 +98,7 @@
           color="neutral"
           size="sm"
           :aria-pressed="secondaryView === 'available'"
-          :class="secondaryView === 'available' ? 'bg-white/10 text-white' : 'text-gray-400'"
+          :class="secondaryView === 'available' ? 'bg-white text-gray-900 shadow-sm dark:bg-white/10 dark:text-white dark:shadow-none' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white'"
           @click="setSecondaryView('available')"
         >
           <UIcon name="i-mdi-clipboard-text" class="hidden h-4 w-4 sm:mr-1 sm:block" />
@@ -116,7 +116,7 @@
           color="neutral"
           size="sm"
           :aria-pressed="secondaryView === 'locked'"
-          :class="secondaryView === 'locked' ? 'bg-white/10 text-white' : 'text-gray-400'"
+          :class="secondaryView === 'locked' ? 'bg-white text-gray-900 shadow-sm dark:bg-white/10 dark:text-white dark:shadow-none' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white'"
           @click="setSecondaryView('locked')"
         >
           <UIcon name="i-mdi-lock" class="hidden h-4 w-4 sm:mr-1 sm:block" />
@@ -134,7 +134,7 @@
           color="neutral"
           size="sm"
           :aria-pressed="secondaryView === 'completed'"
-          :class="secondaryView === 'completed' ? 'bg-white/10 text-white' : 'text-gray-400'"
+          :class="secondaryView === 'completed' ? 'bg-white text-gray-900 shadow-sm dark:bg-white/10 dark:text-white dark:shadow-none' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white'"
           @click="setSecondaryView('completed')"
         >
           <UIcon name="i-mdi-check-circle" class="hidden h-4 w-4 sm:mr-1 sm:block" />
@@ -149,7 +149,7 @@
         </UButton>
       </div>
       <!-- Divider -->
-      <div class="h-6 w-px shrink-0 bg-white/20" />
+      <div class="h-6 w-px shrink-0 bg-gray-200 dark:bg-white/20" />
       <!-- Player/Team view buttons -->
       <div class="flex items-center gap-1">
         <UButton
@@ -158,7 +158,7 @@
           size="sm"
           :aria-pressed="preferencesStore.getTaskUserView === 'self'"
           :class="
-            preferencesStore.getTaskUserView === 'self' ? 'bg-white/10 text-white' : 'text-gray-400'
+            preferencesStore.getTaskUserView === 'self' ? 'bg-white text-gray-900 shadow-sm dark:bg-white/10 dark:text-white dark:shadow-none' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white'
           "
           @click="onUserViewSelect({ label: currentUserDisplayName, value: 'self' })"
         >
@@ -176,7 +176,7 @@
           size="sm"
           :aria-pressed="preferencesStore.getTaskUserView === teamId"
           :class="
-            preferencesStore.getTaskUserView === teamId ? 'bg-white/10 text-white' : 'text-gray-400'
+            preferencesStore.getTaskUserView === teamId ? 'bg-white text-gray-900 shadow-sm dark:bg-white/10 dark:text-white dark:shadow-none' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white'
           "
           @click="onUserViewSelect({ label: getTeammateDisplayName(teamId), value: teamId })"
         >
@@ -190,7 +190,7 @@
           size="sm"
           :aria-pressed="preferencesStore.getTaskUserView === 'all'"
           :class="
-            preferencesStore.getTaskUserView === 'all' ? 'bg-white/10 text-white' : 'text-gray-400'
+            preferencesStore.getTaskUserView === 'all' ? 'bg-white text-gray-900 shadow-sm dark:bg-white/10 dark:text-white dark:shadow-none' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white'
           "
           @click="onUserViewSelect({ label: t('page.tasks.userviews.all'), value: 'all' })"
         >
@@ -202,7 +202,7 @@
     <!-- Map selector (shown when MAPS is selected) - Horizontal scrollable -->
     <div v-if="primaryView === 'maps' && maps.length > 0" class="w-full overflow-x-auto">
       <div
-        class="flex w-max min-w-full justify-center gap-1 rounded-lg bg-[hsl(240,5%,5%)] px-4 py-2.5"
+        class="flex w-max min-w-full justify-center gap-1 rounded-lg bg-gray-100 px-4 py-2.5 dark:bg-[hsl(240,5%,5%)]"
       >
         <button
           v-for="mapOption in mapOptions"
@@ -211,11 +211,11 @@
           :aria-pressed="preferencesStore.getTaskMapView === mapOption.value"
           :class="[
             'flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors',
-            'hover:bg-white/5',
+            'hover:bg-white/60 dark:hover:bg-white/5',
             'focus:ring-primary-500 focus:ring-1 focus:outline-none',
             preferencesStore.getTaskMapView === mapOption.value
-              ? 'bg-white/10 text-white'
-              : 'text-gray-400 hover:text-white',
+              ? 'bg-white text-gray-900 shadow-sm dark:bg-white/10 dark:text-white dark:shadow-none'
+              : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white',
           ]"
           @click="onMapSelect(mapOption)"
         >
@@ -234,7 +234,7 @@
     <!-- Trader selector (shown when TRADERS is selected) - Horizontal scrollable -->
     <div v-if="primaryView === 'traders' && traders.length > 0" class="w-full overflow-x-auto">
       <div
-        class="flex w-max min-w-full justify-center gap-1 rounded-lg bg-[hsl(240,5%,5%)] px-4 py-2.5"
+        class="flex w-max min-w-full justify-center gap-1 rounded-lg bg-gray-100 px-4 py-2.5 dark:bg-[hsl(240,5%,5%)]"
       >
         <button
           v-for="trader in traders"
@@ -243,11 +243,11 @@
           :aria-pressed="preferencesStore.getTaskTraderView === trader.id"
           :class="[
             'flex items-center gap-2 rounded-md px-2.5 py-1.5 transition-colors',
-            'hover:bg-white/5',
+            'hover:bg-white/60 dark:hover:bg-white/5',
             'focus:ring-primary-500 focus:ring-1 focus:outline-none',
             preferencesStore.getTaskTraderView === trader.id
-              ? 'bg-white/10 text-white'
-              : 'text-gray-400 hover:text-white',
+              ? 'bg-white text-gray-900 shadow-sm dark:bg-white/10 dark:text-white dark:shadow-none'
+              : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white',
           ]"
           @click="onTraderSelect({ label: trader.name, value: trader.id })"
         >

@@ -2,16 +2,16 @@
   <div
     :class="[
       'relative overflow-hidden rounded-xl border p-6 transition-all',
-      isAchieved ? achievedClasses : 'bg-surface-900/50 border-surface-700/30 opacity-50',
+      isAchieved ? achievedClasses : 'border-gray-200 bg-gray-50 opacity-50 dark:border-surface-700/30 dark:bg-surface-900/50',
     ]"
   >
     <div class="relative z-10">
       <UIcon
         :name="isAchieved ? achievedIcon : unachievedIcon"
-        :class="['mb-3 h-12 w-12', isAchieved ? iconColorClass : 'text-surface-600']"
+        :class="['mb-3 h-12 w-12', isAchieved ? iconColorClass : 'text-gray-400 dark:text-surface-600']"
       />
-      <div class="mb-1 text-3xl font-bold text-white">{{ title }}</div>
-      <div class="text-surface-400 text-xs tracking-wider uppercase">{{ subtitle }}</div>
+      <div class="mb-1 text-3xl font-bold text-gray-900 dark:text-white">{{ title }}</div>
+      <div class="text-xs tracking-wider uppercase text-gray-500 dark:text-surface-400">{{ subtitle }}</div>
     </div>
   </div>
 </template>
@@ -33,38 +33,38 @@
   const colorClasses: Record<MilestoneColor, { achieved: string; icon: string }> = {
     primary: {
       achieved: [
-        'from-primary-900/40 to-surface-900 border-primary-600/50',
-        'shadow-primary-900/20 bg-linear-to-br shadow-lg',
+        'bg-linear-to-br from-primary-50 to-white border-primary-200 dark:from-primary-900/40 dark:to-surface-900 dark:border-primary-600/50',
+        'shadow-lg shadow-primary-100 dark:shadow-primary-900/20',
       ].join(' '),
-      icon: 'text-primary-400',
+      icon: 'text-primary-600 dark:text-primary-400',
     },
     info: {
       achieved: [
-        'from-info-900/40 to-surface-900 border-info-600/50',
-        'shadow-info-900/20 bg-linear-to-br shadow-lg',
+        'bg-linear-to-br from-info-50 to-white border-info-200 dark:from-info-900/40 dark:to-surface-900 dark:border-info-600/50',
+        'shadow-lg shadow-info-100 dark:shadow-info-900/20',
       ].join(' '),
-      icon: 'text-info-400',
+      icon: 'text-info-600 dark:text-info-400',
     },
     success: {
       achieved: [
-        'from-success-900/40 to-surface-900 border-success-600/50',
-        'shadow-success-900/20 bg-linear-to-br shadow-lg',
+        'bg-linear-to-br from-success-50 to-white border-success-200 dark:from-success-900/40 dark:to-surface-900 dark:border-success-600/50',
+        'shadow-lg shadow-success-100 dark:shadow-success-900/20',
       ].join(' '),
-      icon: 'text-success-400',
+      icon: 'text-success-600 dark:text-success-400',
     },
     warning: {
       achieved: [
-        'from-warning-900/40 to-surface-900 border-warning-600/50',
-        'shadow-warning-900/20 bg-linear-to-br shadow-lg',
+        'bg-linear-to-br from-warning-50 to-white border-warning-200 dark:from-warning-900/40 dark:to-surface-900 dark:border-warning-600/50',
+        'shadow-lg shadow-warning-100 dark:shadow-warning-900/20',
       ].join(' '),
-      icon: 'text-warning-400',
+      icon: 'text-warning-600 dark:text-warning-400',
     },
     purple: {
       achieved: [
-        'from-purple-900/40 to-surface-900 border-purple-600/50',
-        'shadow-purple-900/20 bg-linear-to-br shadow-lg',
+        'bg-linear-to-br from-purple-50 to-white border-purple-200 dark:from-purple-900/40 dark:to-surface-900 dark:border-purple-600/50',
+        'shadow-lg shadow-purple-100 dark:shadow-purple-900/20',
       ].join(' '),
-      icon: 'text-purple-400',
+      icon: 'text-purple-600 dark:text-purple-400',
     },
   };
   const achievedClasses = computed(() => colorClasses[props.color].achieved);

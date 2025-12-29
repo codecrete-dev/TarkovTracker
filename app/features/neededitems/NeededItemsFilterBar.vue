@@ -2,7 +2,7 @@
   <div class="mb-6 space-y-3">
     <!-- Primary Filter: ALL / TASKS / HIDEOUT (Centered) -->
     <div
-      class="flex flex-wrap items-center justify-center gap-1 overflow-x-auto rounded-lg bg-[hsl(240,5%,5%)] px-2 py-2 sm:gap-2 sm:px-4 sm:py-3"
+      class="flex flex-wrap items-center justify-center gap-1 overflow-x-auto rounded-lg bg-surface-elevated px-2 py-2 shadow-sm sm:gap-2 sm:px-4 sm:py-3"
     >
       <UButton
         v-for="tab in filterTabs"
@@ -33,7 +33,9 @@
     <!-- Secondary filters container -->
     <div class="flex w-full flex-wrap gap-3">
       <!-- Section 1: Search bar -->
-      <div class="flex min-w-[250px] flex-1 items-center rounded-lg bg-[hsl(240,5%,5%)] px-4 py-3">
+      <div
+        class="flex min-w-[250px] flex-1 items-center rounded-lg bg-surface-elevated px-4 py-3 shadow-sm"
+      >
         <UInput
           :model-value="search"
           :placeholder="
@@ -57,7 +59,7 @@
         </UInput>
       </div>
       <!-- Section 2: Filters (Popover) -->
-      <div class="flex items-center rounded-lg bg-[hsl(240,5%,5%)] px-4 py-3">
+      <div class="flex items-center rounded-lg bg-surface-elevated px-4 py-3 shadow-sm">
         <UPopover>
           <UButton
             icon="i-mdi-filter-variant"
@@ -79,7 +81,7 @@
           </UButton>
           <template #content>
             <div class="w-80 space-y-3 p-3">
-              <div class="text-surface-400 text-xs font-medium">
+              <div class="text-xs font-medium text-gray-500 dark:text-surface-400">
                 {{ $t('page.neededitems.filters.sections.items', 'ITEMS') }}
               </div>
               <div class="flex flex-wrap gap-2">
@@ -124,8 +126,8 @@
                   </UButton>
                 </AppTooltip>
               </div>
-              <div class="border-t border-white/10 pt-3">
-                <div class="text-surface-400 mb-2 text-xs font-medium">
+              <div class="border-t border-gray-200 pt-3 dark:border-white/10">
+                <div class="mb-2 text-xs font-medium text-gray-500 dark:text-surface-400">
                   {{ $t('page.neededitems.filters.sections.team', 'TEAM') }}
                 </div>
                 <UButton
@@ -148,14 +150,14 @@
         </UPopover>
       </div>
       <!-- Section 3: View Mode & Item Count -->
-      <div class="flex items-center gap-3 rounded-lg bg-[hsl(240,5%,5%)] px-4 py-3">
+      <div class="flex items-center gap-3 rounded-lg bg-surface-elevated px-4 py-3 shadow-sm">
         <UBadge color="neutral" variant="soft" size="md" class="px-3 py-1 text-sm">
           <template v-if="groupByItem && ungroupedCount !== totalCount">
             {{ totalCount }} unique ({{ ungroupedCount }} total)
           </template>
           <template v-else>{{ totalCount }} {{ $t('page.neededitems.items', 'items') }}</template>
         </UBadge>
-        <div class="flex gap-1 border-l border-white/10 pl-3">
+        <div class="flex gap-1 border-l border-gray-300 pl-3 dark:border-white/10">
           <UButton
             icon="i-mdi-view-list"
             :color="!groupByItem && viewMode === 'list' ? 'primary' : 'neutral'"

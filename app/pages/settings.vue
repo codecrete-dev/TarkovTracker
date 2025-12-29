@@ -28,7 +28,7 @@
         <div class="grid gap-6 px-4 py-4 md:grid-cols-2 lg:grid-cols-3">
           <!-- Privacy Mode -->
           <div class="space-y-2">
-            <p class="text-surface-200 text-sm font-semibold">
+            <p class="text-sm font-semibold text-gray-900 dark:text-surface-200">
               {{ $t('settings.general.privacy_mode', 'Privacy Mode') }}
             </p>
             <div class="flex items-center gap-3">
@@ -37,7 +37,7 @@
                 :disabled="!user.loggedIn || streamerModeCooldown"
                 label=""
               />
-              <span class="text-surface-400 text-xs">
+              <span class="text-xs text-gray-500 dark:text-surface-400">
                 {{
                   $t(
                     'settings.general.privacy_mode_hint',
@@ -49,7 +49,7 @@
           </div>
           <!-- Game Edition -->
           <div class="space-y-2">
-            <p class="text-surface-200 text-sm font-semibold">
+            <p class="text-sm font-semibold text-gray-900 dark:text-surface-200">
               {{ $t('settings.game_profile.game_edition', 'Game Edition') }}
             </p>
             <USelectMenu
@@ -61,13 +61,13 @@
               :ui-menu="selectMenuUi"
             >
               <template #leading>
-                <UIcon name="i-mdi-gift-open" class="text-surface-300 h-4 w-4" />
+                <UIcon name="i-mdi-gift-open" class="h-4 w-4 text-gray-400 dark:text-surface-300" />
               </template>
             </USelectMenu>
           </div>
           <!-- Prestige Level -->
           <div class="space-y-2">
-            <p class="text-surface-200 text-sm font-semibold">
+            <p class="text-sm font-semibold text-gray-900 dark:text-surface-200">
               {{ $t('settings.prestige.current_level', 'Current Prestige Level') }}
             </p>
             <USelectMenu
@@ -82,7 +82,7 @@
                 <UIcon name="i-mdi-trophy" class="text-gold-400 h-4 w-4" />
               </template>
             </USelectMenu>
-            <p class="text-surface-400 text-xs">
+            <p class="text-xs text-gray-500 dark:text-surface-400">
               {{
                 $t(
                   'settings.prestige.hint',
@@ -165,7 +165,7 @@
               {{ $t('settings.data_management.reset_all_data', 'Reset All Data') }}
             </UButton>
           </div>
-          <p class="text-surface-400 text-center text-xs">
+          <p class="text-center text-xs text-gray-500 dark:text-surface-400">
             {{
               $t(
                 'settings.data_management.reset_hint',
@@ -199,7 +199,7 @@
               )
             "
           />
-          <p class="text-surface-200 text-sm">
+          <p class="text-sm text-gray-600 dark:text-surface-200">
             {{
               $t(
                 'settings.data_management.reset_pvp_warning',
@@ -254,7 +254,7 @@
               )
             "
           />
-          <p class="text-surface-200 text-sm">
+          <p class="text-sm text-gray-600 dark:text-surface-200">
             {{
               $t(
                 'settings.data_management.reset_pve_warning',
@@ -309,7 +309,7 @@
               )
             "
           />
-          <p class="text-surface-200 text-sm">
+          <p class="text-sm text-gray-600 dark:text-surface-200">
             {{
               $t(
                 'settings.data_management.reset_all_warning',
@@ -440,16 +440,16 @@
   const selectUi = {};
   const selectMenuUi = {
     container: 'z-[9999]',
-    background: 'bg-surface-900',
+    background: 'bg-white dark:bg-surface-900',
     shadow: 'shadow-xl',
     rounded: 'rounded-lg',
-    ring: 'ring-1 ring-white/10',
+    ring: 'ring-1 ring-gray-200 dark:ring-white/10',
     padding: 'p-1',
     option: {
       base: 'px-3 py-2 text-sm cursor-pointer transition-colors rounded',
-      inactive: 'text-surface-200 hover:bg-surface-800 hover:text-white',
-      active: 'bg-surface-800 text-white',
-      selected: 'bg-primary-500/10 text-primary-100 ring-1 ring-primary-500',
+      inactive: 'text-gray-700 hover:bg-gray-100 dark:text-surface-200 dark:hover:bg-surface-800 dark:hover:text-white',
+      active: 'bg-gray-100 text-gray-900 dark:bg-surface-800 dark:text-white',
+      selected: 'bg-primary-50 text-primary-600 ring-1 ring-primary-500 dark:bg-primary-500/10 dark:text-primary-100',
     },
   };
   // Reactive state

@@ -52,6 +52,16 @@
   import { usePreferencesStore } from '@/stores/usePreferences';
   const appStore = useAppStore();
   const preferencesStore = usePreferencesStore();
+  const colorMode = useColorMode();
+
+  // Sync theme preference to color mode
+  watch(
+    () => preferencesStore.theme,
+    (newTheme) => {
+      colorMode.preference = newTheme;
+    },
+    { immediate: true }
+  );
   // Holiday effects
   const holidayEffectsEnabled = computed(() => preferencesStore.getEnableHolidayEffects);
   // Use shared breakpoints to avoid duplicate listeners

@@ -2,7 +2,7 @@
   <div class="container mx-auto min-h-[calc(100vh-250px)] max-w-7xl p-4">
     <!-- Hero Section with Main Progress -->
     <div
-      class="from-primary-900/40 via-surface-900/90 to-surface-900 border-primary-700/30 relative mb-6 overflow-hidden rounded-2xl border bg-linear-to-br shadow-2xl"
+      class="border-primary-800/60 relative mb-6 overflow-hidden rounded-2xl border bg-white shadow-2xl dark:from-primary-900/40 dark:via-surface-900/90 dark:to-surface-950 dark:bg-linear-to-br"
     >
       <div
         class="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(var(--color-primary-500),0.1),transparent_50%)]"
@@ -28,7 +28,7 @@
                   stroke="currentColor"
                   stroke-width="8"
                   fill="none"
-                  class="text-surface-800"
+                  class="text-gray-200 dark:text-surface-800"
                 />
                 <circle
                   cx="96"
@@ -44,10 +44,10 @@
                 />
               </svg>
               <div class="absolute inset-0 flex flex-col items-center justify-center">
-                <div class="text-3xl font-bold text-white md:text-5xl">
+                <div class="text-3xl font-bold text-gray-900 dark:text-white md:text-5xl">
                   {{ totalTasksPercentage }}%
                 </div>
-                <div class="text-surface-400 text-xs tracking-wider uppercase md:text-sm">
+                <div class="text-xs tracking-wider uppercase text-gray-600 dark:text-surface-400 md:text-sm">
                   {{ $t('page.dashboard.hero.overall') }}
                 </div>
               </div>
@@ -56,44 +56,44 @@
           <!-- Stats Overview -->
           <div class="space-y-4 lg:col-span-2 lg:space-y-6">
             <div>
-              <h1 class="mb-2 text-2xl font-bold text-white md:text-4xl">
+              <h1 class="mb-2 text-2xl font-bold text-gray-900 dark:text-white md:text-4xl">
                 {{ $t('page.dashboard.hero.welcome') }}
               </h1>
-              <p class="text-surface-400 text-sm md:text-lg">
+              <p class="text-sm text-gray-600 dark:text-surface-400 md:text-lg">
                 {{ $t('page.dashboard.hero.subtitle') }}
               </p>
             </div>
             <!-- Quick Stats Grid -->
             <div class="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-              <div class="bg-surface-800/50 border-surface-700/50 rounded-xl border p-3 md:p-4">
-                <div class="text-primary-400 text-xl font-bold md:text-3xl">
+              <div class="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-surface-700/50 dark:bg-surface-800/50 md:p-4">
+                <div class="text-xl font-bold text-primary-600 dark:text-primary-400 md:text-3xl">
                   {{ dashboardStats.completedTasks.value }}
                 </div>
-                <div class="text-surface-400 mt-1 text-[10px] tracking-wide uppercase md:text-xs">
+                <div class="mt-1 text-[10px] tracking-wide uppercase text-gray-600 dark:text-surface-400 md:text-xs">
                   {{ $t('page.dashboard.hero.tasksComplete') }}
                 </div>
               </div>
-              <div class="bg-surface-800/50 border-surface-700/50 rounded-xl border p-3 md:p-4">
-                <div class="text-success-400 text-xl font-bold md:text-3xl">
+              <div class="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-surface-700/50 dark:bg-surface-800/50 md:p-4">
+                <div class="text-xl font-bold text-success-600 dark:text-success-400 md:text-3xl">
                   {{ dashboardStats.availableTasksCount.value }}
                 </div>
-                <div class="text-surface-400 mt-1 text-[10px] tracking-wide uppercase md:text-xs">
+                <div class="mt-1 text-[10px] tracking-wide uppercase text-gray-600 dark:text-surface-400 md:text-xs">
                   {{ $t('page.dashboard.hero.available') }}
                 </div>
               </div>
-              <div class="bg-surface-800/50 border-surface-700/50 rounded-xl border p-3 md:p-4">
-                <div class="text-error-400 text-xl font-bold md:text-3xl">
+              <div class="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-surface-700/50 dark:bg-surface-800/50 md:p-4">
+                <div class="text-xl font-bold text-error-600 dark:text-error-400 md:text-3xl">
                   {{ dashboardStats.failedTasksCount.value }}
                 </div>
-                <div class="text-surface-400 mt-1 text-[10px] tracking-wide uppercase md:text-xs">
+                <div class="mt-1 text-[10px] tracking-wide uppercase text-gray-600 dark:text-surface-400 md:text-xs">
                   {{ $t('page.dashboard.hero.failed') }}
                 </div>
               </div>
-              <div class="bg-surface-800/50 border-surface-700/50 rounded-xl border p-3 md:p-4">
-                <div class="text-warning-400 text-xl font-bold md:text-3xl">
+              <div class="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-surface-700/50 dark:bg-surface-800/50 md:p-4">
+                <div class="text-xl font-bold text-warning-600 dark:text-warning-400 md:text-3xl">
                   {{ currentLevel }}
                 </div>
-                <div class="text-surface-400 mt-1 text-[10px] tracking-wide uppercase md:text-xs">
+                <div class="mt-1 text-[10px] tracking-wide uppercase text-gray-600 dark:text-surface-400 md:text-xs">
                   {{ $t('page.dashboard.hero.level') }}
                 </div>
               </div>
@@ -104,8 +104,8 @@
     </div>
     <!-- Progress Breakdown Section -->
     <div class="mb-6">
-      <h2 class="mb-4 flex items-center text-2xl font-bold text-white">
-        <UIcon name="i-mdi-chart-line" class="text-primary-500 mr-2 h-6 w-6" />
+      <h2 class="mb-4 flex items-center text-2xl font-bold text-gray-900 dark:text-white">
+        <UIcon name="i-mdi-chart-line" class="mr-2 h-6 w-6 text-primary-600 dark:text-primary-500" />
         {{ $t('page.dashboard.progress.title') }}
       </h2>
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -158,8 +158,8 @@
     </div>
     <!-- Trader Progress Section -->
     <div class="mb-6">
-      <h2 class="mb-4 flex items-center text-2xl font-bold text-white">
-        <UIcon name="i-mdi-account-group" class="text-primary-500 mr-2 h-6 w-6" />
+      <h2 class="mb-4 flex items-center text-2xl font-bold text-gray-900 dark:text-white">
+        <UIcon name="i-mdi-account-group" class="mr-2 h-6 w-6 text-primary-600 dark:text-primary-500" />
         {{ $t('page.dashboard.traders.title') }}
       </h2>
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
@@ -171,7 +171,7 @@
           <div
             role="button"
             tabindex="0"
-            class="bg-surface-900 border-surface-700/30 hover:border-primary-700/30 focus-visible:border-primary-500 focus-visible:ring-primary-500/50 cursor-pointer rounded-lg border p-3 shadow-sm transition-all outline-none hover:shadow-md focus-visible:ring-2"
+            class="cursor-pointer rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-all outline-none hover:border-primary-500/30 hover:shadow-md focus-visible:border-primary-500 focus-visible:ring-2 focus-visible:ring-primary-500/50 dark:border-surface-700/30 dark:bg-surface-900 dark:hover:border-primary-700/30"
             :aria-label="$t('page.dashboard.traders.viewTasks', { name: trader.name })"
             @click="navigateToTraderTasks(trader.id)"
             @keydown.enter="navigateToTraderTasks(trader.id)"
@@ -182,18 +182,18 @@
                 v-if="trader.imageLink"
                 :src="trader.imageLink"
                 :alt="trader.name"
-                class="bg-surface-800 border-surface-700 h-10 w-10 rounded-full border"
+                class="h-10 w-10 rounded-full border border-gray-200 bg-gray-100 dark:border-surface-700 dark:bg-surface-800"
               />
               <div class="min-w-0 flex-1">
-                <div class="truncate text-xs font-semibold text-white">
+                <div class="truncate text-xs font-semibold text-gray-900 dark:text-white">
                   {{ trader.name }}
                 </div>
-                <div class="text-surface-400 text-xs">
+                <div class="text-xs text-gray-500 dark:text-surface-400">
                   {{ trader.completedTasks }}/{{ trader.totalTasks }}
                 </div>
               </div>
             </div>
-            <div class="bg-surface-800 relative h-1.5 overflow-hidden rounded-full">
+            <div class="relative h-1.5 overflow-hidden rounded-full bg-gray-200 dark:bg-surface-800">
               <div
                 class="absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out"
                 :class="
@@ -204,7 +204,7 @@
                 :style="{ width: `${trader.percentage}%` }"
               ></div>
             </div>
-            <div class="text-primary-400 mt-1 text-right text-xs font-medium">
+            <div class="mt-1 text-right text-xs font-medium text-primary-600 dark:text-primary-400">
               {{ trader.percentage }}%
             </div>
           </div>
@@ -213,8 +213,8 @@
     </div>
     <!-- Milestones Section -->
     <div>
-      <h2 class="mb-4 flex items-center text-2xl font-bold text-white">
-        <UIcon name="i-mdi-star-circle" class="text-primary-500 mr-2 h-6 w-6" />
+      <h2 class="mb-4 flex items-center text-2xl font-bold text-gray-900 dark:text-white">
+        <UIcon name="i-mdi-star-circle" class="mr-2 h-6 w-6 text-primary-600 dark:text-primary-500" />
         {{ $t('page.dashboard.milestones.title') }}
       </h2>
       <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">

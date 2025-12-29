@@ -4,8 +4,8 @@
     class="group relative flex cursor-pointer flex-col items-center rounded-lg border p-2 transition-all select-none hover:scale-105"
     :class="[
       isComplete
-        ? 'border-success-500/50 bg-success-900/20'
-        : 'border-gray-700 bg-gray-800/80 hover:border-gray-600 hover:bg-gray-800',
+        ? 'border-success-400 bg-success-50 dark:border-success-500/50 dark:bg-success-900/20'
+        : 'border-gray-300 bg-white/90 hover:border-gray-400 hover:bg-white dark:border-gray-700 dark:bg-gray-800/80 dark:hover:border-gray-600 dark:hover:bg-gray-800',
     ]"
     @click="toggleComplete"
     @contextmenu.prevent="openContextMenu"
@@ -37,22 +37,26 @@
       <!-- Count Badge for multi-count items -->
       <div v-if="requiredCount > 1" class="absolute right-0 -bottom-1 left-0 flex justify-center">
         <div
-          class="rounded border border-gray-700 bg-gray-900/90 px-1.5 py-0.5 text-[10px] font-bold"
-          :class="isComplete ? 'text-success-400' : 'text-gray-300'"
+          class="rounded border border-gray-300 bg-white/90 px-1.5 py-0.5 text-[10px] font-bold dark:border-gray-700 dark:bg-gray-900/90"
+          :class="isComplete ? 'text-success-600 dark:text-success-400' : 'text-gray-600 dark:text-gray-300'"
         >
           {{ formatNumber(currentCount) }}/{{ formatNumber(requiredCount) }}
         </div>
       </div>
     </div>
     <!-- Item Name -->
-    <div class="line-clamp-2 w-full text-center text-xs leading-tight font-medium text-gray-200">
+    <div
+      class="line-clamp-2 w-full text-center text-xs leading-tight font-medium text-gray-700 dark:text-gray-200"
+    >
       {{ requirement.item.name }}
     </div>
   </div>
   <!-- Context Menu for Manual Count Adjustment -->
   <ContextMenu ref="contextMenu">
     <template #default="{ close }">
-      <div class="border-b border-gray-700 px-2 py-1 text-xs font-medium text-gray-400">
+      <div
+        class="border-b border-gray-200 px-2 py-1 text-xs font-medium text-gray-500 dark:border-gray-700 dark:text-gray-400"
+      >
         {{ requirement.item.name }}
       </div>
       <ContextMenuItem
