@@ -171,7 +171,7 @@
               {{ formatNumber(xpCalculation.xpToNextLevel.value) }} needed
             </span>
           </div>
-          <div class="h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800/50">
+          <div class="h-1.5 overflow-hidden rounded-full bg-surface-200 dark:bg-surface-800">
             <div
               class="h-full rounded-full bg-gradient-to-r from-primary-600 to-primary-500 transition-all duration-500 ease-out"
               :style="{ width: `${xpCalculation.xpProgress.value}%` }"
