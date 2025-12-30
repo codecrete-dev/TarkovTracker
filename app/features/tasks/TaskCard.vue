@@ -286,47 +286,7 @@
       />
 
       <!-- 6) Progress Footer: Previous & Next Quests Links -->
-      <div
-        v-if="parentTasks.length > 0 || childTasks.length > 0"
-        class="flex flex-nowrap items-start justify-between gap-4"
-      >
-        <!-- Left: Previous Quests -->
-        <div v-if="parentTasks.length > 0" class="flex min-w-0 flex-col gap-1.5">
-          <div class="text-[10px] font-medium uppercase tracking-wider text-gray-600 dark:text-gray-300">
-            {{ t('page.tasks.questcard.previousQuests', 'Previous Quests') }}:
-          </div>
-          <div class="flex flex-col items-start gap-1">
-            <router-link
-              v-for="parent in parentTasks"
-              :key="parent.id"
-              :to="`/tasks?task=${parent.id}`"
-              class="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 inline-flex items-center gap-1.5 text-xs no-underline"
-            >
-              <UIcon name="i-mdi-arrow-left" aria-hidden="true" class="h-3 w-3 shrink-0" />
-              <span>{{ parent.name }}</span>
-            </router-link>
-          </div>
-        </div>
-        <div v-else />
 
-        <!-- Right: Next Quests -->
-        <div v-if="childTasks.length > 0" class="flex min-w-0 flex-col items-end gap-1.5 text-right">
-          <div class="text-[10px] font-medium uppercase tracking-wider text-gray-600 dark:text-gray-300">
-            {{ t('page.tasks.questcard.nextQuests', 'Next Quests') }}:
-          </div>
-          <div class="flex flex-col items-end gap-1">
-            <router-link
-              v-for="child in childTasks"
-              :key="child.id"
-              :to="`/tasks?task=${child.id}`"
-              class="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 inline-flex items-center justify-end gap-1.5 text-xs no-underline"
-            >
-              <span>{{ child.name }}</span>
-              <UIcon name="i-mdi-arrow-right" aria-hidden="true" class="h-3 w-3 shrink-0" />
-            </router-link>
-          </div>
-        </div>
-      </div>
     </div>
     <!-- Overflow / Context Menu -->
     <ContextMenu ref="taskContextMenu">

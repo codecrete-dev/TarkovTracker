@@ -13,14 +13,14 @@
       </span>
       <!-- Trader Standing Rewards -->
       <template v-for="standing in traderStandingRewards" :key="`standing-${standing.trader.id}`">
-        <span class="inline-flex items-center gap-1.5 rounded !bg-gray-600 px-2 py-0.5 !text-white">
+        <span class="inline-flex items-center gap-1.5 rounded !bg-gray-500 px-2 py-0.5 !text-white">
           <UIcon
             name="i-mdi-handshake"
             aria-hidden="true"
             class="h-4 w-4 !text-white"
           />
           <span
-            :class="standing.standing >= 0 ? '!text-emerald-300 font-bold' : '!text-red-300 font-bold'"
+            :class="standing.standing >= 0 ? '!text-emerald-500 font-bold' : '!text-red-400 font-bold'"
           >
             {{ standing.standing >= 0 ? '+' : '' }}{{ standing.standing.toFixed(2) }}
           </span>
@@ -29,8 +29,8 @@
       </template>
       <!-- Skill Rewards -->
       <template v-for="skill in skillRewards" :key="`skill-${skill.name}`">
-        <span class="inline-flex items-center gap-1.5 rounded !bg-purple-200 px-2 py-0.5 !text-purple-600">
-          <UIcon name="i-mdi-arm-flex" aria-hidden="true" class="h-3.5 w-3.5 !text-purple-600" />
+        <span class="inline-flex items-center gap-1.5 rounded !bg-green-500 px-2 py-0.5 !text-green-50">
+          <UIcon name="i-mdi-arm-flex" aria-hidden="true" class="h-3.5 w-3.5 !text-green-50" />
           <span>+{{ skill.level }}</span>
           <span>{{ skill.name }}</span>
         </span>
@@ -234,36 +234,91 @@
             </div>
           </div>
         </div>
+
+        <!-- Task Chain (Previous/Next) -->
+        <div
+          v-if="parentTasks.length > 0 || childTasks.length > 0"
+          class="flex flex-col gap-3"
+        >
+          <UDivider v-if="itemRewards.length > 0 || offerUnlockRewards.length > 0" class="opacity-50" />
+          
+          <div class="flex flex-nowrap items-start justify-between gap-4 px-1">
+            <!-- Left: Previous Quests -->
+            <div v-if="parentTasks.length > 0" class="flex min-w-0 flex-1 flex-col gap-1.5">
+              <div class="text-[10px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                {{ t('page.tasks.questcard.previousQuests', 'Previous Quests') }}:
+              </div>
+              <div class="flex flex-col items-start gap-1">
+                <router-link
+                  v-for="parent in parentTasks"
+                  :key="parent.id"
+                  :to="`/tasks?task=${parent.id}`"
+                  class="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 inline-flex items-center gap-1.5 text-xs no-underline"
+                >
+                  <UIcon name="i-mdi-arrow-left" aria-hidden="true" class="h-3 w-3 shrink-0" />
+                  <span class="truncate">{{ parent.name }}</span>
+                </router-link>
+              </div>
+            </div>
+            
+            <div v-if="parentTasks.length > 0 && childTasks.length === 0" class="flex-1" />
+
+            <!-- Right: Next Quests -->
+            <div v-if="childTasks.length > 0" class="flex min-w-0 flex-1 flex-col items-end gap-1.5 text-right">
+              <div class="text-[10px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                {{ t('page.tasks.questcard.nextQuests', 'Next Quests') }}:
+              </div>
+              <div class="flex flex-col items-end gap-1 text-right">
+                <router-link
+                  v-for="child in childTasks"
+                  :key="child.id"
+                  :to="`/tasks?task=${child.id}`"
+                  class="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 inline-flex items-center justify-end gap-1.5 text-xs no-underline"
+                >
+                  <span class="truncate">{{ child.name }}</span>
+                  <UIcon name="i-mdi-arrow-right" aria-hidden="true" class="h-3 w-3 shrink-0" />
+                </router-link>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
+
 <script setup lang="ts">
   import { computed, ref } from 'vue';
   import { useI18n } from 'vue-i18n';
   import type { Task } from '@/types/tarkov';
   import { useLocaleNumberFormatter } from '@/utils/formatters';
+
   interface TraderStanding {
     trader: { id: string; name: string };
     standing: number;
   }
+
   interface SkillReward {
     name: string;
     level: number;
   }
+
   interface TraderUnlock {
     name: string;
   }
+
   interface ItemReward {
     item?: { id: string; name?: string; shortName?: string; iconLink?: string };
     count: number;
   }
+
   interface OfferUnlock {
     id: string;
     item?: { id: string; name?: string; shortName?: string; iconLink?: string };
     trader: { name: string };
     level: number;
   }
+
   const props = defineProps<{
     taskId: string;
     traderStandingRewards: TraderStanding[];
@@ -276,9 +331,11 @@
     unlocksNextCount: number;
     impactCount: number;
   }>();
+
   defineEmits<{
     'item-context-menu': [event: MouseEvent, item: ItemReward['item']];
   }>();
+
   const { t } = useI18n({ useScope: 'global' });
   const formatNumber = useLocaleNumberFormatter();
 
@@ -291,14 +348,17 @@
 
   const rewardLinkClass =
     'text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 inline-flex items-center gap-1.5 text-xs';
+
   const rewardItemCardClass = [
     'group relative flex flex-col items-center gap-1 rounded-lg border border-gray-200 bg-white p-2 shadow-sm dark:border-white/10 dark:bg-white/5 dark:shadow-none cursor-pointer',
     'transition-colors hover:shadow-md dark:hover:bg-white/10 focus:outline-none',
     'focus-visible:ring-primary-500 focus-visible:ring-offset-surface-900',
     'focus-visible:ring-2 focus-visible:ring-offset-2',
   ].join(' ');
+
   const showDetails = ref(false);
   const detailsId = computed(() => `task-${props.taskId}-details`);
+
   const hasRewardsSummary = computed(() => {
     return (
       props.traderStandingRewards.length > 0 ||
@@ -306,17 +366,21 @@
       displayedTraderUnlock.value != null
     );
   });
+
   const hasDetailedRewards = computed(() => {
     return props.itemRewards.length > 0 || props.offerUnlockRewards.length > 0;
   });
+
   const hasExpandableDetails = computed(() => {
     return hasDetailedRewards.value || props.childTasks.length > 0 || props.parentTasks.length > 0;
   });
+
   const toggleDetailsLabel = computed(() => {
     return showDetails.value
       ? t('page.tasks.questcard.hideDetails', 'Hide details')
       : t('page.tasks.questcard.showDetails', 'Show details');
   });
+
   const itemRewardsSummaryTooltip = computed(() => {
     const items = props.itemRewards;
     if (items.length === 0) return '';
@@ -332,6 +396,7 @@
       ? `${names}${t('page.tasks.questcard.andMore', { count }, `, +${count} more`)}`
       : names;
   });
+
   const offerUnlockSummaryTooltip = computed(() => {
     const offers = props.offerUnlockRewards;
     if (offers.length === 0) return '';
@@ -347,14 +412,17 @@
       ? `${names}${t('page.tasks.questcard.andMore', { count }, `, +${count} more`)}`
       : names;
   });
+
   const getItemTooltip = (item?: { shortName?: string; name?: string }) => {
     const name = item?.shortName || item?.name || t('page.tasks.questcard.item', 'Item');
     return t('page.tasks.questcard.openItemOnTarkovDev', { name }, `Open ${name} on tarkov.dev`);
   };
+
   const toggleDetails = () => {
     if (!hasExpandableDetails.value) return;
     showDetails.value = !showDetails.value;
   };
+
   const onAreaClick = (event: MouseEvent) => {
     if (!hasExpandableDetails.value) return;
     const selection = window.getSelection();
