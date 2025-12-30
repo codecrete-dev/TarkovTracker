@@ -1,7 +1,7 @@
 <template>
   <UCard
     :id="`task-${task.id}`"
-    class="relative overflow-hidden border border-base bg-surface-base shadow-sm"
+    class="relative overflow-hidden border border-base bg-surface-elevated shadow-sm"
     :class="taskClasses"
     :ui="{ body: cardBodyClass }"
     @contextmenu.prevent="openOverflowMenu"

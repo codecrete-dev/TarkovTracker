@@ -457,13 +457,13 @@ html {
 
   /* Semantic Backgrounds for Light/Dark switching */
   .bg-surface-base {
-    @apply bg-white dark:bg-surface-950;
+    @apply bg-gray-100 dark:bg-[#0a0a09]; /* Darkened base for OLED feel */
   }
   .bg-surface-elevated {
-    @apply bg-gray-50 dark:bg-[#121214]; /* specific dark tone previously used */
+    @apply bg-white shadow-sm dark:bg-[#151516]; /* Lighter than base */
   }
   .bg-surface-floating {
-    @apply bg-white dark:bg-surface-800;
+    @apply bg-white shadow-md dark:bg-[#1e1e20]; /* Even lighter */
   }
   
   /* Semantic Text */
