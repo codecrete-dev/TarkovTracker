@@ -185,10 +185,10 @@
                 class="h-10 w-10 rounded-full border border-gray-200 bg-gray-100 dark:border-surface-700 dark:bg-surface-800"
               />
               <div class="min-w-0 flex-1">
-                <div class="truncate text-xs font-semibold text-gray-900 dark:text-white">
+                <div class="truncate text-sm font-semibold text-gray-900 dark:text-white">
                   {{ trader.name }}
                 </div>
-                <div class="text-xs text-gray-500 dark:text-surface-400">
+                <div class="text-sm text-gray-500 dark:text-surface-400">
                   {{ trader.completedTasks }}/{{ trader.totalTasks }}
                 </div>
               </div>
@@ -204,7 +204,7 @@
                 :style="{ width: `${trader.percentage}%` }"
               ></div>
             </div>
-            <div class="mt-1 text-right text-xs font-medium text-primary-600 dark:text-primary-400">
+            <div class="mt-1 text-right text-sm font-medium text-primary-600 dark:text-primary-400">
               {{ trader.percentage }}%
             </div>
           </div>

@@ -13,7 +13,7 @@
     <template v-else>
       <!-- Card container for expanded state -->
       <div
-        class="w-full overflow-hidden rounded-lg border border-base bg-surface-elevated px-2 py-1.5 backdrop-blur-sm dark:bg-white/5"
+        class="w-full overflow-hidden rounded-lg border border-base bg-surface-elevated px-2 py-1.5 backdrop-blur-sm dark:bg-surface-800"
       >
         <div class="flex min-w-0 items-center gap-1">
           <span class="mr-1 shrink-0 leading-none">
