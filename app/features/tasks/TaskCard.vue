@@ -97,7 +97,7 @@
                 size="xs"
                 color="gray"
                 variant="solid"
-                class="cursor-help text-xs !bg-gray-500 !text-white"
+                class="cursor-help text-xs !bg-gray-600 !text-white"
               >
                 {{ t('page.tasks.questcard.levelBadge', { count: task.minPlayerLevel }) }}
               </UBadge>
@@ -107,7 +107,7 @@
                 size="xs"
                 color="gray"
                 variant="solid"
-                class="inline-flex max-w-[10rem] items-center gap-1 text-xs !bg-gray-500 !text-white"
+                class="inline-flex max-w-[10rem] items-center gap-1 text-xs !bg-gray-600 !text-white"
               >
                 <UIcon
                   :name="task?.map?.name ? 'i-mdi-map-marker' : 'i-mdi-earth'"
@@ -124,7 +124,7 @@
               size="xs"
               color="gray"
               variant="solid"
-              class="inline-flex items-center gap-1 text-xs !bg-gray-500 !text-white"
+              class="inline-flex items-center gap-1 text-xs !bg-gray-600 !text-white"
             >
               <UIcon name="i-mdi-progress-check" aria-hidden="true" class="h-3 w-3" />
               {{ t('page.tasks.questcard.progress', objectiveProgress) }}
@@ -226,13 +226,13 @@
           </AppTooltip>
         </div>
       </div>
-      <!-- 2) Metadata Row: Requires (Left) & Chain Info (Right) -->
+      <!-- 2) Metadata Row: Requires -->
       <div
-        v-if="lockedBefore > 0 || afterHasContent"
-        class="flex flex-nowrap items-center justify-between gap-4 text-xs text-gray-600 dark:text-content-secondary"
+        v-if="lockedBefore > 0"
+        class="flex flex-nowrap items-center gap-4 text-xs text-gray-600 dark:text-content-secondary"
       >
         <!-- Requires strip (Left) -->
-        <div v-if="lockedBefore > 0" class="flex min-w-0 items-center">
+        <div class="flex min-w-0 items-center">
           <span class="shrink-0 text-gray-700 dark:text-gray-200">
             {{ t('page.tasks.questcard.requires', 'Requires') }}:
           </span>
@@ -259,38 +259,6 @@
             <span class="ml-2 text-gray-600 dark:text-gray-300">{{ lockedBefore }}</span>
           </template>
         </div>
-        <div v-else />
-
-        <!-- Chain info (Right) -->
-        <div v-if="afterHasContent" class="flex shrink-0 items-center">
-          <AppTooltip
-            v-if="unlocksNextCount > 0"
-            :text="
-              t(
-                'page.tasks.questcard.unlocksNextTooltip',
-                'Number of quests that become available after completing this task'
-              )
-            "
-          >
-            <span class="cursor-help border-b border-dotted border-gray-400 text-gray-600 dark:border-gray-500 dark:text-gray-200">
-              {{ t('page.tasks.questcard.unlocksNext', 'Unlocks next') }}: {{ unlocksNextCount }}
-            </span>
-          </AppTooltip>
-          <span v-if="unlocksNextCount > 0 && impactCount > 0" class="mx-2 text-gray-600">•</span>
-          <AppTooltip
-            v-if="impactCount > 0"
-            :text="
-              t(
-                'page.tasks.questcard.impactTooltip',
-                'Number of incomplete quests that depend on this task being completed'
-              )
-            "
-          >
-            <span class="cursor-help border-b border-dotted border-gray-400 text-gray-600 dark:border-gray-500 dark:text-gray-200">
-              {{ t('page.tasks.questcard.impact', 'Impact') }}: {{ impactCount }}
-            </span>
-          </AppTooltip>
-        </div>
       </div>
       <!-- 3) Body: objectives -->
       <div :class="isCompact ? 'space-y-3' : 'space-y-4'">
@@ -312,6 +280,8 @@
         :offer-unlock-rewards="offerUnlockRewards"
         :parent-tasks="parentTasks"
         :child-tasks="childTasks"
+        :unlocks-next-count="unlocksNextCount"
+        :impact-count="impactCount"
         @item-context-menu="openItemContextMenu"
       />
 

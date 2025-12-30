@@ -13,21 +13,15 @@
       </span>
       <!-- Trader Standing Rewards -->
       <template v-for="standing in traderStandingRewards" :key="`standing-${standing.trader.id}`">
-        <span
-          class="inline-flex items-center gap-1.5 rounded px-2 py-0.5"
-          :class="
-            standing.standing >= 0
-              ? '!bg-emerald-300 !text-emerald-950'
-              : '!bg-red-300 !text-red-950'
-          "
-        >
+        <span class="inline-flex items-center gap-1.5 rounded !bg-gray-600 px-2 py-0.5 !text-white">
           <UIcon
             name="i-mdi-handshake"
             aria-hidden="true"
-            class="h-4 w-4"
-            :class="standing.standing >= 0 ? '!text-emerald-950' : '!text-red-950'"
+            class="h-4 w-4 !text-white"
           />
-          <span>
+          <span
+            :class="standing.standing >= 0 ? '!text-emerald-300 font-bold' : '!text-red-300 font-bold'"
+          >
             {{ standing.standing >= 0 ? '+' : '' }}{{ standing.standing.toFixed(2) }}
           </span>
           <span>{{ standing.trader.name }}</span>
@@ -35,8 +29,8 @@
       </template>
       <!-- Skill Rewards -->
       <template v-for="skill in skillRewards" :key="`skill-${skill.name}`">
-        <span class="inline-flex items-center gap-1.5 rounded !bg-purple-300 px-2 py-0.5 !text-purple-950">
-          <UIcon name="i-mdi-arm-flex" aria-hidden="true" class="h-3.5 w-3.5 !text-purple-950" />
+        <span class="inline-flex items-center gap-1.5 rounded !bg-purple-200 px-2 py-0.5 !text-purple-600">
+          <UIcon name="i-mdi-arm-flex" aria-hidden="true" class="h-3.5 w-3.5 !text-purple-600" />
           <span>+{{ skill.level }}</span>
           <span>{{ skill.name }}</span>
         </span>
@@ -83,25 +77,61 @@
           </span>
         </span>
       </AppTooltip>
-      <!-- Dropdown toggle -->
-      <AppTooltip v-if="hasExpandableDetails" :text="toggleDetailsLabel" class="ml-auto">
-        <UButton
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          class="shrink-0 cursor-pointer"
-          :aria-label="toggleDetailsLabel"
-          :aria-expanded="showDetails"
-          :aria-controls="detailsId"
-          @click.stop="toggleDetails"
-        >
-          <UIcon
-            :name="showDetails ? 'i-mdi-chevron-up' : 'i-mdi-chevron-down'"
-            aria-hidden="true"
-            class="h-5 w-5 text-gray-500"
-          />
-        </UButton>
-      </AppTooltip>
+      <!-- Chain info & Dropdown toggle -->
+      <div class="ml-auto flex items-center gap-4">
+        <div v-if="unlocksNextCount > 0 || impactCount > 0" class="flex shrink-0 items-center">
+          <AppTooltip
+            v-if="unlocksNextCount > 0"
+            :text="
+              t(
+                'page.tasks.questcard.unlocksNextTooltip',
+                'Number of quests that become available after completing this task'
+              )
+            "
+          >
+            <span
+              class="cursor-help border-b border-dotted border-gray-400 text-gray-600 dark:border-gray-500 dark:text-gray-200"
+            >
+              {{ t('page.tasks.questcard.unlocksNext', 'Unlocks next') }}: {{ unlocksNextCount }}
+            </span>
+          </AppTooltip>
+          <span v-if="unlocksNextCount > 0 && impactCount > 0" class="mx-2 text-gray-600">•</span>
+          <AppTooltip
+            v-if="impactCount > 0"
+            :text="
+              t(
+                'page.tasks.questcard.impactTooltip',
+                'Number of incomplete quests that depend on this task being completed'
+              )
+            "
+          >
+            <span
+              class="cursor-help border-b border-dotted border-gray-400 text-gray-600 dark:border-gray-500 dark:text-gray-200"
+            >
+              {{ t('page.tasks.questcard.impact', 'Impact') }}: {{ impactCount }}
+            </span>
+          </AppTooltip>
+        </div>
+
+        <AppTooltip v-if="hasExpandableDetails" :text="toggleDetailsLabel">
+          <UButton
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            class="shrink-0 cursor-pointer"
+            :aria-label="toggleDetailsLabel"
+            :aria-expanded="showDetails"
+            :aria-controls="detailsId"
+            @click.stop="toggleDetails"
+          >
+            <UIcon
+              :name="showDetails ? 'i-mdi-chevron-up' : 'i-mdi-chevron-down'"
+              aria-hidden="true"
+              class="h-5 w-5 text-gray-500"
+            />
+          </UButton>
+        </AppTooltip>
+      </div>
     </div>
     <div
       v-if="showDetails && hasExpandableDetails"
@@ -243,6 +273,8 @@
     offerUnlockRewards: OfferUnlock[];
     parentTasks: Task[];
     childTasks: Task[];
+    unlocksNextCount: number;
+    impactCount: number;
   }>();
   defineEmits<{
     'item-context-menu': [event: MouseEvent, item: ItemReward['item']];
