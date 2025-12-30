@@ -84,58 +84,60 @@
         ref="mapContainer"
         class="h-[400px] w-full rounded bg-gray-100 dark:bg-surface-900 sm:h-[500px] lg:h-[600px]"
       />
-      <!-- Legend -->
-      <div
-        v-if="props.showLegend"
-        class="mt-2 flex flex-wrap items-center gap-4 text-xs text-gray-600 dark:text-gray-300"
-      >
-        <div class="flex items-center gap-1">
-          <div class="h-3 w-3 rounded-full bg-red-500" />
-          <span>Your Objectives</span>
-        </div>
-        <div class="flex items-center gap-1">
-          <div class="h-3 w-3 rounded-full bg-orange-500" />
-          <span>Team Objectives</span>
-        </div>
-        <div v-if="showPmcExtracts" class="flex items-center gap-1">
-          <UIcon name="i-mdi-exit-run" class="h-3 w-3 text-green-500" />
-          <span>PMC Extract</span>
-        </div>
-        <div v-if="showScavExtracts" class="flex items-center gap-1">
-          <UIcon name="i-mdi-exit-run" class="h-3 w-3 text-amber-400" />
-          <span>Scav Extract</span>
-        </div>
+      <!-- Legends Footer -->
+      <div class="mt-2 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        <!-- Main Objective Legend -->
         <div
-          v-if="(showPmcExtracts || showScavExtracts) && hasSharedExtracts"
-          class="flex items-center gap-1"
+          v-if="props.showLegend"
+          class="flex flex-wrap items-center gap-4 text-xs text-gray-600 dark:text-gray-300"
         >
-          <UIcon name="i-mdi-exit-run" class="h-3 w-3 text-sky-400" />
-          <span>Shared Extract (Either Faction)</span>
+          <div class="flex items-center gap-1">
+            <div class="h-3 w-3 rounded-full bg-red-500" />
+            <span>Your Objectives</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <div class="h-3 w-3 rounded-full bg-orange-500" />
+            <span>Team Objectives</span>
+          </div>
+          <div v-if="showPmcExtracts" class="flex items-center gap-1">
+            <UIcon name="i-mdi-exit-run" class="h-3 w-3 text-green-500" />
+            <span>PMC Extract</span>
+          </div>
+          <div v-if="showScavExtracts" class="flex items-center gap-1">
+            <UIcon name="i-mdi-exit-run" class="h-3 w-3 text-amber-400" />
+            <span>Scav Extract</span>
+          </div>
+          <div
+            v-if="(showPmcExtracts || showScavExtracts) && hasSharedExtracts"
+            class="flex items-center gap-1"
+          >
+            <UIcon name="i-mdi-exit-run" class="h-3 w-3 text-sky-400" />
+            <span>Shared Extract (Either Faction)</span>
+          </div>
+          <div
+            v-if="(showPmcExtracts || showScavExtracts) && hasCoopExtracts"
+            class="flex items-center gap-1"
+          >
+            <UIcon name="i-mdi-exit-run" class="h-3 w-3 text-sky-600" />
+            <span>Co-op Extract (PMC + Scav)</span>
+          </div>
         </div>
+
+        <!-- Controls Legend -->
         <div
-          v-if="(showPmcExtracts || showScavExtracts) && hasCoopExtracts"
-          class="flex items-center gap-1"
+          class="ml-auto flex flex-wrap-reverse items-center justify-end gap-x-4 gap-y-1 text-[10px] font-medium text-gray-500 dark:text-gray-400"
         >
-          <UIcon name="i-mdi-exit-run" class="h-3 w-3 text-sky-600" />
-          <span>Co-op Extract (PMC + Scav)</span>
+          <div v-if="hasMultipleFloors" class="flex items-center gap-1">
+            <kbd class="rounded bg-gray-200 px-1 py-0.5 font-mono text-gray-700 dark:bg-surface-700 dark:text-gray-300">Ctrl</kbd>
+            <span>+ Scroll to Cycle Floors</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <kbd class="rounded bg-gray-200 px-1 py-0.5 font-mono text-gray-700 dark:bg-surface-700 dark:text-gray-300">Shift</kbd>
+            <span>+ Scroll to Zoom</span>
+          </div>
         </div>
       </div>
     </template>
-    
-    <!-- Controls Legend (Bottom Right) -->
-    <div
-      v-if="!isMapUnavailable"
-      class="pointer-events-none absolute right-2 bottom-2 z-[900] flex flex-col items-end gap-1 rounded bg-white/80 p-1.5 text-[10px] font-medium text-gray-500 backdrop-blur-sm dark:bg-surface-900/80 dark:text-gray-400"
-    >
-      <div class="flex items-center gap-1">
-        <kbd class="rounded bg-gray-200 px-1 py-0.5 font-mono text-gray-700 dark:bg-surface-700 dark:text-gray-300">Shift</kbd>
-        <span>+ Scroll to Zoom</span>
-      </div>
-      <div v-if="hasMultipleFloors" class="flex items-center gap-1">
-        <kbd class="rounded bg-gray-200 px-1 py-0.5 font-mono text-gray-700 dark:bg-surface-700 dark:text-gray-300">Ctrl</kbd>
-        <span>+ Scroll to Cycle Floors</span>
-      </div>
-    </div>
   </div>
 </template>
 <script setup lang="ts">

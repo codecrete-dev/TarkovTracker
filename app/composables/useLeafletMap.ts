@@ -203,7 +203,6 @@ export function useLeafletMap(options: UseLeafletMapOptions): UseLeafletMapRetur
       // Re-enable interactions when coming out of idle
       if (mapInstance.value) {
         mapInstance.value.dragging.enable();
-        mapInstance.value.scrollWheelZoom.enable();
       }
     }
     idleTimer = setTimeout(() => {
@@ -372,6 +371,11 @@ export function useLeafletMap(options: UseLeafletMapOptions): UseLeafletMapRetur
           validSvgConfig.defaultFloor ||
           validSvgConfig.floors[validSvgConfig.floors.length - 1] ||
           '';
+      }
+      
+      // Explicitly disable Leaflet's default scroll wheel zoom
+      if (mapInstance.value) {
+        mapInstance.value.scrollWheelZoom.disable();
       }
       // Load SVG overlay FIRST so it's below markers
       await loadMapSvg();
