@@ -228,7 +228,7 @@
       </div>
       <!-- 2) Metadata Row: Requires -->
       <div
-        v-if="lockedBefore > 0"
+        v-if="isLocked && pendingParentTasks.length > 0"
         class="flex flex-nowrap items-center gap-4 text-xs text-gray-600 dark:text-content-secondary"
       >
         <!-- Requires strip (Left) -->
@@ -236,28 +236,23 @@
           <span class="shrink-0 text-gray-700 dark:text-gray-200">
             {{ t('page.tasks.questcard.requires', 'Requires') }}:
           </span>
-          <template v-if="pendingParentTasks.length">
-            <span class="ml-2 inline-flex flex-nowrap items-center rounded-md gap-1.5 overflow-hidden">
-              <AppTooltip
-                v-for="parent in displayedPendingParents"
-                :key="parent.id"
-                :text="parent.name"
+          <span class="ml-2 inline-flex flex-nowrap items-center rounded-md gap-1.5 overflow-hidden">
+            <AppTooltip
+              v-for="parent in displayedPendingParents"
+              :key="parent.id"
+              :text="parent.name"
+            >
+              <router-link
+                :to="`/tasks?task=${parent.id}`"
+                class="inline-flex max-w-[12rem] items-center rounded-md border border-base bg-surface-elevated px-2 py-0.5 text-[11px] text-content-secondary hover:bg-surface-200 dark:hover:bg-white/5"
               >
-                <router-link
-                  :to="`/tasks?task=${parent.id}`"
-                  class="inline-flex max-w-[12rem] items-center rounded-md border border-base bg-surface-elevated px-2 py-0.5 text-[11px] text-content-secondary hover:bg-surface-200 dark:hover:bg-white/5"
-                >
-                  <span class="truncate">{{ parent.name }}</span>
-                </router-link>
-              </AppTooltip>
-              <span v-if="extraPendingParentsCount > 0" class="shrink-0 text-gray-500">
-                +{{ extraPendingParentsCount }}
-              </span>
+                <span class="truncate">{{ parent.name }}</span>
+              </router-link>
+            </AppTooltip>
+            <span v-if="extraPendingParentsCount > 0" class="shrink-0 text-gray-500">
+              +{{ extraPendingParentsCount }}
             </span>
-          </template>
-          <template v-else>
-            <span class="ml-2 text-gray-600 dark:text-gray-300">{{ lockedBefore }}</span>
-          </template>
+          </span>
         </div>
       </div>
       <!-- 3) Body: objectives -->
