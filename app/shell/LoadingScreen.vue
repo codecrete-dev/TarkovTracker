@@ -5,7 +5,7 @@
     role="dialog"
     aria-modal="true"
     aria-labelledby="loading-screen-title"
-    class="fixed inset-x-0 top-16 bottom-0 z-50 flex items-center justify-center bg-gray-950"
+    class="fixed inset-x-0 top-16 bottom-0 z-50 flex items-center justify-center bg-white dark:bg-gray-950"
   >
     <div class="flex flex-col items-center gap-6 px-4">
       <!-- Loading Spinner or Error Icon -->
@@ -21,16 +21,16 @@
       <div class="flex flex-col items-center gap-2 text-center">
         <h2
           id="loading-screen-title"
-          class="focus-visible:ring-primary-500 rounded-sm text-xl font-semibold text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+          class="focus-visible:ring-primary-500 rounded-sm text-xl font-semibold text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 dark:text-gray-100"
         >
           {{ hasErrors ? 'Loading Issue' : 'Loading Tarkov Tracker' }}
         </h2>
-        <p class="text-sm text-gray-400">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
           {{ hasErrors ? 'Some data failed to load' : 'Downloading required game data...' }}
         </p>
       </div>
       <!-- Loading Progress Details -->
-      <div class="flex flex-col gap-2 text-xs text-gray-500">
+      <div class="flex flex-col gap-2 text-xs text-gray-500 dark:text-gray-400">
         <div class="flex items-center gap-2">
           <UIcon
             :name="getStatusIcon(metadataStore.loading, metadataStore.error)"
@@ -61,7 +61,7 @@
         </div>
       </div>
       <!-- User Reassurance or Error Actions -->
-      <div v-if="!hasErrors" class="mt-4 max-w-md text-center text-xs text-gray-600">
+      <div v-if="!hasErrors" class="mt-4 max-w-md text-center text-xs text-gray-600 dark:text-gray-400">
         This may take a moment on first load. Data will be cached for future visits.
       </div>
       <div v-else class="mt-4 flex flex-col items-center gap-3">
