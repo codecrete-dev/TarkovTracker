@@ -2,16 +2,16 @@
   <div
     :class="[
       'relative overflow-hidden rounded-xl border p-6 transition-all',
-      isAchieved ? achievedClasses : 'border-base bg-surface-elevated opacity-50',
+      isAchieved ? achievedClasses : 'border-base bg-surface-elevated opacity-50 dark:bg-surface-900/50 dark:border-surface-700/30',
     ]"
   >
     <div class="relative z-10">
       <UIcon
         :name="isAchieved ? achievedIcon : unachievedIcon"
-        :class="['mb-3 h-12 w-12', isAchieved ? iconColorClass : 'text-content-tertiary']"
+        :class="['mb-3 h-12 w-12', isAchieved ? iconColorClass : 'text-content-tertiary dark:text-surface-600']"
       />
-      <div class="mb-1 text-3xl font-bold text-content-primary">{{ title }}</div>
-      <div class="text-xs tracking-wider uppercase text-content-secondary">{{ subtitle }}</div>
+      <div class="mb-1 text-3xl font-bold text-content-primary dark:text-white">{{ title }}</div>
+      <div class="text-xs tracking-wider uppercase text-content-secondary dark:text-surface-400">{{ subtitle }}</div>
     </div>
   </div>
 </template>

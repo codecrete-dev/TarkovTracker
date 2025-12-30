@@ -1,6 +1,6 @@
 <template>
   <header
-    class="fixed top-0 right-0 z-40 h-16 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur-sm dark:bg-transparent dark:from-surface-800/95 dark:to-surface-950/95 dark:border-primary-800/60 dark:bg-linear-to-tr dark:shadow-[0_1px_0_rgba(0,0,0,0.4)]"
+    class="from-surface-800/95 to-surface-950/95 border-primary-800/60 fixed top-0 right-0 z-40 h-16 border-b bg-linear-to-tr shadow-[0_1px_0_rgba(0,0,0,0.4)] backdrop-blur-sm"
   >
     <div class="flex h-full items-center gap-1 px-2 sm:gap-3 sm:px-3">
       <!-- Left: Toggle Button -->
@@ -15,7 +15,7 @@
         />
       </AppTooltip>
       <!-- Center: Page Title -->
-      <span class="min-w-0 flex-1 truncate text-xl font-bold text-content-primary dark:text-white">
+      <span class="min-w-0 flex-1 truncate text-xl font-bold text-white">
         {{ pageTitle }}
       </span>
       <!-- Right: Status Icons & Settings -->
@@ -32,7 +32,7 @@
         </AppTooltip>
         <!-- Game mode quick toggle -->
         <div
-          class="flex items-center overflow-hidden rounded-md border border-base bg-surface-elevated ring-1 ring-gray-200/50 dark:border-white/15 dark:bg-surface-900/90 dark:ring-white/10"
+          class="bg-surface-900/90 flex items-center overflow-hidden rounded-md border border-white/15 ring-1 ring-white/10"
           role="group"
           aria-label="Toggle game mode"
         >
@@ -46,7 +46,7 @@
             <UIcon name="i-mdi-sword-cross" class="hidden h-4 w-4 sm:block md:h-5 md:w-5" />
             PvP
           </button>
-          <div class="h-6 w-px bg-gray-300 dark:bg-white/15 sm:h-8" aria-hidden="true" />
+          <div class="h-6 w-px bg-white/15 sm:h-8" aria-hidden="true" />
           <button
             type="button"
             class="focus:ring-pve-400 inline-flex items-center gap-0.5 px-1.5 py-1 text-[10px] font-semibold tracking-wide uppercase transition-colors focus:z-10 focus:ring-2 focus:outline-none sm:gap-2 sm:px-3 sm:py-1.5 sm:text-xs md:px-3.5 md:text-sm lg:px-4 lg:text-[15px]"
@@ -58,44 +58,6 @@
             PvE
           </button>
         </div>
-        <!-- Theme selector -->
-        <USelectMenu
-          v-model="selectedTheme"
-          :items="themeItems"
-          value-attribute="value"
-          :popper="{ placement: 'bottom-end', strategy: 'fixed' }"
-          :ui="{
-            base: 'bg-surface-elevated border border-base ring-1 ring-gray-200/50 rounded-md px-2 py-1.5 dark:bg-surface-900/90 dark:border-white/15 dark:ring-white/10',
-            leading: { padding: { sm: 'pl-1' } },
-          }"
-          :ui-menu="{
-            container: 'z-[9999]',
-            width: 'w-32',
-            background: 'bg-surface-floating dark:bg-surface-900',
-            shadow: 'shadow-xl',
-            rounded: 'rounded-lg',
-            ring: 'ring-1 ring-gray-200 dark:ring-white/10',
-            padding: 'p-1',
-            option: {
-              base: 'px-3 py-2 text-sm cursor-pointer transition-colors rounded',
-              inactive: 'text-content-secondary hover:bg-surface-200 dark:hover:bg-surface-800 hover:text-content-primary dark:text-surface-200 dark:hover:text-white',
-              active: 'bg-surface-200 text-content-primary dark:bg-surface-800 dark:text-white',
-              selected: 'bg-primary-50 text-primary-600 ring-1 ring-primary-500 dark:bg-primary-500/10 dark:text-primary-100',
-              icon: { base: 'flex-shrink-0 h-4 w-4', active: 'text-primary-600 dark:text-white', inactive: 'text-gray-400 dark:text-surface-400' },
-            },
-          }"
-          class="h-auto min-w-0"
-        >
-          <template #leading>
-            <UIcon :name="currentThemeIcon" class="h-4 w-4 text-content-tertiary" />
-          </template>
-          <template #default>
-            <span class="sr-only">Theme</span>
-          </template>
-          <template #trailing>
-            <UIcon name="i-mdi-chevron-down" class="text-surface-400 h-3 w-3" />
-          </template>
-        </USelectMenu>
         <!-- Language selector -->
         <USelectMenu
           v-model="selectedLocale"
@@ -103,33 +65,33 @@
           value-key="value"
           :popper="{ placement: 'bottom-end', strategy: 'fixed' }"
           :ui="{
-            base: 'bg-surface-elevated border border-base ring-1 ring-gray-200/50 rounded-md px-2 py-1.5 dark:bg-surface-900/90 dark:border-white/15 dark:ring-white/10',
+            base: 'bg-surface-900/90 border border-white/15 ring-1 ring-white/10 rounded-md px-2 py-1.5',
           }"
           :ui-menu="{
             container: 'z-[9999]',
             width: 'w-auto min-w-32',
-            background: 'bg-surface-floating dark:bg-surface-900',
+            background: 'bg-surface-900',
             shadow: 'shadow-xl',
             rounded: 'rounded-lg',
-            ring: 'ring-1 ring-gray-200 dark:ring-white/10',
+            ring: 'ring-1 ring-white/10',
             padding: 'p-1',
             option: {
               base: 'px-3 py-2 text-sm cursor-pointer transition-colors rounded',
-              inactive: 'text-content-secondary hover:bg-surface-200 dark:hover:bg-surface-800 hover:text-content-primary dark:text-surface-200 dark:hover:text-white',
-              active: 'bg-surface-200 text-content-primary dark:bg-surface-800 dark:text-white',
-              selected: 'bg-primary-50 text-primary-600 ring-1 ring-primary-500 dark:bg-primary-500/10 dark:text-primary-100',
+              inactive: 'text-surface-200 hover:bg-surface-800 hover:text-white',
+              active: 'bg-surface-800 text-white',
+              selected: 'bg-primary-500/10 text-primary-100 ring-1 ring-primary-500',
             },
           }"
           class="h-auto min-w-0"
         >
           <template #leading>
-            <UIcon name="i-mdi-translate" class="h-4 w-4 text-content-tertiary dark:text-surface-300" />
+            <UIcon name="i-mdi-translate" class="text-surface-300 h-4 w-4" />
           </template>
           <template #default>
-            <span class="text-xs font-medium uppercase text-content-secondary dark:text-white/80">{{ locale }}</span>
+            <span class="text-xs font-medium text-white/80 uppercase">{{ locale }}</span>
           </template>
           <template #trailing>
-            <UIcon name="i-mdi-chevron-down" class="h-3 w-3 text-content-tertiary" />
+            <UIcon name="i-mdi-chevron-down" class="text-surface-400 h-3 w-3" />
           </template>
         </USelectMenu>
       </div>
@@ -167,13 +129,13 @@
   });
   const pveClasses = computed(() =>
     currentGameMode.value === GAME_MODES.PVE
-      ? 'bg-pve-600 hover:bg-pve-700 text-white shadow-[0_0_0_4px_rgba(0,0,0,0.15)] dark:shadow-[0_0_0_4px_rgba(0,0,0,0.45)] ring-2 ring-white/60 ring-inset outline outline-2 outline-white/40'
-      : 'bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-pve-950/80 dark:text-pve-400 dark:hover:bg-pve-900/90'
+      ? 'bg-pve-500 hover:bg-pve-600 text-white shadow-[0_0_0_4px_rgba(0,0,0,0.45)] ring-2 ring-white/60 ring-inset outline outline-2 outline-white/40'
+      : 'bg-pve-950/80 text-pve-400 hover:bg-pve-900/90'
   );
   const pvpClasses = computed(() =>
     currentGameMode.value === GAME_MODES.PVP
-      ? 'bg-pvp-600 hover:bg-pvp-700 text-white shadow-[0_0_0_4px_rgba(0,0,0,0.15)] dark:bg-pvp-800 dark:shadow-[0_0_0_4px_rgba(0,0,0,0.45)] ring-2 ring-white/60 ring-inset outline outline-2 outline-white/40'
-      : 'bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-pvp-950/80 dark:text-pvp-400 dark:hover:bg-pvp-900/90'
+      ? 'bg-pvp-800 hover:bg-pvp-700 text-pvp-100 shadow-[0_0_0_4px_rgba(0,0,0,0.45)] ring-2 ring-white/60 ring-inset outline outline-2 outline-white/40'
+      : 'bg-pvp-950/80 text-pvp-400 hover:bg-pvp-900/90'
   );
   async function switchMode(mode: GameMode) {
     if (mode !== currentGameMode.value && !dataLoading.value) {
@@ -251,27 +213,5 @@
           dataError.value = true;
         });
     },
-  });
-
-  // Theme Logic
-  const themeItems = [
-    { label: 'System', value: 'system', icon: 'i-mdi-desktop-mac' },
-    { label: 'Light', value: 'light', icon: 'i-mdi-white-balance-sunny' },
-    { label: 'Dark', value: 'dark', icon: 'i-mdi-moon-waning-crescent' },
-  ];
-
-  const selectedTheme = computed({
-    get() {
-      return preferencesStore.getTheme;
-    },
-    set(newValue: string | { value: string }) {
-      const newTheme = typeof newValue === 'string' ? newValue : newValue.value;
-      preferencesStore.setTheme(newTheme as 'system' | 'light' | 'dark');
-    },
-  });
-
-  const currentThemeIcon = computed(() => {
-    const current = themeItems.find((i) => i.value === preferencesStore.getTheme);
-    return current ? current.icon : 'i-mdi-moon-waning-crescent';
   });
 </script>

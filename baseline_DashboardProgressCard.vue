@@ -1,7 +1,7 @@
 <template>
   <div
     :class="[
-      'cursor-pointer rounded-xl border border-base bg-surface-elevated p-6 shadow-lg dark:bg-surface-900 dark:border-surface-700/30',
+      'bg-surface-900 border-surface-700/30 cursor-pointer rounded-xl border p-6 shadow-lg',
       'transition-colors',
       hoverBorderClass,
     ]"
@@ -21,15 +21,15 @@
           <UIcon :name="icon" class="h-5 w-5" :class="iconColorClass" />
         </div>
         <div>
-          <div class="text-sm tracking-wider uppercase text-content-secondary dark:text-surface-400">
+          <div class="text-surface-400 text-sm tracking-wider uppercase">
             {{ label }}
           </div>
-          <div class="text-2xl font-bold text-content-primary dark:text-white">{{ completed }}/{{ total }}</div>
+          <div class="text-2xl font-bold text-white">{{ completed }}/{{ total }}</div>
         </div>
       </div>
       <div class="text-3xl font-bold" :class="percentageColorClass">{{ percentageDisplay }}%</div>
     </div>
-    <div class="relative h-3 overflow-hidden rounded-full bg-surface-200 dark:bg-surface-800">
+    <div class="bg-surface-800 relative h-3 overflow-hidden rounded-full">
       <div
         class="absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ease-out"
         :class="holidayEffectsEnabled ? 'candy-cane' : barGradientClass"
@@ -72,39 +72,39 @@
     { hover: string; iconBg: string; icon: string; percentage: string; bar: string }
   > = {
     primary: {
-      hover: 'hover:border-primary-500/50 dark:hover:border-primary-700/50',
-      iconBg: 'bg-primary-50 dark:bg-primary-600/15',
-      icon: 'text-primary-600 dark:text-primary-400',
-      percentage: 'text-primary-600 dark:text-primary-400',
-      bar: 'from-primary-500 to-primary-400 bg-gradient-to-r',
+      hover: 'hover:border-primary-700/50',
+      iconBg: 'bg-primary-600/15',
+      icon: 'text-primary-400',
+      percentage: 'text-primary-400',
+      bar: 'from-primary-600 to-primary-400 bg-gradient-to-r',
     },
     info: {
-      hover: 'hover:border-info-500/50 dark:hover:border-info-700/50',
-      iconBg: 'bg-info-50 dark:bg-info-600/15',
-      icon: 'text-info-600 dark:text-info-400',
-      percentage: 'text-info-600 dark:text-info-400',
-      bar: 'from-info-500 to-info-400 bg-gradient-to-r',
+      hover: 'hover:border-info-700/50',
+      iconBg: 'bg-info-600/15',
+      icon: 'text-info-400',
+      percentage: 'text-info-400',
+      bar: 'from-info-600 to-info-400 bg-gradient-to-r',
     },
     success: {
-      hover: 'hover:border-success-500/50 dark:hover:border-success-700/50',
-      iconBg: 'bg-success-50 dark:bg-success-600/15',
-      icon: 'text-success-600 dark:text-success-400',
-      percentage: 'text-success-600 dark:text-success-400',
-      bar: 'from-success-500 to-success-400 bg-gradient-to-r',
+      hover: 'hover:border-success-700/50',
+      iconBg: 'bg-success-600/15',
+      icon: 'text-success-400',
+      percentage: 'text-success-400',
+      bar: 'from-success-600 to-success-400 bg-gradient-to-r',
     },
     warning: {
-      hover: 'hover:border-warning-500/50 dark:hover:border-warning-700/50',
-      iconBg: 'bg-warning-50 dark:bg-warning-600/15',
-      icon: 'text-warning-600 dark:text-warning-400',
-      percentage: 'text-warning-600 dark:text-warning-400',
-      bar: 'from-warning-500 to-warning-400 bg-gradient-to-r',
+      hover: 'hover:border-warning-700/50',
+      iconBg: 'bg-warning-600/15',
+      icon: 'text-warning-400',
+      percentage: 'text-warning-400',
+      bar: 'from-warning-600 to-warning-400 bg-gradient-to-r',
     },
     purple: {
-      hover: 'hover:border-purple-500/50 dark:hover:border-purple-700/50',
-      iconBg: 'bg-purple-50 dark:bg-purple-600/15',
-      icon: 'text-purple-600 dark:text-purple-400',
-      percentage: 'text-purple-600 dark:text-purple-400',
-      bar: 'from-purple-500 to-purple-400 bg-gradient-to-r',
+      hover: 'hover:border-purple-700/50',
+      iconBg: 'bg-purple-600/15',
+      icon: 'text-purple-400',
+      percentage: 'text-purple-400',
+      bar: 'from-purple-600 to-purple-400 bg-gradient-to-r',
     },
   };
   const hoverBorderClass = computed(() => colorClasses[props.color].hover);

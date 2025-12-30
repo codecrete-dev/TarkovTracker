@@ -332,27 +332,6 @@ html {
 }
 /* Nuxt UI core tokens mapped to Tarkov Tracker theme */
 :root {
-  /* Light Mode Defaults */
-  --ui-bg: #ffffff;
-  --ui-bg-muted: #fafafa;
-  --ui-bg-elevated: #ffffff;
-  --ui-bg-accented: #f4f4f5;
-  --ui-bg-inverted: #121212;
-  --ui-text: #18181b;
-  --ui-text-muted: #71717a;
-  --ui-text-highlighted: #855d28;
-  --ui-text-dimmed: #a1a1aa;
-  --ui-text-inverted: #f8f8f8;
-  
-  /* Light mode border overrides */
-  --ui-border-accented: var(--color-primary-300);
-  --ui-color-neutral-700: var(--color-primary-300);
-  
-  /* Primary token for light mode */
-  --ui-primary: var(--color-primary-600);
-}
-
-:root.dark {
   --ui-bg: #121212;
   --ui-bg-muted: #0a0a09;
   --ui-bg-elevated: #1c1c1f;
@@ -363,11 +342,9 @@ html {
   --ui-text-highlighted: #9a8866;
   --ui-text-dimmed: #71717a;
   --ui-text-inverted: #f8f8f8;
-  
   /* Overwrite Nuxt UI defaults that pointed to neutral-700 */
   --ui-border-accented: var(--color-primary-700);
   --ui-color-neutral-700: var(--color-primary-700);
-  
   /* Set Nuxt UI primary token used by dark theme buttons */
   --ui-primary: hsl(150 60% 40%);
 }
@@ -380,17 +357,16 @@ html {
   --tw-ring-color: var(--ui-border-accented);
 }
 /* Nav text overrides: replace gray-400 default with pure white at stepped opacities */
-/* Scoped to dark mode to prevent white-on-white in light mode */
-.dark .text-gray-400 {
+.text-gray-400 {
   color: rgba(255, 255, 255, 0.6);
 }
-.dark .text-gray-500 {
+.text-gray-500 {
   color: rgba(255, 255, 255, 0.7);
 }
-.dark .text-gray-300 {
+.text-gray-300 {
   color: rgba(255, 255, 255, 0.8);
 }
-.dark .text-gray-200 {
+.text-gray-200 {
   color: rgba(255, 255, 255, 0.9);
 }
 
@@ -454,70 +430,6 @@ html {
   .fade-leave-to {
     opacity: 0;
   }
-
-  /* Semantic Backgrounds for Light/Dark switching */
-  .bg-surface-base {
-    @apply bg-white dark:bg-surface-950;
-  }
-  .bg-surface-elevated {
-    @apply bg-gray-50 dark:bg-[#121214]; /* specific dark tone previously used */
-  }
-  .bg-surface-floating {
-    @apply bg-white dark:bg-surface-800;
-  }
-  
-  /* Semantic Text */
-  .text-content-primary {
-    @apply text-gray-900 dark:text-white;
-  }
-  .text-content-secondary {
-    @apply text-gray-600;
-  }
-  .dark .text-content-secondary {
-    color: rgba(255, 255, 255, 0.8); /* Matches legacy text-gray-300 override */
-  }
-
-  .text-content-tertiary {
-    @apply text-gray-500;
-  }
-  .dark .text-content-tertiary {
-    color: rgba(255, 255, 255, 0.6); /* Matches legacy text-gray-400 override */
-  }
-
-  /* Universal Border */
-  .border-base {
-    @apply border-gray-200 dark:border-white/10;
-  }
-  
-  /* Semantic Divider (background) */
-  .bg-divider {
-    @apply bg-gray-200 dark:bg-white/10;
-  }
-}
-
-/* Light Mode Leaflet Overrides (when not .dark) */
-:root:not(.dark) .leaflet-container {
-  background-color: #f3f4f6 !important; /* gray-100 */
-}
-:root:not(.dark) .leaflet-popup-content-wrapper,
-:root:not(.dark) .leaflet-popup-tip {
-  background-color: #ffffff !important;
-  color: #111827 !important; /* gray-900 */
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-:root:not(.dark) .map-zone-tooltip {
-  background-color: #ffffff !important;
-  color: #111827 !important;
-  border-color: #e5e7eb !important; /* gray-200 */
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-:root:not(.dark) .leaflet-control-zoom a {
-  background-color: #ffffff !important;
-  color: #374151 !important; /* gray-700 */
-  border-color: #d1d5db !important; /* gray-300 */
-}
-:root:not(.dark) .leaflet-control-zoom a:hover {
-  background-color: #f3f4f6 !important;
 }
 
 @keyframes scanline {

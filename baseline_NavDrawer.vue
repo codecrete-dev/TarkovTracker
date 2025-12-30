@@ -14,7 +14,7 @@
   </Transition>
   <!-- Unified Sidebar - works as rail on mobile, rail/expanded on desktop -->
   <aside
-    class="border-base fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-surface-elevated shadow-sm backdrop-blur-sm transition-all duration-300 dark:bg-[linear-gradient(180deg,rgba(18,18,20,0.96)_0%,rgba(14,14,15,0.96)_45%,rgba(12,12,13,0.97)_100%)] dark:border-primary-800/60 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.03),inset_0_-1px_0_rgba(0,0,0,0.6),1px_0_0_rgba(0,0,0,0.55)]"
+    class="border-primary-800/60 fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-[linear-gradient(180deg,rgba(18,18,20,0.96)_0%,rgba(14,14,15,0.96)_45%,rgba(12,12,13,0.97)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.03),inset_0_-1px_0_rgba(0,0,0,0.6),1px_0_0_rgba(0,0,0,0.55)] backdrop-blur-sm transition-all duration-300"
     :class="[sidebarWidth]"
   >
     <div
@@ -34,15 +34,15 @@
                 ? '/img/logos/tarkovtrackerlogo-mini.webp'
                 : '/img/logos/tarkovtrackerlogo-light.webp'
             "
-            class="h-auto w-full invert dark:invert-0"
+            class="h-auto w-full"
             preload
           />
         </div>
         <div v-if="!isCollapsed" class="mt-1 text-center">
-          <div class="text-base leading-tight font-medium text-content-primary">TarkovTracker.org</div>
+          <div class="text-base leading-tight font-medium text-white">TarkovTracker.org</div>
         </div>
       </NuxtLink>
-      <div class="mx-3 my-0.5 h-px bg-divider dark:bg-primary-800/40" />
+      <div class="bg-primary-800/40 mx-3 my-0.5 h-px" />
       <ul class="flex flex-col gap-1 px-1">
         <template v-if="isLoggedIn">
           <UDropdownMenu :items="accountItems" :content="{ side: 'right', align: 'start' }">
@@ -83,24 +83,24 @@
           </UButton>
         </template>
       </ul>
-      <div class="mx-3 my-0.5 h-px bg-divider dark:bg-primary-800/40" />
+      <div class="bg-primary-800/40 mx-3 my-0.5 h-px" />
       <DrawerLevel :is-collapsed="isCollapsed" />
       <div v-if="!isCollapsed" class="my-2 flex flex-col items-center gap-1.5 px-4">
         <button
-          class="w-full rounded border px-2 py-1 text-center text-xs font-medium transition-colors border-base text-content-secondary hover:text-content-primary dark:border-primary-800/50 dark:hover:border-primary-600 dark:text-white/80 dark:hover:text-white"
+          class="border-primary-800/50 hover:border-primary-600 w-full rounded border px-2 py-1 text-center text-xs font-medium text-white/80 transition-colors hover:text-white"
           @click="navigateToSettings"
         >
           {{ currentEditionName }}
         </button>
-        <div class="flex w-full overflow-hidden rounded-md border border-base dark:border-primary-800/50">
+        <div class="border-primary-800/50 flex w-full overflow-hidden rounded-md border">
           <button
             v-for="faction in factions"
             :key="faction"
             class="flex-1 px-2 py-1 text-xs font-semibold uppercase transition-colors"
             :class="
               faction === currentFaction
-                ? 'bg-primary-600 text-white dark:bg-primary-700'
-                : 'bg-transparent text-content-tertiary hover:bg-surface-200 hover:text-content-primary dark:text-white/65 dark:hover:bg-white/5 dark:hover:text-white'
+                ? 'bg-primary-700 text-white'
+                : 'bg-transparent text-white/65 hover:bg-white/5 hover:text-white'
             "
             @click="setFaction(faction)"
           >
@@ -108,12 +108,12 @@
           </button>
         </div>
       </div>
-      <div class="mx-3 my-0.5 h-px bg-divider dark:bg-primary-800/40" />
+      <div class="bg-primary-800/40 mx-3 my-0.5 h-px" />
       <DrawerLinks :is-collapsed="isCollapsed" />
-      <div class="mx-3 my-0.5 h-px bg-divider dark:bg-primary-800/40" />
+      <div class="bg-primary-800/40 mx-3 my-0.5 h-px" />
       <div class="flex flex-col gap-1">
         <div v-if="!isCollapsed" class="px-4 py-0.5">
-          <h3 class="text-xs font-semibold tracking-wider text-content-tertiary uppercase">External</h3>
+          <h3 class="text-xs font-semibold tracking-wider text-gray-500 uppercase">External</h3>
         </div>
         <ul class="flex flex-col gap-1 px-1">
           <DrawerItem
