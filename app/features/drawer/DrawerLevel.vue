@@ -155,19 +155,25 @@
           </span>
         </div>
         <!-- XP Progress Display -->
+        <!-- Separator -->
+        <div class="my-2 h-px bg-gray-100 dark:bg-white/5"></div>
+        
+        <!-- XP Progress Display -->
         <div
-          class="hover:border-primary/30 mt-1.5 cursor-pointer rounded border border-base bg-surface-200 px-2 py-1 transition-all hover:bg-surface-elevated dark:bg-white/[0.02] dark:hover:bg-white/[0.04]"
+          class="group/xp cursor-pointer px-1"
           @click="navigateToSettings"
         >
-          <div class="mb-0.5 flex items-center justify-between text-[0.6rem]">
-            <span class="text-content-secondary">{{ formatNumber(xpCalculation.totalXP.value) }} XP</span>
+          <div class="mb-1.5 flex items-center justify-between text-[0.65rem] leading-none">
+            <span class="font-medium text-content-secondary group-hover/xp:text-primary-600 dark:group-hover/xp:text-primary-400 transition-colors">
+              {{ formatNumber(xpCalculation.totalXP.value) }} XP
+            </span>
             <span class="text-content-tertiary">
               {{ formatNumber(xpCalculation.xpToNextLevel.value) }} needed
             </span>
           </div>
-          <div class="h-1 overflow-hidden rounded-full bg-surface-400 dark:bg-gray-800">
+          <div class="h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800/50">
             <div
-              class="bg-primary-500 h-full transition-all duration-300"
+              class="h-full rounded-full bg-gradient-to-r from-primary-600 to-primary-500 transition-all duration-500 ease-out"
               :style="{ width: `${xpCalculation.xpProgress.value}%` }"
             ></div>
           </div>
