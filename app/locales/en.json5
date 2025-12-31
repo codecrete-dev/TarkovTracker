@@ -176,6 +176,8 @@
         uncomplete: 'Uncomplete',
         item: 'Item',
         completebutton: 'Complete',
+        unlockbutton: 'Unlock',
+        uncompletebutton: 'Uncomplete',
         availablebutton: 'Mark Available',
         statuscomplete: 'Marked {name} as complete',
         statusuncomplete: 'Marked {name} as uncompleted',

@@ -169,18 +169,21 @@
           </div>
           <!-- Action buttons in header for consistent positioning -->
           <template v-if="isOurFaction">
+            <!-- 1) Locked state: Green "UNLOCK" button -->
             <UButton
-              v-if="isLocked || isComplete"
+              v-if="isLocked"
               :size="actionButtonSize"
-              color="primary"
+              color="success"
               variant="solid"
-              class="shrink-0 !bg-primary-600 hover:!bg-primary-700 !text-white shadow-sm"
-              @click.stop="isComplete ? markTaskUncomplete() : markTaskAvailable()"
+              class="shrink-0 !bg-success-600 hover:!bg-success-700 !text-white shadow-sm"
+              @click.stop="markTaskAvailable()"
             >
-              {{ t('page.tasks.questcard.availablebutton', 'Mark Available') }}
+              {{ t('page.tasks.questcard.unlockbutton', 'Unlock').toUpperCase() }}
             </UButton>
+
+            <!-- 2) Available state: Green "COMPLETE" button -->
             <UButton
-              v-if="!isComplete && !isLocked"
+              v-else-if="!isComplete"
               :size="actionButtonSize"
               color="success"
               :ui="completeButtonUi"
@@ -188,6 +191,18 @@
               @click.stop="markTaskComplete()"
             >
               {{ t('page.tasks.questcard.completebutton', 'Complete').toUpperCase() }}
+            </UButton>
+
+            <!-- 3) Completed state: Red "UNCOMPLETE" button -->
+            <UButton
+              v-else
+              :size="actionButtonSize"
+              color="error"
+              variant="solid"
+              class="shrink-0 !bg-error-600 hover:!bg-error-700 !text-white shadow-sm"
+              @click.stop="markTaskUncomplete()"
+            >
+              {{ t('page.tasks.questcard.uncompletebutton', 'Uncomplete').toUpperCase() }}
             </UButton>
           </template>
           <!-- Menu button -->
