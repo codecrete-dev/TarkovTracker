@@ -31,5 +31,5 @@ logs
 .env
 .env.*
 !.env.example
-
-
+graphql.config.js
+schema.graphql

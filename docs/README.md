@@ -1,54 +1,36 @@
 # TarkovTracker Documentation
 
-## Core Stack
+This is the consolidated source of truth for the TarkovTracker Nuxt 4 application.
 
-- **Nuxt**: 4.2.1
-- **@nuxt/ui**: 4.2.0
-- **Tailwind CSS**: 4.1.17 (CSS-first config)
-- **Supabase**: Auth + Database
-- **Pinia**: State management with localStorage persistence
-  See `00_VERSION_CONTRACT.md` for detailed requirements.
+## 1. Project Standards & Philosophy
+- **Framework**: Nuxt ^4.2.1 (SPA mode, `app/` directory, Node 22).
+- **Frontend**: Vue 3 SFCs (`<script setup lang="ts">`), Pinia state, @nuxt/ui v4, Tailwind CSS v4.
+- **Backend**: Supabase (Auth, DB, Realtime) + Cloudflare Workers (Gateway).
+- **Styling**: Strictly use Tailwind v4 theme layer (`@theme {}`). No hex colors or legacy UI patterns.
+- **Philosophy**: Pragmatic flat structure. Shallow nesting (e.g., [`app/shell/`](../app/shell/)). Avoid unnecessary abstractions.
+- **Conventions**: 2-space indent, 100-char width. Group imports (builtin → external → internal). Use `@/` aliases.
 
-## Project Structure
+## 2. Architecture & Directory Structure
+- [`app/app.vue`](../app/app.vue): Global providers and minimal app-wide initialization.
+- [`app/layouts/`](../app/layouts/): Composition of structural shell components.
+- [`app/shell/`](../app/shell/): "Chrome" components (AppBar, NavDrawer, AppFooter).
+- [`app/features/`](../app/features/): Domain-specific logic slices (tasks, team, hideout, maps).
+- [`app/stores/`](../app/stores/): Pinia domain stores with localStorage persistence and Supabase sync.
+- [`app/server/api/`](../app/server/api/): Nitro routes proxying and caching `tarkov.dev` GraphQL data.
 
-```
-app/
-├── app.vue          # Root wrapper (see APP_STRUCTURE.md)
-├── layouts/         # Nuxt page layouts
-├── shell/           # App chrome (header, nav, footer)
-├── pages/           # File-based routing
-├── features/        # Feature-specific components
-├── components/      # Shared UI components
-├── stores/          # Pinia stores
-├── composables/     # Composition utilities
-├── plugins/         # Nuxt plugins
-├── locales/         # i18n translations
-└── assets/css/      # Tailwind theme
-```
+## 3. Key Feature Architectures
+- **Team System**: Gateway-tier architecture (Cloudflare Worker + Supabase Edge Functions). Real-time updates via Supabase Broadcast (<200ms). Teammate profiles fetched via server route using service roles to bypass RLS.
+- **XP & Level System**: Dynamic calculation from tasks. Stores `xpOffset` (difference between calculated and actual XP) to maintain accuracy across manual adjustments.
+- **i18n**: 6 languages managed in [`app/locales/*.json5`](../app/locales/). Missing keys fallback to raw strings.
 
-See `APP_STRUCTURE.md` for detailed explanation of app.vue, layouts, and shell components.
-
-## Development
-
-```bash
-npm run dev      # Start dev server
-npm run build    # Production build
-npx vitest       # Run tests
-npx eslint app   # Lint code
-```
-
-## Documentation Index
-
-| File                                  | Purpose                                           |
-| ------------------------------------- | ------------------------------------------------- |
-| `00_VERSION_CONTRACT.md`              | Stack requirements and patterns                   |
-| `APP_STRUCTURE.md`                    | App organization (app.vue, layouts, shell)        |
-| `BACKEND_STATUS.md`                   | Backend integration status                        |
-| `I18N_STATUS.md`                      | Translation system                                |
-| `TEAM_SYSTEM.md`                      | Team architecture (Workers + Edge Functions)      |
-| `Analysis/CONSOLIDATED_ANALYSIS.md`   | Verified architectural issues and priorities      |
-| `Analysis/CODEBASE_REVIEW_2025_11.md` | November 2025 codebase review and refactor plan   |
-| `Runbooks/`                           | Operational procedures and troubleshooting guides |
+## 4. Security & Operations
+- **Security**: Origin-check middleware (`tarkovtracker.org`) + Gateway rate limiting (IP+User). HMAC signing for critical endpoints.
+- **Commands**: `npm run dev` (dev), `npm run build` (prod), `npx vitest` (test), `npm run lint` (lint).
+- **Deployment**: 
+    - Frontend: Automated via Cloudflare Pages on push.
+    - Functions: `supabase functions deploy [name]`.
+    - Gateway: `cd workers/team-gateway && npx wrangler deploy`.
+- **Troubleshooting**: Check Supabase Dashboard for Edge Function logs. Gateway implements retries with exponential backoff for cold starts (1-3s).
 
 --- DO NOT TOUCH ANY OF THIS FILE CONENT BELOW HERE, IT IS MANUALLY MAINTAINED ---
 
