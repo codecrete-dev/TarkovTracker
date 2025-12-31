@@ -303,7 +303,9 @@
         if (!pos) return;
         const latLng = gameToLatLng(pos.x, pos.z);
         const isSelf = mark.users?.includes('self') ?? false;
-        const markerColor = isSelf ? '#ef4444' : '#f97316'; // red-500 : orange-500
+        const markerColor = isSelf 
+          ? getComputedStyle(document.documentElement).getPropertyValue('--color-map-marker-self').trim() || '#ef4444' 
+          : getComputedStyle(document.documentElement).getPropertyValue('--color-map-marker-team').trim() || '#f97316';
         const marker = L.circleMarker([latLng.lat, latLng.lng], {
           radius: 8,
           fillColor: markerColor,
@@ -320,7 +322,9 @@
         const latLngs = outlineToLatLngArray(zone.outline);
         if (latLngs.length < 3) return;
         const isSelf = mark.users?.includes('self') ?? false;
-        const zoneColor = isSelf ? '#ef4444' : '#f97316';
+        const zoneColor = isSelf 
+          ? getComputedStyle(document.documentElement).getPropertyValue('--color-map-marker-self').trim() || '#ef4444' 
+          : getComputedStyle(document.documentElement).getPropertyValue('--color-map-marker-team').trim() || '#f97316';
         const polygon = L.polygon(
           latLngs.map((ll) => [ll.lat, ll.lng]),
           {
@@ -393,16 +397,18 @@
       let markerColor: string;
       switch (extract.faction) {
       case 'pmc':
-        markerColor = '#22c55e'; // green-500
+        markerColor = getComputedStyle(document.documentElement).getPropertyValue('--color-map-extract-pmc').trim() || '#22c55e';
         break;
       case 'scav':
-        markerColor = '#f59e0b'; // amber-500
+        markerColor = getComputedStyle(document.documentElement).getPropertyValue('--color-map-extract-scav').trim() || '#f59e0b';
         break;
       case 'shared':
-        markerColor = isCoop ? '#0284c7' : '#38bdf8'; // sky-600 : sky-400
+        markerColor = isCoop 
+          ? getComputedStyle(document.documentElement).getPropertyValue('--color-map-extract-coop').trim() || '#0284c7' 
+          : '#38bdf8'; // Keep simpler blue for generic shared
         break;
         default:
-          markerColor = '#3b82f6'; // blue-500
+          markerColor = '#3b82f6';
           break;
       }
       const iconHtml = `<span style="
@@ -494,13 +500,13 @@
     font-family: inherit;
   }
   :root.dark .leaflet-popup-content-wrapper {
-    background-color: #1a1a1e !important;
-    color: #e5e5e5 !important;
+    background-color: rgb(var(--color-surface-900)) !important;
+    color: rgb(var(--color-gray-200)) !important;
     border-radius: 0.5rem;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   }
   :root.dark .leaflet-popup-tip {
-    background-color: #1a1a1e !important;
+    background-color: rgb(var(--color-surface-900)) !important;
   }
   .leaflet-popup-content {
     margin: 0.75rem;
@@ -515,8 +521,8 @@
   }
   /* Zone hover tooltip styling */
   :root.dark .map-zone-tooltip {
-    background-color: #1a1a1e !important;
-    color: #e5e5e5 !important;
+    background-color: rgb(var(--color-surface-900));
+    color: rgb(var(--color-gray-200));
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 0.5rem;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);

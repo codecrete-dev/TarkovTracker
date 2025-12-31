@@ -25,7 +25,7 @@
                 class="group flex items-center gap-2.5 transition-all duration-150 hover:-translate-y-0.5"
               >
                 <span
-                  class="flex h-9 w-9 items-center justify-center rounded-lg bg-[#5865f2]/15 text-[#5865f2] transition-all duration-150 group-hover:bg-[#4752c4] group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(88,101,242,0.4)]"
+                  class="flex h-9 w-9 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--color-entity-discord),transparent_85%)] text-[var(--color-entity-discord)] transition-all duration-150 group-hover:bg-[color-mix(in_srgb,var(--color-entity-discord),black_10%)] group-hover:text-white group-hover:shadow-[0_4px_12px_color-mix(in_srgb,var(--color-entity-discord),transparent_60%)]"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"

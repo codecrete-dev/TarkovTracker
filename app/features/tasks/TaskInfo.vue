@@ -86,10 +86,10 @@
         </InfoRow>
         <!-- Required labels (Kappa, Lightkeeper) -->
         <div v-if="preferencesStore.getShowRequiredLabels" class="mb-1 flex flex-wrap gap-1">
-          <UBadge v-if="task.kappaRequired" size="xs" color="primary" variant="solid">
+          <UBadge v-if="task.kappaRequired" size="xs" color="gray" variant="solid" class="!bg-[var(--color-entity-kappa)] !text-white">
             {{ t('page.tasks.questcard.kapparequired', 'KAPPA REQUIRED') }}
           </UBadge>
-          <UBadge v-if="task.lightkeeperRequired" size="xs" color="info" variant="solid">
+          <UBadge v-if="task.lightkeeperRequired" size="xs" color="gray" variant="solid" class="!bg-[var(--color-entity-lightkeeper)] !text-white">
             {{ t('page.tasks.questcard.lightkeeperrequired', 'LIGHTKEEPER REQUIRED') }}
           </UBadge>
         </div>

@@ -16,7 +16,7 @@
   </div>
 </template>
 <script setup lang="ts">
-  export type MilestoneColor = 'primary' | 'info' | 'success' | 'warning' | 'purple';
+  export type MilestoneColor = 'primary' | 'info' | 'success' | 'warning' | 'purple' | 'kappa' | 'lightkeeper';
   const props = withDefaults(
     defineProps<{
       title: string;
@@ -65,6 +65,22 @@
         'shadow-lg shadow-purple-100 dark:shadow-purple-900/20',
       ].join(' '),
       icon: 'text-purple-600 dark:text-purple-400',
+    },
+    kappa: {
+      achieved: [
+        'bg-linear-to-br from-[color-mix(in_srgb,var(--color-entity-kappa),white_90%)] to-white border-[color-mix(in_srgb,var(--color-entity-kappa),white_60%)]',
+        'dark:from-[color-mix(in_srgb,var(--color-entity-kappa),transparent_85%)] dark:to-surface-900 dark:border-[color-mix(in_srgb,var(--color-entity-kappa),transparent_70%)]',
+        'shadow-lg shadow-[color-mix(in_srgb,var(--color-entity-kappa),transparent_80%)] dark:shadow-[color-mix(in_srgb,var(--color-entity-kappa),transparent_90%)]',
+      ].join(' '),
+      icon: 'text-[var(--color-entity-kappa)]',
+    },
+    lightkeeper: {
+      achieved: [
+        'bg-linear-to-br from-[color-mix(in_srgb,var(--color-entity-lightkeeper),white_90%)] to-white border-[color-mix(in_srgb,var(--color-entity-lightkeeper),white_60%)]',
+        'dark:from-[color-mix(in_srgb,var(--color-entity-lightkeeper),transparent_85%)] dark:to-surface-900 dark:border-[color-mix(in_srgb,var(--color-entity-lightkeeper),transparent_70%)]',
+        'shadow-lg shadow-[color-mix(in_srgb,var(--color-entity-lightkeeper),transparent_80%)] dark:shadow-[color-mix(in_srgb,var(--color-entity-lightkeeper),transparent_90%)]',
+      ].join(' '),
+      icon: 'text-[var(--color-entity-lightkeeper)]',
     },
   };
   const achievedClasses = computed(() => colorClasses[props.color].achieved);

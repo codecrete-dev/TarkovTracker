@@ -2,7 +2,7 @@
   <div
     v-if="hasRewardsSummary || hasExpandableDetails"
     class="rounded-md border border-gray-200 p-2 transition-colors dark:border-white/5"
-    :class="{ 'cursor-pointer hover:bg-gray-100 dark:hover:bg-white/5': hasExpandableDetails }"
+    :class="{ 'cursor-pointer hover:bg-gray-100/50 dark:hover:bg-white/5': hasExpandableDetails }"
     @click="onAreaClick"
   >
     <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-300">
@@ -22,14 +22,14 @@
       <!-- Trader Unlock -->
       <span
         v-if="displayedTraderUnlock?.name"
-        class="inline-flex items-center gap-1.5 rounded !bg-amber-300 px-2 py-0.5 !text-amber-950"
+        class="inline-flex items-center gap-1.5 rounded !bg-[var(--color-reward-trader)] px-2 py-0.5 !text-white"
       >
-        <UIcon name="i-mdi-lock-open-variant" aria-hidden="true" class="h-4 w-4 !text-amber-950" />
+        <UIcon name="i-mdi-lock-open-variant" aria-hidden="true" class="h-4 w-4 !text-white" />
         <span>{{ displayedTraderUnlock.name }}</span>
       </span>
       <!-- Trader Standing Rewards -->
       <template v-for="standing in traderStandingRewards" :key="`standing-${standing.trader.id}`">
-        <span class="inline-flex items-center gap-1.5 rounded !bg-gray-500 px-2 py-0.5 !text-white">
+        <span class="inline-flex items-center gap-1.5 rounded !bg-gray-600 px-2 py-0.5 !text-white">
           <UIcon
             name="i-mdi-handshake"
             aria-hidden="true"
@@ -45,8 +45,8 @@
       </template>
       <!-- Skill Rewards -->
       <template v-for="skill in skillRewards" :key="`skill-${skill.name}`">
-        <span class="inline-flex items-center gap-1.5 rounded !bg-green-500 px-2 py-0.5 !text-green-50">
-          <UIcon name="i-mdi-arm-flex" aria-hidden="true" class="h-3.5 w-3.5 !text-green-50" />
+        <span class="inline-flex items-center gap-1.5 rounded !bg-[var(--color-reward-skill)] px-2 py-0.5 !text-white">
+          <UIcon name="i-mdi-arm-flex" aria-hidden="true" class="h-3.5 w-3.5 !text-white" />
           <span>+{{ skill.level }}</span>
           <span>{{ skill.name }}</span>
         </span>
@@ -54,9 +54,9 @@
       <!-- Item Rewards Summary -->
       <AppTooltip v-if="itemRewards.length > 0" :text="itemRewardsSummaryTooltip">
         <span
-          class="inline-flex cursor-help items-center gap-1.5 rounded !bg-blue-400 px-2 py-0.5 !text-blue-50"
+          class="inline-flex cursor-help items-center gap-1.5 rounded !bg-[var(--color-reward-item)] px-2 py-0.5 !text-white"
         >
-          <UIcon name="i-mdi-package-variant" aria-hidden="true" class="h-4 w-4 !text-blue-50" />
+          <UIcon name="i-mdi-package-variant" aria-hidden="true" class="h-4 w-4 !text-white" />
           <span>
             {{
               t(
@@ -71,9 +71,9 @@
       <!-- Offer Unlock Summary -->
       <AppTooltip v-if="offerUnlockRewards.length > 0" :text="offerUnlockSummaryTooltip">
         <span
-          class="inline-flex cursor-help items-center gap-1.5 rounded !bg-indigo-400 px-2 py-0.5 !text-indigo-50"
+          class="inline-flex cursor-help items-center gap-1.5 rounded !bg-[var(--color-reward-item)] px-2 py-0.5 !text-white"
         >
-          <UIcon name="i-mdi-cart-check" aria-hidden="true" class="h-4 w-4 !text-indigo-50" />
+          <UIcon name="i-mdi-cart-check" aria-hidden="true" class="h-4 w-4 !text-white" />
           <span>
             {{
               t(

@@ -142,7 +142,7 @@
                 size="xs"
                 color="red"
                 variant="solid"
-                class="cursor-help text-xs !bg-red-300 !text-red-950"
+                class="cursor-help text-xs !bg-[var(--color-entity-kappa)] !text-white"
               >
                 {{ t('page.tasks.questcard.kappa', 'Kappa') }}
               </UBadge>
@@ -160,7 +160,7 @@
                 size="xs"
                 color="amber"
                 variant="solid"
-                class="cursor-help text-xs !bg-amber-300 !text-amber-950"
+                class="cursor-help text-xs !bg-[var(--color-entity-lightkeeper)] !text-white"
               >
                 {{ t('page.tasks.questcard.lightkeeper', 'Lightkeeper') }}
               </UBadge>

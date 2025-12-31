@@ -266,6 +266,33 @@ select:disabled,
   --color-contentbackground: #181817;
   --color-border: #1f1f1f;
   --color-link: hsl(187 100% 38%);
+
+  /* --- Entities --- */
+  /* Lightkeeper: Amber/Gold. Adaptive for contrast. */
+  --color-entity-lightkeeper: var(--color-warning-600); 
+  --color-entity-kappa: var(--color-error-600);
+  --color-entity-discord: #5865f2;                    
+  --color-entity-twitch: #9146ff;
+  
+  /* --- Task Status --- */
+  --color-task-locked: var(--color-surface-500);
+  --color-task-available: var(--color-primary-600);
+  --color-task-complete: var(--color-success-600);
+  --color-task-failed: var(--color-error-600);
+
+  /* --- Rewards --- */
+  --color-reward-item: var(--color-blue-400);
+  --color-reward-skill: var(--color-success-600);
+  --color-reward-offer: var(--color-secondary-600); /* Indigo-ish */
+  --color-reward-trader: var(--color-warning-600);
+  --color-reward-xp: var(--color-primary-600);
+
+  /* --- Map Markers --- */
+  --color-map-marker-self: var(--color-error-500);    
+  --color-map-marker-team: var(--color-warning-500);  
+  --color-map-extract-pmc: var(--color-success-500);  
+  --color-map-extract-scav: var(--color-warning-400); 
+  --color-map-extract-coop: var(--color-secondary-400);
 }
 
 /* Modern override: use OKLCH where supported for better perceptual consistency */
@@ -414,6 +441,11 @@ select:disabled,
   
   /* Set Nuxt UI primary token used by dark theme buttons */
   --ui-primary: var(--color-primary-500);
+
+  /* --- Dark Mode Semantic Overrides --- */
+  --color-task-available: var(--color-primary-500);
+  --color-task-complete: var(--color-success-500);
+  --color-task-failed: var(--color-error-500);
 }
 
 /* =========================================

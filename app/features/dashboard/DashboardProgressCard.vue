@@ -45,7 +45,7 @@
 </template>
 <script setup lang="ts">
   import { usePreferencesStore } from '@/stores/usePreferences';
-  export type ProgressCardColor = 'primary' | 'info' | 'success' | 'warning' | 'purple';
+  export type ProgressCardColor = 'primary' | 'info' | 'success' | 'warning' | 'purple' | 'kappa' | 'lightkeeper' | 'item';
   const props = defineProps<{
     icon: string;
     label: string;
@@ -105,6 +105,27 @@
       icon: 'text-purple-600 dark:text-purple-400',
       percentage: 'text-purple-600 dark:text-purple-400',
       bar: 'from-purple-500 to-purple-400 bg-gradient-to-r',
+    },
+    kappa: {
+      hover: 'hover:border-[color-mix(in_srgb,var(--color-entity-kappa),transparent_50%)]',
+      iconBg: 'bg-[color-mix(in_srgb,var(--color-entity-kappa),white_90%)] dark:bg-[color-mix(in_srgb,var(--color-entity-kappa),transparent_85%)]',
+      icon: 'text-[var(--color-entity-kappa)]',
+      percentage: 'text-[var(--color-entity-kappa)]',
+      bar: 'bg-[var(--color-entity-kappa)]',
+    },
+    lightkeeper: {
+      hover: 'hover:border-[color-mix(in_srgb,var(--color-entity-lightkeeper),transparent_50%)]',
+      iconBg: 'bg-[color-mix(in_srgb,var(--color-entity-lightkeeper),white_90%)] dark:bg-[color-mix(in_srgb,var(--color-entity-lightkeeper),transparent_85%)]',
+      icon: 'text-[var(--color-entity-lightkeeper)]',
+      percentage: 'text-[var(--color-entity-lightkeeper)]',
+      bar: 'bg-[var(--color-entity-lightkeeper)]',
+    },
+    item: {
+      hover: 'hover:border-[color-mix(in_srgb,var(--color-reward-item),transparent_50%)]',
+      iconBg: 'bg-[color-mix(in_srgb,var(--color-reward-item),white_90%)] dark:bg-[color-mix(in_srgb,var(--color-reward-item),transparent_85%)]',
+      icon: 'text-[var(--color-reward-item)]',
+      percentage: 'text-[var(--color-reward-item)]',
+      bar: 'bg-[var(--color-reward-item)]',
     },
   };
   const hoverBorderClass = computed(() => colorClasses[props.color].hover);

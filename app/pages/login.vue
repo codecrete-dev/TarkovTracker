@@ -24,7 +24,7 @@
             block
             size="xl"
             variant="solid"
-            class="flex h-12 w-full items-center justify-center border-none bg-[#9146FF] text-white transition-colors hover:bg-[#9146FF]/90"
+            class="flex h-12 w-full items-center justify-center border-none bg-[var(--color-entity-twitch)] text-white transition-colors hover:opacity-90"
             :loading="loading.twitch"
             :disabled="loading.twitch || loading.discord"
             @click="signInWithTwitch"
@@ -38,7 +38,7 @@
             block
             size="xl"
             variant="solid"
-            class="flex h-12 w-full items-center justify-center border-none bg-[#5865F2] text-white transition-colors hover:bg-[#5865F2]/90"
+            class="flex h-12 w-full items-center justify-center border-none bg-[var(--color-entity-discord)] text-white transition-colors hover:opacity-90"
             :loading="loading.discord"
             :disabled="loading.twitch || loading.discord"
             @click="signInWithDiscord"

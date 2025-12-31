@@ -66,7 +66,7 @@
             <!-- Quick Stats Grid -->
             <div class="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
               <div class="rounded-xl border border-gray-200 bg-gray-100 p-3 dark:border-surface-700/50 dark:bg-surface-800/50 md:p-4">
-                <div class="text-xl font-bold text-primary-600 dark:text-primary-400 md:text-3xl">
+                <div class="text-xl font-bold text-success-600 dark:text-success-400 md:text-3xl">
                   {{ dashboardStats.completedTasks.value }}
                 </div>
                 <div class="mt-1 text-[10px] tracking-wide uppercase text-gray-600 dark:text-surface-300 md:text-xs">
@@ -74,7 +74,7 @@
                 </div>
               </div>
               <div class="rounded-xl border border-gray-200 bg-gray-100 p-3 dark:border-surface-700/50 dark:bg-surface-800/50 md:p-4">
-                <div class="text-xl font-bold text-success-600 dark:text-success-400 md:text-3xl">
+                <div class="text-xl font-bold text-primary-600 dark:text-primary-400 md:text-3xl">
                   {{ dashboardStats.availableTasksCount.value }}
                 </div>
                 <div class="mt-1 text-[10px] tracking-wide uppercase text-gray-600 dark:text-surface-300 md:text-xs">
@@ -90,7 +90,7 @@
                 </div>
               </div>
               <div class="rounded-xl border border-gray-200 bg-gray-100 p-3 dark:border-surface-700/50 dark:bg-surface-800/50 md:p-4">
-                <div class="text-xl font-bold text-warning-600 dark:text-warning-400 md:text-3xl">
+                <div class="text-xl font-bold text-gray-900 dark:text-white md:text-3xl">
                   {{ currentLevel }}
                 </div>
                 <div class="mt-1 text-[10px] tracking-wide uppercase text-gray-600 dark:text-surface-300 md:text-xs">
@@ -124,7 +124,7 @@
           :completed="dashboardStats.completedObjectives.value"
           :total="dashboardStats.totalObjectives.value"
           :percentage="totalObjectivesPercentageNum"
-          color="info"
+          color="success"
           @click="router.push('/tasks')"
         />
         <DashboardProgressCard
@@ -133,7 +133,7 @@
           :completed="dashboardStats.completedTaskItems.value"
           :total="dashboardStats.totalTaskItems.value"
           :percentage="totalTaskItemsPercentageNum"
-          color="success"
+          color="item"
           @click="router.push('/neededitems')"
         />
         <DashboardProgressCard
@@ -142,7 +142,7 @@
           :completed="dashboardStats.completedKappaTasks.value"
           :total="dashboardStats.totalKappaTasks.value"
           :percentage="totalKappaTasksPercentageNum"
-          color="warning"
+          color="kappa"
           @click="router.push('/tasks')"
         />
         <DashboardProgressCard
@@ -151,7 +151,7 @@
           :completed="dashboardStats.completedLightkeeperTasks.value"
           :total="dashboardStats.totalLightkeeperTasks.value"
           :percentage="totalLightkeeperTasksPercentageNum"
-          color="purple"
+          color="lightkeeper"
           @click="router.push('/tasks')"
         />
       </div>
@@ -248,7 +248,7 @@
           :is-achieved="totalKappaTasksPercentageNum >= 100"
           achieved-icon="i-mdi-trophy"
           unachieved-icon="i-mdi-trophy-outline"
-          color="warning"
+          color="kappa"
         />
         <DashboardMilestoneCard
           :title="$t('page.dashboard.milestones.lightkeeper.title')"
@@ -256,7 +256,7 @@
           :is-achieved="totalLightkeeperTasksPercentageNum >= 100"
           achieved-icon="i-mdi-lighthouse"
           unachieved-icon="i-mdi-lighthouse-on"
-          color="purple"
+          color="lightkeeper"
         />
       </div>
     </div>
