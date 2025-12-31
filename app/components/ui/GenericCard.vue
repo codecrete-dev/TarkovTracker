@@ -1,6 +1,6 @@
 <template>
   <div
-    class="overflow-hidden rounded bg-white shadow-md dark:bg-surface-800"
+    class="overflow-hidden rounded bg-white shadow-md dark:bg-surface-800 border border-gray-200 dark:border-surface-700"
     :class="{ 'h-full': props.fillHeight, [props.cardClass]: true }"
   >
     <div class="m-0 h-full p-0">

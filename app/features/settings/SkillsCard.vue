@@ -100,15 +100,15 @@
             </div>
             <!-- Breakdown -->
             <div class="mb-2 flex gap-3 text-xs">
-              <div class="flex-1 text-gray-500 dark:text-surface-400">
+              <div class="flex-1 text-gray-600 dark:text-surface-300">
                 Quest:
-                <span class="font-medium text-gray-700 dark:text-surface-200">
+                <span class="font-medium text-gray-900 dark:text-surface-100">
                   {{ getQuestSkillLevel(skill.name) }}
                 </span>
               </div>
-              <div class="flex-1 text-gray-500 dark:text-surface-400">
+              <div class="flex-1 text-gray-600 dark:text-surface-300">
                 Offset:
-                <span class="font-medium text-gray-700 dark:text-surface-200">{{ getSkillOffset(skill.name) }}</span>
+                <span class="font-medium text-gray-900 dark:text-surface-100">{{ getSkillOffset(skill.name) }}</span>
               </div>
             </div>
             <!-- Skill Level Input -->

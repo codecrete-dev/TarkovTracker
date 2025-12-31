@@ -48,7 +48,7 @@
               v-model="localDisplayName"
               :maxlength="displayNameMaxLength"
               :placeholder="$t('settings.display_name.placeholder', 'Enter your display name...')"
-              class="flex-1"
+              class="flex-1 placeholder:text-gray-500 dark:placeholder:text-gray-400"
               @keyup.enter="saveDisplayName"
             />
             <UButton

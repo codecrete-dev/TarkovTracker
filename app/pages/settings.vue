@@ -137,7 +137,7 @@
               icon="i-mdi-shield-sword"
               block
               :ui="{
-                base: 'bg-pvp-900 hover:bg-pvp-800 active:bg-pvp-700 text-pvp-200 focus-visible:ring focus-visible:ring-pvp-500',
+                base: 'bg-pvp-200 dark:bg-pvp-900/80 hover:bg-pvp-300 dark:hover:bg-pvp-800 active:bg-pvp-400 dark:active:bg-pvp-700 text-pvp-900 dark:text-pvp-100 focus-visible:ring focus-visible:ring-pvp-500',
               }"
               @click="showResetPvPDialog = true"
             >
@@ -148,7 +148,7 @@
               icon="i-mdi-account-group"
               block
               :ui="{
-                base: 'bg-pve-900 hover:bg-pve-800 active:bg-pve-700 text-pve-200 focus-visible:ring focus-visible:ring-pve-500',
+                base: 'bg-pve-200 dark:bg-pve-900/80 hover:bg-pve-300 dark:hover:bg-pve-900 active:bg-pve-400 dark:active:bg-pve-700 text-pve-900 dark:text-pve-100 focus-visible:ring focus-visible:ring-pve-500',
               }"
               @click="showResetPvEDialog = true"
             >
@@ -383,9 +383,9 @@
           <div
             class="from-primary-500/10 via-primary-500/5 to-primary-500/10 absolute inset-0 z-10 flex items-center justify-center bg-black/15 bg-gradient-to-b text-center backdrop-blur-[2px]"
           >
-            <div class="rounded-lg bg-black/55 px-4 py-3 shadow-lg shadow-black/40">
-              <div class="text-xl font-semibold text-white">Work in Progress</div>
-              <div class="mt-1 text-sm text-slate-200">
+            <div class="rounded-lg bg-white/80 px-4 py-3 shadow-lg shadow-black/5 backdrop-blur-md dark:bg-black/55 dark:shadow-black/40">
+              <div class="text-xl font-semibold text-gray-900 dark:text-white">Work in Progress</div>
+              <div class="mt-1 text-sm text-gray-600 dark:text-slate-200">
                 API Tokens is not ready yet. Check back soon.
               </div>
             </div>
