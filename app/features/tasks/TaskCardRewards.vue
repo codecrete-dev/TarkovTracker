@@ -20,7 +20,7 @@
             class="h-4 w-4 !text-white"
           />
           <span
-            :class="standing.standing >= 0 ? '!text-emerald-500 font-bold' : '!text-red-400 font-bold'"
+            :class="standing.standing >= 0 ? '!text-green-400 font-bold' : '!text-red-400 font-bold'"
           >
             {{ standing.standing >= 0 ? '+' : '' }}{{ standing.standing.toFixed(2) }}
           </span>

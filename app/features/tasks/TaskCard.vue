@@ -97,7 +97,7 @@
                 size="xs"
                 color="gray"
                 variant="solid"
-                class="cursor-help text-xs !bg-gray-600 !text-white"
+                class="cursor-help text-xs !bg-gray-400 !text-white"
               >
                 {{ t('page.tasks.questcard.levelBadge', { count: task.minPlayerLevel }) }}
               </UBadge>
@@ -107,7 +107,7 @@
                 size="xs"
                 color="gray"
                 variant="solid"
-                class="inline-flex max-w-[10rem] items-center gap-1 text-xs !bg-gray-600 !text-white"
+                class="inline-flex max-w-[10rem] items-center gap-1 text-xs !bg-gray-400 !text-white"
               >
                 <UIcon
                   :name="task?.map?.name ? 'i-mdi-map-marker' : 'i-mdi-earth'"
@@ -124,7 +124,7 @@
               size="xs"
               color="gray"
               variant="solid"
-              class="inline-flex items-center gap-1 text-xs !bg-gray-600 !text-white"
+              class="inline-flex items-center gap-1 text-xs !bg-gray-400 !text-white"
             >
               <UIcon name="i-mdi-progress-check" aria-hidden="true" class="h-3 w-3" />
               {{ t('page.tasks.questcard.progress', objectiveProgress) }}
