@@ -6,7 +6,7 @@
         itemCardClasses,
         {
           'hover:ring-primary-400 hover:ring-opacity-50 cursor-pointer transition-all hover:ring-2 active:scale-[0.98]':
-            hasItem && isSingleItem && !selfCompletedNeed,
+            hasItem && !selfCompletedNeed,
         },
       ]"
       @click="handleCardClick"
@@ -15,10 +15,10 @@
         <!-- Tooltip wrapper for the clickable area (Image + Content) -->
         <AppTooltip
           :text="
-            isSingleItem && !selfCompletedNeed
+            !selfCompletedNeed
               ? currentCount >= neededCount
-                ? 'Click to uncollect'
-                : 'Click to collect'
+                ? isSingleItem ? 'Click to uncollect' : 'Click to mark as incomplete'
+                : isSingleItem ? 'Click to collect' : 'Click to mark as 100% complete'
               : ''
           "
           class="flex flex-1 flex-col"
@@ -117,6 +117,7 @@
               @increase="$emit('increaseCount')"
               @toggle="$emit('toggleCount')"
               @set-count="(count) => $emit('setCount', count)"
+              @click.stop
             />
           </template>
           <span v-else class="text-sm font-bold text-success-600 dark:text-success-400">
@@ -187,7 +188,7 @@
   // Simplified UI for single-quantity items
   const isSingleItem = computed(() => neededCount.value === 1);
   const handleCardClick = () => {
-    if (hasItem.value && isSingleItem.value && !selfCompletedNeed.value) {
+    if (hasItem.value && !selfCompletedNeed.value) {
       emit('toggleCount');
     }
   };

@@ -46,7 +46,7 @@
                 variant="ghost"
                 color="neutral"
                 class="m-0 p-0 px-1"
-                @click="isSingleItem ? $emit('toggleCount') : (smallDialog = true)"
+                @click="$emit('toggleCount')"
               >
                 <template v-if="isSingleItem">
                   <UIcon

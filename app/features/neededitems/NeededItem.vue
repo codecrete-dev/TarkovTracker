@@ -99,7 +99,7 @@
         tarkovStore.setObjectiveCount(props.need.id, neededCount.value);
         tarkovStore.setTaskObjectiveComplete(props.need.id);
       } else if (currentCount.value === neededCount.value) {
-        tarkovStore.setObjectiveCount(props.need.id, Math.max(0, neededCount.value - 1));
+        tarkovStore.setObjectiveCount(props.need.id, 0);
         tarkovStore.setTaskObjectiveUncomplete(props.need.id);
       } else {
         tarkovStore.setObjectiveCount(props.need.id, neededCount.value);
@@ -110,7 +110,7 @@
         tarkovStore.setHideoutPartCount(props.need.id, neededCount.value);
         tarkovStore.setHideoutPartComplete(props.need.id);
       } else if (currentCount.value === neededCount.value) {
-        tarkovStore.setHideoutPartCount(props.need.id, Math.max(0, neededCount.value - 1));
+        tarkovStore.setHideoutPartCount(props.need.id, 0);
         tarkovStore.setHideoutPartUncomplete(props.need.id);
       } else {
         tarkovStore.setHideoutPartCount(props.need.id, neededCount.value);
