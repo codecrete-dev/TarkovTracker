@@ -34,11 +34,8 @@
     <slot />
   </div>
 </template>
-
 <script setup lang="ts">
   import { computed } from 'vue';
-
-
   interface Props {
     src?: string;
     alt?: string;
@@ -49,7 +46,6 @@
     isVisible?: boolean;
     noBorder?: boolean;
   }
-
   const props = withDefaults(defineProps<Props>(), {
     src: '',
     alt: '',
@@ -60,11 +56,9 @@
     isVisible: true,
     noBorder: false,
   });
-
   const formattedSrc = computed(() => {
     return props.src;
   });
-
   const containerClasses = computed(() => {
     const classes = ['block', 'relative'];
     if (props.fill) {
@@ -83,7 +77,6 @@
     }
     return classes;
   });
-
   const backgroundClassMap = {
     violet: 'bg-[var(--color-stash-violet)] overlay-stash-bg',
     grey: 'bg-[var(--color-stash-grey)] overlay-stash-bg',
@@ -95,24 +88,18 @@
     blue: 'bg-[var(--color-stash-blue)] overlay-stash-bg',
     default: 'bg-[var(--color-stash-default)] overlay-stash-bg',
   } as const;
-
   type BackgroundKey = keyof typeof backgroundClassMap;
-
   const resolvedBackgroundClass = computed(() => {
     const bgColor = (props.backgroundColor || 'default').toLowerCase() as BackgroundKey;
     return backgroundClassMap[bgColor] ?? backgroundClassMap.default;
   });
-
   const imageElementClasses = ['rounded'];
-
   const imageTileClasses = computed(() => {
     const classes = [...imageElementClasses];
     // Border logic is handled by bg-stash-cell, but we keep this for consistency if we add more
     return classes;
   });
-
   const handleImgError = () => {
     console.warn(`[GameItemImage] Failed to load image: ${props.src}`);
   };
-
 </script>

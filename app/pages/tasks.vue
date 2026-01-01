@@ -332,7 +332,6 @@
    */
   const displayCount = ref(15);
   const tasksSentinel = ref<HTMLElement | null>(null);
-
   const paginatedTasks = computed(() => {
     return filteredTasks.value.slice(0, displayCount.value);
   });
@@ -373,16 +372,13 @@
     const elementMiddle = rect.top + rect.height / 2;
     return Math.abs(viewportMiddle - elementMiddle) < threshold;
   };
-
   const scrollToTask = async (taskId: string) => {
     // Wait for the task to appear in filteredTasks (filters are async)
     const maxWaitTime = 2000;
     const checkInterval = 50;
     let elapsed = 0;
-
     while (elapsed < maxWaitTime) {
       const taskIndex = filteredTasks.value.findIndex((t) => t.id === taskId);
-
       if (taskIndex >= 0) {
         // Task found. If it's beyond the current display count, expand the list.
         if (taskIndex >= displayCount.value) {
@@ -390,15 +386,12 @@
           const requiredCount = Math.ceil((taskIndex + 1) / 15) * 15;
           displayCount.value = requiredCount;
         }
-
         // Wait for DOM update
         await nextTick();
-
         const taskElement = document.getElementById(`task-${taskId}`);
         if (taskElement) {
           // 1. Initial Scroll: Get close immediately with smooth scroll
           taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
           // Add highlight immediately
           taskElement.classList.add(
             'ring-2',
@@ -406,17 +399,14 @@
             'ring-offset-2',
             'ring-offset-surface-900'
           );
-
           // 2. Stabilization Delay: Wait for layout to settle (e.g. dynamic images/heights)
           // We use a generous delay to ensure animations/layout shifts are done
           await new Promise((resolve) => setTimeout(resolve, 500));
-
           // 3. Correction Check: If layout shifted, centering might be off.
           if (!isElementCentered(taskElement)) {
              // Adaptive Correction: Seamlessly retarget the scroll
              taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
-
           // Cleanup highlight after animation
           setTimeout(() => {
             taskElement.classList.remove(
@@ -431,7 +421,6 @@
         }
         return;
       }
-
       // Wait and check again
       await new Promise((resolve) => setTimeout(resolve, checkInterval));
       elapsed += checkInterval;
@@ -440,14 +429,11 @@
   const handleTaskQueryParam = () => {
     const taskId = route.query.task as string;
     if (!taskId || tasksLoading.value) return;
-
     const taskInMetadata = tasks.value.find((t) => t.id === taskId);
     if (!taskInMetadata) return;
-
     // IF the task is already visible in the current filtered view, we don't need to change filters
     // This allows clicking a requirement link while in "ALL" view without switching to "LOCKED"
     const isAlreadyVisible = filteredTasks.value.some((t) => t.id === taskId);
-
     if (!isAlreadyVisible) {
       // Enable the appropriate type filter based on task properties
       const isKappaRequired = taskInMetadata.kappaRequired === true;
@@ -456,9 +442,7 @@
         lightkeeperTraderId.value !== undefined
           ? taskInMetadata.trader?.id === lightkeeperTraderId.value
           : taskInMetadata.trader?.name?.toLowerCase() === 'lightkeeper';
-
       const isNonSpecial = !isKappaRequired && !isLightkeeperRequired && !isLightkeeperTraderTask;
-
       // Ensure the task's type filter is enabled so task will appear
       if (
         (isLightkeeperRequired || isLightkeeperTraderTask) &&
@@ -472,19 +456,16 @@
       if (isNonSpecial && !preferencesStore.getShowNonSpecialTasks) {
         preferencesStore.setShowNonSpecialTasks(true);
       }
-
       // Determine task status and set appropriate filter
       const status = getTaskStatus(taskId);
       if (preferencesStore.getTaskSecondaryView !== status) {
         preferencesStore.setTaskSecondaryView(status);
       }
-
       // Set primary view to 'all' to ensure the task is visible regardless of map/trader
       if (preferencesStore.getTaskPrimaryView !== 'all') {
         preferencesStore.setTaskPrimaryView('all');
       }
     }
-
     // Scroll to the task after filters are applied (if needed), then clear query param
     scrollToTask(taskId).then(() => {
       // Clear the query param to avoid re-triggering on filter changes

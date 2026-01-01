@@ -107,15 +107,16 @@
                       <span class="text-content-secondary">Username:</span>
                       <span class="ml-1 font-mono font-medium">{{ maskedUsername }}</span>
                     </span>
-                    <UButton
-                      v-tooltip="showUsername ? $t('common.hide') : $t('common.show')"
-                      size="xs"
-                      variant="ghost"
-                      :icon="showUsername ? 'i-mdi-eye-off' : 'i-mdi-eye'"
-                      color="neutral"
-                      class="ml-1"
-                      @click="showUsername = !showUsername"
-                    />
+                    <span v-tooltip="showUsername ? $t('common.hide') : $t('common.show')">
+                      <UButton
+                        size="xs"
+                        variant="ghost"
+                        :icon="showUsername ? 'i-mdi-eye-off' : 'i-mdi-eye'"
+                        color="neutral"
+                        class="ml-1"
+                        @click="showUsername = !showUsername"
+                      />
+                    </span>
                   </div>
                   <div class="mb-2 flex items-center">
                     <UIcon name="i-mdi-email" class="mr-2 h-4.5 w-4.5 text-content-tertiary" />
@@ -123,15 +124,16 @@
                       <span class="text-content-secondary">Email:</span>
                       <span class="ml-1 font-mono font-medium">{{ maskedEmail }}</span>
                     </span>
-                    <UButton
-                      v-tooltip="showEmail ? $t('common.hide') : $t('common.show')"
-                      size="xs"
-                      variant="ghost"
-                      :icon="showEmail ? 'i-mdi-eye-off' : 'i-mdi-eye'"
-                      color="neutral"
-                      class="ml-1"
-                      @click="showEmail = !showEmail"
-                    />
+                    <span v-tooltip="showEmail ? $t('common.hide') : $t('common.show')">
+                      <UButton
+                        size="xs"
+                        variant="ghost"
+                        :icon="showEmail ? 'i-mdi-eye-off' : 'i-mdi-eye'"
+                        color="neutral"
+                        class="ml-1"
+                        @click="showEmail = !showEmail"
+                      />
+                    </span>
                   </div>
                 </div>
                 <div>
@@ -161,24 +163,26 @@
                 <UIcon name="i-mdi-identifier" class="mr-2 h-4.5 w-4.5 text-content-tertiary" />
                 <span class="mr-2 text-sm text-content-secondary">Account ID:</span>
                 <code class="rounded bg-surface-200 px-2 py-1 text-xs dark:bg-surface-700">{{ maskedAccountId }}</code>
-                <UButton
-                  v-tooltip="showAccountId ? $t('common.hide') : $t('common.show')"
-                  size="xs"
-                  variant="ghost"
-                  :icon="showAccountId ? 'i-mdi-eye-off' : 'i-mdi-eye'"
-                  color="neutral"
-                  class="ml-1"
-                  @click="showAccountId = !showAccountId"
-                />
-                <UButton
-                  v-tooltip="accountIdCopied ? $t('common.copied') : $t('settings.account.copy_account_id')"
-                  size="xs"
-                  variant="ghost"
-                  :icon="accountIdCopied ? 'i-mdi-check' : 'i-mdi-content-copy'"
-                  :color="accountIdCopied ? 'success' : 'primary'"
-                  class="ml-1"
-                  @click="copyAccountId"
-                />
+                <span v-tooltip="showAccountId ? $t('common.hide') : $t('common.show')">
+                  <UButton
+                    size="xs"
+                    variant="ghost"
+                    :icon="showAccountId ? 'i-mdi-eye-off' : 'i-mdi-eye'"
+                    color="neutral"
+                    class="ml-1"
+                    @click="showAccountId = !showAccountId"
+                  />
+                </span>
+                <span v-tooltip="accountIdCopied ? $t('common.copied') : $t('settings.account.copy_account_id')">
+                  <UButton
+                    size="xs"
+                    variant="ghost"
+                    :icon="accountIdCopied ? 'i-mdi-check' : 'i-mdi-content-copy'"
+                    :color="accountIdCopied ? 'success' : 'primary'"
+                    class="ml-1"
+                    @click="copyAccountId"
+                  />
+                </span>
               </div>
             </div>
             <!-- Deletion Warning -->

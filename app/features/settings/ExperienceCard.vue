@@ -92,14 +92,12 @@
              <div class="mb-3 text-sm font-semibold text-content-primary">
               {{ $t('settings.experience.breakdown', 'XP Breakdown') }}
             </div>
-            
             <div class="flex flex-col gap-1 font-mono text-sm">
               <!-- Quest XP -->
               <div class="flex justify-between items-center text-content-secondary">
                 <span>Quest XP</span>
                 <span>{{ formatNumber(xpCalculation.calculatedQuestXP.value) }}</span>
               </div>
-              
               <!-- Manual Offset -->
               <div class="flex justify-between items-center text-content-secondary">
                 <span class="flex items-center gap-2">
@@ -110,10 +108,8 @@
                   {{ formatNumber(tarkovStore.getXpOffset()) }}
                 </span>
               </div>
-
               <!-- Divider -->
               <div class="border-b border-base my-2"></div>
-
               <!-- Total -->
               <div class="flex justify-between items-center font-bold text-lg py-0.5">
                 <span class="text-content-primary">Total XP</span>
@@ -123,13 +119,11 @@
               </div>
             </div>
           </div>
-
           <!-- Right: Manual Input Actions -->
           <div class="rounded-lg border border-base bg-surface-elevated p-4 dark:border-primary-700/30">
             <label class="mb-3 block text-sm font-semibold text-content-primary">
               {{ $t('settings.experience.set_total_xp', 'Set Total XP') }}
             </label>
-            
             <div class="flex flex-col gap-1">
               <!-- Description (Matches Quest XP row) -->
               <div class="flex items-center text-xs text-content-tertiary min-h-[20px]">
@@ -137,7 +131,6 @@
                   {{ $t('settings.experience.manual_hint', 'Enter your actual total XP to adjust the offset automatically.') }}
                 </p>
               </div>
-
               <!-- Reset Button (Matches Manual Offset row) -->
               <div class="flex items-center min-h-[20px]">
                 <UButton
@@ -152,10 +145,8 @@
                   {{ $t('settings.experience.reset_offset', 'Reset XP Offset') }}
                 </UButton>
               </div>
-
               <!-- Invisible Divider (Matches visible divider) -->
               <div class="border-b border-transparent my-2"></div>
-
               <!-- Input (Matches Total XP row) -->
               <div class="flex items-center gap-2 py-0.5">
                 <UInput

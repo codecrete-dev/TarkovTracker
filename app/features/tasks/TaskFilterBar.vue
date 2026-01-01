@@ -70,7 +70,6 @@
           </template>
           <span class="text-xs sm:text-sm">ALL</span>
         </FilterPill>
-        
         <FilterPill
           :active="secondaryView === 'available'"
           :label="t('page.tasks.secondaryviews.available').toUpperCase()"
@@ -83,7 +82,6 @@
               <UIcon name="i-mdi-clipboard-text" class="hidden h-4 w-4 sm:mr-1 sm:block" />
             </template>
         </FilterPill>
-
         <FilterPill
           :active="secondaryView === 'locked'"
           :label="t('page.tasks.secondaryviews.locked').toUpperCase()"
@@ -96,7 +94,6 @@
               <UIcon name="i-mdi-lock" class="hidden h-4 w-4 sm:mr-1 sm:block" />
             </template>
         </FilterPill>
-
         <FilterPill
           :active="secondaryView === 'completed'"
           :label="t('page.tasks.secondaryviews.completed').toUpperCase()"
@@ -109,7 +106,6 @@
               <UIcon name="i-mdi-check-circle" class="hidden h-4 w-4 sm:mr-1 sm:block" />
             </template>
         </FilterPill>
-        
         <FilterPill
           :active="secondaryView === 'failed'"
           :label="t('page.tasks.secondaryviews.failed', 'FAILED').toUpperCase()"
@@ -138,7 +134,6 @@
              <UBadge size="xs" color="primary" variant="solid" class="ml-1">YOU</UBadge>
           </template>
         </FilterPill>
-
         <FilterPill
           v-for="teamId in visibleTeammates"
           :key="teamId"
@@ -148,7 +143,6 @@
           label-class="text-xs sm:text-sm"
           @click="onUserViewSelect({ label: getTeammateDisplayName(teamId), value: teamId })"
         />
-
         <FilterPill
           v-if="visibleTeammates.length > 0"
           :active="preferencesStore.getTaskUserView === 'all'"

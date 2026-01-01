@@ -144,12 +144,10 @@
   const isParentTaskLocked = computed(() => {
     const taskId = parentTaskId.value;
     if (!taskId) return false;
-    
     const isUnlocked = progressStore.unlockedTasks[taskId]?.self === true;
     const isComplete = tarkovStore.isTaskComplete(taskId);
     const isFailed = tarkovStore.isTaskFailed(taskId);
     const isInvalid = progressStore.invalidTasks[taskId]?.self === true;
-
     // Task is locked if it's NOT unlocked, OR if it's already complete, failed, or blocked
     return !isUnlocked || isComplete || isFailed || isInvalid;
   });

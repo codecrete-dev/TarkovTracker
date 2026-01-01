@@ -96,9 +96,6 @@
       </span>
       <!-- Chain info & Dropdown toggle -->
       <div class="ml-auto flex items-center gap-4">
-
-
-
       </div>
     </div>
     <div
@@ -120,43 +117,45 @@
               {{ t('page.tasks.questcard.rewardItems', 'Items') }}:
             </div>
             <div class="flex flex-wrap gap-2">
-                <component
-                  :is="reward.item?.id ? 'a' : 'span'"
+                <span
                   v-for="(reward, index) in itemRewards"
                   :key="`item-${reward.item?.id || index}`"
                   v-tooltip="getItemTooltip(reward.item)"
-                  :href="reward.item?.id ? `https://tarkov.dev/item/${reward.item?.id}` : undefined"
-                  :target="reward.item?.id ? '_blank' : undefined"
-                  :rel="reward.item?.id ? 'noopener noreferrer' : undefined"
-                  :class="rewardItemCardClass"
-                  @contextmenu.prevent.stop="$emit('item-context-menu', $event, reward.item)"
-                  @click.stop
                 >
-                  <GameItemImage
-                    v-if="reward.item?.iconLink"
-                    :src="reward.item?.iconLink"
-                    :alt="reward.item?.name || reward.item?.shortName || 'Item'"
-                    :background-color="reward.item?.backgroundColor"
-                    size="small"
-                    class="mx-auto"
-                  />
-                  <div class="flex flex-col items-center gap-0.5">
-                    <span
-                      class="max-w-[72px] truncate text-center text-xs text-content-primary"
-                    >
-                      {{ reward.item?.shortName || reward.item?.name || '' }}
-                    </span>
-                    <span
-                      v-if="reward.count > 1"
-                      class="text-xs font-medium text-content-tertiary"
-                    >
-                      x{{ formatNumber(reward.count) }}
-                    </span>
-                  </div>
-                </component>
+                  <component
+                    :is="reward.item?.id ? 'a' : 'span'"
+                    :href="reward.item?.id ? `https://tarkov.dev/item/${reward.item?.id}` : undefined"
+                    :target="reward.item?.id ? '_blank' : undefined"
+                    :rel="reward.item?.id ? 'noopener noreferrer' : undefined"
+                    :class="rewardItemCardClass"
+                    @contextmenu.prevent.stop="$emit('item-context-menu', $event, reward.item)"
+                    @click.stop
+                  >
+                    <GameItemImage
+                      v-if="reward.item?.iconLink"
+                      :src="reward.item?.iconLink"
+                      :alt="reward.item?.name || reward.item?.shortName || 'Item'"
+                      :background-color="reward.item?.backgroundColor"
+                      size="small"
+                      class="mx-auto"
+                    />
+                    <div class="flex flex-col items-center gap-0.5">
+                      <span
+                        class="max-w-[72px] truncate text-center text-xs text-content-primary"
+                      >
+                        {{ reward.item?.shortName || reward.item?.name || '' }}
+                      </span>
+                      <span
+                        v-if="reward.count > 1"
+                        class="text-xs font-medium text-content-tertiary"
+                      >
+                        x{{ formatNumber(reward.count) }}
+                      </span>
+                    </div>
+                  </component>
+                </span>
             </div>
           </div>
-
           <!-- Offer Unlocks (Right) -->
           <div
             v-if="offerUnlockRewards.length > 0"
@@ -166,47 +165,47 @@
               {{ t('page.tasks.questcard.unlocksPurchase', 'Unlocks purchase') }}:
             </div>
             <div class="flex flex-wrap justify-end gap-2 text-left">
-                <component
-                  :is="offer.item?.id ? 'a' : 'span'"
+                <span
                   v-for="offer in offerUnlockRewards"
                   :key="`offer-${offer.id}`"
                   v-tooltip="getItemTooltip(offer.item)"
-                  :href="offer.item?.id ? `https://tarkov.dev/item/${offer.item?.id}` : undefined"
-                  :target="offer.item?.id ? '_blank' : undefined"
-                  :rel="offer.item?.id ? 'noopener noreferrer' : undefined"
-                  :class="rewardItemCardClass"
-                  @contextmenu.prevent.stop="$emit('item-context-menu', $event, offer.item)"
-                  @click.stop
                 >
-                  <GameItemImage
-                    v-if="offer.item?.iconLink"
-                    :src="offer.item?.iconLink"
-                    :alt="offer.item?.name || offer.item?.shortName || 'Item'"
-                    :background-color="offer.item?.backgroundColor"
-                    size="small"
-                    class="mx-auto"
-                  />
-                  <div class="flex flex-col items-center gap-0.5">
-                    <span
-                      class="max-w-[72px] truncate text-center text-xs text-content-primary"
-                    >
-                      {{ offer.item?.shortName || offer.item?.name || '' }}
-                    </span>
-                    <span class="text-xs text-content-tertiary">
-                      {{ offer.trader.name }} LL{{ offer.level }}
-                    </span>
-                  </div>
-                </component>
+                  <component
+                    :is="offer.item?.id ? 'a' : 'span'"
+                    :href="offer.item?.id ? `https://tarkov.dev/item/${offer.item?.id}` : undefined"
+                    :target="offer.item?.id ? '_blank' : undefined"
+                    :rel="offer.item?.id ? 'noopener noreferrer' : undefined"
+                    :class="rewardItemCardClass"
+                    @contextmenu.prevent.stop="$emit('item-context-menu', $event, offer.item)"
+                    @click.stop
+                  >
+                    <GameItemImage
+                      v-if="offer.item?.iconLink"
+                      :src="offer.item?.iconLink"
+                      :alt="offer.item?.name || offer.item?.shortName || 'Item'"
+                      :background-color="offer.item?.backgroundColor"
+                      size="small"
+                      class="mx-auto"
+                    />
+                    <div class="flex flex-col items-center gap-0.5">
+                      <span
+                        class="max-w-[72px] truncate text-center text-xs text-content-primary"
+                      >
+                        {{ offer.item?.shortName || offer.item?.name || '' }}
+                      </span>
+                      <span class="text-xs text-content-tertiary">
+                        {{ offer.trader.name }} LL{{ offer.level }}
+                      </span>
+                    </div>
+                  </component>
+                </span>
             </div>
           </div>
         </div>
-
-
       </div>
     </div>
   </div>
 </template>
-
 <script setup lang="ts">
   import { computed, ref } from 'vue';
   import { useI18n } from 'vue-i18n';
@@ -214,33 +213,27 @@
   import { usePreferencesStore } from '@/stores/usePreferences';
   import type { Task } from '@/types/tarkov';
   import { useLocaleNumberFormatter } from '@/utils/formatters';
-
   interface TraderStanding {
     trader: { id: string; name: string };
     standing: number;
   }
-
   interface SkillReward {
     name: string;
     level: number;
   }
-
   interface TraderUnlock {
     name: string;
   }
-
   interface ItemReward {
     item?: { id: string; name?: string; shortName?: string; iconLink?: string; backgroundColor?: string };
     count: number;
   }
-
   interface OfferUnlock {
     id: string;
     item?: { id: string; name?: string; shortName?: string; iconLink?: string; backgroundColor?: string };
     trader: { name: string };
     level: number;
   }
-
   const props = defineProps<{
     taskId: string;
     experience: number;
@@ -254,37 +247,29 @@
     unlocksNextCount: number;
     impactCount: number;
   }>();
-
   defineEmits<{
     'item-context-menu': [event: MouseEvent, item: ItemReward['item']];
   }>();
-
   const { t } = useI18n({ useScope: 'global' });
   const formatNumber = useLocaleNumberFormatter();
   const preferencesStore = usePreferencesStore();
-
   const displayedTraderUnlock = computed(() => {
     if (Array.isArray(props.traderUnlockReward)) {
       return props.traderUnlockReward.length > 0 ? props.traderUnlockReward[0] : null;
     }
     return props.traderUnlockReward || null;
   });
-
   const rewardLinkClass =
     'text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 inline-flex items-center gap-1.5 text-xs';
-
   const rewardItemCardClass = [
     'group relative flex flex-col items-center gap-1 rounded-lg border border-gray-200 bg-white p-2 shadow-sm dark:border-white/10 dark:bg-white/5 dark:shadow-none cursor-pointer',
     'transition-colors hover:shadow-md dark:hover:bg-white/10 focus:outline-none',
     'focus-visible:ring-primary-500 focus-visible:ring-offset-surface-900',
     'focus-visible:ring-2 focus-visible:ring-offset-2',
   ].join(' ');
-
   const showDetails = ref(false);
   const detailsId = computed(() => `task-${props.taskId}-details`);
-
   const remainingCount = computed(() => Math.max(0, props.impactCount - props.unlocksNextCount));
-
   const hasRewardsSummary = computed(() => {
     return (
       (preferencesStore.getShowExperienceRewards && props.experience > 0) ||
@@ -293,21 +278,17 @@
       displayedTraderUnlock.value != null
     );
   });
-
   const hasDetailedRewards = computed(() => {
     return props.itemRewards.length > 0 || props.offerUnlockRewards.length > 0;
   });
-
   const hasExpandableDetails = computed(() => {
     return hasDetailedRewards.value;
   });
-
   const toggleDetailsLabel = computed(() => {
     return showDetails.value
       ? t('page.tasks.questcard.hideDetails', 'Hide details')
       : t('page.tasks.questcard.showDetails', 'Show details');
   });
-
   const itemRewardsSummaryTooltip = computed(() => {
     const items = props.itemRewards;
     if (items.length === 0) return '';
@@ -323,7 +304,6 @@
       ? `${names}${t('page.tasks.questcard.andMore', { count }, `, +${count} more`)}`
       : names;
   });
-
   const offerUnlockSummaryTooltip = computed(() => {
     const offers = props.offerUnlockRewards;
     if (offers.length === 0) return '';
@@ -339,17 +319,14 @@
       ? `${names}${t('page.tasks.questcard.andMore', { count }, `, +${count} more`)}`
       : names;
   });
-
   const getItemTooltip = (item?: { shortName?: string; name?: string }) => {
     const name = item?.shortName || item?.name || t('page.tasks.questcard.item', 'Item');
     return t('page.tasks.questcard.openItemOnTarkovDev', { name }, `Open ${name} on tarkov.dev`);
   };
-
   const toggleDetails = () => {
     if (!hasExpandableDetails.value) return;
     showDetails.value = !showDetails.value;
   };
-
   const onAreaClick = (event: MouseEvent) => {
     if (!hasExpandableDetails.value) return;
     const selection = window.getSelection();

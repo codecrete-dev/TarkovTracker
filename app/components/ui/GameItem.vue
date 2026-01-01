@@ -54,7 +54,6 @@
             </a>
         </div>
       </GameItemImage>
-
       <!-- Counter controls for multi-item objectives -->
       <div v-if="showCounter" class="mr-2" @click.stop>
         <ItemCountControls
@@ -156,7 +155,6 @@
   import ContextMenu from './ContextMenu.vue';
   import ContextMenuItem from './ContextMenuItem.vue';
   import GameItemImage from './GameItemImage.vue';
-
   const ItemCountControls = defineAsyncComponent(
     () => import('@/features/neededitems/ItemCountControls.vue')
   );
@@ -230,7 +228,6 @@
     toggle: [];
   }>();
   const formatNumber = useLocaleNumberFormatter();
-  
   const contextMenu = ref<InstanceType<typeof ContextMenu>>();
   const computedImageSrc = computed(() => {
     if (props.src) return props.src;
@@ -241,14 +238,12 @@
     if (props.itemId) return `https://assets.tarkov.dev/${props.itemId}-icon.webp`;
     return '';
   });
-  
   const containerClasses = computed(() => {
     if (props.simpleMode) {
       return 'block';
     }
     return '';
   });
-
   const resolvedBackgroundColor = computed(() => {
     return (
       props.backgroundColor ||
@@ -256,14 +251,12 @@
       'default'
     )
   });
-
   const overlayIconClasses = computed(() => {
     if (props.size === 'xs') {
       return 'h-3.5 w-3.5';
     }
     return 'h-5 w-5';
   });
-  
   // Action methods
   const openTarkovDevLink = () => {
     if (props.devLink) {

@@ -8,12 +8,12 @@
       />
       <span class="text-sm text-gray-900 dark:text-gray-200">{{ label }}</span>
     </div>
-    <UIcon
-      v-if="tooltip"
-      v-tooltip="tooltip"
-      name="i-mdi-help-circle-outline"
-      class="h-5 w-5 text-gray-400 dark:text-gray-500"
-    />
+    <span v-if="tooltip" v-tooltip="tooltip" class="flex items-center">
+      <UIcon
+        name="i-mdi-help-circle-outline"
+        class="h-5 w-5 text-gray-400 dark:text-gray-500"
+      />
+    </span>
   </div>
 </template>
 <script setup lang="ts">

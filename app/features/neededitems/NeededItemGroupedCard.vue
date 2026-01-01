@@ -63,16 +63,17 @@
         </div>
         <div class="flex gap-3">
           <div v-if="groupedItem.taskFir > 0" class="flex items-center gap-1">
-              <UIcon
-                v-tooltip="'Found in Raid required'"
-                name="i-mdi-checkbox-marked-circle-outline"
-                class="h-3 w-3"
-                :class="
-                  groupedItem.taskFirCurrent >= groupedItem.taskFir
-                    ? 'text-success-400 dark:text-success-400'
-                    : 'text-content-primary'
-                "
-              />
+              <span v-tooltip="'Found in Raid required'" class="inline-flex">
+                <UIcon
+                  name="i-mdi-checkbox-marked-circle-outline"
+                  class="h-3 w-3"
+                  :class="
+                    groupedItem.taskFirCurrent >= groupedItem.taskFir
+                      ? 'text-success-400 dark:text-success-400'
+                      : 'text-content-primary'
+                  "
+                />
+              </span>
             <span
               class="font-semibold"
               :class="
@@ -121,16 +122,17 @@
         </div>
         <div class="flex gap-3">
           <div v-if="groupedItem.hideoutFir > 0" class="flex items-center gap-1">
-              <UIcon
-                v-tooltip="'Found in Raid required'"
-                name="i-mdi-checkbox-marked-circle-outline"
-                class="h-3 w-3"
-                :class="
-                  groupedItem.hideoutFirCurrent >= groupedItem.hideoutFir
-                    ? 'text-success-400 dark:text-success-400'
-                    : 'text-content-primary'
-                "
-              />
+              <span v-tooltip="'Found in Raid required'" class="inline-flex">
+                <UIcon
+                  name="i-mdi-checkbox-marked-circle-outline"
+                  class="h-3 w-3"
+                  :class="
+                    groupedItem.hideoutFirCurrent >= groupedItem.hideoutFir
+                      ? 'text-success-400 dark:text-success-400'
+                      : 'text-content-primary'
+                  "
+                />
+              </span>
             <span
               class="font-semibold"
               :class="

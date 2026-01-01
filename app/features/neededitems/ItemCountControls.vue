@@ -6,8 +6,8 @@
     >
       <!-- Decrease button -->
       <button
-        type="button"
         v-tooltip="t('page.neededitems.decrease_count')"
+        type="button"
         :disabled="currentCount <= 0"
         class="cursor-pointer focus-visible:ring-primary-500 focus-visible:ring-offset-surface-900 flex h-7 w-7 items-center justify-center rounded-l-md text-gray-500 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 active:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-white/10 dark:active:bg-white/15"
         :aria-label="t('page.neededitems.decrease_count')"
@@ -44,8 +44,8 @@
       </div>
       <!-- Increase button -->
       <button
-        type="button"
         v-tooltip="t('page.neededitems.increase_count')"
+        type="button"
         :disabled="currentCount >= neededCount"
         class="cursor-pointer focus-visible:ring-primary-500 focus-visible:ring-offset-surface-900 flex h-7 w-7 items-center justify-center rounded-r-md text-gray-500 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 active:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-white/10 dark:active:bg-white/15"
         :aria-label="t('page.neededitems.increase_count')"
@@ -57,10 +57,10 @@
     <!-- Mark as 100% complete button -->
     <!-- Mark as 100% complete button -->
     <button
-      type="button"
       v-tooltip="
         currentCount >= neededCount ? t('page.neededitems.mark_as_incomplete') : t('page.neededitems.mark_as_complete_100')
       "
+      type="button"
       class="cursor-pointer focus-visible:ring-primary-500 focus-visible:ring-offset-surface-900 flex h-7 w-7 items-center justify-center rounded-md border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
       :aria-label="currentCount >= neededCount ? t('page.neededitems.mark_as_incomplete') : t('page.neededitems.mark_as_complete_100')"
       :class="

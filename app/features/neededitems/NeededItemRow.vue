@@ -158,7 +158,7 @@
                       </template>
                       <template v-else>
                         <CollectedToggleButton
-                          v-tooltip="isCollected ? t('page.neededitems.collected') : t('page.neededitems.mark_as_collected')"
+                          :tooltip="isCollected ? t('page.neededitems.collected') : t('page.neededitems.mark_as_collected')"
                           :is-collected="isCollected"
                           class="flex h-12 w-12 items-center justify-center rounded-lg border transition-colors"
                           :class="
@@ -226,7 +226,7 @@
                 </template>
                 <template v-else>
                   <CollectedToggleButton
-                    v-tooltip="isCollected ? t('page.neededitems.collected') : t('page.neededitems.mark_as_collected')"
+                    :tooltip="isCollected ? t('page.neededitems.collected') : t('page.neededitems.mark_as_collected')"
                     :is-collected="isCollected"
                     class="flex h-8 w-8 items-center justify-center rounded-lg border transition-colors"
                     :class="

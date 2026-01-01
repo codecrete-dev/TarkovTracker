@@ -51,7 +51,6 @@
           </div>
         </div>
       </div>
-
       <!-- Item Name -->
       <div
         class="line-clamp-2 w-full px-1 text-center text-[10px] leading-tight font-medium text-content-primary sm:text-xs"

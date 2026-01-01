@@ -20,7 +20,6 @@
             {{ station.name }}
           </span>
         </div>
-
         <div
           v-if="!upgradeDisabled"
           class="flex shrink-0 items-center rounded-md border px-2 py-1 shadow-sm"

@@ -84,31 +84,25 @@ const craftableTitle = computed(() => {
     if (!isCraftable.value) {
       return '';
     }
-
     // Sort to show available options first
     const sorted = [...craftSourceStatuses.value].sort((a, b) => {
       if (a.isAvailable !== b.isAvailable) return a.isAvailable ? -1 : 1;
       return a.stationLevel - b.stationLevel;
     });
-
     const lines = sorted.slice(0, 3).map((source) => {
       if (source.isAvailable) {
         return `${source.stationName} level ${source.stationLevel}`;
       }
       return `${source.stationName} level ${source.stationLevel} (current: ${source.currentLevel})`;
     });
-
     const remainingCount = sorted.length - lines.length;
     if (remainingCount > 0) {
       lines.push(`+${remainingCount} more`);
     }
-
     const list = lines.join(', ');
-
     if (isCraftableAvailable.value) {
       return `Craftable at ${list}`;
     }
-
     return `Requires ${list}`;
   });
   const goToCraftStation = async () => {

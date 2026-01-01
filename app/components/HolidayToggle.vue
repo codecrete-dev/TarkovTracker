@@ -1,8 +1,8 @@
 <template>
   <div class="fixed right-4 bottom-4 z-[200]">
       <button
-        type="button"
         v-tooltip.left="enabled ? $t('holiday.disable') : $t('holiday.enable')"
+        type="button"
         class="group flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all duration-300 hover:scale-110"
         :class="
           enabled

@@ -50,10 +50,10 @@
   import { computed, defineAsyncComponent, nextTick, watch } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { useRoute, useRouter } from 'vue-router';
+  import FilterPill from '@/components/FilterPill.vue';
   import { useHideoutFiltering } from '@/composables/useHideoutFiltering';
   import { useMetadataStore } from '@/stores/useMetadata';
   import { useProgressStore } from '@/stores/useProgress';
-  import FilterPill from '@/components/FilterPill.vue';
   // Page metadata
   useSeoMeta({
     title: 'Hideout',

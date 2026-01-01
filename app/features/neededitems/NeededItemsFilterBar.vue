@@ -90,29 +90,32 @@
                   <UIcon name="i-mdi-checkbox-blank-circle-outline" class="mr-1 h-4 w-4" />
                   {{ $t('page.neededitems.filters.non_fir', 'NON-FIR') }}
                 </UButton>
-
-                  <UButton
+                  <span
                     v-tooltip="
                       $t(
                         'page.neededitems.filters.hide_non_fir_special_equipment_title',
                         'Hide non-FIR special equipment (e.g., MS2000 Markers, Wi-Fi Cameras)'
                       )
                     "
-                    :variant="hideNonFirSpecialEquipment ? 'soft' : 'ghost'"
-                    :color="hideNonFirSpecialEquipment ? 'primary' : 'neutral'"
-                    size="sm"
-                    @click="
-                      $emit('update:hideNonFirSpecialEquipment', !hideNonFirSpecialEquipment)
-                    "
+                    class="inline-flex"
                   >
-                    <UIcon name="i-mdi-briefcase-outline" class="mr-1 h-4 w-4" />
-                    {{
-                      hideNonFirSpecialEquipment
-                        ? $t('page.neededitems.filters.no_special', 'NO-SPECIAL')
-                        : $t('page.neededitems.filters.special', 'SPECIAL')
-                    }}
-                  </UButton>
-                  <UButton
+                    <UButton
+                      :variant="hideNonFirSpecialEquipment ? 'soft' : 'ghost'"
+                      :color="hideNonFirSpecialEquipment ? 'primary' : 'neutral'"
+                      size="sm"
+                      @click="
+                        $emit('update:hideNonFirSpecialEquipment', !hideNonFirSpecialEquipment)
+                      "
+                    >
+                      <UIcon name="i-mdi-briefcase-outline" class="mr-1 h-4 w-4" />
+                      {{
+                        hideNonFirSpecialEquipment
+                          ? $t('page.neededitems.filters.no_special', 'NO-SPECIAL')
+                          : $t('page.neededitems.filters.special', 'SPECIAL')
+                      }}
+                    </UButton>
+                  </span>
+                  <span
                     v-tooltip="
                       isKappaDisabled
                         ? $t(
@@ -124,15 +127,19 @@
                             'Show only items required for Kappa quests'
                           )
                     "
-                    :variant="kappaOnly ? 'soft' : 'ghost'"
-                    :color="kappaOnly ? 'warning' : 'neutral'"
-                    size="sm"
-                    :disabled="isKappaDisabled"
-                    @click="$emit('update:kappaOnly', !kappaOnly)"
+                    class="inline-flex"
                   >
-                    <UIcon name="i-mdi-trophy" class="mr-1 h-4 w-4" />
-                    {{ $t('page.neededitems.filters.kappa_only', 'KAPPA') }}
-                  </UButton>
+                    <UButton
+                      :variant="kappaOnly ? 'soft' : 'ghost'"
+                      :color="kappaOnly ? 'warning' : 'neutral'"
+                      size="sm"
+                      :disabled="isKappaDisabled"
+                      @click="$emit('update:kappaOnly', !kappaOnly)"
+                    >
+                      <UIcon name="i-mdi-trophy" class="mr-1 h-4 w-4" />
+                      {{ $t('page.neededitems.filters.kappa_only', 'KAPPA') }}
+                    </UButton>
+                  </span>
               </div>
               <div class="border-t border-base pt-3">
                 <div class="mb-2 text-xs font-medium text-content-tertiary">
@@ -193,8 +200,8 @@
   </div>
 </template>
 <script setup lang="ts">
-  import FilterPill from '@/components/FilterPill.vue';
   import { computed } from 'vue';
+  import FilterPill from '@/components/FilterPill.vue';
   type FilterType = 'all' | 'tasks' | 'hideout' | 'completed';
   type ViewMode = 'list' | 'grid';
   type FirFilter = 'all' | 'fir' | 'non-fir';

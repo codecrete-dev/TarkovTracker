@@ -1,5 +1,6 @@
 <template>
   <button
+    v-tooltip="props.tooltip"
     v-bind="attrs"
     type="button"
     :aria-pressed="props.isCollected"
@@ -10,8 +11,8 @@
   </button>
 </template>
 <script setup lang="ts">
-  defineOptions({ inheritAttrs: false });
   import { useI18n } from 'vue-i18n';
+  defineOptions({ inheritAttrs: false });
   const { t } = useI18n();
   const props = withDefaults(
     defineProps<{
@@ -19,6 +20,7 @@
       iconNameUnchecked?: string;
       iconClass?: string;
       isCollected: boolean;
+      tooltip?: string;
     }>(),
     {
       iconName: 'i-mdi-check-circle',

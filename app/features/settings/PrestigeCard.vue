@@ -10,37 +10,36 @@
     <template #content>
       <div class="space-y-4 px-4 py-4">
         <!-- Prestige Level Selector -->
-        <div class="space-y-2">
+        <div
+          v-tooltip="
+            isPveMode
+              ? $t('settings.prestige.pve_disabled', 'Prestige is not available in PVE mode')
+              : undefined
+          "
+          class="space-y-2"
+        >
           <p class="text-sm font-semibold text-content-secondary">
             {{ $t('settings.prestige.current_level', 'Current Prestige Level') }}
           </p>
-          <AppTooltip
-            :text="
-              isPveMode
-                ? $t('settings.prestige.pve_disabled', 'Prestige is not available in PVE mode')
-                : ''
-            "
-            :disabled="!isPveMode"
+          <USelectMenu
+            v-model="currentPrestige"
+            :items="prestigeOptions"
+            value-key="value"
+            :disabled="isPveMode"
+            :popper="{ placement: 'bottom-start', strategy: 'fixed' }"
+            :ui="selectUi"
+            :ui-menu="selectMenuUi"
           >
-            <USelectMenu
-              v-model="currentPrestige"
-              :items="prestigeOptions"
-              value-key="value"
-              :disabled="isPveMode"
-              :popper="{ placement: 'bottom-start', strategy: 'fixed' }"
-              :ui="selectUi"
-              :ui-menu="selectMenuUi"
-            >
-              <template #leading>
-                <UIcon
-                  name="i-mdi-trophy"
-                  class="text-gold-400 h-4 w-4"
-                  :class="{ 'opacity-50': isPveMode }"
-                />
-              </template>
-            </USelectMenu>
-          </AppTooltip>
-          <p class="text-content-tertiary text-xs">
+            <template #leading>
+              <UIcon
+                name="i-mdi-trophy"
+                class="text-gold-400 h-4 w-4"
+                :class="{ 'opacity-50': isPveMode }"
+              />
+            </template>
+          </USelectMenu>
+        </div>
+        <p class="text-content-tertiary text-xs">
             <template v-if="isPveMode">
               {{ $t('settings.prestige.pve_hint', 'Prestige is not available in PVE mode.') }}
             </template>

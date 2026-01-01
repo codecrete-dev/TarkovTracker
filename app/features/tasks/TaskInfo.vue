@@ -9,7 +9,7 @@
         </div>
         <InfoRow
           v-if="task.minPlayerLevel != 0"
-          v-tooltip="t('page.tasks.questcard.min_level_required')"
+          :tooltip="t('page.tasks.questcard.min_level_required')"
           icon="mdi-menu-right"
           class="text-sm text-gray-400"
         >

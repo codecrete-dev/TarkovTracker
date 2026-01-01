@@ -30,8 +30,8 @@
               icon="i-mdi-close"
               size="sm"
               :aria-label="t('page.tasks.filters.close', 'Close')"
-              @click="isOpen = false"
               class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              @click="isOpen = false"
             />
           </div>
         </template>

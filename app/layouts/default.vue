@@ -53,7 +53,6 @@
   const appStore = useAppStore();
   const preferencesStore = usePreferencesStore();
   const colorMode = useColorMode();
-
   // Sync theme preference to color mode
   watch(
     () => preferencesStore.theme,

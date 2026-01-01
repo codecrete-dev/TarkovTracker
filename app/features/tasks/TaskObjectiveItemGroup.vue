@@ -271,7 +271,6 @@
   });
   const isParentTaskLocked = computed(() => {
     if (parentTaskIds.value.length === 0) return false;
-    
     // If ANY associated task is NOT available (locked, complete, failed, or blocked),
     // we consider the group locked for safety. Usually these are all the same task anyway.
     return parentTaskIds.value.some(taskId => {
@@ -279,7 +278,6 @@
       const isComplete = tarkovStore.isTaskComplete(taskId);
       const isFailed = tarkovStore.isTaskFailed(taskId);
       const isInvalid = progressStore.invalidTasks[taskId]?.self === true;
-      
       return !isUnlocked || isComplete || isFailed || isInvalid;
     });
   });

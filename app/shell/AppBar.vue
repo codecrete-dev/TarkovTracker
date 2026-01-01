@@ -4,8 +4,8 @@
   >
     <div class="flex h-full items-center gap-1 px-2 sm:gap-3 sm:px-3">
       <!-- Left: Toggle Button -->
+      <span v-tooltip="t('app_bar.toggle_drawer')">
         <UButton
-          v-tooltip="t('app_bar.toggle_drawer')"
           :icon="navBarIcon"
           variant="ghost"
           color="neutral"
@@ -13,6 +13,7 @@
           :aria-label="t('app_bar.toggle_drawer')"
           @click.stop="changeNavigationDrawer"
         />
+      </span>
       <!-- Center: Page Title -->
       <span class="min-w-0 flex-1 truncate text-xl font-bold text-content-primary">
         {{ pageTitle }}
@@ -62,18 +63,19 @@
           </button>
         </div>
         <!-- Theme toggle -->
-          <button
-            v-tooltip="nextThemeLabel"
-            type="button"
-            class="bg-surface-elevated border-base flex items-center justify-center rounded-md border px-2 py-1.5 ring-1 ring-gray-200/50 transition-colors hover:bg-surface-100 dark:bg-surface-900/90 dark:border-white/15 dark:ring-white/10 dark:hover:bg-surface-800"
-            @click="cycleTheme"
-            :aria-label="nextThemeLabel"
-          >
-            <UIcon
-              :name="currentThemeIcon"
-              class="text-content-tertiary h-4 w-4 transition-transform duration-200"
-            />
-          </button>
+          <span v-tooltip="nextThemeLabel" class="inline-flex">
+            <button
+              type="button"
+              class="bg-surface-elevated border-base flex items-center justify-center rounded-md border px-2 py-1.5 ring-1 ring-gray-200/50 transition-colors hover:bg-surface-100 dark:bg-surface-900/90 dark:border-white/15 dark:ring-white/10 dark:hover:bg-surface-800"
+              :aria-label="nextThemeLabel"
+              @click="cycleTheme"
+            >
+              <UIcon
+                :name="currentThemeIcon"
+                class="text-content-tertiary h-4 w-4 transition-transform duration-200"
+              />
+            </button>
+          </span>
         <!-- Language selector -->
         <USelectMenu
           v-model="selectedLocale"
@@ -126,40 +128,33 @@
   import { useTarkovStore } from '@/stores/useTarkov';
   import { GAME_MODES, type GameMode } from '@/utils/constants';
   import { logger } from '@/utils/logger';
-
   const { t } = useI18n({ useScope: 'global' });
   const appStore = useAppStore();
   const tarkovStore = useTarkovStore();
   const metadataStore = useMetadataStore();
   const preferencesStore = usePreferencesStore();
   const route = useRoute();
-
   const { width } = useWindowSize();
   const mdAndDown = computed(() => width.value < 960); // md breakpoint at 960px
-
   const navBarIcon = computed(() => {
     if (mdAndDown.value) {
       return appStore.mobileDrawerExpanded ? 'i-mdi-menu-open' : 'i-mdi-menu';
     }
     return appStore.drawerRail ? 'i-mdi-menu' : 'i-mdi-menu-open';
   });
-
   const currentGameMode = computed(() => {
     return tarkovStore.getCurrentGameMode();
   });
-
   const pveClasses = computed(() =>
     currentGameMode.value === GAME_MODES.PVE
       ? 'bg-pve-600 hover:bg-pve-700 text-white shadow-[0_0_0_4px_rgba(0,0,0,0.15)] dark:shadow-[0_0_0_4px_rgba(0,0,0,0.45)] ring-2 ring-white/60 ring-inset outline outline-2 outline-white/40'
       : 'bg-pve-50 text-pve-600 hover:bg-pve-100 dark:bg-pve-950/80 dark:text-pve-400 dark:hover:bg-pve-900/90'
   );
-
   const pvpClasses = computed(() =>
     currentGameMode.value === GAME_MODES.PVP
       ? 'bg-pvp-600 hover:bg-pvp-700 text-white shadow-[0_0_0_4px_rgba(0,0,0,0.15)] dark:bg-pvp-800 dark:shadow-[0_0_0_4px_rgba(0,0,0,0.45)] ring-2 ring-white/60 ring-inset outline outline-2 outline-white/40'
       : 'bg-pvp-50 text-pvp-600 hover:bg-pvp-100 dark:bg-pvp-950/80 dark:text-pvp-400 dark:hover:bg-pvp-900/90'
   );
-
   async function switchMode(mode: GameMode) {
     if (mode !== currentGameMode.value && !dataLoading.value && !localLoading.value) {
       localLoading.value = true;
@@ -177,31 +172,25 @@
       }
     }
   }
-
   const { loading: dataLoading, hideoutLoading } = storeToRefs(metadataStore);
   // Local loading state for UI feedback during mode switch to avoid store mutation warnings
   const localLoading = ref(false);
   const dataError = ref(false);
-
   const pageTitle = computed(() =>
     t(`page.${String(route.name || 'index').replace('-', '_')}.title`)
   );
-
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === 'Escape' && appStore.mobileDrawerExpanded && mdAndDown.value) {
       event.preventDefault();
       appStore.setMobileDrawerExpanded(false);
     }
   }
-
   onMounted(() => {
     document.addEventListener('keydown', handleKeydown);
   });
-
   onUnmounted(() => {
     document.removeEventListener('keydown', handleKeydown);
   });
-
   function changeNavigationDrawer() {
     if (mdAndDown.value) {
       appStore.toggleMobileDrawerExpanded();
@@ -209,9 +198,7 @@
       appStore.toggleDrawerRail();
     }
   }
-
   const { locale, availableLocales } = useI18n({ useScope: 'global' });
-
   const localeItems = computed(() => {
     const languageNames = new Intl.DisplayNames([locale.value], { type: 'language' });
     return availableLocales.map((localeCode) => ({
@@ -219,7 +206,6 @@
       value: localeCode,
     }));
   });
-
   const selectedLocale = computed({
     get() {
       // Return the current locale string directly
@@ -230,17 +216,13 @@
       // Handle both string and object values
       const newLocale = typeof newValue === 'string' ? newValue : newValue.value;
       if (newLocale === locale.value) return;
-
       // Set the i18n locale (this updates the UI translations)
       locale.value = newLocale;
-
       // Persist in preferences
       preferencesStore.localeOverride = newLocale;
       logger.debug('[AppBar] Setting locale to:', newLocale);
-
       // Update metadata store and refetch data with new language
       metadataStore.updateLanguageAndGameMode(newLocale);
-
       // Use cached data if available (forceRefresh = false)
       metadataStore
         .fetchAllData(false)
@@ -253,26 +235,20 @@
         });
     },
   });
-
   // Theme Logic
   const isPreferredDark = usePreferredDark();
   const themeModes = ['system', 'dark', 'light'] as const;
   type ThemeMode = (typeof themeModes)[number];
-
   const currentTheme = computed(() => preferencesStore.getTheme as ThemeMode);
-
   const themeIconMap: Record<ThemeMode, string> = {
     system: 'i-mdi-desktop-mac',
     light: 'i-mdi-white-balance-sunny',
     dark: 'i-mdi-moon-waning-crescent',
   };
-
   const currentThemeIcon = computed(() => themeIconMap[currentTheme.value]);
-
   const nextTheme = computed<ThemeMode>(() => {
     const isSystemDark = isPreferredDark.value;
     const current = currentTheme.value;
-
     if (current === 'system') {
       return isSystemDark ? 'light' : 'dark';
     }
@@ -282,11 +258,9 @@
     // current === 'dark'
     return isSystemDark ? 'system' : 'light';
   });
-
   const nextThemeLabel = computed(() => {
     return t(`app_bar.themes.${nextTheme.value}`);
   });
-
   function cycleTheme() {
     preferencesStore.setTheme(nextTheme.value);
   }

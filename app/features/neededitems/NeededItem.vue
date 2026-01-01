@@ -152,13 +152,10 @@
     craftableTitle,
     goToCraftStation,
   } = useCraftableItem(() => item.value?.id);
-
   const isCraftable = computed(() => {
     const isCompleted = selfCompletedNeed.value || currentCount.value >= neededCount.value;
     return baseIsCraftable.value && !isCompleted;
   });
-
-
   // Helper functions and data to calculate the item's progress
   // These are passed to the child components via provide/inject
   const currentCount = computed(() => {

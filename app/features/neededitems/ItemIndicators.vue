@@ -1,16 +1,16 @@
 <template>
-  <UIcon
-    v-if="foundInRaid"
-    v-tooltip="foundInRaidTitle"
-    name="i-mdi-checkbox-marked-circle-outline"
-    :class="firIconClass"
-  />
-  <UIcon
-    v-if="kappaRequired"
-    v-tooltip="kappaTitleText"
-    name="i-mdi-trophy"
-    :class="kappaIconClass"
-  />
+  <span v-if="foundInRaid" v-tooltip="foundInRaidTitle" class="inline-flex">
+    <UIcon
+      name="i-mdi-checkbox-marked-circle-outline"
+      :class="firIconClass"
+    />
+  </span>
+  <span v-if="kappaRequired" v-tooltip="kappaTitleText" class="inline-flex">
+    <UIcon
+      name="i-mdi-trophy"
+      :class="kappaIconClass"
+    />
+  </span>
   <button
     v-if="isCraftable"
     v-tooltip="craftableTitleText"

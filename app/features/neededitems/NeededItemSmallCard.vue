@@ -157,6 +157,7 @@
 <script setup lang="ts">
   import { computed, defineAsyncComponent, inject } from 'vue';
   import { useI18n } from 'vue-i18n';
+  import GameItem from '@/components/ui/GameItem.vue';
   import {
     createDefaultNeededItemContext,
     neededItemKey,
@@ -164,7 +165,6 @@
   import { useTarkovStore } from '@/stores/useTarkov';
   import { useLocaleNumberFormatter } from '@/utils/formatters';
   import ItemCountControls from './ItemCountControls.vue';
-  import GameItem from '@/components/ui/GameItem.vue';
   const TaskLink = defineAsyncComponent(() => import('@/features/tasks/TaskLink.vue'));
   const StationLink = defineAsyncComponent(() => import('@/features/hideout/StationLink.vue'));
   const { t } = useI18n();

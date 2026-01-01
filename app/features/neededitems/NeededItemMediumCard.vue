@@ -18,18 +18,18 @@
     <div v-if="item" class="flex h-12 shrink-0 items-center justify-center px-2 pt-2">
       <div class="line-clamp-2 text-center text-sm leading-tight">
         {{ item.name }}
-          <UIcon
-            v-if="props.need.foundInRaid"
-            v-tooltip="$t('page.neededitems.fir_required')"
-            name="i-mdi-checkbox-marked-circle-outline"
-            class="ml-0.5 inline-block h-3.5 w-3.5"
-          />
-          <UIcon
-            v-if="isKappaRequired"
-            v-tooltip="$t('task.kappa_req', 'Required for Kappa quest')"
-            name="i-mdi-trophy"
-            class="text-entity-kappa ml-0.5 inline-block h-3.5 w-3.5"
-          />
+          <span v-if="props.need.foundInRaid" v-tooltip="$t('page.neededitems.fir_required')" class="inline-block">
+            <UIcon
+              name="i-mdi-checkbox-marked-circle-outline"
+              class="ml-0.5 inline-block h-3.5 w-3.5"
+            />
+          </span>
+          <span v-if="isKappaRequired" v-tooltip="$t('task.kappa_req', 'Required for Kappa quest')" class="inline-block">
+            <UIcon
+              name="i-mdi-trophy"
+              class="text-entity-kappa ml-0.5 inline-block h-3.5 w-3.5"
+            />
+          </span>
           <button
             v-if="isCraftable"
             v-tooltip="craftableTitle"

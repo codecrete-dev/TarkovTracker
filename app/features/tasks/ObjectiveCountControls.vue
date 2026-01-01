@@ -1,19 +1,22 @@
 <template>
   <div class="flex items-center gap-1">
     <div class="flex items-center rounded-md border border-gray-300 bg-white dark:border-white/10 dark:bg-white/5">
-      <AppTooltip :text="t('page.tasks.questcard.decrease', 'Decrease')">
-        <span class="inline-flex" :class="{ 'cursor-not-allowed': disabled || currentCount <= 0 }" @click.stop>
-          <button
-            type="button"
-            :disabled="disabled || currentCount <= 0"
-            :aria-label="t('page.tasks.questcard.decrease', 'Decrease')"
-            class="focus-visible:ring-primary-500 focus-visible:ring-offset-surface-900 flex h-7 w-7 items-center justify-center rounded-l-md text-gray-500 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 active:bg-gray-200 disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-50 dark:text-gray-300 dark:hover:bg-white/10 dark:active:bg-white/15"
-            @click="$emit('decrease')"
-          >
-            <UIcon name="i-mdi-minus" aria-hidden="true" class="h-4 w-4" />
-          </button>
-        </span>
-      </AppTooltip>
+      <span
+        v-tooltip="t('page.tasks.questcard.decrease', 'Decrease')"
+        class="inline-flex"
+        :class="{ 'cursor-not-allowed': disabled || currentCount <= 0 }"
+        @click.stop
+      >
+        <button
+          type="button"
+          :disabled="disabled || currentCount <= 0"
+          :aria-label="t('page.tasks.questcard.decrease', 'Decrease')"
+          class="focus-visible:ring-primary-500 focus-visible:ring-offset-surface-900 flex h-7 w-7 items-center justify-center rounded-l-md text-gray-500 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 active:bg-gray-200 disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-50 dark:text-gray-300 dark:hover:bg-white/10 dark:active:bg-white/15"
+          @click="$emit('decrease')"
+        >
+          <UIcon name="i-mdi-minus" aria-hidden="true" class="h-4 w-4" />
+        </button>
+      </span>
       <!-- Editable count display -->
       <div
         v-if="!isEditing"
@@ -39,28 +42,33 @@
         />
         <span class="text-[11px] font-semibold text-gray-900 dark:text-gray-100">/{{ neededCount }}</span>
       </div>
-      <AppTooltip :text="t('page.tasks.questcard.increase', 'Increase')">
-        <span class="inline-flex" :class="{ 'cursor-not-allowed': disabled || currentCount >= neededCount }" @click.stop>
-          <button
-            type="button"
-            :disabled="disabled || currentCount >= neededCount"
-            :aria-label="t('page.tasks.questcard.increase', 'Increase')"
-            class="focus-visible:ring-primary-500 focus-visible:ring-offset-surface-900 flex h-7 w-7 items-center justify-center rounded-r-md text-gray-500 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 active:bg-gray-200 disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-50 dark:text-gray-300 dark:hover:bg-white/10 dark:active:bg-white/15"
-            @click="$emit('increase')"
-          >
-            <UIcon name="i-mdi-plus" aria-hidden="true" class="h-4 w-4" />
-          </button>
-        </span>
-      </AppTooltip>
+      <span
+        v-tooltip="t('page.tasks.questcard.increase', 'Increase')"
+        class="inline-flex"
+        :class="{ 'cursor-not-allowed': disabled || currentCount >= neededCount }"
+        @click.stop
+      >
+        <button
+          type="button"
+          :disabled="disabled || currentCount >= neededCount"
+          :aria-label="t('page.tasks.questcard.increase', 'Increase')"
+          class="focus-visible:ring-primary-500 focus-visible:ring-offset-surface-900 flex h-7 w-7 items-center justify-center rounded-r-md text-gray-500 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 active:bg-gray-200 disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-50 dark:text-gray-300 dark:hover:bg-white/10 dark:active:bg-white/15"
+          @click="$emit('increase')"
+        >
+          <UIcon name="i-mdi-plus" aria-hidden="true" class="h-4 w-4" />
+        </button>
+      </span>
     </div>
-    <AppTooltip
-        :text="
+      <span
+        v-tooltip="
           currentCount >= neededCount
             ? t('page.tasks.questcard.complete', 'Complete')
             : t('page.tasks.questcard.markComplete', 'Mark complete')
         "
+        class="inline-flex"
+        :class="{ 'cursor-not-allowed': disabled }"
+        @click.stop
       >
-      <span class="inline-flex" :class="{ 'cursor-not-allowed': disabled }" @click.stop>
         <button
           type="button"
           :disabled="disabled"
@@ -81,7 +89,6 @@
           <UIcon name="i-mdi-check" aria-hidden="true" class="h-4 w-4" />
         </button>
       </span>
-    </AppTooltip>
   </div>
 </template>
 <script setup lang="ts">

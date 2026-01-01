@@ -118,8 +118,6 @@ export function useTaskFiltering() {
     const isFailed = progressStore.tasksFailed?.[taskId]?.[teamId] === true;
     return { isUnlocked, isCompleted, isFailed };
   };
-
-
   /**
    * Filter tasks for all team members view
    */
@@ -403,8 +401,6 @@ export function useTaskFiltering() {
       }
     }).length;
   };
-
-
   /**
    * Sort tasks by:
    * 1. Impact (Descending)
@@ -415,11 +411,9 @@ export function useTaskFiltering() {
       // 1. Impact Sorting (within same status group)
       const impactA = calculateTaskImpact(a, userView);
       const impactB = calculateTaskImpact(b, userView);
-
       if (impactA !== impactB) {
         return impactB - impactA; // Descending impact
       }
-
       // 2. ID fallback for stability
       return a.id.localeCompare(b.id);
     });

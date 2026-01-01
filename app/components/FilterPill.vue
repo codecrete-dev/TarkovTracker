@@ -13,12 +13,10 @@
     <!-- Icon Slot or Prop -->
     <UIcon v-if="icon" :name="icon" class="h-4 w-4" />
     <slot name="icon" />
-
     <!-- Label -->
     <span :class="labelClass">
       <slot>{{ label }}</slot>
     </span>
-
     <!-- Count Badge -->
     <span
       v-if="count !== undefined || $slots.count"
@@ -29,15 +27,12 @@
     >
       <slot name="count">{{ count }}</slot>
     </span>
-    
     <!-- Optional Badge/Extra slot -->
     <slot name="badge" />
   </button>
 </template>
-
 <script setup lang="ts">
 import { computed } from 'vue';
-
 const props = defineProps<{
   label?: string;
   active?: boolean;
@@ -46,7 +41,6 @@ const props = defineProps<{
   countColor?: string; // Optional override for badge color
   labelClass?: string; // Optional class for label span to handle responsiveness (hidden sm:inline etc)
 }>();
-
 const countColorClass = computed(() => {
     if (props.countColor) return props.countColor;
     // Default logic: Primary if active or count > 0, Gray if 0?

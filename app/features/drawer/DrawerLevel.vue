@@ -140,7 +140,6 @@
         <!-- XP Progress Display -->
         <!-- Separator -->
         <div class="my-2 h-px bg-gray-100 dark:bg-white/5"></div>
-        
         <!-- XP Progress Display -->
         <div
           class="group/xp cursor-pointer px-1"
@@ -203,7 +202,6 @@
       !metadataStore.loading && metadataStore.playerLevels.length > 0 && tarkovStore.getPMCFaction()
     );
   });
-
   const groupIcon = computed(() => {
     const level = displayedLevel.value;
     const entry = playerLevels.value.find((pl) => pl.level === level);
@@ -249,7 +247,6 @@
     router.push('/settings');
   }
   // Reset failure flags if icons change (retry)
-
   watch(groupIcon, () => {
     groupImageLoadFailed.value = false;
   });
@@ -257,7 +254,6 @@
    * Log image load failure and flip a flag to hide the specific failing image.
    * This is a fallback in case an image file is missing from the server or assets.
    */
-
   function handleGroupImageError(event) {
     console.warn('Failed to load group image:', event.target?.src);
     groupImageLoadFailed.value = true;

@@ -122,7 +122,6 @@
             <span>Co-op Extract (PMC + Scav)</span>
           </div>
         </div>
-
         <!-- Controls Legend -->
         <div
           class="ml-auto flex flex-wrap-reverse items-center justify-end gap-x-4 gap-y-1 text-[10px] font-medium text-gray-500 dark:text-gray-400"
@@ -529,7 +528,6 @@
     background: transparent;
     border: none;
   }
-  
   /* Reset Leaflet's default tooltip styles so we can use floating-vue styles */
   .leaflet-tooltip-reset {
     background: transparent !important;
@@ -538,7 +536,6 @@
     padding: 0 !important;
     margin: 0 !important;
   }
-  
   .leaflet-tooltip-reset::before {
     display: none !important;
   }

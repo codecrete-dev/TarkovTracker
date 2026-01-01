@@ -21,12 +21,12 @@
       <!--1) Header: identity + state -->
       <div class="flex flex-nowrap items-center justify-between gap-3">
         <div class="flex min-w-0 items-center gap-2">
-            <router-link
-              v-tooltip="task?.name"
-              :to="`/tasks?task=${task.id}`"
-              class="text-primary-700 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 flex min-w-0 items-center gap-2 no-underline"
-              @click.stop
-            >
+            <span v-tooltip="task?.name">
+              <router-link
+                :to="`/tasks?task=${task.id}`"
+                class="text-primary-700 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 flex min-w-0 items-center gap-2 no-underline"
+                @click.stop
+              >
               <div class="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-gray-800">
                 <img
                   v-if="task?.trader?.imageLink"
@@ -45,7 +45,8 @@
               <span class="min-w-0 truncate text-sm font-semibold text-content-primary sm:text-base">
                 {{ task?.name }}
               </span>
-            </router-link>
+              </router-link>
+            </span>
           <!-- External link icons -->
           <div class="ml-2 flex shrink-0 items-center gap-1.5">
               <a
@@ -80,7 +81,7 @@
         </div>
         <div class="flex shrink-0 flex-nowrap items-center justify-end gap-2.5">
           <div class="flex items-center gap-1.5">
-              <UBadge
+              <span
                 v-if="(task.minPlayerLevel ?? 0) > 0"
                 v-tooltip="
                   t(
@@ -89,30 +90,34 @@
                     `Minimum player level ${task.minPlayerLevel} required to unlock this quest`
                   )
                 "
-                size="xs"
-                :color="'gray' as any"
-                variant="solid"
-                class="cursor-help text-xs !text-white"
-                :class="meetsLevelRequirement ? '!bg-success-600' : '!bg-error-600'"
               >
-                {{ t('page.tasks.questcard.levelBadge', { count: task.minPlayerLevel }) }}
-              </UBadge>
-              <UBadge
-                v-tooltip="task?.map?.name || t('page.tasks.questcard.anyMap', 'Any')"
-                size="xs"
-                :color="'gray' as any"
-                variant="solid"
-                class="inline-flex max-w-[10rem] items-center gap-1 text-xs !bg-green-800 !text-white"
-              >
-                <UIcon
-                  :name="task?.map?.name ? 'i-mdi-map-marker' : 'i-mdi-earth'"
-                  aria-hidden="true"
-                  class="h-3 w-3"
-                />
-                <span class="truncate">
-                  {{ task?.map?.name || t('page.tasks.questcard.anyMap', 'Any') }}
-                </span>
-              </UBadge>
+                <UBadge
+                  size="xs"
+                  :color="'gray' as any"
+                  variant="solid"
+                  class="cursor-help text-xs !text-white"
+                  :class="meetsLevelRequirement ? '!bg-success-600' : '!bg-error-600'"
+                >
+                  {{ t('page.tasks.questcard.levelBadge', { count: task.minPlayerLevel }) }}
+                </UBadge>
+              </span>
+              <span v-tooltip="task?.map?.name || t('page.tasks.questcard.anyMap', 'Any')">
+                <UBadge
+                  size="xs"
+                  :color="'gray' as any"
+                  variant="solid"
+                  class="inline-flex max-w-[10rem] items-center gap-1 text-xs !bg-green-800 !text-white"
+                >
+                  <UIcon
+                    :name="task?.map?.name ? 'i-mdi-map-marker' : 'i-mdi-earth'"
+                    aria-hidden="true"
+                    class="h-3 w-3"
+                  />
+                  <span class="truncate">
+                    {{ task?.map?.name || t('page.tasks.questcard.anyMap', 'Any') }}
+                  </span>
+                </UBadge>
+              </span>
             <UBadge
               v-if="objectiveProgress.total > 0"
               size="xs"
@@ -123,9 +128,7 @@
               <UIcon name="i-mdi-progress-check" aria-hidden="true" class="h-3 w-3" />
               {{ t('page.tasks.questcard.progress', objectiveProgress) }}
             </UBadge>
-
-
-              <UBadge
+              <span
                 v-if="preferencesStore.getShowRequiredLabels && task.kappaRequired"
                 v-tooltip="
                   t(
@@ -133,14 +136,17 @@
                     'This quest is required to obtain the Kappa Secure Container'
                   )
                 "
-                size="xs"
-                color="error"
-                variant="solid"
-                class="cursor-help text-xs !bg-[var(--color-entity-kappa)] !text-white"
               >
-                {{ t('page.tasks.questcard.kappa', 'Kappa') }}
-              </UBadge>
-              <UBadge
+                <UBadge
+                  size="xs"
+                  color="error"
+                  variant="solid"
+                  class="cursor-help text-xs !bg-[var(--color-entity-kappa)] !text-white"
+                >
+                  {{ t('page.tasks.questcard.kappa', 'Kappa') }}
+                </UBadge>
+              </span>
+              <span
                 v-if="preferencesStore.getShowRequiredLabels && task.lightkeeperRequired"
                 v-tooltip="
                   t(
@@ -148,13 +154,16 @@
                     'This quest is required to unlock the Lightkeeper trader'
                   )
                 "
-                size="xs"
-                color="warning"
-                variant="solid"
-                class="cursor-help text-xs !bg-[var(--color-entity-lightkeeper)] !text-white"
               >
-                {{ t('page.tasks.questcard.lightkeeper', 'Lightkeeper') }}
-              </UBadge>
+                <UBadge
+                  size="xs"
+                  color="warning"
+                  variant="solid"
+                  class="cursor-help text-xs !bg-[var(--color-entity-lightkeeper)] !text-white"
+                >
+                  {{ t('page.tasks.questcard.lightkeeper', 'Lightkeeper') }}
+                </UBadge>
+              </span>
             <UBadge
               v-if="isFailed"
               size="xs"
@@ -164,21 +173,24 @@
             >
                {{ t('page.dashboard.stats.failed.stat', 'Failed') }}
             </UBadge>
-            <UBadge
-              v-if="isInvalid && !isFailed"
-              v-tooltip="
-                t(
-                  'page.tasks.questcard.blockedTooltip',
-                  'This quest is permanently blocked and can never be completed due to choices made in other quests'
-                )
-              "
-              size="xs"
-              :color="'gray' as any"
-              variant="solid"
-              class="cursor-help text-xs !bg-[var(--color-task-blocked)] !text-white"
-            >
-              {{ t('page.tasks.questcard.blocked', 'Blocked') }}
-            </UBadge>
+              <span
+                v-if="isInvalid && !isFailed"
+                v-tooltip="
+                  t(
+                    'page.tasks.questcard.blockedTooltip',
+                    'This quest is permanently blocked and can never be completed due to choices made in other quests'
+                  )
+                "
+              >
+                <UBadge
+                  size="xs"
+                  :color="'gray' as any"
+                  variant="solid"
+                  class="cursor-help text-xs !bg-[var(--color-task-blocked)] !text-white"
+                >
+                  {{ t('page.tasks.questcard.blocked', 'Blocked') }}
+                </UBadge>
+              </span>
             <!-- XP display - moved to TaskCardRewards -->
           </div>
           <!-- Action buttons in header for consistent positioning -->
@@ -195,7 +207,6 @@
             >
               {{ t('page.tasks.questcard.unlockbutton', 'Unlock').toUpperCase() }}
             </UButton>
-
             <!-- 2) Available state: Green "COMPLETE" button -->
             <UButton
               v-else-if="!isComplete && !isInvalid"
@@ -208,7 +219,6 @@
             >
               {{ t('page.tasks.questcard.completebutton', 'Complete').toUpperCase() }}
             </UButton>
-
             <!-- 3) Completed state: Primary "AVAILABLE" button -->
             <UButton
               v-else
@@ -223,18 +233,18 @@
             </UButton>
           </template>
           <!-- Menu button -->
-            <UButton
-              v-if="isOurFaction"
-              v-tooltip="t('page.tasks.questcard.more', 'More')"
-              size="xs"
-              color="neutral"
-              variant="ghost"
-              class="shrink-0"
-              :aria-label="t('page.tasks.questcard.more', 'More')"
-              @click.stop="openOverflowMenu"
-            >
-              <UIcon name="i-mdi-dots-horizontal" aria-hidden="true" class="h-5 w-5" />
-            </UButton>
+            <span v-if="isOurFaction" v-tooltip="t('page.tasks.questcard.more', 'More')">
+              <UButton
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                class="shrink-0"
+                :aria-label="t('page.tasks.questcard.more', 'More')"
+                @click.stop="openOverflowMenu"
+              >
+                <UIcon name="i-mdi-dots-horizontal" aria-hidden="true" class="h-5 w-5" />
+              </UButton>
+            </span>
         </div>
       </div>
       <RelatedTasksRow
@@ -300,7 +310,6 @@
           :uncompleted-irrelevant="uncompletedIrrelevantObjectives.length"
         />
       </div>
-
       <!--5) Rewards Summary Section -->
       <TaskCardRewards
         :task-id="task.id"
@@ -316,7 +325,6 @@
         :impact-count="impactCount"
         @item-context-menu="openItemContextMenu"
       />
-
       <!-- Next Quests Toggle -->
       <div v-if="childTasks.length > 0">
         <RelatedTasksRow
@@ -339,7 +347,6 @@
                 </span>
             </div>
           </template>
-          
           <div class="flex flex-col gap-2">
             <TaskCard
               v-for="child in childTasks"
@@ -351,7 +358,6 @@
           </div>
         </RelatedTasksRow>
       </div>
-
       <!-- Previous Quests Toggle -->
       <div v-if="filteredPreviousTasks.length > 0">
         <RelatedTasksRow
@@ -374,7 +380,6 @@
         </RelatedTasksRow>
       </div>
     </div>
-
     <ContextMenu ref="taskContextMenu">
       <template #default="{ close }">
         <ContextMenuItem
@@ -520,7 +525,6 @@
   });
   const taskClasses = computed(() => {
     const cursor = props.isNested ? 'cursor-pointer' : 'cursor-default';
-
     if (isComplete.value && !isFailed.value) return `border-success-500/25 bg-success-500/10 ${cursor}`;
     if (isFailed.value) return `border-error-500/25 bg-error-500/10 ${cursor}`; // Red for failed
     if (isInvalid.value) return `border-[var(--color-task-blocked)]/25 bg-[var(--color-task-blocked)]/10 ${cursor}`; // Gray for blocked
@@ -565,7 +569,6 @@
   const failureSources = computed(() => {
     if (!isFailed.value) return [];
     const sourceIds = new Set<string>();
-    
     (props.task.failConditions ?? [])
       .filter(
         (objective) => objective?.task?.id && hasStatus(objective.status, ['complete', 'completed'])
@@ -574,13 +577,11 @@
       .forEach((objective) => {
         sourceIds.add(objective.task!.id);
       });
-
     tasks.value.forEach((task) => {
       if (!task.alternatives?.includes(props.task.id)) return;
       if (!isTaskSuccessful(task.id)) return;
       sourceIds.add(task.id);
     });
-
     return Array.from(sourceIds)
       .map(id => tasks.value.find(t => t.id === id))
       .filter((t): t is Task => t !== undefined);
@@ -738,10 +739,8 @@
       window.open(props.task.wikiLink, '_blank');
     }
   };
-
   // Expanded state for recursive cards
   const expandedTasks = ref<Set<string>>(new Set());
-  
   const toggleExpanded = (section: 'parents' | 'children' | 'requires' | 'failed') => {
     if (expandedTasks.value.has(section)) {
       expandedTasks.value.delete(section);
