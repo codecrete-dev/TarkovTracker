@@ -123,6 +123,24 @@
                     }}
                   </UButton>
                 </AppTooltip>
+                <AppTooltip
+                  :text="
+                    $t(
+                      'page.neededitems.filters.kappa_only_tooltip',
+                      'Show only items required for Kappa quests'
+                    )
+                  "
+                >
+                  <UButton
+                    :variant="kappaOnly ? 'soft' : 'ghost'"
+                    :color="kappaOnly ? 'warning' : 'neutral'"
+                    size="sm"
+                    @click="$emit('update:kappaOnly', !kappaOnly)"
+                  >
+                    <UIcon name="i-mdi-trophy" class="mr-1 h-4 w-4" />
+                    {{ $t('page.neededitems.filters.kappa_only', 'KAPPA') }}
+                  </UButton>
+                </AppTooltip>
               </div>
               <div class="border-t border-white/10 pt-3">
                 <div class="text-surface-400 mb-2 text-xs font-medium">
@@ -203,6 +221,7 @@
     groupByItem: boolean;
     hideTeamItems: boolean;
     hideNonFirSpecialEquipment: boolean;
+    kappaOnly: boolean;
   }>();
   const emit = defineEmits<{
     'update:modelValue': [value: FilterType];
@@ -212,6 +231,7 @@
     'update:groupByItem': [value: boolean];
     'update:hideTeamItems': [value: boolean];
     'update:hideNonFirSpecialEquipment': [value: boolean];
+    'update:kappaOnly': [value: boolean];
   }>();
   const activeFiltersCount = computed(() => {
     let count = 0;
@@ -222,6 +242,9 @@
       count += 1;
     }
     if (props.hideTeamItems) {
+      count += 1;
+    }
+    if (props.kappaOnly) {
       count += 1;
     }
     return count;

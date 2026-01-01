@@ -9,6 +9,7 @@
       v-model:group-by-item="groupByItem"
       v-model:hide-non-fir-special-equipment="hideNonFirSpecialEquipment"
       v-model:hide-team-items="hideTeamItems"
+      v-model:kappa-only="kappaOnly"
       :filter-tabs="filterTabsWithCounts"
       :total-count="displayItems.length"
       :ungrouped-count="filteredItems.length"
@@ -96,6 +97,7 @@
   const firFilter = ref<FirFilter>('all');
   const groupByItem = ref(false);
   const hideNonFirSpecialEquipment = ref(false);
+  const kappaOnly = ref(false);
   // Team filter preferences (two-way binding with preferences store)
   const hideTeamItems = computed({
     get: () => preferencesStore.itemsTeamAllHidden,
@@ -246,6 +248,14 @@
         !hideNonFirSpecialEquipment.value ||
         !isNonFirSpecialEquipment(need as NeededItemTaskObjective)
     );
+    // Filter to only show items for Kappa-required quests (excludes hideout items)
+    if (kappaOnly.value) {
+      items = items.filter((need) => {
+        if (need.needType !== 'taskObjective') return false;
+        const task = metadataStore.getTaskById(need.taskId);
+        return task?.kappaRequired === true;
+      });
+    }
     // Filter by search - searches item name, task name, and hideout station name
     if (search.value) {
       const searchLower = search.value.toLowerCase();
@@ -384,7 +394,7 @@
     visibleCount.value = initialVisibleCount.value;
   };
   watch(
-    [search, activeFilter, firFilter, groupByItem, hideNonFirSpecialEquipment, viewMode],
+    [search, activeFilter, firFilter, groupByItem, hideNonFirSpecialEquipment, kappaOnly, viewMode],
     () => {
       resetVisibleCount();
     }
