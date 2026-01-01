@@ -7,10 +7,18 @@
   >
     <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-300">
       <!-- Rewards title -->
-      <span class="font-medium text-gray-700 dark:text-gray-300">
-        <UIcon name="i-mdi-gift" aria-hidden="true" class="mr-1 inline h-3.5 w-3.5" />
-        {{ t('page.tasks.questcard.rewards', 'Rewards') }}:
-      </span>
+      <div class="flex items-center">
+        <UIcon
+          v-if="hasExpandableDetails"
+          :name="showDetails ? 'i-mdi-chevron-down' : 'i-mdi-chevron-right'"
+          aria-hidden="true"
+          class="mr-1 h-4 w-4 text-gray-400 dark:text-gray-500"
+        />
+        <span class="font-medium text-gray-700 dark:text-gray-300">
+          <UIcon name="i-mdi-gift" aria-hidden="true" class="mr-1 inline h-3.5 w-3.5" />
+          {{ t('page.tasks.questcard.rewards', 'Rewards') }}:
+        </span>
+      </div>
       <!-- XP Badge -->
       <span
         v-if="preferencesStore.getShowExperienceRewards && experience > 0"
@@ -87,52 +95,9 @@
       </span>
       <!-- Chain info & Dropdown toggle -->
       <div class="ml-auto flex items-center gap-4">
-        <div v-if="unlocksNextCount > 0 || impactCount > 0" class="flex shrink-0 items-center">
-          <span
-            v-if="unlocksNextCount > 0"
-            v-tooltip="
-              t(
-                'page.tasks.questcard.unlocksNextTooltip',
-                'Number of quests that become available after completing this task'
-              )
-            "
-            class="cursor-help border-b border-dotted border-base text-content-secondary"
-          >
-            {{ t('page.tasks.questcard.unlocksNext', 'Unlocks next') }}: {{ unlocksNextCount }}
-          </span>
-          <span v-if="unlocksNextCount > 0 && impactCount > 0" class="mx-2 text-content-secondary">•</span>
-          <span
-            v-if="impactCount > 0"
-            v-tooltip="
-              t(
-                'page.tasks.questcard.impactTooltip',
-                'Number of incomplete quests that depend on this task being completed'
-              )
-            "
-            class="cursor-help border-b border-dotted border-base text-content-secondary"
-          >
-            {{ t('page.tasks.questcard.impact', 'Impact') }}: {{ impactCount }}
-          </span>
-        </div>
 
-          <UButton
-            v-if="hasExpandableDetails"
-            v-tooltip="toggleDetailsLabel"
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            class="shrink-0 cursor-pointer"
-            :aria-label="toggleDetailsLabel"
-            :aria-expanded="showDetails"
-            :aria-controls="detailsId"
-            @click.stop="toggleDetails"
-          >
-            <UIcon
-              :name="showDetails ? 'i-mdi-chevron-up' : 'i-mdi-chevron-down'"
-              aria-hidden="true"
-              class="h-5 w-5 text-content-tertiary"
-            />
-          </UButton>
+
+
       </div>
     </div>
     <div
@@ -235,53 +200,7 @@
           </div>
         </div>
 
-        <!-- Task Chain (Previous/Next) -->
-        <div
-          v-if="parentTasks.length > 0 || childTasks.length > 0"
-          class="flex flex-col gap-3"
-        >
-          <UDivider v-if="itemRewards.length > 0 || offerUnlockRewards.length > 0" class="opacity-50" />
-          
-          <div class="flex flex-nowrap items-start justify-between gap-4 px-1">
-            <!-- Left: Previous Quests -->
-            <div v-if="parentTasks.length > 0" class="flex min-w-0 flex-1 flex-col gap-1.5">
-              <div class="text-[10px] font-medium uppercase tracking-wider text-content-tertiary">
-                {{ t('page.tasks.questcard.previousQuests', 'Previous Quests') }}:
-              </div>
-              <div class="flex flex-col items-start gap-1">
-                <router-link
-                  v-for="parent in parentTasks"
-                  :key="parent.id"
-                  :to="`/tasks?task=${parent.id}`"
-                  class="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 inline-flex items-center gap-1.5 text-xs no-underline"
-                >
-                  <UIcon name="i-mdi-arrow-left" aria-hidden="true" class="h-3 w-3 shrink-0" />
-                  <span class="truncate">{{ parent.name }}</span>
-                </router-link>
-              </div>
-            </div>
-            
-            <div v-if="parentTasks.length > 0 && childTasks.length === 0" class="flex-1" />
 
-            <!-- Right: Next Quests -->
-            <div v-if="childTasks.length > 0" class="flex min-w-0 flex-1 flex-col items-end gap-1.5 text-right">
-              <div class="text-[10px] font-medium uppercase tracking-wider text-content-tertiary">
-                {{ t('page.tasks.questcard.nextQuests', 'Next Quests') }}:
-              </div>
-              <div class="flex flex-col items-end gap-1 text-right">
-                <router-link
-                  v-for="child in childTasks"
-                  :key="child.id"
-                  :to="`/tasks?task=${child.id}`"
-                  class="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 inline-flex items-center justify-end gap-1.5 text-xs no-underline"
-                >
-                  <span class="truncate">{{ child.name }}</span>
-                  <UIcon name="i-mdi-arrow-right" aria-hidden="true" class="h-3 w-3 shrink-0" />
-                </router-link>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -363,6 +282,8 @@
   const showDetails = ref(false);
   const detailsId = computed(() => `task-${props.taskId}-details`);
 
+  const remainingCount = computed(() => Math.max(0, props.impactCount - props.unlocksNextCount));
+
   const hasRewardsSummary = computed(() => {
     return (
       (preferencesStore.getShowExperienceRewards && props.experience > 0) ||
@@ -377,7 +298,7 @@
   });
 
   const hasExpandableDetails = computed(() => {
-    return hasDetailedRewards.value || props.childTasks.length > 0 || props.parentTasks.length > 0;
+    return hasDetailedRewards.value;
   });
 
   const toggleDetailsLabel = computed(() => {
