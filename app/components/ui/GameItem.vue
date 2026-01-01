@@ -6,50 +6,25 @@
     @contextmenu="handleContextMenu"
   >
     <!-- Simple image display mode (for ItemImage compatibility) -->
-    <div
+    <GameItemImage
       v-if="simpleMode"
-      :class="[
-        'relative overflow-hidden bg-stash-cell',
-        imageContainerClasses,
-        imageTileClasses,
-        fill ? 'flex items-center justify-center' : '',
-      ]"
-    >
-      <div :class="['absolute inset-0', resolvedBackgroundClass]"></div>
-      <img
-        v-if="isVisible && computedImageSrc"
-        :src="computedImageSrc"
-        :class="[
-          fill ? 'max-h-full max-w-full object-contain' : 'h-full w-full object-contain',
-          'relative z-10',
-          imageElementClasses,
-        ]"
-        loading="lazy"
-        @error="handleImgError"
-      />
-      <div
-        v-else
-        :class="[
-          'bg-surface-800 flex h-full w-full items-center justify-center rounded relative z-10',
-          imageClasses,
-        ]"
-      >
-        <UIcon name="i-mdi-loading" class="h-6 w-6 animate-spin text-gray-400" />
-      </div>
-    </div>
+      :src="computedImageSrc"
+      :item-name="props.itemName"
+      :background-color="resolvedBackgroundColor"
+      :fill="fill"
+      :size="size"
+      :is-visible="isVisible"
+      :no-border="noBorder"
+    />
     <!-- Full item display mode (for TarkovItem compatibility) -->
     <div v-else class="relative flex h-full w-full items-center justify-start">
-      <div class="relative mr-2 flex shrink-0 items-center justify-center bg-stash-cell rounded">
-        <div :class="['absolute inset-0 rounded', resolvedBackgroundClass]"></div>
-        <img
-          :width="imageSize"
-          :height="imageSize"
-          :src="computedImageSrc"
-          :class="imageClasses"
-          class="rounded object-contain relative z-10"
-          alt="Item Icon"
-          @error="handleImgError"
-        />
+      <GameItemImage
+        class="relative mr-2 flex shrink-0 items-center justify-center rounded"
+        :src="computedImageSrc"
+        :item-name="props.itemName"
+        :background-color="resolvedBackgroundColor"
+        :size="size"
+      >
         <!-- Hover action buttons - centered overlay on image -->
         <div
           v-if="showActions && (props.devLink || props.wikiLink)"
@@ -78,7 +53,8 @@
               <img src="/img/logos/tarkovdevlogo.webp" alt="tarkov.dev" :class="overlayIconClasses" />
             </a>
         </div>
-      </div>
+      </GameItemImage>
+
       <!-- Counter controls for multi-item objectives -->
       <div v-if="showCounter" class="mr-2" @click.stop>
         <ItemCountControls
@@ -177,9 +153,10 @@
 <script setup lang="ts">
   import { computed, defineAsyncComponent, ref } from 'vue';
   import { useLocaleNumberFormatter } from '@/utils/formatters';
-  import { logger } from '@/utils/logger';
   import ContextMenu from './ContextMenu.vue';
   import ContextMenuItem from './ContextMenuItem.vue';
+  import GameItemImage from './GameItemImage.vue';
+
   const ItemCountControls = defineAsyncComponent(
     () => import('@/features/neededitems/ItemCountControls.vue')
   );
@@ -253,18 +230,7 @@
     toggle: [];
   }>();
   const formatNumber = useLocaleNumberFormatter();
-  const backgroundClassMap = {
-    violet: 'bg-[var(--color-stash-violet)] overlay-stash-bg',
-    grey: 'bg-[var(--color-stash-grey)] overlay-stash-bg',
-    yellow: 'bg-[var(--color-stash-yellow)] overlay-stash-bg',
-    orange: 'bg-[var(--color-stash-orange)] overlay-stash-bg',
-    green: 'bg-[var(--color-stash-green)] overlay-stash-bg',
-    red: 'bg-[var(--color-stash-red)] overlay-stash-bg',
-    black: 'bg-[var(--color-stash-black)] overlay-stash-bg',
-    blue: 'bg-[var(--color-stash-blue)] overlay-stash-bg',
-    default: 'bg-[var(--color-stash-default)] overlay-stash-bg',
-  } as const;
-  type BackgroundKey = keyof typeof backgroundClassMap;
+  
   const contextMenu = ref<InstanceType<typeof ContextMenu>>();
   const computedImageSrc = computed(() => {
     if (props.src) return props.src;
@@ -275,77 +241,29 @@
     if (props.itemId) return `https://assets.tarkov.dev/${props.itemId}-icon.webp`;
     return '';
   });
-  // Compute display properties based on size
-  const imageSize = computed(() => {
-    switch (props.size) {
-      case 'xs':
-        return 36;
-      case 'small':
-        return 64;
-      case 'large':
-        return 104;
-      case 'medium':
-      default:
-        return 84;
-    }
-  });
+  
   const containerClasses = computed(() => {
     if (props.simpleMode) {
       return 'block';
     }
     return '';
   });
-  const imageContainerClasses = computed(() => {
-    const classes = ['block', 'relative', 'overflow-hidden'];
-    if (props.fill) {
-      classes.push('h-full', 'w-full');
-    } else {
-      classes.push('shrink-0');
-      if (props.size === 'xs') {
-        classes.push('h-9 w-9'); // 36px - compact inline display
-      } else if (props.size === 'small') {
-        classes.push('h-12 w-12 md:h-16 md:w-16'); // 48px -> 64px
-      } else if (props.size === 'large') {
-        classes.push('h-20 w-20 md:h-28 md:w-28'); // 80px -> 112px
-      } else {
-        classes.push('h-16 w-16 md:h-24 md:w-24'); // 64px -> 96px
-      }
-    }
-    return classes;
-  });
-  const imageClasses = computed(() => {
-    return ['rounded'];
-  });
-  const resolvedBackgroundClass = computed(() => {
-    const bgColor = (
+
+  const resolvedBackgroundColor = computed(() => {
+    return (
       props.backgroundColor ||
       props.imageItem?.backgroundColor ||
       'default'
-    ).toLowerCase() as BackgroundKey;
-    const backgroundClass: string = backgroundClassMap[bgColor] ?? backgroundClassMap.default;
-    return backgroundClass;
+    )
   });
-  const imageTileClasses = computed(() => {
-    const baseImageClasses = imageClasses.value;
-    const backgroundClass = resolvedBackgroundClass.value;
-    const classes: string[] = baseImageClasses.slice();
-    if (backgroundClass !== backgroundClassMap.default && !props.noBorder) {
-      // styles removed as per user request
-    }
-    return classes;
-  });
-  const imageElementClasses = ['rounded'];
+
   const overlayIconClasses = computed(() => {
     if (props.size === 'xs') {
       return 'h-3.5 w-3.5';
     }
     return 'h-5 w-5';
   });
-  // Image error handling
-  const handleImgError = () => {
-    // Log error for debugging if needed
-    logger.warn(`[GameItem] Failed to load image for item: ${props.itemId || 'unknown'}`);
-  };
+  
   // Action methods
   const openTarkovDevLink = () => {
     if (props.devLink) {

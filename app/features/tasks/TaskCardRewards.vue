@@ -166,11 +166,13 @@
                   @contextmenu.prevent.stop="$emit('item-context-menu', $event, reward.item)"
                   @click.stop
                 >
-                  <img
+                  <GameItemImage
                     v-if="reward.item?.iconLink"
                     :src="reward.item?.iconLink"
                     :alt="reward.item?.name || reward.item?.shortName || 'Item'"
-                    class="h-16 w-16 object-contain"
+                    :background-color="reward.item?.backgroundColor"
+                    size="small"
+                    class="mx-auto"
                   />
                   <div class="flex flex-col items-center gap-0.5">
                     <span
@@ -210,11 +212,13 @@
                   @contextmenu.prevent.stop="$emit('item-context-menu', $event, offer.item)"
                   @click.stop
                 >
-                  <img
+                  <GameItemImage
                     v-if="offer.item?.iconLink"
                     :src="offer.item?.iconLink"
                     :alt="offer.item?.name || offer.item?.shortName || 'Item'"
-                    class="h-16 w-16 object-contain"
+                    :background-color="offer.item?.backgroundColor"
+                    size="small"
+                    class="mx-auto"
                   />
                   <div class="flex flex-col items-center gap-0.5">
                     <span
@@ -286,6 +290,7 @@
 <script setup lang="ts">
   import { computed, ref } from 'vue';
   import { useI18n } from 'vue-i18n';
+  import GameItemImage from '@/components/ui/GameItemImage.vue';
   import { usePreferencesStore } from '@/stores/usePreferences';
   import type { Task } from '@/types/tarkov';
   import { useLocaleNumberFormatter } from '@/utils/formatters';
@@ -305,13 +310,13 @@
   }
 
   interface ItemReward {
-    item?: { id: string; name?: string; shortName?: string; iconLink?: string };
+    item?: { id: string; name?: string; shortName?: string; iconLink?: string; backgroundColor?: string };
     count: number;
   }
 
   interface OfferUnlock {
     id: string;
-    item?: { id: string; name?: string; shortName?: string; iconLink?: string };
+    item?: { id: string; name?: string; shortName?: string; iconLink?: string; backgroundColor?: string };
     trader: { name: string };
     level: number;
   }

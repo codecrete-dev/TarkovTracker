@@ -159,6 +159,7 @@
   } from '@/features/neededitems/neededitem-keys';
   import { useTarkovStore } from '@/stores/useTarkov';
   import ItemCountControls from './ItemCountControls.vue';
+  import GameItem from '@/components/ui/GameItem.vue';
   const TaskLink = defineAsyncComponent(() => import('@/features/tasks/TaskLink.vue'));
   const StationLink = defineAsyncComponent(() => import('@/features/hideout/StationLink.vue'));
   const emit = defineEmits(['decreaseCount', 'increaseCount', 'toggleCount', 'setCount']);

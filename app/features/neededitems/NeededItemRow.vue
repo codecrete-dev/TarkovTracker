@@ -65,11 +65,11 @@
                   {{ formatNumber(currentCount) }}/{{ formatNumber(neededCount) }}
                 </template>
               </UButton>
-              <UModal v-model="smallDialog" :ui="{ width: 'w-11/12' }">
-                <UCard>
-                  <div class="flex h-full flex-col items-end">
+              <UModal v-model="smallDialog" :ui="{ width: 'w-11/12', padding: 'p-0' }">
+                <UCard v-if="smallDialog" :ui="{ body: { padding: 'p-0 sm:p-0' } }">
+                  <div class="flex flex-col items-center">
                     <!-- Item image -->
-                    <div class="flex aspect-video min-h-[100px] self-stretch">
+                    <div class="flex aspect-video w-full items-center justify-center bg-surface-elevated">
                       <GameItem
                         v-if="imageItem"
                         :image-item="imageItem"
@@ -82,11 +82,13 @@
                         :background-color="imageItem?.backgroundColor || 'grey'"
                         size="large"
                         simple-mode
+                        fill
                         no-border
+                        class="h-full w-full"
                       />
                     </div>
                     <div class="mx-2 mt-2 flex items-center self-center">
-                      <div class="px-2 text-center">
+                      <div class="px-2 text-center text-lg font-bold">
                         {{ item.name }}
                       </div>
                       <ItemIndicators
@@ -100,9 +102,9 @@
                       />
                     </div>
                     <!-- Item need details -->
-                    <div class="mx-2 mt-2 flex w-full flex-col self-center">
+                    <div class="mx-2 mt-2 flex w-full flex-col self-center items-center">
                       <template v-if="props.need.needType == 'taskObjective'">
-                        <task-link :task="relatedTask" />
+                        <TaskLink :task="relatedTask" />
                         <RequirementInfo
                           :need-type="props.need.needType"
                           :level-required="levelRequired"
@@ -114,7 +116,7 @@
                         <div class="mt-1 mb-1 flex justify-center">
                           <div class="text-center">
                             <template v-if="relatedStation">
-                              <station-link :station="relatedStation" class="justify-center" />
+                              <StationLink :station="relatedStation" class="justify-center" />
                             </template>
                             <template v-else>
                               <span class="text-sm text-gray-300">Unknown station</span>
@@ -137,7 +139,7 @@
                     <!-- Item count actions -->
                     <div
                       v-if="!selfCompletedNeed"
-                      class="mx-2 mt-2 mb-2 flex h-full flex-col items-center justify-center self-stretch"
+                      class="mx-2 mt-4 mb-4 flex w-full flex-col items-center justify-center"
                     >
                       <template v-if="!isSingleItem">
                         <ItemCountControls
@@ -153,14 +155,14 @@
                         <CollectedToggleButton
                           v-tooltip="isCollected ? 'Collected' : 'Mark as collected'"
                           :is-collected="isCollected"
-                          class="flex h-10 w-10 items-center justify-center rounded-lg border transition-colors"
+                          class="flex h-12 w-12 items-center justify-center rounded-lg border transition-colors"
                           :class="
                             isCollected
                               ? 'bg-success-600 border-success-500 hover:bg-success-500 text-white'
                               : 'bg-surface-elevated text-content-secondary hover:bg-surface-hover border-base hover:text-content-primary'
                           "
                           :aria-label="isCollected ? 'Collected' : 'Mark as collected'"
-                          icon-class="h-6 w-6"
+                          icon-class="h-8 w-8"
                           @toggle="$emit('toggleCount')"
                         />
                       </template>
@@ -175,9 +177,9 @@
                     <!-- Show static count for completed parent items (Completed tab) -->
                     <div
                       v-else
-                      class="mx-2 mt-2 mb-2 flex h-full items-center justify-center self-stretch"
+                      class="mx-2 mt-4 mb-4 flex w-full items-center justify-center"
                     >
-                      <span class="text-success-400 text-sm font-semibold">
+                      <span class="text-success-400 text-lg font-bold">
                         {{ formatNumber(currentCount) }}/{{ formatNumber(neededCount) }}
                       </span>
                     </div>

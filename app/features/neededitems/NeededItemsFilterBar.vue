@@ -11,11 +11,7 @@
         :icon="tab.icon"
         :label="tab.label.toUpperCase()"
         :count="tab.count"
-        :count-color="
-          modelValue === tab.value
-            ? tab.activeColor || 'bg-primary-500'
-            : tab.inactiveColor || 'bg-surface-400'
-        "
+        :count-color="tab.badgeColor || 'bg-primary-500'"
         class="shrink-0"
         label-class="hidden sm:inline text-[clamp(0.625rem,2vw,0.875rem)]"
         @click="$emit('update:modelValue', tab.value)"
@@ -176,6 +172,7 @@
 </template>
 <script setup lang="ts">
   import FilterPill from '@/components/FilterPill.vue';
+  import { computed } from 'vue';
   type FilterType = 'all' | 'tasks' | 'hideout' | 'completed';
   type ViewMode = 'list' | 'grid';
   type FirFilter = 'all' | 'fir' | 'non-fir';
@@ -184,8 +181,7 @@
     value: FilterType;
     icon: string;
     count: number;
-    activeColor?: string;
-    inactiveColor?: string;
+    badgeColor?: string;
   }
   const props = defineProps<{
     modelValue: FilterType;
