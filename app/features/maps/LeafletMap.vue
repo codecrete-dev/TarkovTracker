@@ -285,12 +285,18 @@
     props.marks.forEach((mark) => {
       const objective = metadataStore.objectives.find((obj) => obj.id === mark.id);
       const task = objective ? metadataStore.tasks.find((t) => t.id === objective.taskId) : null;
-      const popupContent =
+        const popupContent =
         task || objective
           ? `
-          <div class="text-sm">
-            ${task ? `<div class="font-semibold">${task.name}</div>` : ''}
-            ${objective ? `<div class="text-gray-400">${objective.description}</div>` : ''}
+          <div class="v-popper__popper v-popper--theme-tooltip">
+            <div class="v-popper__wrapper">
+              <div class="v-popper__inner" style="visibility: visible; position: relative;">
+                <div class="text-sm">
+                  ${task ? `<div class="font-semibold">${task.name}</div>` : ''}
+                  ${objective ? `<div class="text-gray-400">${objective.description}</div>` : ''}
+                </div>
+              </div>
+            </div>
           </div>
         `
           : undefined;
@@ -303,8 +309,8 @@
         if (!pos) return;
         const latLng = gameToLatLng(pos.x, pos.z);
         const isSelf = mark.users?.includes('self') ?? false;
-        const markerColor = isSelf 
-          ? getComputedStyle(document.documentElement).getPropertyValue('--color-map-marker-self').trim() || '#ef4444' 
+        const markerColor = isSelf
+          ? getComputedStyle(document.documentElement).getPropertyValue('--color-map-marker-self').trim() || '#ef4444'
           : getComputedStyle(document.documentElement).getPropertyValue('--color-map-marker-team').trim() || '#f97316';
         const marker = L.circleMarker([latLng.lat, latLng.lng], {
           radius: 8,
@@ -322,8 +328,8 @@
         const latLngs = outlineToLatLngArray(zone.outline);
         if (latLngs.length < 3) return;
         const isSelf = mark.users?.includes('self') ?? false;
-        const zoneColor = isSelf 
-          ? getComputedStyle(document.documentElement).getPropertyValue('--color-map-marker-self').trim() || '#ef4444' 
+        const zoneColor = isSelf
+          ? getComputedStyle(document.documentElement).getPropertyValue('--color-map-marker-self').trim() || '#ef4444'
           : getComputedStyle(document.documentElement).getPropertyValue('--color-map-marker-team').trim() || '#f97316';
         const polygon = L.polygon(
           latLngs.map((ll) => [ll.lat, ll.lng]),
@@ -349,9 +355,10 @@
         if (popupContent) {
           attachTogglePopup(polygon, popupContent, () => polygon.getBounds().getCenter());
           polygon.bindTooltip(popupContent, {
-            className: 'map-zone-tooltip',
-            opacity: 0.95,
-            sticky: true,
+            className: 'leaflet-tooltip-reset',
+            opacity: 1,
+            sticky: false,
+            direction: 'top'
           });
         }
         polygon.on('mouseover', () => polygon.setStyle({ fillOpacity: 0.35, weight: 3 }));
@@ -363,8 +370,8 @@
       if (popupContent) {
         attachTogglePopup(marker, popupContent, () => marker.getLatLng());
         marker.bindTooltip(popupContent, {
-          className: 'map-zone-tooltip',
-          opacity: 0.95,
+          className: 'leaflet-tooltip-reset',
+          opacity: 1,
           direction: 'top',
         });
       }
@@ -445,9 +452,15 @@
           ? extract.faction.charAt(0).toUpperCase() + extract.faction.slice(1)
           : 'Unknown';
       const popupContent = `
-      <div class="text-sm">
-        <div class="font-semibold">${extract.name}</div>
-        <div class="text-gray-400">Faction: ${factionText}</div>
+      <div class="v-popper__popper v-popper--theme-tooltip">
+        <div class="v-popper__wrapper">
+          <div class="v-popper__inner" style="visibility: visible; position: relative;">
+            <div class="text-sm">
+              <div class="font-semibold">${extract.name}</div>
+              <div class="text-gray-400">Faction: ${factionText}</div>
+            </div>
+          </div>
+        </div>
       </div>
     `;
       attachTogglePopup(marker, popupContent, () => marker.getLatLng());
@@ -519,18 +532,22 @@
   :root.dark .leaflet-control-zoom a:hover {
     background-color: rgb(var(--color-surface-700)) !important;
   }
-  /* Zone hover tooltip styling */
-  :root.dark .map-zone-tooltip {
-    background-color: rgb(var(--color-surface-900));
-    color: rgb(var(--color-gray-200));
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 0.5rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    padding: 6px 8px;
-  }
   /* Extract marker styling */
   .extract-marker {
     background: transparent;
     border: none;
+  }
+  
+  /* Reset Leaflet's default tooltip styles so we can use floating-vue styles */
+  .leaflet-tooltip-reset {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  .leaflet-tooltip-reset::before {
+    display: none !important;
   }
 </style>

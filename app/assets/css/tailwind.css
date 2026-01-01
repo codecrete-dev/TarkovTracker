@@ -657,6 +657,7 @@ select:disabled,
 /* Light Mode Leaflet Overrides (when not .dark) */
 :root:not(.dark) .leaflet-container {
   background-color: #f3f4f6 !important; /* gray-100 */
+  font-family: inherit !important;
 }
 :root:not(.dark) .leaflet-popup-content-wrapper,
 :root:not(.dark) .leaflet-popup-tip {
@@ -664,12 +665,7 @@ select:disabled,
   color: #111827 !important; /* gray-900 */
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
-:root:not(.dark) .map-zone-tooltip {
-  background-color: #ffffff !important;
-  color: #111827 !important;
-  border-color: #e5e7eb !important; /* gray-200 */
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
+
 :root:not(.dark) .leaflet-control-zoom a {
   background-color: #ffffff !important;
   color: #374151 !important; /* gray-700 */
