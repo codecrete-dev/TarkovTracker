@@ -75,6 +75,8 @@ function createTooltip(el: HTMLElement, value: string | TooltipOptions) {
   document.body.appendChild(tooltip);
 
   let cleanup: (() => void) | null = null;
+  let rafId: number | null = null;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
   const updatePosition = () => {
     const placement = options.placement || 'top';
@@ -114,26 +116,50 @@ function createTooltip(el: HTMLElement, value: string | TooltipOptions) {
   };
 
   const show = () => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+
     // Update content and options fresh on show in case they changed without binding update (unlikely but safe)
     tooltip.style.display = 'block';
-    // Small delay to allow display block to render before opacity transition
-    requestAnimationFrame(() => {
-        tooltip.style.opacity = '1';
-    });
+    
+    // Ensure we don't have duplicate autoUpdate loops
+    if (cleanup) {
+      cleanup();
+    }
     cleanup = autoUpdate(el, tooltip, updatePosition);
+
+    // Small delay to allow display block to render before opacity transition
+    rafId = requestAnimationFrame(() => {
+        tooltip.style.opacity = '1';
+        rafId = null;
+    });
   };
 
   const hide = () => {
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+
     tooltip.style.opacity = '0';
     // Wait for transition
-    setTimeout(() => {
-        if (tooltip.style.opacity === '0') {
-             tooltip.style.display = 'none';
-             if (cleanup) {
-                cleanup();
-                cleanup = null;
-             }
+    timeoutId = setTimeout(() => {
+        tooltip.style.display = 'none';
+        if (cleanup) {
+            cleanup();
+            cleanup = null;
         }
+        timeoutId = null;
     }, 200);
   };
 
