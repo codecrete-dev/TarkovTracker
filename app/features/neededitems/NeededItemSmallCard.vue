@@ -191,18 +191,18 @@
   const hasItem = computed(() => Boolean(item.value));
   // Simplified UI for single-quantity items
   const isSingleItem = computed(() => neededCount.value === 1);
+  const isCompleted = computed(() => selfCompletedNeed.value || currentCount.value >= neededCount.value);
   const handleCardClick = () => {
     if (hasItem.value && !selfCompletedNeed.value) {
       emit('toggleCount');
     }
   };
   const itemCardClasses = computed(() => {
-    const isCompleted = selfCompletedNeed.value || currentCount.value >= neededCount.value;
     return {
       'bg-success-50/50 border-success-200 dark:bg-success-900/10 dark:border-success-500/30':
-        isCompleted,
+        isCompleted.value,
       'bg-surface-elevated border-base hover:border-primary-300':
-        !isCompleted,
+        !isCompleted.value,
     };
   });
   const imageContainerClasses = computed(() => {
@@ -214,12 +214,11 @@
     return [baseLayoutClasses, transitionClasses, hoverClasses];
   });
   const itemCountTagClasses = computed(() => {
-    const isCompleted = selfCompletedNeed.value || currentCount.value >= neededCount.value;
     return {
       'bg-clip-padding rounded-tl-[5px] rounded-br-[10px]': true,
       'bg-surface-elevated text-content-primary shadow-md ring-1 ring-black/5 dark:ring-0':
-        !isCompleted,
-      'bg-success-500 text-white shadow-md': isCompleted,
+        !isCompleted.value,
+      'bg-success-500 text-white shadow-md': isCompleted.value,
     };
   });
 </script>

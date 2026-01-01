@@ -509,28 +509,28 @@
   /* Override Leaflet default styles for dark theme */
   /* Override Leaflet default styles for dark theme */
   :root.dark .leaflet-container {
-    background-color: rgb(var(--color-surface-900));
+    background-color: var(--color-surface-900);
     font-family: inherit;
   }
   :root.dark .leaflet-popup-content-wrapper {
-    background-color: rgb(var(--color-surface-900)) !important;
-    color: rgb(var(--color-gray-200)) !important;
+    background-color: var(--color-surface-900) !important;
+    color: var(--color-gray-200) !important;
     border-radius: 0.5rem;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   }
   :root.dark .leaflet-popup-tip {
-    background-color: rgb(var(--color-surface-900)) !important;
+    background-color: var(--color-surface-900) !important;
   }
   .leaflet-popup-content {
     margin: 0.75rem;
   }
   :root.dark .leaflet-control-zoom a {
-    background-color: rgb(var(--color-surface-800)) !important;
-    color: rgb(var(--color-gray-200)) !important;
-    border-color: rgb(var(--color-surface-700)) !important;
+    background-color: var(--color-surface-800) !important;
+    color: var(--color-gray-200) !important;
+    border-color: var(--color-surface-700) !important;
   }
   :root.dark .leaflet-control-zoom a:hover {
-    background-color: rgb(var(--color-surface-700)) !important;
+    background-color: var(--color-surface-700) !important;
   }
   /* Extract marker styling */
   .extract-marker {

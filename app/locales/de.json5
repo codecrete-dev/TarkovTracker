@@ -612,6 +612,8 @@
       title: 'Fertigkeiten-Verwaltung',
       explanation: 'Alle Fertigkeiten aus den Spieldaten werden unten angezeigt. Quest-Belohnungen werden automatisch berechnet. Verwende Offsets, um durch Gameplay erworbene Fertigkeiten hinzuzufügen.',
       no_skills: 'Keine Fertigkeiten in den Spieldaten gefunden.',
+      required_for: 'Benötigt für: {tasks}',
+      required_levels: 'Benötigte Level: {levels}',
     },
     experience: {
       title: 'Erfahrung & Level',
@@ -628,10 +630,6 @@
     },
     danger_zone: {
       title: 'Gefahrenzone',
-    },
-    skills: {
-      required_for: 'Benötigt für: {tasks}',
-      required_levels: 'Benötigte Level: {levels}',
     },
   },
   generic: {
