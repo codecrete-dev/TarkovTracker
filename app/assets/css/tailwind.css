@@ -303,10 +303,11 @@ select:disabled,
   --color-entity-twitch: #9146ff;
   
   /* --- Task Status --- */
-  --color-task-locked: var(--color-gray-600);
+  --color-task-locked: var(--color-gray-400);
   --color-task-available: var(--color-primary-600);
   --color-task-complete: var(--color-success-600);
   --color-task-failed: var(--color-error-600);
+  --color-task-blocked: var(--color-gray-600);
 
   /* --- Rewards --- */
   --color-reward-item: var(--color-blue-400);
@@ -608,7 +609,7 @@ select:disabled,
     background-color: var(--color-task-available);
   }
   .bg-task-blocked {
-    background-color: var(--color-gray-400);
+    background-color: var(--color-task-blocked);
   }
 
   /* Overlay utility */

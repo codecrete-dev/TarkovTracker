@@ -5,7 +5,7 @@
       isComplete ? 'bg-success-500/10' : 'hover:bg-surface-200 dark:hover:bg-white/5',
       isParentTaskLocked ? 'cursor-not-allowed opacity-80' : 'cursor-pointer',
     ]"
-    @click="handleRowClick"
+    @click="handleRowClick($event)"
     @mouseenter="objectiveMouseEnter()"
     @mouseleave="objectiveMouseLeave()"
   >
@@ -19,7 +19,7 @@
           : 'text-gray-500 group-hover:text-gray-700 dark:text-content-tertiary dark:group-hover:text-content-secondary'
       "
     />
-    <div class="flex flex-1 flex-wrap items-center gap-2">
+    <div class="flex flex-1 flex-nowrap items-center gap-2">
       <div class="min-w-0">
         <div class="text-sm leading-5 text-content-primary">
           {{ props.objective?.description }}
@@ -33,7 +33,7 @@
             <span>{{ userNeeds.length }}</span>
           </div>
       </div>
-      <div class="flex items-center gap-2" @click.stop>
+      <div class="flex shrink-0 items-center gap-2" @click.stop>
         <ObjectiveCountControls
           v-if="neededCount > 1"
           :current-count="currentObjectiveCount"
@@ -44,22 +44,24 @@
           @toggle="toggleCount"
           @set-count="setCount"
         />
+        <span
+          v-else
+          class="inline-flex"
+          :class="{ 'cursor-not-allowed': isParentTaskLocked }"
+          @click.stop
+        >
           <button
-            v-else
             v-tooltip="
               isComplete
                 ? t('page.tasks.questcard.uncomplete', 'Uncomplete')
                 : t('page.tasks.questcard.complete', 'Complete')
             "
             type="button"
-            class="focus-visible:ring-primary-500 focus-visible:ring-offset-surface-900 flex h-7 w-7 items-center justify-center rounded-md border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+            class="focus-visible:ring-primary-500 focus-visible:ring-offset-surface-900 flex h-7 w-7 items-center justify-center rounded-md border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
             :aria-label="toggleObjectiveLabel"
             :aria-pressed="isComplete"
             :disabled="isParentTaskLocked"
             :class="[
-              isParentTaskLocked
-                ? 'cursor-not-allowed opacity-50'
-                : 'cursor-pointer',
               isComplete
                 ? 'bg-success-600 border-success-500 hover:bg-success-500 text-white'
                 : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10',
@@ -72,6 +74,7 @@
               class="h-4 w-4"
             />
           </button>
+        </span>
       </div>
     </div>
   </div>
@@ -139,7 +142,16 @@
     return tarkovStore.isTaskFailed(taskId);
   });
   const isParentTaskLocked = computed(() => {
-    return isParentTaskComplete.value || isParentTaskFailed.value;
+    const taskId = parentTaskId.value;
+    if (!taskId) return false;
+    
+    const isUnlocked = progressStore.unlockedTasks[taskId]?.self === true;
+    const isComplete = tarkovStore.isTaskComplete(taskId);
+    const isFailed = tarkovStore.isTaskFailed(taskId);
+    const isInvalid = progressStore.invalidTasks[taskId]?.self === true;
+
+    // Task is locked if it's NOT unlocked, OR if it's already complete, failed, or blocked
+    return !isUnlocked || isComplete || isFailed || isInvalid;
   });
   const userNeeds = computed(() => {
     const needingUsers: string[] = [];
@@ -207,8 +219,12 @@
     return iconMap[props.objective.type ?? ''] || 'mdi-help-circle';
   });
   const neededCount = computed(() => fullObjective.value?.count ?? props.objective.count ?? 1);
-  const handleRowClick = () => {
-    if (isParentTaskLocked.value) return;
+  const handleRowClick = (e: MouseEvent) => {
+    if (isParentTaskLocked.value) {
+      e.stopPropagation();
+      e.preventDefault();
+      return;
+    }
     if (neededCount.value > 1) {
       toggleCount();
       return;
@@ -221,7 +237,7 @@
       const currentCount = currentObjectiveCount.value;
       const requiredCount = neededCount.value;
       if (currentCount >= requiredCount) {
-        tarkovStore.setObjectiveCount(props.objective.id, Math.max(0, requiredCount - 1));
+        tarkovStore.setObjectiveCount(props.objective.id, 0);
       }
     }
     tarkovStore.toggleTaskObjectiveComplete(props.objective.id);
@@ -268,7 +284,7 @@
     const currentCount = currentObjectiveCount.value;
     const requiredCount = neededCount.value;
     if (currentCount >= requiredCount) {
-      tarkovStore.setObjectiveCount(props.objective.id, Math.max(0, requiredCount - 1));
+      tarkovStore.setObjectiveCount(props.objective.id, 0);
       if (isComplete.value) {
         tarkovStore.setTaskObjectiveUncomplete(props.objective.id);
       }

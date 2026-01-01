@@ -15,7 +15,7 @@
           class="mr-1 h-4 w-4 shrink-0 text-gray-500 transition-transform duration-200"
           :class="showDetails ? 'rotate-90' : ''"
         />
-        <span class="font-medium text-gray-700 dark:text-gray-300">
+        <span class="font-medium text-gray-700 dark:text-gray-200">
           <UIcon name="i-mdi-gift" aria-hidden="true" class="mr-1 inline h-3.5 w-3.5" />
           {{ t('page.tasks.questcard.rewards', 'Rewards') }}:
         </span>

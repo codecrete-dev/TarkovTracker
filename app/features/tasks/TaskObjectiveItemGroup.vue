@@ -15,8 +15,9 @@
           row.allComplete
             ? 'border-success-500/50 bg-success-100 text-success-900 dark:bg-success-500/10 dark:text-success-100'
             : 'border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-white/5',
-          isParentTaskLocked ? 'opacity-70' : '',
+          isParentTaskLocked ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-gray-100 dark:hover:bg-white/10',
         ]"
+        @click.stop="toggleCountForRow(row)"
       >
         <GameItem
           v-if="row.meta.itemIcon"
@@ -40,40 +41,47 @@
           FiR
         </span>
         <!-- Single set of controls per item - updates all related objectives together -->
-        <ObjectiveCountControls
-          v-if="row.meta.neededCount > 1"
-          :current-count="row.currentCount"
-          :needed-count="row.meta.neededCount"
-          :disabled="isParentTaskLocked"
-          @decrease="decreaseCountForRow(row)"
-          @increase="increaseCountForRow(row)"
-          @toggle="toggleCountForRow(row)"
-          @set-count="(value) => setCountForRow(row, value)"
-        />
-        <button
-          v-else
-          type="button"
-           class="cursor-pointer focus-visible:ring-primary-500 focus-visible:ring-offset-surface-900 flex h-7 w-7 items-center justify-center rounded-md border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-           :aria-label="
-            row.allComplete
-              ? t('page.tasks.questcard.uncomplete', 'Uncomplete')
-              : t('page.tasks.questcard.complete', 'Complete')
-          "
-          :aria-pressed="row.allComplete"
-          :disabled="isParentTaskLocked"
-          :class="
-            row.allComplete
-              ? 'bg-success-600 border-success-500 hover:bg-success-500 text-white'
-              : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10'
-          "
-          @click="toggleCountForRow(row)"
-        >
-          <UIcon
-            :name="row.allComplete ? 'i-mdi-check' : 'i-mdi-circle-outline'"
-            aria-hidden="true"
-            class="h-4 w-4"
+        <span v-if="row.meta.neededCount > 1" @click.stop>
+          <ObjectiveCountControls
+            :current-count="row.currentCount"
+            :needed-count="row.meta.neededCount"
+            :disabled="isParentTaskLocked"
+            @decrease="decreaseCountForRow(row)"
+            @increase="increaseCountForRow(row)"
+            @toggle="toggleCountForRow(row)"
+            @set-count="(value) => setCountForRow(row, value)"
           />
-        </button>
+        </span>
+        <span
+          v-else
+          class="inline-flex"
+          :class="{ 'cursor-not-allowed': isParentTaskLocked }"
+          @click.stop
+        >
+          <button
+             type="button"
+             class="focus-visible:ring-primary-500 focus-visible:ring-offset-surface-900 flex h-7 w-7 items-center justify-center rounded-md border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+             :aria-label="
+              row.allComplete
+                ? t('page.tasks.questcard.uncomplete', 'Uncomplete')
+                : t('page.tasks.questcard.complete', 'Complete')
+            "
+            :aria-pressed="row.allComplete"
+            :disabled="isParentTaskLocked"
+            :class="
+              row.allComplete
+                ? 'bg-success-600 border-success-500 hover:bg-success-500 text-white'
+                : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10'
+            "
+            @click="toggleCountForRow(row)"
+          >
+            <UIcon
+              :name="row.allComplete ? 'i-mdi-check' : 'i-mdi-circle-outline'"
+              aria-hidden="true"
+              class="h-4 w-4"
+            />
+          </button>
+        </span>
       </div>
     </div>
   </div>
@@ -83,6 +91,7 @@
   import { useI18n } from 'vue-i18n';
   import ObjectiveCountControls from '@/features/tasks/ObjectiveCountControls.vue';
   import { useMetadataStore } from '@/stores/useMetadata';
+  import { useProgressStore } from '@/stores/useProgress';
   import { useTarkovStore } from '@/stores/useTarkov';
   import type { TaskObjective } from '@/types/tarkov';
   const props = defineProps<{
@@ -92,6 +101,7 @@
   }>();
   const { t } = useI18n({ useScope: 'global' });
   const tarkovStore = useTarkovStore();
+  const progressStore = useProgressStore();
   const metadataStore = useMetadataStore();
   type ObjectiveMeta = {
     neededCount: number;
@@ -260,7 +270,18 @@
     return parentTaskIds.value.some((taskId) => tarkovStore.isTaskFailed(taskId));
   });
   const isParentTaskLocked = computed(() => {
-    return isParentTaskComplete.value || isParentTaskFailed.value;
+    if (parentTaskIds.value.length === 0) return false;
+    
+    // If ANY associated task is NOT available (locked, complete, failed, or blocked),
+    // we consider the group locked for safety. Usually these are all the same task anyway.
+    return parentTaskIds.value.some(taskId => {
+      const isUnlocked = progressStore.unlockedTasks[taskId]?.self === true;
+      const isComplete = tarkovStore.isTaskComplete(taskId);
+      const isFailed = tarkovStore.isTaskFailed(taskId);
+      const isInvalid = progressStore.invalidTasks[taskId]?.self === true;
+      
+      return !isUnlocked || isComplete || isFailed || isInvalid;
+    });
   });
   // Update all objectives in a row together
   const decreaseCountForRow = (row: ConsolidatedRow) => {

@@ -8,7 +8,7 @@
   >
     <div
       v-if="showBackgroundIcon"
-      class="pointer-events-none absolute inset-0 z-0 flex rotate-12 transform items-center justify-center p-8 opacity-15"
+      class="pointer-events-none absolute inset-0 z-0 flex rotate-12 transform items-center justify-center p-8"
       :class="backgroundIconColor"
     >
       <UIcon
@@ -124,21 +124,7 @@
               {{ t('page.tasks.questcard.progress', objectiveProgress) }}
             </UBadge>
 
-            <UBadge
-              v-if="isInvalid && !isFailed"
-              v-tooltip="
-                t(
-                  'page.tasks.questcard.blockedTooltip',
-                  'This quest is permanently blocked and can never be completed due to choices made in other quests'
-                )
-              "
-              size="xs"
-              :color="'gray' as any"
-              variant="solid"
-              class="cursor-help text-xs !bg-gray-400 !text-white"
-            >
-              {{ t('page.tasks.questcard.blocked', 'Blocked') }}
-            </UBadge>
+
               <UBadge
                 v-if="preferencesStore.getShowRequiredLabels && task.kappaRequired"
                 v-tooltip="
@@ -178,6 +164,21 @@
             >
                {{ t('page.dashboard.stats.failed.stat', 'Failed') }}
             </UBadge>
+            <UBadge
+              v-if="isInvalid && !isFailed"
+              v-tooltip="
+                t(
+                  'page.tasks.questcard.blockedTooltip',
+                  'This quest is permanently blocked and can never be completed due to choices made in other quests'
+                )
+              "
+              size="xs"
+              :color="'gray' as any"
+              variant="solid"
+              class="cursor-help text-xs !bg-[var(--color-task-blocked)] !text-white"
+            >
+              {{ t('page.tasks.questcard.blocked', 'Blocked') }}
+            </UBadge>
             <!-- XP display - moved to TaskCardRewards -->
           </div>
           <!-- Action buttons in header for consistent positioning -->
@@ -197,7 +198,7 @@
 
             <!-- 2) Available state: Green "COMPLETE" button -->
             <UButton
-              v-else-if="!isComplete"
+              v-else-if="!isComplete && !isInvalid"
               :size="actionButtonSize"
               icon="i-mdi-check-circle"
               color="success"
@@ -289,7 +290,7 @@
       <div 
         :class="[
           isCompact ? 'space-y-3' : 'space-y-4',
-          !isInteractive ? 'pointer-events-none cursor-not-allowed opacity-60' : ''
+          !isInteractive ? 'cursor-not-allowed opacity-60' : ''
         ]"
       >
         <QuestKeys v-if="task?.neededKeys?.length" :needed-keys="task.neededKeys" />
@@ -317,7 +318,7 @@
       />
 
       <!-- Next Quests Toggle -->
-      <div v-if="!isNested && childTasks.length > 0">
+      <div v-if="childTasks.length > 0">
         <RelatedTasksRow
           :tasks="childTasks"
           :label="t('page.tasks.questcard.nextQuests', 'Next Quests')"
@@ -331,7 +332,7 @@
             <div 
               v-if="impactCount > 0" 
               v-tooltip="{ content: t('page.tasks.questcard.remainingTooltip', 'Tasks blocked by this task, but not unlocked by completing it'), placement: 'top-end' }"
-              class="flex cursor-help items-center text-xs text-content-tertiary"
+              class="flex cursor-help items-center text-xs font-medium text-gray-500"
             >
                 <span>
                   {{ t('page.tasks.questcard.remainingLabel', 'Remaining') }}: {{ impactCount }}
@@ -352,7 +353,7 @@
       </div>
 
       <!-- Previous Quests Toggle -->
-      <div v-if="!isNested && filteredPreviousTasks.length > 0">
+      <div v-if="filteredPreviousTasks.length > 0">
         <RelatedTasksRow
           :tasks="filteredPreviousTasks"
           :label="t('page.tasks.questcard.previousQuests', 'Previous Quests')"
@@ -518,11 +519,13 @@
     return minLevel <= 0 || tarkovStore.playerLevel() >= minLevel;
   });
   const taskClasses = computed(() => {
-    if (isComplete.value && !isFailed.value) return 'border-success-500/25 bg-success-500/10';
-    if (isFailed.value) return 'border-error-500/25 bg-error-500/10'; // Red for failed
-    if (isInvalid.value) return 'border-neutral-500/25 bg-neutral-500/10 opacity-60'; // Gray for blocked
-    if (isLocked.value) return 'border-warning-500/25 bg-warning-500/10'; // Amber/orange for locked
-    return 'border-base';
+    const cursor = props.isNested ? 'cursor-pointer' : 'cursor-default';
+
+    if (isComplete.value && !isFailed.value) return `border-success-500/25 bg-success-500/10 ${cursor}`;
+    if (isFailed.value) return `border-error-500/25 bg-error-500/10 ${cursor}`; // Red for failed
+    if (isInvalid.value) return `border-[var(--color-task-blocked)]/25 bg-[var(--color-task-blocked)]/10 ${cursor}`; // Gray for blocked
+    if (isLocked.value) return `border-warning-500/25 bg-warning-500/10 ${cursor}`; // Amber/orange for locked
+    return `border-base ${cursor}`;
   });
   const isCompact = computed(() => preferencesStore.getTaskCardDensity === 'compact');
   const cardBodyClass = computed(() => {
@@ -539,11 +542,11 @@
     return '';
   });
   const backgroundIconColor = computed(() => {
-    if (isFailed.value) return 'text-error-400';
-    if (isComplete.value) return 'text-success-400';
-    if (isInvalid.value) return 'text-neutral-400';
-    if (isLocked.value) return 'text-warning-400';
-    return 'text-brand-200';
+    if (isFailed.value) return 'text-error-600';
+    if (isComplete.value) return 'text-success-600';
+    if (isInvalid.value) return 'text-neutral-600';
+    if (isLocked.value) return 'text-warning-600';
+    return 'text-brand-600';
   });
   const lockedBehind = computed(() => {
     return props.task.successors?.filter((s) => !isTaskSuccessful(s)).length || 0;

@@ -3,7 +3,7 @@
     ref="container" 
     class="group flex min-w-0 flex-col overflow-hidden"
     :class="[
-      expandable ? 'cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 rounded-md border border-gray-300 dark:border-white/20 p-2 transition-colors' : 'py-0.5',
+      expandable ? 'cursor-pointer hover:bg-gray-100/50 dark:hover:bg-white/5 rounded-md border border-gray-300 dark:border-white/20 p-2 transition-colors' : 'py-0.5',
       expanded ? 'bg-surface-50 dark:bg-surface-900 shadow-inner' : '',
       intent === 'error' ? 'bg-error-50 dark:bg-error-900/10' : ''
     ]"
@@ -35,23 +35,21 @@
       
       <!-- Badges Container -->
       <div class="flex flex-1 flex-nowrap items-center gap-1.5 overflow-hidden">
-        <router-link
+        <span
           v-for="task in visibleTasks"
           :key="task.id"
           v-tooltip="task.name"
-          :to="`/tasks?task=${task.id}`"
-          class="inline-flex max-w-[12rem] shrink-0 items-center rounded px-2 py-0.5 text-xs transition-colors hover:opacity-90 active:opacity-100 no-underline"
+          class="inline-flex max-w-[12rem] shrink-0 items-center rounded px-2 py-0.5 text-xs transition-colors hover:opacity-90 no-underline"
           :class="getBadgeClass(task)"
-          @click.stop
         >
           <span class="truncate">{{ task.name }}</span>
-        </router-link>
+        </span>
         
         <span v-if="remainingCount > 0" class="shrink-0 text-xs text-gray-500 font-medium">
           +{{ remainingCount }}{{ hasSuffix ? ',' : '' }}
         </span>
 
-        <span ref="suffixRef" class="shrink-0">
+        <span ref="suffixRef" class="shrink-0 text-xs">
           <slot name="suffix" />
         </span>
       </div>
@@ -66,7 +64,7 @@
           {{ expanded ? 'Collapse' : 'Expand' }}
         </button>
     </div>
-    <div v-if="expanded" class="mt-2 w-full min-w-0">
+    <div v-if="expanded" ref="bodyRef" class="mt-2 w-full min-w-0">
       <slot />
     </div>
   </div>
@@ -117,15 +115,19 @@ const getBadgeClass = (task: Task) => {
   const isComplete = tarkovStore.isTaskComplete(task.id);
   const isFailed = tarkovStore.isTaskFailed(task.id);
   const isUnlocked = progressStore.unlockedTasks[task.id]?.self === true;
+  const isBlocked = progressStore.invalidTasks?.[task.id]?.self === true;
   
   if (isComplete && !isFailed) return 'bg-task-complete text-white';
   if (isFailed) return 'bg-task-failed text-white';
   
+  // Blocked -> Blocked color
+  if (isBlocked) return 'bg-task-blocked text-white';
+
   // Available (Unlocked & Not Complete) -> Primary
   if (isUnlocked && !isComplete) return 'bg-task-available text-white';
 
-  // Locked/Blocked -> Gray
-  if (!isUnlocked) return 'bg-task-blocked text-white';
+  // Locked -> Locked color
+  if (!isUnlocked) return 'bg-task-locked text-white';
   
   // Default fallback
   switch (props.intent) {
@@ -140,7 +142,9 @@ const hasSuffix = computed(() => !!slots.suffix);
 
 const onRowClick = (e: MouseEvent) => {
   if (props.expandable) {
-    e.preventDefault(); 
+    // Otherwise, this is a header interaction: stop bubbling (so we don't toggle parent rows) and toggle
+    e.preventDefault();
+    e.stopPropagation();
     toggle();
   }
 };
@@ -235,4 +239,6 @@ const visibleTasks = computed(() => {
 const remainingCount = computed(() => {
   return Math.max(0, props.tasks.length - visibleCount.value);
 });
+
+const bodyRef = ref<HTMLElement | null>(null);
 </script>
