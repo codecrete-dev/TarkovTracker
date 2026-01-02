@@ -6,7 +6,7 @@
         <div class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ title }}</div>
       </div>
     </div>
-    <div class="flex flex-wrap gap-2 pl-9">
+    <div class="flex flex-wrap gap-2">
       <div
         v-for="row in consolidatedRows"
         :key="row.itemKey"

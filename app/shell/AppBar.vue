@@ -34,48 +34,6 @@
         >
           <UIcon name="i-heroicons-arrow-path" class="text-primary-500 h-6 w-6 animate-spin" />
         </span>
-        <!-- Game mode quick toggle -->
-        <div
-          class="flex items-center overflow-hidden rounded-md border border-base bg-surface-elevated ring-1 ring-gray-200/50 dark:border-white/15 dark:bg-surface-900/90 dark:ring-white/10"
-          role="group"
-          aria-label="Toggle game mode"
-        >
-          <button
-            type="button"
-            class="focus-visible:ring-inset focus-visible:z-10 rounded-l-[5px] cursor-pointer inline-flex items-center justify-center gap-0.5 px-1.5 py-1 text-[10px] font-semibold tracking-wide uppercase transition-colors sm:gap-2 sm:px-3 sm:py-1.5 sm:text-xs md:px-3.5 md:text-sm lg:px-4 lg:text-[15px]"
-            :class="pvpClasses"
-            :disabled="dataLoading || localLoading"
-            @click="switchMode(GAME_MODES.PVP)"
-          >
-            <UIcon name="i-mdi-sword-cross" class="hidden h-4 w-4 sm:block md:h-5 md:w-5" />
-            PvP
-          </button>
-          <div class="h-6 w-px bg-gray-300 dark:bg-white/15 sm:h-8" aria-hidden="true" />
-          <button
-            type="button"
-            class="focus-visible:ring-inset focus-visible:z-10 rounded-r-[5px] cursor-pointer inline-flex items-center justify-center gap-0.5 px-1.5 py-1 text-[10px] font-semibold tracking-wide uppercase transition-colors sm:gap-2 sm:px-3 sm:py-1.5 sm:text-xs md:px-3.5 md:text-sm lg:px-4 lg:text-[15px]"
-            :class="pveClasses"
-            :disabled="dataLoading || localLoading"
-            @click="switchMode(GAME_MODES.PVE)"
-          >
-            <UIcon name="i-mdi-account-group" class="hidden h-4 w-4 sm:block md:h-5 md:w-5" />
-            PvE
-          </button>
-        </div>
-        <!-- Theme toggle -->
-          <span v-tooltip="nextThemeLabel" class="inline-flex">
-            <button
-              type="button"
-              class="bg-surface-elevated border-base flex items-center justify-center rounded-md border px-2 py-1.5 ring-1 ring-gray-200/50 transition-colors hover:bg-surface-100 dark:bg-surface-900/90 dark:border-white/15 dark:ring-white/10 dark:hover:bg-surface-800"
-              :aria-label="nextThemeLabel"
-              @click="cycleTheme"
-            >
-              <UIcon
-                :name="currentThemeIcon"
-                class="text-content-tertiary h-4 w-4 transition-transform duration-200"
-              />
-            </button>
-          </span>
         <!-- Language selector -->
         <USelectMenu
           v-model="selectedLocale"
@@ -113,6 +71,39 @@
             <UIcon name="i-mdi-chevron-down" class="h-3 w-3 text-content-tertiary" />
           </template>
         </USelectMenu>
+        <!-- Theme toggle -->
+          <span v-tooltip="nextThemeLabel" class="inline-flex">
+            <button
+              type="button"
+              class="bg-surface-elevated border-base flex items-center justify-center rounded-md border px-2 py-1.5 ring-1 ring-gray-200/50 transition-colors hover:bg-surface-100 dark:bg-surface-900/90 dark:border-white/15 dark:ring-white/10 dark:hover:bg-surface-800"
+              :aria-label="nextThemeLabel"
+              @click="cycleTheme"
+            >
+              <UIcon
+                :name="currentThemeIcon"
+                class="text-content-tertiary h-4 w-4 transition-transform duration-200"
+              />
+            </button>
+          </span>
+        <!-- User/Login control -->
+        <template v-if="isLoggedIn">
+          <UDropdownMenu :items="accountItems" :content="{ side: 'bottom', align: 'end' }">
+            <button
+              type="button"
+              class="bg-surface-elevated border-base flex items-center justify-center rounded-md border p-1 ring-1 ring-gray-200/50 transition-colors hover:bg-surface-100 dark:bg-surface-900/90 dark:border-white/15 dark:ring-white/10 dark:hover:bg-surface-800"
+            >
+              <UAvatar :src="avatarSrc" size="xs" alt="User avatar" />
+            </button>
+          </UDropdownMenu>
+        </template>
+        <template v-else>
+          <NuxtLink
+            to="/login"
+            class="bg-surface-elevated border-base flex items-center justify-center rounded-md border px-2 py-1.5 ring-1 ring-gray-200/50 transition-colors hover:bg-surface-100 dark:bg-surface-900/90 dark:border-white/15 dark:ring-white/10 dark:hover:bg-surface-800"
+          >
+            <UIcon name="i-mdi-fingerprint" class="h-4 w-4 text-content-tertiary" />
+          </NuxtLink>
+        </template>
       </div>
     </div>
   </header>
@@ -126,15 +117,30 @@
   import { useAppStore } from '@/stores/useApp';
   import { useMetadataStore } from '@/stores/useMetadata';
   import { usePreferencesStore } from '@/stores/usePreferences';
-  import { useTarkovStore } from '@/stores/useTarkov';
-  import { GAME_MODES, type GameMode } from '@/utils/constants';
-  import { logger } from '@/utils/logger';
   const { t } = useI18n({ useScope: 'global' });
   const appStore = useAppStore();
-  const tarkovStore = useTarkovStore();
   const metadataStore = useMetadataStore();
   const preferencesStore = usePreferencesStore();
+  const { $supabase } = useNuxtApp();
   const route = useRoute();
+  
+  // User/Login state
+  const isLoggedIn = computed(() => $supabase.user?.loggedIn ?? false);
+  const avatarSrc = computed(() => {
+    return preferencesStore.getStreamerMode || !$supabase.user.photoURL
+      ? '/img/default-avatar.svg'
+      : $supabase.user.photoURL;
+  });
+  function logout() {
+    $supabase.signOut();
+  }
+  const accountItems = computed(() => [
+    {
+      label: t('navigation_drawer.logout'),
+      icon: 'i-mdi-lock',
+      onSelect: logout,
+    },
+  ]);
   const { width } = useWindowSize();
   const mdAndDown = computed(() => width.value < 960); // md breakpoint at 960px
   const navBarIcon = computed(() => {
@@ -143,39 +149,7 @@
     }
     return appStore.drawerRail ? 'i-mdi-menu' : 'i-mdi-menu-open';
   });
-  const currentGameMode = computed(() => {
-    return tarkovStore.getCurrentGameMode();
-  });
-  const pveClasses = computed(() =>
-    currentGameMode.value === GAME_MODES.PVE
-      ? 'bg-pve-600 hover:bg-pve-700 text-white shadow-[0_0_0_4px_rgba(0,0,0,0.15)] dark:shadow-[0_0_0_4px_rgba(0,0,0,0.45)] ring-2 ring-white/60 ring-inset outline outline-2 outline-white/40'
-      : 'bg-pve-50 text-pve-600 hover:bg-pve-100 dark:bg-pve-950/80 dark:text-pve-400 dark:hover:bg-pve-900/90'
-  );
-  const pvpClasses = computed(() =>
-    currentGameMode.value === GAME_MODES.PVP
-      ? 'bg-pvp-600 hover:bg-pvp-700 text-white shadow-[0_0_0_4px_rgba(0,0,0,0.15)] dark:bg-pvp-800 dark:shadow-[0_0_0_4px_rgba(0,0,0,0.45)] ring-2 ring-white/60 ring-inset outline outline-2 outline-white/40'
-      : 'bg-pvp-50 text-pvp-600 hover:bg-pvp-100 dark:bg-pvp-950/80 dark:text-pvp-400 dark:hover:bg-pvp-900/90'
-  );
-  async function switchMode(mode: GameMode) {
-    if (mode !== currentGameMode.value && !dataLoading.value && !localLoading.value) {
-      localLoading.value = true;
-      try {
-        await tarkovStore.switchGameMode(mode);
-        metadataStore.updateLanguageAndGameMode();
-        // Since we are changing mode, we should ensure fresh data
-        await metadataStore.fetchAllData(true);
-        dataError.value = false;
-      } catch (err) {
-        logger.error('[AppBar] Error switching mode:', err);
-        dataError.value = true;
-      } finally {
-        localLoading.value = false;
-      }
-    }
-  }
   const { loading: dataLoading, hideoutLoading } = storeToRefs(metadataStore);
-  // Local loading state for UI feedback during mode switch to avoid store mutation warnings
-  const localLoading = ref(false);
   const dataError = ref(false);
   const pageTitle = computed(() =>
     t(`page.${String(route.name || 'index').replace('-', '_')}.title`)

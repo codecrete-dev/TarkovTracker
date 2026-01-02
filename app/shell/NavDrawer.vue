@@ -43,47 +43,6 @@
         </div>
       </NuxtLink>
       <div class="mx-3 my-0.5 h-px bg-divider dark:bg-primary-800/40" />
-      <ul class="flex flex-col gap-1 px-1">
-        <template v-if="isLoggedIn">
-          <UDropdownMenu :items="accountItems" :content="{ side: 'right', align: 'start' }">
-            <UButton
-              color="neutral"
-              variant="ghost"
-              :padded="!isCollapsed"
-              class="w-full justify-between rounded-md px-2 py-2"
-              :class="[isCollapsed ? 'justify-center px-0' : '']"
-            >
-              <div class="flex min-w-0 items-center gap-3">
-                <UAvatar :src="avatarSrc" size="md" alt="User avatar" class="shrink-0" />
-                <span v-if="!isCollapsed" class="truncate">{{ userDisplayName }}</span>
-              </div>
-              <template #trailing>
-                <UIcon
-                  v-if="!isCollapsed"
-                  name="i-heroicons-chevron-down-20-solid"
-                  class="h-5 w-5 transition-transform duration-200"
-                />
-              </template>
-            </UButton>
-          </UDropdownMenu>
-        </template>
-        <template v-else>
-          <UButton
-            to="/login"
-            icon="i-mdi-fingerprint"
-            color="neutral"
-            variant="ghost"
-            block
-            :padded="!isCollapsed"
-            class="h-12 justify-center rounded-md px-3 py-3"
-          >
-            <span v-if="!isCollapsed" class="truncate text-base font-medium">
-              {{ t('navigation_drawer.login') }}
-            </span>
-          </UButton>
-        </template>
-      </ul>
-      <div class="mx-3 my-0.5 h-px bg-divider dark:bg-primary-800/40" />
       <DrawerLevel :is-collapsed="isCollapsed" />
       <div v-if="!isCollapsed" class="my-2 flex flex-col items-center gap-1.5 px-4">
         <button
@@ -92,26 +51,35 @@
         >
           {{ currentEditionName }}
         </button>
-        <div class="flex w-full overflow-hidden rounded-md border border-base dark:border-primary-800/50">
-          <button
-            v-for="faction in factions"
-            :key="faction"
-            class="flex flex-1 items-center justify-center px-2 py-2.5 transition-colors"
-            :class="
-              faction === currentFaction
-                ? 'bg-primary-600 text-white dark:bg-primary-700'
-                : 'bg-transparent text-content-tertiary hover:bg-surface-200 hover:text-content-primary dark:text-white/65 dark:hover:bg-white/5 dark:hover:text-white'
-            "
-            @click="setFaction(faction)"
-          >
-            <NuxtImg
-              :src="`/img/factions/${faction}.webp`"
-              class="h-10 w-10 object-contain"
-              :class="faction === currentFaction ? 'invert' : 'invert-0 dark:invert'"
-              width="40"
-              height="40"
-            />
-          </button>
+        <!-- Faction and Game Mode Cycling Buttons Row -->
+        <div class="flex w-full gap-1.5">
+          <!-- Faction Cycling Button -->
+          <span v-tooltip="`Switch to ${nextFaction}`" class="aspect-square">
+            <button
+              class="w-full h-full rounded border px-2 py-2.5 text-center transition-colors border-base hover:bg-surface-200 dark:border-primary-800/50 dark:hover:border-primary-600 dark:hover:bg-white/5"
+              @click="cycleFaction"
+            >
+              <NuxtImg
+                :src="`/img/factions/${currentFaction}.webp`"
+                class="h-10 w-10 mx-auto object-contain invert-0 dark:invert"
+                width="40"
+                height="40"
+              />
+            </button>
+          </span>
+          <!-- Game Mode Cycling Button -->
+          <span v-tooltip="`Switch to ${nextGameModeLabel}`" class="flex-1">
+            <button
+              class="w-full h-full rounded border px-2 py-2.5 flex items-center justify-center transition-colors border-base dark:border-primary-800/50 dark:hover:border-primary-600"
+              :class="currentGameModeColorClass"
+              @click="cycleGameMode"
+            >
+              <div class="flex items-center justify-center gap-1.5 text-md font-semibold uppercase tracking-wide">
+                <UIcon :name="currentGameModeIcon" class="h-10 w-10" :class="currentGameModeIconClass" />
+                <span>{{ currentGameModeLabel }}</span>
+              </div>
+            </button>
+          </span>
         </div>
       </div>
       <div class="mx-3 my-0.5 h-px bg-divider dark:bg-primary-800/40" />
@@ -164,7 +132,7 @@
   import { useMetadataStore } from '@/stores/useMetadata';
   import { usePreferencesStore } from '@/stores/usePreferences';
   import { useTarkovStore } from '@/stores/useTarkov';
-  import { PMC_FACTIONS, type PMCFaction } from '@/utils/constants';
+  import { PMC_FACTIONS, type PMCFaction, GAME_MODES, type GameMode } from '@/utils/constants';
   // Use shared breakpoints to avoid duplicate listeners
   const { belowMd } = useSharedBreakpoints();
   const appStore = useAppStore();
@@ -204,45 +172,67 @@
   const preferencesStore = usePreferencesStore();
   const tarkovStore = useTarkovStore();
   const router = useRouter();
-  const factions = PMC_FACTIONS;
   const { t } = useI18n({ useScope: 'global' });
-  const { $supabase } = useNuxtApp();
-  const isLoggedIn = computed(() => $supabase.user?.loggedIn ?? false);
-  const avatarSrc = computed(() => {
-    return preferencesStore.getStreamerMode || !$supabase.user.photoURL
-      ? '/img/default-avatar.svg'
-      : $supabase.user.photoURL;
-  });
-  const currentFaction = computed<PMCFaction>(() => tarkovStore.getPMCFaction());
   const currentEditionName = computed(() => metadataStore.getEditionName(tarkovStore.gameEdition));
+  
+  // Faction cycling logic
+  const factionArray = PMC_FACTIONS; // ['USEC', 'BEAR']
+  const currentFaction = computed<PMCFaction>(() => tarkovStore.getPMCFaction());
+  const nextFaction = computed<PMCFaction>(() => {
+    const currentIndex = factionArray.indexOf(currentFaction.value);
+    const nextIndex = (currentIndex + 1) % factionArray.length;
+    return factionArray[nextIndex];
+  });
   function setFaction(faction: PMCFaction) {
     if (faction !== currentFaction.value) {
       tarkovStore.setPMCFaction(faction);
     }
   }
+  function cycleFaction() {
+    setFaction(nextFaction.value);
+  }
+  
+  // Game mode cycling logic
+  const gameModeArray = [GAME_MODES.PVP, GAME_MODES.PVE];
+  const gameModeConfig = {
+    [GAME_MODES.PVP]: { 
+      label: 'PvP', 
+      icon: 'i-mdi-sword-cross',
+      colorClass: 'bg-primary-100 hover:bg-primary-200 dark:bg-primary-500/20 dark:text-primary-100 dark:hover:bg-primary-500/30',
+      iconClass: 'text-pvp-600 dark:text-pvp-600',
+    },
+    [GAME_MODES.PVE]: { 
+      label: 'PvE', 
+      icon: 'i-mdi-account-group',
+      colorClass: 'bg-pve-100 text-pve-900 hover:bg-pve-200 dark:bg-pve-500/20 dark:text-pve-100 dark:hover:bg-pve-500/30',
+      iconClass: 'text-pve-600 dark:text-pve-400',
+    },
+  };
+  const currentGameMode = computed(() => tarkovStore.getCurrentGameMode());
+  const currentGameModeConfig = computed(() => gameModeConfig[currentGameMode.value]);
+  const currentGameModeLabel = computed(() => currentGameModeConfig.value.label);
+  const currentGameModeIcon = computed(() => currentGameModeConfig.value.icon);
+  const currentGameModeColorClass = computed(() => currentGameModeConfig.value.colorClass);
+  const currentGameModeIconClass = computed(() => currentGameModeConfig.value.iconClass);
+  const nextGameMode = computed<GameMode>(() => {
+    const currentIndex = gameModeArray.indexOf(currentGameMode.value);
+    const nextIndex = (currentIndex + 1) % gameModeArray.length;
+    return gameModeArray[nextIndex];
+  });
+  const nextGameModeLabel = computed(() => {
+    return gameModeConfig[nextGameMode.value].label;
+  });
+  function setGameMode(mode: GameMode) {
+    if (mode !== currentGameMode.value) {
+      tarkovStore.switchGameMode(mode);
+    }
+  }
+  function cycleGameMode() {
+    setGameMode(nextGameMode.value);
+  }
   function navigateToSettings() {
     router.push('/settings');
   }
-  const userDisplayName = computed(() => {
-    if (preferencesStore.getStreamerMode) return 'User';
-    // Prefer Display Name from tarkov store (current game mode)
-    const displayName = tarkovStore.getDisplayName();
-    if (displayName && displayName.trim() !== '') {
-      return displayName;
-    }
-    // Fallback to auth username or'User'
-    return $supabase.user.displayName || 'User';
-  });
-  function logout() {
-    $supabase.signOut();
-  }
-  const accountItems = computed(() => [
-    {
-      label: t('navigation_drawer.logout'),
-      icon: 'i-mdi-lock',
-      onSelect: logout,
-    },
-  ]);
 </script>
 <style scoped>
   /* Hide scrollbar but keep scroll functionality */
