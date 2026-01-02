@@ -12,41 +12,30 @@
   >
     <!-- Content Cluster -->
     <div class="flex h-full w-full flex-col items-center gap-1 pt-1">
-      <!-- Image Area -->
-      <div class="relative flex h-16 w-full shrink-0 items-center justify-center sm:h-20">
+      <!-- Image Area - relative container for overlays -->
+      <div class="relative">
         <GameItem
           :item="requirement.item"
           size="small"
           :show-actions="false"
           simple-mode
-          fill
         />
         <!-- Complete Checkmark Overlay -->
         <div
           v-if="isComplete"
-          class="bg-success-500/10 absolute inset-0 flex items-center justify-center rounded-lg"
+          class="bg-success-500/10 absolute inset-0 flex items-center justify-center rounded z-2"
         >
           <UIcon name="i-mdi-check-circle" class="text-success-500/50 h-10 w-10 sm:h-12 sm:w-12" />
         </div>
-        <div
-          v-if="isFoundInRaid"
-          v-tooltip="'Found in Raid required'"
-          class="absolute bottom-1 right-1 z-30 flex items-center justify-center rounded bg-warning-500/90 p-px shadow-sm"
-        >
-          <UIcon name="i-mdi-checkbox-marked-circle-outline" class="text-warning-950 h-3 w-3" />
-        </div>
-        <!-- Count Badge -->
-        <div
-          v-if="requiredCount > 1"
-          class="absolute -bottom-1 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap"
-        >
-          <div
-            class="rounded-md border border-base bg-surface-elevated px-2 py-0.5 text-[10px] font-bold shadow-md"
-            :class="isComplete ? 'text-success-600 dark:text-success-400' : 'text-content-secondary'"
-          >
-            {{ formatNumber(currentCount) }}/{{ formatNumber(requiredCount) }}
-          </div>
-        </div>
+        <!-- Status Badge Overlay -->
+        <ItemStatusBadge
+          :current-count="currentCount"
+          :needed-count="requiredCount"
+          :is-complete="isComplete"
+          :found-in-raid="isFoundInRaid"
+          :show-count="requiredCount > 1"
+          size="sm"
+        />
       </div>
       <!-- Item Name -->
       <div
@@ -156,6 +145,7 @@
   import ContextMenu from '@/components/ui/ContextMenu.vue';
   import ContextMenuItem from '@/components/ui/ContextMenuItem.vue';
   import GameItem from '@/components/ui/GameItem.vue';
+  import ItemStatusBadge from '@/components/ui/ItemStatusBadge.vue';
   import { useTarkovStore } from '@/stores/useTarkov';
   import { useLocaleNumberFormatter } from '@/utils/formatters';
   interface Props {

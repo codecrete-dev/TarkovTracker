@@ -106,16 +106,6 @@
               </span>
             </GameBadge>
 
-            <!-- Progress Badge -->
-            <GameBadge
-              v-if="objectiveProgress.total > 0"
-              variant="solid"
-              color="gray"
-              badge-class="inline-flex items-center gap-1 text-xs border dark:text-gray-100 dark:border-gray-100"
-              icon="i-mdi-progress-check"
-              :label="t('page.tasks.questcard.progress', objectiveProgress)"
-            />
-
             <!-- Kappa Badge -->
             <GameBadge
               v-if="preferencesStore.getShowRequiredLabels && task.kappaRequired"
@@ -169,7 +159,18 @@
               badge-class="cursor-help text-xs !bg-[var(--color-task-blocked)] !text-white"
               :label="t('page.tasks.questcard.blocked', 'Blocked')"
             />
-          </div>
+          
+            <!-- Progress Badge -->
+            <GameBadge
+              v-if="objectiveProgress.total > 0 && !(isInvalid && !isFailed)"
+              variant="solid"
+              color="gray"
+              badge-class="inline-flex items-center gap-1 text-xs border dark:text-gray-100 dark:border-gray-100"
+              icon="i-mdi-progress-check"
+              :label="t('page.tasks.questcard.progress', objectiveProgress)"
+            />
+</div>
+          
           <!-- Action buttons in header for consistent positioning -->
           <template v-if="isOurFaction">
             <!-- 1) Locked state: Green "UNLOCK" button -->

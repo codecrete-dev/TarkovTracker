@@ -10,10 +10,8 @@
         <GameItem
           :item="groupedItem.item"
           :is-visible="true"
-          size="small"
+          size="fluid"
           simple-mode
-          fill
-          class="h-full w-full"
         />
       </div>
       <!-- Item name + Total - with padding -->

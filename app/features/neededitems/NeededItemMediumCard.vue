@@ -1,15 +1,13 @@
 <template>
   <div class="flex h-full flex-col rounded" :class="itemCardClasses">
     <!-- Item image - fixed aspect ratio -->
-    <div class="relative aspect-video w-full shrink-0 overflow-hidden">
+    <div class="relative flex items-center justify-center w-full shrink-0 overflow-hidden">
       <GameItem
         v-if="imageItem"
         :item="imageItem"
         :is-visible="true"
-        size="small"
+        size="large"
         simple-mode
-        fill
-        class="h-full w-full"
       />
     </div>
     <!-- Item name - fixed height with line clamp -->

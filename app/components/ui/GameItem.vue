@@ -1,7 +1,7 @@
 <template>
   <div
     class="group relative"
-    :class="[containerClasses, { 'h-full w-full': size !== 'small', 'cursor-pointer': clickable }]"
+    :class="[containerClasses, { 'h-full w-full': size === 'fluid', 'cursor-pointer': clickable }]"
     @click="handleClick"
     @contextmenu="handleContextMenu"
   >
@@ -11,7 +11,6 @@
       :src="computedImageSrc"
       :item-name="computedItemName"
       :background-color="resolvedBackgroundColor"
-      :fill="fill"
       :size="size"
       :is-visible="isVisible"
     />
@@ -181,7 +180,7 @@
     taskWikiLink?: string | null;
     // Display options
     count?: number | null;
-    size?: 'xs' | 'small' | 'medium' | 'large';
+    size?: 'xs' | 'small' | 'medium' | 'large' | 'fluid';
     simpleMode?: boolean;
     showActions?: boolean;
     isVisible?: boolean;
@@ -192,8 +191,6 @@
     showCounter?: boolean;
     currentCount?: number;
     neededCount?: number;
-    // Fill parent container (for simpleMode)
-    fill?: boolean;
     /** @deprecated use item prop */
     imageItem?: {
       iconLink?: string;
@@ -223,7 +220,6 @@
     showCounter: false,
     currentCount: 0,
     neededCount: 1,
-    fill: false,
     imageItem: undefined,
   });
   const emit = defineEmits<{

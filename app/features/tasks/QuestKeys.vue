@@ -17,7 +17,7 @@
             <GameItem
               :item="key"
               :count="1"
-              size="xs"
+              size="medium"
               class="mr-2"
               :show-actions="true"
             />

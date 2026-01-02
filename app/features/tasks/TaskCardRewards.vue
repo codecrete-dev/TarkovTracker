@@ -134,7 +134,7 @@
                     <GameItem
                       v-if="reward.item"
                       :item="reward.item"
-                      size="small"
+                      size="medium"
                       simple-mode
                       class="mx-auto"
                     />
@@ -181,7 +181,7 @@
                     <GameItem
                       v-if="offer.item"
                       :item="offer.item"
-                      size="small"
+                      size="medium"
                       simple-mode
                       class="mx-auto"
                     />

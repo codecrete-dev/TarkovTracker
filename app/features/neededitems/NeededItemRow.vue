@@ -8,7 +8,11 @@
       <div class="px-3 py-2">
         <div class="mx-0 flex flex-nowrap items-center">
           <div class="flex min-w-0 flex-1 items-center p-0">
-            <div class="relative aspect-square h-20 shrink-0">
+            <div 
+              class="group/image relative shrink-0 cursor-pointer transition-transform hover:scale-105"
+              :class="{ 'pointer-events-none': selfCompletedNeed }"
+              @click.stop="!selfCompletedNeed && $emit('toggleCount')"
+            >
               <GameItem
                 v-if="isVisible"
                 :item="imageItem"
@@ -16,9 +20,18 @@
                 :task-wiki-link="relatedTask?.wikiLink"
                 size="small"
                 simple-mode
-                fill
-                class="h-full w-full"
               />
+              <!-- Click to collect overlay -->
+              <div
+                v-if="!selfCompletedNeed"
+                class="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-black/40 opacity-0 transition-opacity duration-200 group-hover/image:opacity-100"
+              >
+                <span
+                  class="rounded bg-black/60 px-2 py-1 text-xs font-bold tracking-wide text-white backdrop-blur-sm"
+                >
+                  {{ isCollected ? t('page.neededitems.uncollect') : t('page.neededitems.collect') }}
+                </span>
+              </div>
             </div>
             <span class="ml-3 flex min-w-0 flex-1 flex-col overflow-hidden">
               <span class="flex items-center truncate text-base font-semibold">
@@ -79,8 +92,6 @@
                         :task-wiki-link="relatedTask?.wikiLink"
                         size="large"
                         simple-mode
-                        fill
-                        class="h-full w-full"
                       />
                     </div>
                     <div class="mx-2 mt-2 flex items-center self-center">

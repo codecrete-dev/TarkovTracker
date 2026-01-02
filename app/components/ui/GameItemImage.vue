@@ -4,7 +4,7 @@
       'relative overflow-hidden bg-stash-cell rounded',
       containerClasses,
       imageTileClasses,
-      fill ? 'flex items-center justify-center' : '',
+      'flex items-center justify-center',
     ]"
   >
     <div :class="['absolute inset-0 overlay-stash-bg', resolvedBackgroundClass]"></div>
@@ -13,8 +13,7 @@
       :src="formattedSrc"
       :alt="alt || itemName || 'Item'"
       :class="[
-        fill ? 'max-h-full max-w-full object-contain' : 'h-full w-full object-contain',
-        'relative z-10',
+        'max-h-full max-w-full object-contain p-1 rounded relative z-1',
         imageElementClasses,
       ]"
       loading="lazy"
@@ -23,7 +22,7 @@
     <div
       v-else
       :class="[
-        'bg-surface-800 flex h-full w-full items-center justify-center rounded relative z-10',
+        'bg-surface-800 flex h-full w-full items-center justify-center rounded',
         imageElementClasses,
       ]"
     >
@@ -40,8 +39,7 @@
     alt?: string;
     itemName?: string | null;
     backgroundColor?: string;
-    fill?: boolean;
-    size?: 'xs' | 'small' | 'medium' | 'large';
+    size?: 'xs' | 'small' | 'medium' | 'large' | 'fluid';
     isVisible?: boolean;
   }
   const props = withDefaults(defineProps<Props>(), {
@@ -49,7 +47,6 @@
     alt: '',
     itemName: null,
     backgroundColor: 'default',
-    fill: false,
     size: 'medium',
     isVisible: true,
   });
@@ -57,21 +54,25 @@
     return props.src;
   });
   const containerClasses = computed(() => {
-    const classes = ['block', 'relative'];
-    if (props.fill) {
-      classes.push('h-full', 'w-full');
-    } else {
-      classes.push('shrink-0');
-      if (props.size === 'xs') {
-        classes.push('h-9 w-9'); 
-      } else if (props.size === 'small') {
-        classes.push('h-12 w-12 md:h-16 md:w-16'); 
-      } else if (props.size === 'large') {
-        classes.push('h-20 w-20 md:h-28 md:w-28'); 
-      } else {
-        classes.push('h-16 w-16 md:h-24 md:w-24'); 
-      }
+    // Fluid mode: fills parent container, maintains square aspect ratio
+    if (props.size === 'fluid') {
+      return ['block', 'relative', 'w-full', 'aspect-square'];
     }
+    
+    // Fixed sizes
+    const classes = ['block', 'relative', 'shrink-0'];
+    
+    if (props.size === 'xs') {
+      classes.push('h-9', 'w-9'); // 36px
+    } else if (props.size === 'small') {
+      classes.push('h-16', 'w-16'); // 64px - hideout
+    } else if (props.size === 'large') {
+      classes.push('h-32', 'w-32'); // 128px - list view
+    } else {
+      // medium (default) - 96px - tasks
+      classes.push('h-24', 'w-24');
+    }
+    
     return classes;
   });
   const backgroundClassMap = {

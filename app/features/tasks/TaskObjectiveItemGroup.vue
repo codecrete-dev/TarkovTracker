@@ -10,7 +10,7 @@
       <div
         v-for="row in consolidatedRows"
         :key="row.itemKey"
-        class="flex max-w-full items-center gap-2 rounded-md border px-2 py-1 transition-colors"
+        class="flex max-w-full items-center gap-2 rounded-md border p-1 transition-colors"
         :class="[
           row.allComplete
             ? 'border-success-500/50 bg-success-100 text-success-900 dark:bg-success-500/10 dark:text-success-100'
@@ -25,7 +25,7 @@
           :src="row.meta.itemIcon"
           :item-name="row.meta.itemName"
           :background-color="row.meta.backgroundColor"
-          size="small"
+          size="medium"
           simple-mode
           class="shrink-0"
         />

@@ -16,26 +16,18 @@
           ]"
           @click="handleCardClick"
         >
-          <div class="peer/indicators absolute top-0 left-0 z-40">
-            <div
-              class="flex items-center gap-1 rounded-br-lg px-2 py-1 text-sm font-bold shadow-lg"
-              :class="itemCountTagClasses"
-            >
-              {{ currentCount }}/{{ neededCount }}
-              <ItemIndicators
-                :found-in-raid="props.need.foundInRaid"
-                fir-icon-class="h-4 w-4"
-                :is-craftable="isCraftable"
-                :craftable-title="craftableTitle"
-                craftable-icon-base-class="h-4 w-4 opacity-90"
-                :craftable-icon-class="craftableIconClass"
-                :kappa-required="isKappaRequired"
-                :kappa-title="$t('task.kappa_req', 'Required for Kappa quest')"
-                kappa-icon-class="h-4 w-4 text-entity-kappa"
-                @craft="goToCraftStation"
-              />
-            </div>
-          </div>
+          <ItemStatusBadge
+            :current-count="currentCount"
+            :needed-count="neededCount"
+            :is-complete="isCompleted"
+            :found-in-raid="props.need.foundInRaid"
+            :is-craftable="isCraftable"
+            :craftable-title="craftableTitle"
+            :craftable-icon-class="craftableIconClass"
+            :is-kappa-required="isKappaRequired"
+            :kappa-title="$t('task.kappa_req', 'Required for Kappa quest')"
+            @craft="goToCraftStation"
+          />
           <!-- Click to complete overlay -->
           <div
             v-if="!selfCompletedNeed"
@@ -56,10 +48,8 @@
             :item="item"
             :is-visible="true"
             :task-wiki-link="relatedTask?.wikiLink"
-            size="small"
+            size="fluid"
             simple-mode
-            fill
-            class="h-full w-full"
           />
         </div>
         <!-- Card content -->
@@ -157,6 +147,7 @@
   import { computed, defineAsyncComponent, inject } from 'vue';
   import { useI18n } from 'vue-i18n';
   import GameItem from '@/components/ui/GameItem.vue';
+  import ItemStatusBadge from '@/components/ui/ItemStatusBadge.vue';
   import {
     createDefaultNeededItemContext,
     neededItemKey,
@@ -212,18 +203,11 @@
   });
   const imageContainerClasses = computed(() => {
     const baseLayoutClasses =
-      'group/image relative z-0 aspect-[4/3] w-full shrink-0 origin-bottom overflow-hidden rounded';
+      'group/image relative z-0 flex items-center justify-center w-full shrink-0 origin-bottom overflow-hidden rounded';
     const transitionClasses = 'transition-transform duration-150 ease-out will-change-transform';
     const hoverClasses =
       'hover:z-20 hover:-translate-y-1 hover:scale-[1.08] hover:ring-1 hover:ring-black/5 dark:hover:ring-white/10';
     return [baseLayoutClasses, transitionClasses, hoverClasses];
   });
-  const itemCountTagClasses = computed(() => {
-    return {
-      'bg-clip-padding rounded-tl-[5px] rounded-br-[10px]': true,
-      'bg-surface-elevated': true,
-      'text-content-primary': !isCompleted.value,
-      'text-success-600 dark:text-success-400 font-bold': isCompleted.value,
-    };
-  });
+
 </script>

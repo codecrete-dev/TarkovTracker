@@ -296,9 +296,8 @@ select:disabled,
   --color-link: hsl(187 100% 38%);
 
   /* --- Entities --- */
-  /* Lightkeeper: Amber/Gold. Adaptive for contrast. */
-  --color-entity-lightkeeper: var(--color-warning-600); 
-  --color-entity-kappa: var(--color-amber-400);
+  --color-entity-lightkeeper: var(--color-amber-500); 
+  --color-entity-kappa: var(--color-entity-twitch);
   --color-entity-discord: #5865f2;                    
   --color-entity-twitch: #9146ff;
   
