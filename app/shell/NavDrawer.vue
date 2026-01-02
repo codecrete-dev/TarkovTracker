@@ -70,7 +70,7 @@
           <!-- Game Mode Cycling Button -->
           <span v-tooltip="`Switch to ${nextGameModeLabel}`" class="flex-1">
             <button
-              class="w-full h-full rounded border px-2 py-2.5 flex items-center justify-center transition-colors border-base dark:border-primary-800/50 dark:hover:border-primary-600"
+              class="w-full h-full rounded border px-2 py-2.5 flex items-center justify-center transition-colors border-base hover:bg-surface-200 dark:border-primary-800/50 dark:hover:border-primary-600 dark:hover:bg-white/5"
               :class="currentGameModeColorClass"
               @click="cycleGameMode"
             >
@@ -198,13 +198,13 @@
     [GAME_MODES.PVP]: { 
       label: 'PvP', 
       icon: 'i-mdi-sword-cross',
-      colorClass: 'bg-primary-100 hover:bg-primary-200 dark:bg-primary-500/20 dark:text-primary-100 dark:hover:bg-primary-500/30',
+      colorClass: 'dark:text-primary-100',
       iconClass: 'text-pvp-600 dark:text-pvp-600',
     },
     [GAME_MODES.PVE]: { 
       label: 'PvE', 
       icon: 'i-mdi-account-group',
-      colorClass: 'bg-pve-100 text-pve-900 hover:bg-pve-200 dark:bg-pve-500/20 dark:text-pve-100 dark:hover:bg-pve-500/30',
+      colorClass: 'dark:text-pve-100',
       iconClass: 'text-pve-600 dark:text-pve-400',
     },
   };
