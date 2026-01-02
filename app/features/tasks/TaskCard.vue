@@ -6,17 +6,6 @@
     :ui="{ body: cardBodyClass }"
     @contextmenu.prevent="openOverflowMenu"
   >
-    <div
-      v-if="showBackgroundIcon"
-      class="pointer-events-none absolute inset-0 z-0 flex rotate-12 transform items-center justify-center p-8"
-      :class="backgroundIconColor"
-    >
-      <UIcon
-        :name="backgroundIcon.startsWith('mdi-') ? `i-${backgroundIcon}` : backgroundIcon"
-        aria-hidden="true"
-        class="h-24 w-24"
-      />
-    </div>
     <div class="relative z-10 flex h-full flex-col" :class="isCompact ? 'gap-2' : 'gap-3'">
       <!--1) Header: identity + state -->
       <div class="flex flex-nowrap items-center justify-between gap-3">
@@ -280,19 +269,36 @@
            {{ t('page.tasks.questcard.failedbecauseunknown', 'Failed manually or data missing') }}
          </span>
       </div>
-      <!-- 3) Body: objectives -->
-      <div 
-        :class="[
-          isCompact ? 'space-y-3' : 'space-y-4',
-          !isInteractive ? 'cursor-not-allowed opacity-60' : ''
-        ]"
-      >
-        <QuestKeys v-if="task?.neededKeys?.length" :needed-keys="task.neededKeys" />
-        <QuestObjectives
-          :objectives="relevantViewObjectives"
-          :irrelevant-count="irrelevantObjectives.length"
-          :uncompleted-irrelevant="uncompletedIrrelevantObjectives.length"
-        />
+      <!-- 3) Body: objectives (Secondary Body) -->
+      <div class="relative -mx-1 -my-1 overflow-hidden p-1">
+        <!-- Background Icon (The Background) -->
+        <div
+          v-if="showBackgroundIcon"
+          class="pointer-events-none absolute inset-0 z-0 flex rotate-12 transform items-center justify-center opacity-80"
+          :class="backgroundIconColor"
+        >
+          <UIcon
+            :name="backgroundIcon.startsWith('mdi-') ? `i-${backgroundIcon}` : backgroundIcon"
+            aria-hidden="true"
+            class="h-24 w-24"
+          />
+        </div>
+        
+        <!-- Objective Content (The Existing Body) -->
+        <div 
+          class="relative z-10"
+          :class="[
+            isCompact ? 'space-y-3' : 'space-y-4',
+            !isInteractive ? 'cursor-not-allowed opacity-60' : ''
+          ]"
+        >
+          <QuestKeys v-if="task?.neededKeys?.length" :needed-keys="task.neededKeys" />
+          <QuestObjectives
+            :objectives="relevantViewObjectives"
+            :irrelevant-count="irrelevantObjectives.length"
+            :uncompleted-irrelevant="uncompletedIrrelevantObjectives.length"
+          />
+        </div>
       </div>
       <!--5) Rewards Summary Section -->
       <TaskCardRewards
