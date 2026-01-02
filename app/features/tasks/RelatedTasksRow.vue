@@ -1,7 +1,7 @@
 <template>
   <div 
     ref="container" 
-    class="group flex min-w-0 flex-col overflow-hidden"
+    class="flex min-w-0 flex-col overflow-hidden"
     :class="[
       expandable ? 'cursor-pointer hover:bg-gray-100/50 dark:hover:bg-white/5 rounded-md border border-gray-300 dark:border-white/20 p-2 transition-colors' : 'py-0.5',
       expanded ? 'bg-surface-50 dark:bg-surface-900 shadow-inner' : '',
