@@ -395,10 +395,10 @@ select:disabled,
   /* Base Grid Cell - Defined in :root for Theme Switching */
   /* See :root and :root.dark below for stash-base/border */
   
-  --color-stash-violet: rgba(80, 40, 140, 0.15);
+  --color-stash-violet: rgba(80, 40, 140, 0.2);
   --color-stash-orange: rgba(255, 120, 0, 0.15);
   --color-stash-yellow: rgba(255, 220, 0, 0.15);
-  --color-stash-green: rgba(35, 140, 35, 0.12);
+  --color-stash-green: rgba(35, 140, 35, 0.2);
   --color-stash-red: rgba(220, 20, 20, 0.15);
   --color-stash-blue: rgba(0, 180, 255, 0.1);
   --color-stash-grey: rgba(80, 80, 80, 0.25);
@@ -614,7 +614,7 @@ select:disabled,
 
   /* Overlay utility */
   .overlay-stash-bg {
-    @apply absolute inset-[1px]; /* Slight indent to show border */
+    @apply absolute inset-[1px] rounded; /* Slight indent to show border */
     mix-blend-mode: normal;
   }
 

@@ -242,21 +242,20 @@
 
   const computedImageSrc = computed(() => {
     // Priority: direct src -> direct links -> item object -> itemId
+    // IMPORTANT: Never use iconLink - it has baked-in backgrounds that override our background control
     if (props.src) return props.src;
-    if (props.iconLink) return props.iconLink;
-    if (props.image512pxLink && props.size === 'large') return props.image512pxLink;
+    if (props.image512pxLink) return props.image512pxLink;
     
     if (props.item) {
-      if (props.size === 'large' && props.item.image512pxLink) return props.item.image512pxLink;
-      return props.item.iconLink || props.item.image8xLink || props.item.image512pxLink || '';
+      // Always prefer transparent images: 512px > 8x
+      return props.item.image512pxLink || props.item.image8xLink || '';
     }
 
-    // Legacy imageItem support
-    if (props.imageItem?.iconLink) return props.imageItem.iconLink;
-    if (props.imageItem?.image512pxLink && props.size === 'large')
-      return props.imageItem.image512pxLink;
+    // Legacy imageItem support - use transparent images only
+    if (props.imageItem?.image512pxLink) return props.imageItem.image512pxLink;
     
-    if (props.itemId) return `https://assets.tarkov.dev/${props.itemId}-icon.webp`;
+    // Fallback to constructing 512px URL from itemId if available
+    if (props.itemId) return `https://assets.tarkov.dev/${props.itemId}-512.webp`;
     return '';
   });
 

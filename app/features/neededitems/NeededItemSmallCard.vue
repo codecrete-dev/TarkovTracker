@@ -208,7 +208,7 @@
   });
   const imageContainerClasses = computed(() => {
     const baseLayoutClasses =
-      'group/image relative z-0 aspect-[4/3] w-full shrink-0 origin-bottom overflow-hidden rounded-t-lg';
+      'group/image relative z-0 aspect-[4/3] w-full shrink-0 origin-bottom overflow-hidden rounded';
     const transitionClasses = 'transition-transform duration-150 ease-out will-change-transform';
     const hoverClasses =
       'hover:z-20 hover:-translate-y-1 hover:scale-[1.08] hover:shadow-2xl hover:ring-1 hover:ring-black/5 dark:hover:ring-white/10';

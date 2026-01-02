@@ -153,7 +153,7 @@
           item?.name ||
           objective.description ||
           t('page.tasks.questcard.item', 'Item'),
-        itemIcon: item?.iconLink || item?.image8xLink || item?.image512pxLink || undefined,
+        itemIcon: item?.image512pxLink || item?.image8xLink || undefined,
         backgroundColor: item?.backgroundColor,
         foundInRaid: full?.foundInRaid === true || objective.foundInRaid === true,
       };
