@@ -52,7 +52,6 @@
               }}
             </template>
           </p>
-        </div>
       </div>
     </template>
   </GenericCard>

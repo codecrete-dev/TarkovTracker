@@ -88,7 +88,6 @@
               ]"
               :label="t('page.tasks.questcard.levelBadge', { count: task.minPlayerLevel })"
             />
-
             <!-- Map Badge -->
             <GameBadge
               variant="solid"
@@ -105,7 +104,6 @@
                 {{ task?.map?.name || t('page.tasks.questcard.anyMap', 'Any') }}
               </span>
             </GameBadge>
-
             <!-- Kappa Badge -->
             <GameBadge
               v-if="preferencesStore.getShowRequiredLabels && task.kappaRequired"
@@ -121,7 +119,6 @@
               badge-class="badge-soft-kappa cursor-help text-xs"
               :label="t('page.tasks.questcard.kappa', 'Kappa')"
             />
-
             <!-- Lightkeeper Badge -->
             <GameBadge
               v-if="preferencesStore.getShowRequiredLabels && task.lightkeeperRequired"
@@ -137,7 +134,6 @@
               badge-class="badge-soft-lightkeeper cursor-help text-xs"
               :label="t('page.tasks.questcard.lightkeeper', 'Lightkeeper')"
             />
-
             <!-- Failed Badge -->
             <GameBadge
               v-if="isFailed"
@@ -146,7 +142,6 @@
               badge-class="badge-soft-error text-[11px]"
               :label="t('page.dashboard.stats.failed.stat', 'Failed')"
             />
-
             <!-- Blocked Badge -->
             <GameBadge
               v-if="isInvalid && !isFailed"
@@ -161,7 +156,6 @@
               badge-class="badge-soft-surface cursor-help text-xs"
               :label="t('page.tasks.questcard.blocked', 'Blocked')"
             />
-          
             <!-- Progress Badge (only on available tasks) -->
             <GameBadge
               v-if="objectiveProgress.total > 0 && !isLocked && !isComplete && !isFailed && !isInvalid"
@@ -296,7 +290,6 @@
             class="h-12 w-12"
           />
         </div>
-        
         <!-- Objective Content (The Existing Body) -->
         <div 
           class="relative z-10"
@@ -490,7 +483,7 @@
   const progressStore = useProgressStore();
   const preferencesStore = usePreferencesStore();
   const metadataStore = useMetadataStore();
-  const formatNumber = useLocaleNumberFormatter();
+  const _formatNumber = useLocaleNumberFormatter();
   const tasks = computed(() => metadataStore.tasks);
   const taskContextMenu = ref<ContextMenuRef | null>(null);
   const itemContextMenu = ref<ContextMenuRef | null>(null);
@@ -559,7 +552,7 @@
   const lockedBehind = computed(() => {
     return props.task.successors?.filter((s) => !isTaskSuccessful(s)).length || 0;
   });
-  const lockedBefore = computed(() => {
+  const _lockedBefore = computed(() => {
     return props.task.predecessors?.filter((s) => !isTaskSuccessful(s)).length || 0;
   });
   const isFactionTask = computed(() => props.task.factionName !== 'Any');
@@ -610,18 +603,18 @@
   });
   const unlocksNextCount = computed(() => childTasks.value.length);
   const impactCount = computed(() => lockedBehind.value);
-  const afterHasContent = computed(() => unlocksNextCount.value > 0 || impactCount.value > 0);
+  const _afterHasContent = computed(() => unlocksNextCount.value > 0 || impactCount.value > 0);
   const traderStandingRewards = computed(() => props.task.finishRewards?.traderStanding ?? []);
   const skillRewards = computed(() => props.task.finishRewards?.skillLevelReward ?? []);
   const traderUnlockReward = computed(() => props.task.finishRewards?.traderUnlock);
   const itemRewards = computed(() => props.task.finishRewards?.items ?? []);
   const offerUnlockRewards = computed(() => props.task.finishRewards?.offerUnlock ?? []);
-  const completeButtonUi = {
+  const _completeButtonUi = {
     base: 'bg-success-500 hover:bg-success-600 active:bg-success-700 text-white border border-success-700',
   };
   const actionButtonSize = computed(() => (xs.value ? 'xs' : 'sm'));
   const isHotWheelsTask = computed(() => props.task.id === HOT_WHEELS_TASK_ID);
-  const showHotWheelsFail = computed(
+  const _showHotWheelsFail = computed(
     () => isHotWheelsTask.value && !isComplete.value && !isLocked.value
   );
   const mapObjectiveTypes = [

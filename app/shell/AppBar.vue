@@ -117,13 +117,13 @@
   import { useAppStore } from '@/stores/useApp';
   import { useMetadataStore } from '@/stores/useMetadata';
   import { usePreferencesStore } from '@/stores/usePreferences';
+  import { logger } from '@/utils/logger';
   const { t } = useI18n({ useScope: 'global' });
   const appStore = useAppStore();
   const metadataStore = useMetadataStore();
   const preferencesStore = usePreferencesStore();
   const { $supabase } = useNuxtApp();
   const route = useRoute();
-  
   // User/Login state
   const isLoggedIn = computed(() => $supabase.user?.loggedIn ?? false);
   const avatarSrc = computed(() => {
@@ -212,8 +212,8 @@
   });
   // Theme Logic
   const isPreferredDark = usePreferredDark();
-  const themeModes = ['system', 'dark', 'light'] as const;
-  type ThemeMode = (typeof themeModes)[number];
+  const _themeModes = ['system', 'dark', 'light'] as const;
+  type ThemeMode = (typeof _themeModes)[number];
   const currentTheme = computed(() => preferencesStore.getTheme as ThemeMode);
   const themeIconMap: Record<ThemeMode, string> = {
     system: 'i-mdi-desktop-mac',
@@ -240,4 +240,3 @@
     preferencesStore.setTheme(nextTheme.value);
   }
 </script>
-

@@ -165,7 +165,7 @@
       required: true,
     },
   });
-  const formatNumber = useLocaleNumberFormatter();
+  const _formatNumber = useLocaleNumberFormatter();
   const tarkovStore = useTarkovStore();
   const playerLevel = computed(() => tarkovStore.playerLevel());
   const {
@@ -209,5 +209,4 @@
       'hover:z-20 hover:-translate-y-1 hover:scale-[1.08] hover:ring-1 hover:ring-black/5 dark:hover:ring-white/10';
     return [baseLayoutClasses, transitionClasses, hoverClasses];
   });
-
 </script>

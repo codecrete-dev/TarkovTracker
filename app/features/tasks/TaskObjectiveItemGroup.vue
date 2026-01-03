@@ -124,7 +124,16 @@
   const progressStore = useProgressStore();
   const metadataStore = useMetadataStore();
   type ObjectiveMeta = {
-    item?: any;
+    item?: {
+      id?: string;
+      name?: string;
+      shortName?: string;
+      iconLink?: string;
+      image512pxLink?: string;
+      image8xLink?: string;
+      backgroundColor?: string;
+      properties?: { defaultPreset?: unknown };
+    };
     neededCount: number;
     currentCount: number;
     itemName: string;
@@ -372,12 +381,12 @@
     });
     return Array.from(ids);
   });
-  const isParentTaskComplete = computed(() => {
+  const _isParentTaskComplete = computed(() => {
     return parentTaskIds.value.some(
       (taskId) => tarkovStore.isTaskComplete(taskId) && !tarkovStore.isTaskFailed(taskId)
     );
   });
-  const isParentTaskFailed = computed(() => {
+  const _isParentTaskFailed = computed(() => {
     return parentTaskIds.value.some((taskId) => tarkovStore.isTaskFailed(taskId));
   });
   const isParentTaskLocked = computed(() => {

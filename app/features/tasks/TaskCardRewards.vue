@@ -60,7 +60,6 @@
           <span>{{ standing.trader.name }}</span>
         </span>
       </template>
-
       <!-- Item Rewards Summary -->
         <span
           v-if="itemRewards.length > 0"
@@ -258,7 +257,7 @@
     }
     return props.traderUnlockReward || null;
   });
-  const rewardLinkClass =
+  const _rewardLinkClass =
     'text-accent-600 hover:text-accent-700 dark:text-accent-400 dark:hover:text-accent-300 inline-flex items-center gap-1.5 text-xs';
   const rewardItemCardClass = [
     'group relative flex flex-col items-center gap-1 rounded-lg border border-gray-200 bg-white p-2 shadow-sm dark:border-white/10 dark:bg-white/5 dark:shadow-none cursor-pointer',
@@ -268,7 +267,7 @@
   ].join(' ');
   const showDetails = ref(false);
   const detailsId = computed(() => `task-${props.taskId}-details`);
-  const remainingCount = computed(() => Math.max(0, props.impactCount - props.unlocksNextCount));
+  const _remainingCount = computed(() => Math.max(0, props.impactCount - props.unlocksNextCount));
   const hasRewardsSummary = computed(() => {
     return (
       (preferencesStore.getShowExperienceRewards && props.experience > 0) ||
@@ -283,7 +282,7 @@
   const hasExpandableDetails = computed(() => {
     return hasDetailedRewards.value;
   });
-  const toggleDetailsLabel = computed(() => {
+  const _toggleDetailsLabel = computed(() => {
     return showDetails.value
       ? t('page.tasks.questcard.hideDetails', 'Hide details')
       : t('page.tasks.questcard.showDetails', 'Show details');

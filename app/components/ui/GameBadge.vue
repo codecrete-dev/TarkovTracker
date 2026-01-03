@@ -32,13 +32,12 @@
     </slot>
   </UBadge>
 </template>
-
 <script setup lang="ts">
   /**
    * GameBadge.vue
    * A wrapper around UBadge that provides a stable root element for tooltips.
    */
-  const props = withDefaults(
+  withDefaults(
     defineProps<{
       label?: string;
       icon?: string;
@@ -46,8 +45,8 @@
       size?: string;
       color?: string;
       variant?: string;
-      badgeClass?: any;
-      wrapperAttrs?: any;
+      badgeClass?: string | string[] | object;
+      wrapperAttrs?: object;
     }>(),
     {
       size: 'xs',
@@ -55,7 +54,6 @@
       variant: 'solid',
     }
   );
-
   defineOptions({
     inheritAttrs: false,
   });

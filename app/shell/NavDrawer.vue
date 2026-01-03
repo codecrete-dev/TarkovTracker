@@ -167,12 +167,11 @@
   const DrawerLinks = defineAsyncComponent(() => import('@/features/drawer/DrawerLinks.vue'));
   const DrawerLevel = defineAsyncComponent(() => import('@/features/drawer/DrawerLevel.vue'));
   const DrawerItem = defineAsyncComponent(() => import('@/features/drawer/DrawerItem.vue'));
-  const preferencesStore = usePreferencesStore();
+  const _preferencesStore = usePreferencesStore();
   const tarkovStore = useTarkovStore();
   const router = useRouter();
-  const { t } = useI18n({ useScope: 'global' });
+  const _t = useI18n({ useScope: 'global' }).t;
   const currentEditionName = computed(() => metadataStore.getEditionName(tarkovStore.gameEdition));
-  
   // Faction cycling logic
   const factionArray = PMC_FACTIONS; // ['USEC', 'BEAR']
   const currentFaction = computed<PMCFaction>(() => tarkovStore.getPMCFaction());
@@ -189,7 +188,6 @@
   function cycleFaction() {
     setFaction(nextFaction.value);
   }
-  
   // Game mode cycling logic
   const gameModeArray = [GAME_MODES.PVP, GAME_MODES.PVE];
   const gameModeConfig = {

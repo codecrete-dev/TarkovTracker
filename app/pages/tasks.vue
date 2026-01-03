@@ -141,7 +141,7 @@
   // Use mapsWithSvg getter to get maps with merged SVG config from maps.json
   const maps = computed(() => metadataStore.mapsWithSvg);
   const progressStore = useProgressStore();
-  const { tasksCompletions, unlockedTasks, tasksFailed } = storeToRefs(progressStore);
+  const { tasksCompletions, unlockedTasks, tasksFailed: _tasksFailed } = storeToRefs(progressStore);
   const { visibleTasks, reloadingTasks, updateVisibleTasks } = useTaskFiltering();
   const tarkovStore = useTarkovStore();
   const { tarkovTime } = useTarkovTime();
@@ -280,7 +280,7 @@
       mergedIds: (map as unknown as { mergedIds?: string[] }).mergedIds || [map.id],
     }));
   });
-  const lightkeeperTraderId = computed(() => metadataStore.getTraderByName('lightkeeper')?.id);
+  const _lightkeeperTraderId = computed(() => metadataStore.getTraderByName('lightkeeper')?.id);
   const refreshVisibleTasks = () => {
     updateVisibleTasks(
       getTaskPrimaryView.value,
@@ -321,7 +321,6 @@
   );
   // Search state
   const searchQuery = ref('');
-
   // Single-task mode: when ?task=<taskId> is present, show only that task
   const singleTaskId = computed(() => {
     const taskId = route.query.task as string | undefined;
@@ -330,14 +329,12 @@
     const taskExists = tasks.value.some((t) => t.id === taskId);
     return taskExists ? taskId : null;
   });
-
   // When entering single-task mode, set secondary view to 'all' so the task is visible
   watch(singleTaskId, (taskId) => {
     if (taskId && getTaskSecondaryView.value !== 'all') {
       preferencesStore.setTaskSecondaryView('all');
     }
   });
-
   // Clear single-task filter when user interacts with any filters
   watch(
     [
@@ -361,12 +358,10 @@
       }
     }
   );
-
   // Clear single task filter and return to normal view
   const clearSingleTaskFilter = () => {
     router.push({ path: '/tasks', query: {} });
   };
-
   // Filter tasks by search query OR single-task mode
   const filteredTasks = computed(() => {
     // Single-task mode takes priority

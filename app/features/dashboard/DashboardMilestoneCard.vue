@@ -16,6 +16,7 @@
   </div>
 </template>
 <script setup lang="ts">
+  import { computed } from 'vue';
   export type MilestoneColor = 'primary' | 'accent' | 'info' | 'success' | 'warning' | 'purple' | 'kappa' | 'lightkeeper';
   const props = withDefaults(
     defineProps<{
