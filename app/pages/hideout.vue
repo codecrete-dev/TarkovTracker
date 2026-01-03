@@ -52,7 +52,9 @@
   import { useRoute, useRouter } from 'vue-router';
   import FilterPill from '@/components/FilterPill.vue';
   import { useHideoutFiltering } from '@/composables/useHideoutFiltering';
+  import { useViewState } from '@/composables/useViewState';
   import { useMetadataStore } from '@/stores/useMetadata';
+  import { usePreferencesStore } from '@/stores/usePreferences';
   import { useProgressStore } from '@/stores/useProgress';
   // Page metadata
   useSeoMeta({
@@ -68,9 +70,23 @@
   const metadataStore = useMetadataStore();
   const { hideoutStations } = storeToRefs(metadataStore);
   const progressStore = useProgressStore();
+  const preferencesStore = usePreferencesStore();
+
   // Hideout filtering composable
   const { activePrimaryView, isStoreLoading, visibleStations, stationCounts } =
     useHideoutFiltering();
+
+  // Browser history support for view filter
+  useViewState({
+    params: {
+      view: {
+        get: () => preferencesStore.getHideoutPrimaryView,
+        set: (v) => preferencesStore.setHideoutPrimaryView(v),
+        default: 'available',
+        validate: (v) => ['all', 'available', 'maxed', 'locked'].includes(v),
+      },
+    },
+  });
   const primaryViews = computed(() => [
     {
       title: t('page.hideout.primaryviews.all'),

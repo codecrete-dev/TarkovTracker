@@ -108,6 +108,7 @@
   import { computed, ref, watch } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { useInfiniteScroll } from '@/composables/useInfiniteScroll';
+  import { useViewState } from '@/composables/useViewState';
   import NeededItem from '@/features/neededitems/NeededItem.vue';
   import { isNonFirSpecialEquipment } from '@/features/neededitems/neededItemFilters';
   import NeededItemGroupedCard from '@/features/neededitems/NeededItemGroupedCard.vue';
@@ -130,12 +131,31 @@
   const preferencesStore = usePreferencesStore();
   const tarkovStore = useTarkovStore();
   const { neededItemTaskObjectives, neededItemHideoutModules } = storeToRefs(metadataStore);
+
   // View mode state: 'list' or 'grid'
   const viewMode = ref<'list' | 'grid'>('grid');
   // Filter state
   type FilterType = 'all' | 'tasks' | 'hideout' | 'completed';
   type FirFilter = 'all' | 'fir' | 'non-fir';
   const activeFilter = ref<FilterType>('all');
+
+  // Browser history support for main filter controls
+  useViewState({
+    params: {
+      filter: {
+        get: () => activeFilter.value,
+        set: (v) => { activeFilter.value = v as FilterType; },
+        default: 'all',
+        validate: (v) => ['all', 'tasks', 'hideout', 'completed'].includes(v),
+      },
+      viewMode: {
+        get: () => viewMode.value,
+        set: (v) => { viewMode.value = v as 'list' | 'grid'; },
+        default: 'grid',
+        validate: (v) => ['list', 'grid'].includes(v),
+      },
+    },
+  });
   const search = ref('');
   const firFilter = ref<FirFilter>('all');
   const groupByItem = ref(false);

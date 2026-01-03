@@ -104,6 +104,7 @@
   import { useInfiniteScroll } from '@/composables/useInfiniteScroll';
   import { useTarkovTime } from '@/composables/useTarkovTime';
   import { useTaskFiltering } from '@/composables/useTaskFiltering';
+  import { useViewState } from '@/composables/useViewState';
   import TaskCard from '@/features/tasks/TaskCard.vue';
   import TaskEmptyState from '@/features/tasks/TaskEmptyState.vue';
   import TaskLoadingState from '@/features/tasks/TaskLoadingState.vue';
@@ -145,6 +146,34 @@
   const { visibleTasks, reloadingTasks, updateVisibleTasks } = useTaskFiltering();
   const tarkovStore = useTarkovStore();
   const { tarkovTime } = useTarkovTime();
+
+  // Browser history support for main filter bar controls
+  useViewState({
+    params: {
+      view: {
+        get: () => preferencesStore.getTaskPrimaryView,
+        set: (v) => preferencesStore.setTaskPrimaryView(v),
+        default: 'all',
+        validate: (v) => ['all', 'maps', 'traders'].includes(v),
+      },
+      status: {
+        get: () => preferencesStore.getTaskSecondaryView,
+        set: (v) => preferencesStore.setTaskSecondaryView(v),
+        default: 'available',
+        validate: (v) => ['all', 'available', 'locked', 'completed', 'failed'].includes(v),
+      },
+      map: {
+        get: () => preferencesStore.getTaskMapView,
+        set: (v) => preferencesStore.setTaskMapView(v),
+        default: 'all',
+      },
+      trader: {
+        get: () => preferencesStore.getTaskTraderView,
+        set: (v) => preferencesStore.setTaskTraderView(v),
+        default: 'all',
+      },
+    },
+  });
   // Maps with static/fixed raid times (don't follow normal day/night cycle)
   const STATIC_TIME_MAPS: Record<string, string> = {
     '55f2d3fd4bdc2d5f408b4567': '15:28 / 03:28', // Factory
