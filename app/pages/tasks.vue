@@ -4,7 +4,11 @@
       <TaskLoadingState v-if="isLoading" />
       <div v-else>
         <!-- Task Filter Bar -->
-        <TaskFilterBar v-model:search-query="searchQuery" />
+        <TaskFilterBar
+          v-model:search-query="searchQuery"
+          :single-task-id="singleTaskId"
+          @clear-single-task="clearSingleTaskFilter"
+        />
         <!-- Map Display (shown when MAPS view is selected) -->
         <div v-if="showMapDisplay" class="mb-6">
           <div class="rounded-lg bg-surface-base p-4 dark:bg-surface-800/50">
@@ -94,7 +98,7 @@
 </template>
 <script setup lang="ts">
   import { storeToRefs } from 'pinia';
-  import { computed, defineAsyncComponent, nextTick, ref, watch } from 'vue';
+  import { computed, defineAsyncComponent, ref, watch } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { useRoute, useRouter } from 'vue-router';
   import { useInfiniteScroll } from '@/composables/useInfiniteScroll';
@@ -317,8 +321,36 @@
   );
   // Search state
   const searchQuery = ref('');
-  // Filter tasks by search query
+
+  // Single-task mode: when ?task=<taskId> is present, show only that task
+  const singleTaskId = computed(() => {
+    const taskId = route.query.task as string | undefined;
+    if (!taskId) return null;
+    // Validate that the task exists in metadata
+    const taskExists = tasks.value.some((t) => t.id === taskId);
+    return taskExists ? taskId : null;
+  });
+
+  // When entering single-task mode, set secondary view to 'all' so the task is visible
+  watch(singleTaskId, (taskId) => {
+    if (taskId && preferencesStore.getTaskSecondaryView !== 'all') {
+      preferencesStore.setTaskSecondaryView('all');
+    }
+  });
+
+  // Clear single task filter and return to normal view
+  const clearSingleTaskFilter = () => {
+    router.push({ path: '/tasks', query: {} });
+  };
+
+  // Filter tasks by search query OR single-task mode
   const filteredTasks = computed(() => {
+    // Single-task mode takes priority
+    if (singleTaskId.value) {
+      const task = tasks.value.find((t) => t.id === singleTaskId.value);
+      return task ? [task] : [];
+    }
+    // Normal filtering
     if (!searchQuery.value.trim()) {
       return visibleTasks.value;
     }
@@ -353,135 +385,8 @@
       displayCount.value = 15;
     }
   );
-  // Handle deep linking to a specific task via ?task=taskId query param
-  const getTaskStatus = (taskId: string): 'available' | 'locked' | 'completed' | 'failed' => {
-    const isFailed = tasksFailed.value?.[taskId]?.['self'] ?? false;
-    if (isFailed) return 'failed';
-    const isCompleted = tasksCompletions.value?.[taskId]?.['self'] ?? false;
-    if (isCompleted) return 'completed';
-    const isUnlocked = unlockedTasks.value?.[taskId]?.['self'] ?? false;
-    if (isUnlocked) return 'available';
-    return 'locked';
-  };
-  /*
-   * Helper to check if an element is roughly centered in the viewport
-   */
-  const isElementCentered = (element: Element, threshold = 100) => {
-    const rect = element.getBoundingClientRect();
-    const viewportMiddle = window.innerHeight / 2;
-    const elementMiddle = rect.top + rect.height / 2;
-    return Math.abs(viewportMiddle - elementMiddle) < threshold;
-  };
-  const scrollToTask = async (taskId: string) => {
-    // Wait for the task to appear in filteredTasks (filters are async)
-    const maxWaitTime = 2000;
-    const checkInterval = 50;
-    let elapsed = 0;
-    while (elapsed < maxWaitTime) {
-      const taskIndex = filteredTasks.value.findIndex((t) => t.id === taskId);
-      if (taskIndex >= 0) {
-        // Task found. If it's beyond the current display count, expand the list.
-        if (taskIndex >= displayCount.value) {
-          // Expand to the next multiple of 15 that covers this index
-          const requiredCount = Math.ceil((taskIndex + 1) / 15) * 15;
-          displayCount.value = requiredCount;
-        }
-        // Wait for DOM update
-        await nextTick();
-        const taskElement = document.getElementById(`task-${taskId}`);
-        if (taskElement) {
-          // 1. Initial Scroll: Get close immediately with smooth scroll
-          taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          // Add highlight immediately
-          taskElement.classList.add(
-            'ring-2',
-            'ring-primary-500',
-            'ring-offset-2',
-            'ring-offset-surface-900'
-          );
-          // 2. Stabilization Delay: Wait for layout to settle (e.g. dynamic images/heights)
-          // We use a generous delay to ensure animations/layout shifts are done
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          // 3. Correction Check: If layout shifted, centering might be off.
-          if (!isElementCentered(taskElement)) {
-             // Adaptive Correction: Seamlessly retarget the scroll
-             taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-          // Cleanup highlight after animation
-          setTimeout(() => {
-            taskElement.classList.remove(
-              'ring-2',
-              'ring-primary-500',
-              'ring-offset-2',
-              'ring-offset-surface-900'
-            );
-          }, 2000);
-        } else {
-             logger.warn(`[Tasks] Could not find element task-${taskId} to scroll to.`);
-        }
-        return;
-      }
-      // Wait and check again
-      await new Promise((resolve) => setTimeout(resolve, checkInterval));
-      elapsed += checkInterval;
-    }
-  };
-  const handleTaskQueryParam = () => {
-    const taskId = route.query.task as string;
-    if (!taskId || tasksLoading.value) return;
-    const taskInMetadata = tasks.value.find((t) => t.id === taskId);
-    if (!taskInMetadata) return;
-    // IF the task is already visible in the current filtered view, we don't need to change filters
-    // This allows clicking a requirement link while in "ALL" view without switching to "LOCKED"
-    const isAlreadyVisible = filteredTasks.value.some((t) => t.id === taskId);
-    if (!isAlreadyVisible) {
-      // Enable the appropriate type filter based on task properties
-      const isKappaRequired = taskInMetadata.kappaRequired === true;
-      const isLightkeeperRequired = taskInMetadata.lightkeeperRequired === true;
-      const isLightkeeperTraderTask =
-        lightkeeperTraderId.value !== undefined
-          ? taskInMetadata.trader?.id === lightkeeperTraderId.value
-          : taskInMetadata.trader?.name?.toLowerCase() === 'lightkeeper';
-      const isNonSpecial = !isKappaRequired && !isLightkeeperRequired && !isLightkeeperTraderTask;
-      // Ensure the task's type filter is enabled so task will appear
-      if (
-        (isLightkeeperRequired || isLightkeeperTraderTask) &&
-        !preferencesStore.getShowLightkeeperTasks
-      ) {
-        preferencesStore.setShowLightkeeperTasks(true);
-      }
-      if (isKappaRequired && preferencesStore.getHideNonKappaTasks) {
-        preferencesStore.setHideNonKappaTasks(false);
-      }
-      if (isNonSpecial && !preferencesStore.getShowNonSpecialTasks) {
-        preferencesStore.setShowNonSpecialTasks(true);
-      }
-      // Determine task status and set appropriate filter
-      const status = getTaskStatus(taskId);
-      if (preferencesStore.getTaskSecondaryView !== status) {
-        preferencesStore.setTaskSecondaryView(status);
-      }
-      // Set primary view to 'all' to ensure the task is visible regardless of map/trader
-      if (preferencesStore.getTaskPrimaryView !== 'all') {
-        preferencesStore.setTaskPrimaryView('all');
-      }
-    }
-    // Scroll to the task after filters are applied (if needed), then clear query param
-    scrollToTask(taskId).then(() => {
-      // Clear the query param to avoid re-triggering on filter changes
-      router.replace({ path: '/tasks', query: {} });
-    });
-  };
-  // Watch for task query param and handle it when tasks are loaded
-  watch(
-    [() => route.query.task, tasksLoading, tasksCompletions],
-    ([taskQueryParam, loading]) => {
-      if (taskQueryParam && !loading) {
-        handleTaskQueryParam();
-      }
-    },
-    { immediate: true }
-  );
+  // Note: Single-task mode via ?task=<id> is now handled reactively via singleTaskId computed.
+  // No scroll logic needed - we simply filter to show only that task.
   // Helper Methods for Undo
   const handleTaskObjectives = (
     objectives: TaskObjective[],

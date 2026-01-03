@@ -1,5 +1,25 @@
 <template>
   <div class="mb-6 space-y-3">
+    <!-- Single Task Mode Indicator -->
+    <div
+      v-if="singleTaskId"
+      class="flex items-center justify-between rounded-lg bg-accent-100 px-4 py-2.5 dark:bg-accent-500/20"
+    >
+      <div class="flex items-center gap-2">
+        <UIcon name="i-mdi-filter" class="h-5 w-5 text-accent-600 dark:text-accent-400" />
+        <span class="text-sm font-medium text-accent-800 dark:text-accent-200">
+          {{ t('page.tasks.filters.singleTaskMode', 'Viewing a single task') }}
+        </span>
+      </div>
+      <UButton
+        size="xs"
+        variant="soft"
+        color="primary"
+        icon="i-mdi-close"
+        :label="t('page.tasks.filters.showAllTasks', 'Show all tasks')"
+        @click="$emit('clearSingleTask')"
+      />
+    </div>
     <!-- Top Bar: Search (left) | Primary View Tabs (center) | Settings (right) -->
     <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-lg bg-surface-elevated px-4 py-2.5">
       <!-- Search - larger width -->
@@ -228,9 +248,11 @@
   import { useTeamStore } from '@/stores/useTeamStore';
   defineProps<{
     searchQuery: string;
+    singleTaskId: string | null;
   }>();
   defineEmits<{
     'update:searchQuery': [value: string];
+    'clearSingleTask': [];
   }>();
   const { t } = useI18n({ useScope: 'global' });
   const preferencesStore = usePreferencesStore();

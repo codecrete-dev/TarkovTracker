@@ -32,15 +32,17 @@
       </span>
       <!-- Badges Container -->
       <div class="flex flex-1 flex-nowrap items-center gap-1.5 overflow-hidden">
-        <span
+        <router-link
           v-for="task in visibleTasks"
           :key="task.id"
           v-tooltip="task.name"
+          :to="`/tasks?task=${task.id}`"
           class="inline-flex shrink-0 items-center rounded px-2 py-0.5 text-xs transition-colors hover:opacity-90 no-underline"
           :class="getBadgeClass(task)"
+          @click.stop
         >
           <span class="truncate">{{ task.name }}</span>
-        </span>
+        </router-link>
         <span v-if="remainingCount > 0" class="shrink-0 text-xs text-gray-500 font-medium">
           +{{ remainingCount }}{{ hasSuffix ? ',' : '' }}
         </span>
