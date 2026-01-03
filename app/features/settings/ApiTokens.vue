@@ -425,7 +425,7 @@
     }
   };
   const generateToken = (gameMode: GameMode) => {
-    const bytes = crypto.getRandomValues(new Uint8Array(32));
+    const bytes = crypto.getRandomValues(new Uint8Array(9));
     const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
     const prefix = gameMode === GAME_MODES.PVE ? 'PVE' : 'PVP';
     return `${prefix}_${hex}`;

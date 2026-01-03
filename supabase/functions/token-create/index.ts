@@ -9,7 +9,7 @@ import {
 } from "../_shared/auth.ts"
 
 const generateToken = (gameMode: string) => {
-  const bytes = crypto.getRandomValues(new Uint8Array(32))
+  const bytes = crypto.getRandomValues(new Uint8Array(9))
   const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")
   const prefix = gameMode === "pve" ? "PVE" : "PVP"
   return `${prefix}_${hex}`

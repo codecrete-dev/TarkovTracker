@@ -45,15 +45,22 @@
       </NuxtLink>
       <div class="mx-3 my-0.5 h-px bg-divider dark:bg-accent-800/40" />
       <DrawerLevel :is-collapsed="isCollapsed" />
-      <div v-if="!isCollapsed" class="my-2 flex flex-col items-center gap-1.5 px-4">
-        <button
-          class="w-full rounded border px-2 py-2.5 text-center text-xs font-medium transition-colors border-base text-content-secondary hover:text-content-primary dark:border-accent-800/50 dark:hover:border-accent-600 dark:text-white/80 dark:hover:text-white"
-          @click="navigateToSettings"
-        >
-          {{ currentEditionName }}
-        </button>
+      <div v-if="!isCollapsed" class="flex flex-col items-center gap-1.5 px-4">
         <!-- Faction and Game Mode Cycling Buttons Row -->
         <div class="flex w-full gap-1.5">
+          <!-- Game Mode Cycling Button -->
+          <span v-tooltip="`Switch to ${nextGameModeLabel}`" class="flex-1">
+            <button
+              class="w-full h-full rounded border px-2 py-2.5 flex items-center justify-center transition-colors border-base hover:bg-surface-200 dark:border-accent-800/50 dark:hover:border-accent-600 dark:hover:bg-white/5"
+              :class="currentGameModeColorClass"
+              @click="cycleGameMode"
+            >
+              <div class="flex items-center justify-center gap-1.5 text-md font-semibold uppercase tracking-wide">
+                <UIcon :name="currentGameModeIcon" class="h-10 w-10" :class="currentGameModeIconClass" />
+                <span class="opacity-70">{{ currentGameModeLabel }}</span>
+              </div>
+            </button>
+          </span>
           <!-- Faction Cycling Button -->
           <span v-tooltip="`Switch to ${nextFaction}`" class="flex">
             <button
@@ -69,20 +76,13 @@
               />
             </button>
           </span>
-          <!-- Game Mode Cycling Button -->
-          <span v-tooltip="`Switch to ${nextGameModeLabel}`" class="flex-1">
-            <button
-              class="w-full h-full rounded border px-2 py-2.5 flex items-center justify-center transition-colors border-base hover:bg-surface-200 dark:border-accent-800/50 dark:hover:border-accent-600 dark:hover:bg-white/5"
-              :class="currentGameModeColorClass"
-              @click="cycleGameMode"
-            >
-              <div class="flex items-center justify-center gap-1.5 text-md font-semibold uppercase tracking-wide">
-                <UIcon :name="currentGameModeIcon" class="h-10 w-10" :class="currentGameModeIconClass" />
-                <span class="opacity-70">{{ currentGameModeLabel }}</span>
-              </div>
-            </button>
-          </span>
         </div>
+        <button
+          class="w-full rounded border px-2 py-2.5 text-center text-xs font-medium transition-colors border-base text-content-secondary hover:text-content-primary dark:border-accent-800/50 dark:hover:border-accent-600 dark:text-white/80 dark:hover:text-white"
+          @click="navigateToSettings"
+        >
+          {{ currentEditionName }}
+        </button>
       </div>
       <div class="mx-3 my-0.5 h-px bg-divider dark:bg-accent-800/40" />
       <DrawerLinks :is-collapsed="isCollapsed" />

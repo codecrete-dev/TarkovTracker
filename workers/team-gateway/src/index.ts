@@ -359,7 +359,7 @@ async function handleTokenAction(request: Request, env: Env, action: TokenAction
     }
     if (!tokenValue) {
       // generate a token if the client did not supply one
-      const bytes = crypto.getRandomValues(new Uint8Array(32));
+      const bytes = crypto.getRandomValues(new Uint8Array(9));
       const prefix = gameMode === "pve" ? "PVE" : "PVP";
       tokenValue = `${prefix}_${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
     }
