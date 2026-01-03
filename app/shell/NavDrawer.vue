@@ -43,7 +43,7 @@
           <div class="text-base leading-tight font-medium text-content-primary">TarkovTracker.org</div>
         </div>
       </NuxtLink>
-      <div class="mx-3 my-1 h-px bg-divider dark:bg-accent-800/40" />
+      <div class="mx-3 my-1 h-px shrink-0 bg-divider dark:bg-accent-800/40" />
       <DrawerLevel :is-collapsed="isCollapsed" />
       <div v-if="!isCollapsed" class="flex flex-col items-center gap-1.5 px-4">
         <!-- Faction and Game Mode Cycling Buttons Row -->
@@ -85,7 +85,7 @@
         </button>
       </div>
       <DrawerLinks :is-collapsed="isCollapsed" class="mt-1" />
-      <div class="mx-3 my-1 h-px bg-divider dark:bg-accent-800/40" />
+      <div class="mx-3 my-1 h-px shrink-0 bg-divider dark:bg-accent-800/40" />
       <div class="flex flex-col gap-1">
         <ul class="flex flex-col gap-1 px-1">
           <DrawerItem
