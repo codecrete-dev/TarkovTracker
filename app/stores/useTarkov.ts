@@ -13,6 +13,7 @@ import { useMetadataStore } from '@/stores/useMetadata';
 import type { Task } from '@/types/tarkov';
 import { GAME_MODES, type GameMode } from '@/utils/constants';
 import { logger } from '@/utils/logger';
+import { STORAGE_KEYS } from '@/utils/storageKeys';
 // Create a type that extends UserState with Pinia store methods
 type TarkovStoreInstance = UserState & {
   $state: UserState;
@@ -140,7 +141,7 @@ const tarkovActions = {
       }
       // Clear localStorage and update store
       logger.debug('[TarkovStore] Clearing localStorage and updating store');
-      localStorage.removeItem('progress');
+      localStorage.removeItem(STORAGE_KEYS.progress);
       // Use $patch with a function to fully replace the pvp object (not deep merge)
       this.$patch((state) => {
         state.pvp = freshPvPData;
@@ -182,7 +183,7 @@ const tarkovActions = {
       }
       // Clear localStorage and update store
       logger.debug('[TarkovStore] Clearing localStorage and updating store');
-      localStorage.removeItem('progress');
+      localStorage.removeItem(STORAGE_KEYS.progress);
       // Use $patch with a function to fully replace the pve object (not deep merge)
       this.$patch((state) => {
         state.pve = freshPvEData;
@@ -563,7 +564,7 @@ export const useTarkovStore = defineStore('swapTarkov', {
   actions: tarkovActions,
   // Enable automatic localStorage persistence with user scoping
   persist: {
-    key: 'progress', // LocalStorage key for user progress data
+    key: STORAGE_KEYS.progress, // LocalStorage key for user progress data
     storage: typeof window !== 'undefined' ? localStorage : undefined,
     // Add userId to serialized data to prevent cross-user contamination
     serializer: {
@@ -614,10 +615,10 @@ export const useTarkovStore = defineStore('swapTarkov', {
             // Backup the corrupted/mismatching localStorage
             if (typeof window !== 'undefined') {
               try {
-                const backupKey = `progress_backup_${storedUserId}_${Date.now()}`;
+                const backupKey = `${STORAGE_KEYS.progressBackupPrefix}${storedUserId}_${Date.now()}`;
                 localStorage.setItem(backupKey, value);
                 if (import.meta.dev) logger.debug(`[TarkovStore] Data backed up to ${backupKey}`);
-                localStorage.removeItem('progress');
+                localStorage.removeItem(STORAGE_KEYS.progress);
               } catch (e) {
                 logger.error('[TarkovStore] Error backing up/clearing localStorage:', e);
               }

@@ -237,8 +237,7 @@ export default defineEventHandler(async (event) => {
     // Default production hosts
     effectiveAllowedHosts.push(
       'tarkovtracker.org',
-      'www.tarkovtracker.org',
-      'dev.tarkovtracker.org'
+      'www.tarkovtracker.org'
     );
   }
   // === SECURITY CHECK 1: Host Header Validation ===
