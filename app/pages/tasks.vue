@@ -115,6 +115,7 @@
   import { usePageFilters } from '@/composables/usePageFilters';
   import { useTarkovTime } from '@/composables/useTarkovTime';
   import { useTaskFiltering } from '@/composables/useTaskFiltering';
+  import { useTasksFilterConfig } from '@/features/tasks/composables/useTasksFilterConfig';
   import TaskCard from '@/features/tasks/TaskCard.vue';
   import TaskEmptyState from '@/features/tasks/TaskEmptyState.vue';
   import TaskLoadingState from '@/features/tasks/TaskLoadingState.vue';
@@ -153,20 +154,8 @@
   const { tarkovTime } = useTarkovTime();
 
   // URL-based filter state (URL is single source of truth)
-  const { filters, setFilter, setFilters, debouncedInputs } = usePageFilters({
-    view: {
-      default: 'all',
-      validate: (v) => ['all', 'maps', 'traders'].includes(v),
-    },
-    status: {
-      default: 'available',
-      validate: (v) => ['all', 'available', 'locked', 'completed', 'failed'].includes(v),
-    },
-    map: { default: 'all' },
-    trader: { default: 'all' },
-    task: { default: '' }, // Single-task mode
-    search: { default: '', debounceMs: 300 },
-  });
+  // Filter config is extracted to useTasksFilterConfig for sharing with navigation
+  const { filters, setFilter, setFilters, debouncedInputs } = usePageFilters(useTasksFilterConfig());
 
   // Computed aliases for cleaner template/code access
   const getTaskPrimaryView = filters.view;

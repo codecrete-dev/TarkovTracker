@@ -53,6 +53,7 @@
   import FilterPill from '@/components/FilterPill.vue';
   import { useHideoutFiltering } from '@/composables/useHideoutFiltering';
   import { usePageFilters } from '@/composables/usePageFilters';
+  import { useHideoutFilterConfig } from '@/features/hideout/composables/useHideoutFilterConfig';
   import { useMetadataStore } from '@/stores/useMetadata';
   import { usePreferencesStore } from '@/stores/usePreferences';
   import { useProgressStore } from '@/stores/useProgress';
@@ -76,13 +77,8 @@
     useHideoutFiltering();
 
   // URL-based filter state
-  const { filters, setFilter } = usePageFilters({
-    view: {
-      default: 'available',
-      validate: (v) => ['all', 'available', 'maxed', 'locked'].includes(v),
-    },
-    station: { default: '' }, // Deep-link to specific station
-  });
+  // Filter config is extracted to useHideoutFilterConfig for sharing with navigation
+  const { filters, setFilter } = usePageFilters(useHideoutFilterConfig());
 
   // Sync URL filter to activePrimaryView (from useHideoutFiltering)
   watch(filters.view, (newView) => {

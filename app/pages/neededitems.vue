@@ -109,6 +109,7 @@
   import { useI18n } from 'vue-i18n';
   import { useInfiniteScroll } from '@/composables/useInfiniteScroll';
   import { usePageFilters } from '@/composables/usePageFilters';
+  import { useNeededItemsFilterConfig } from '@/features/neededitems/composables/useNeededItemsFilterConfig';
   import NeededItem from '@/features/neededitems/NeededItem.vue';
   import { isNonFirSpecialEquipment } from '@/features/neededitems/neededItemFilters';
   import NeededItemGroupedCard from '@/features/neededitems/NeededItemGroupedCard.vue';
@@ -133,40 +134,8 @@
   const { neededItemTaskObjectives, neededItemHideoutModules } = storeToRefs(metadataStore);
 
   // URL-based filter state
-  type FilterType = 'all' | 'tasks' | 'hideout' | 'completed';
-  type FirFilter = 'all' | 'fir' | 'non-fir';
-  type ViewMode = 'list' | 'grid';
-
-  const { filters, setFilter, debouncedInputs } = usePageFilters({
-    filter: {
-      default: 'all',
-      validate: (v) => ['all', 'tasks', 'hideout', 'completed'].includes(v),
-    },
-    viewMode: {
-      default: 'grid',
-      validate: (v) => ['list', 'grid'].includes(v),
-    },
-    fir: {
-      default: 'all',
-      validate: (v) => ['all', 'fir', 'non-fir'].includes(v),
-    },
-    grouped: {
-      default: false,
-      parse: (v) => v === '1',
-      serialize: (v) => v ? '1' : null,
-    },
-    kappa: {
-      default: false,
-      parse: (v) => v === '1',
-      serialize: (v) => v ? '1' : null,
-    },
-    hideSpecial: {
-      default: false,
-      parse: (v) => v === '1',
-      serialize: (v) => v ? '1' : null,
-    },
-    search: { default: '', debounceMs: 300 },
-  });
+  // Filter config is extracted to useNeededItemsFilterConfig for sharing with navigation
+  const { filters, setFilter, debouncedInputs } = usePageFilters(useNeededItemsFilterConfig());
 
   // Computed aliases for template bindings
   const activeFilter = computed({

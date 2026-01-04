@@ -1,6 +1,8 @@
 <template>
   <li>
-    <NuxtLink
+    <!-- Internal navigation link - middleware handles preference restoration -->
+    <component
+      :is="linkComponent"
       v-if="props.to && !props.href"
       :to="props.to"
       class="group flex cursor-pointer items-center rounded-md px-3 py-2.5 text-base font-medium transition-colors duration-150"
@@ -10,6 +12,7 @@
           : 'border-l-2 border-transparent text-content-secondary hover:bg-surface-200 dark:hover:bg-white/5 hover:text-content-primary',
         props.isCollapsed ? 'justify-center' : '',
       ]"
+
     >
       <!-- Icon / Avatar -->
       <div
@@ -34,7 +37,8 @@
           {{ props.text }}
         </template>
       </span>
-    </NuxtLink>
+    </component>
+    <!-- External link -->
     <a
       v-else-if="props.href"
       :href="props.href"
@@ -75,6 +79,7 @@
         </template>
       </span>
     </a>
+    <!-- Non-link item (fallback) -->
     <div
       v-else
       class="group flex cursor-pointer items-center rounded-md border-l-4 border-transparent px-3 py-2.5 text-base font-medium text-content-tertiary transition-colors duration-200 hover:bg-surface-200 dark:hover:bg-white/5 hover:text-content-primary"
@@ -111,11 +116,13 @@
   </li>
 </template>
 <script setup>
-  import { computed } from 'vue';
+  import { computed, resolveComponent } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { useRoute } from 'vue-router';
+  
   const { t } = useI18n({ useScope: 'global' });
   const route = useRoute();
+  
   const props = defineProps({
     icon: {
       type: String,
@@ -162,22 +169,30 @@
       required: true,
     },
   });
+  
+  // Check if this page path is active (for styling)
   const isActive = computed(() => {
     if (props.to) {
       return route.path === props.to;
     }
     return false;
   });
+  
   const iconClasses = computed(() => {
     if (isActive.value) {
-      // Use iconColor if provided, otherwise fall back to accent colors
       return props.iconColor
         ? `text-${props.iconColor}`
         : 'text-accent-600 dark:text-accent-400';
     }
-    // Default fallback: gray text that turns darker/lighter on hover based on theme
     return 'text-content-tertiary group-hover:text-content-primary';
   });
+  
+  /**
+   * Use NuxtLink component for navigation.
+   * Nav links always use clean paths - middleware handles preference restoration.
+   */
+  const linkComponent = resolveComponent('NuxtLink');
+  
   const visitHref = () => {
     if (props.href !== null) {
       window.open(props.href, '_blank');
