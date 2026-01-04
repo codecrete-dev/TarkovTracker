@@ -11,11 +11,11 @@
         />
         <!-- Map Display (shown when MAPS view is selected) -->
         <div v-if="showMapDisplay" class="mb-6">
-          <div class="rounded-lg bg-surface-base dark:bg-surface-800/50">
+          <div class="bg-surface-base dark:bg-surface-800/50 rounded-lg">
             <div class="mb-3 flex items-center justify-between">
-              <h3 class="text-lg font-medium text-content-primary">
+              <h3 class="text-content-primary text-lg font-medium">
                 {{ selectedMapData?.name || 'Map' }}
-                <span class="ml-2 text-sm font-normal text-content-tertiary">
+                <span class="text-content-tertiary ml-2 text-sm font-normal">
                   {{ displayTime }}
                 </span>
               </h3>
@@ -65,7 +65,9 @@
           v-if="taskStatusUpdated"
           class="fixed inset-x-0 bottom-6 z-50 flex justify-center px-4"
         >
-          <UCard class="bg-white/95 dark:bg-surface-900/95 w-full max-w-xl border border-gray-200/50 dark:border-white/10 shadow-2xl backdrop-blur-sm text-gray-900 dark:text-gray-100">
+          <UCard
+            class="dark:bg-surface-900/95 w-full max-w-xl border border-gray-200/50 bg-white/95 text-gray-900 shadow-2xl backdrop-blur-sm dark:border-white/10 dark:text-gray-100"
+          >
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
               <span
                 class="text-sm sm:text-base"
@@ -371,6 +373,10 @@
   // Flag to track when we're programmatically changing filters (to avoid triggering single-task clear)
   const isProgrammaticFilterChange = ref(false);
 
+  // Flag to track when a task action is in progress (complete, uncomplete, etc.)
+  // This prevents filter watchers from incorrectly clearing single-task mode
+  const isTaskActionInProgress = ref(false);
+
   // Store previous view state to restore when exiting single-task mode
   const previousViewState = ref<{
     primaryView: string;
@@ -385,8 +391,10 @@
 
     isProgrammaticFilterChange.value = true;
 
-    // Scroll to top of page for better UX
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Only scroll to top when genuinely entering single-task mode (not on re-clicks or state updates)
+    if (!oldTaskId) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
     // Store current view state before changing (only if not already in single-task mode)
     if (!oldTaskId) {
@@ -474,8 +482,8 @@
       searchQuery,
     ],
     () => {
-      // Skip if we're programmatically changing filters upon entering single-task mode
-      if (isProgrammaticFilterChange.value) {
+      // Skip if we're programmatically changing filters or if a task action is in progress
+      if (isProgrammaticFilterChange.value || isTaskActionInProgress.value) {
         return;
       }
       // If we're in single-task mode and the user changed a filter, clear the query param
@@ -630,6 +638,9 @@
     undoKey?: string;
     statusKey?: string;
   }) => {
+    // Mark task action in progress to prevent filter watchers from clearing single-task mode
+    isTaskActionInProgress.value = true;
+
     undoData.value = {
       taskId: event.taskId,
       taskName: event.taskName,
@@ -640,6 +651,13 @@
     } else if (event.statusKey) {
       updateTaskStatus(event.statusKey, event.taskName, true);
     }
+
+    // Reset flag after reactive updates propagate (double nextTick to ensure watcher queue has flushed)
+    nextTick(() => {
+      nextTick(() => {
+        isTaskActionInProgress.value = false;
+      });
+    });
   };
   const undoLastAction = () => {
     if (!undoData.value) return;
