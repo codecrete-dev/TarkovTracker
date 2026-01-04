@@ -124,10 +124,13 @@
   </aside>
 </template>
 <script setup lang="ts">
-  import { computed, defineAsyncComponent, watch } from 'vue';
+  import { computed, watch } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { useRouter } from 'vue-router';
   import { useSharedBreakpoints } from '@/composables/useSharedBreakpoints';
+  import DrawerItem from '@/features/drawer/DrawerItem.vue';
+  import DrawerLevel from '@/features/drawer/DrawerLevel.vue';
+  import DrawerLinks from '@/features/drawer/DrawerLinks.vue';
   import { useAppStore } from '@/stores/useApp';
   import { useMetadataStore } from '@/stores/useMetadata';
   import { usePreferencesStore } from '@/stores/usePreferences';
@@ -166,9 +169,6 @@
     // Desktop: based on rail setting
     return appStore.drawerRail ? 'w-14' : 'w-56';
   });
-  const DrawerLinks = defineAsyncComponent(() => import('@/features/drawer/DrawerLinks.vue'));
-  const DrawerLevel = defineAsyncComponent(() => import('@/features/drawer/DrawerLevel.vue'));
-  const DrawerItem = defineAsyncComponent(() => import('@/features/drawer/DrawerItem.vue'));
   const _preferencesStore = usePreferencesStore();
   const tarkovStore = useTarkovStore();
   const router = useRouter();

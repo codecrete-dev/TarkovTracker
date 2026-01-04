@@ -47,12 +47,14 @@
 </template>
 <script setup lang="ts">
   import { storeToRefs } from 'pinia';
-  import { computed, defineAsyncComponent, nextTick, watch } from 'vue';
+  import { computed, nextTick, watch } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { useRouter } from 'vue-router';
   import FilterPill from '@/components/FilterPill.vue';
+  import RefreshButton from '@/components/ui/RefreshButton.vue';
   import { useHideoutFiltering } from '@/composables/useHideoutFiltering';
   import { usePageFilters } from '@/composables/usePageFilters';
+  import HideoutCard from '@/features/hideout/HideoutCard.vue';
   import { useHideoutFilterConfig } from '@/features/hideout/composables/useHideoutFilterConfig';
   import { useMetadataStore } from '@/stores/useMetadata';
   import { usePreferencesStore } from '@/stores/usePreferences';
@@ -63,8 +65,6 @@
     description:
       'Track your hideout module upgrades and requirements. See what items you need to complete each station upgrade.',
   });
-  const HideoutCard = defineAsyncComponent(() => import('@/features/hideout/HideoutCard.vue'));
-  const RefreshButton = defineAsyncComponent(() => import('@/components/ui/RefreshButton.vue'));
   const router = useRouter();
   const { t } = useI18n({ useScope: 'global' });
   const metadataStore = useMetadataStore();

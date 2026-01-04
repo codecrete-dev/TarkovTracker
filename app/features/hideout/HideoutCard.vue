@@ -242,8 +242,10 @@
   </GenericCard>
 </template>
 <script setup lang="ts">
-  import { computed, defineAsyncComponent } from 'vue';
+  import { computed } from 'vue';
   import { useI18n } from 'vue-i18n';
+  import GenericCard from '@/components/ui/GenericCard.vue';
+  import HideoutRequirement from './HideoutRequirement.vue';
   import { useProgressStore } from '@/stores/useProgress';
   import { useTarkovStore } from '@/stores/useTarkov';
   import type {
@@ -256,8 +258,6 @@
   } from '@/types/tarkov';
   import { SPECIAL_STATIONS } from '@/utils/constants';
   import { useToast } from '#imports';
-  const GenericCard = defineAsyncComponent(() => import('@/components/ui/GenericCard.vue'));
-  const HideoutRequirement = defineAsyncComponent(() => import('./HideoutRequirement.vue'));
   const props = defineProps<{ station: HideoutStation }>();
   const progressStore = useProgressStore();
   const tarkovStore = useTarkovStore();
