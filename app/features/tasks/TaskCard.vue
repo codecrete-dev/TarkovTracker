@@ -438,7 +438,7 @@
   </UCard>
 </template>
 <script setup lang="ts">
-  import { computed, defineAsyncComponent, ref } from 'vue';
+  import { computed, ref } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { useRouter } from 'vue-router';
   import ContextMenu from '@/components/ui/ContextMenu.vue';
@@ -446,6 +446,10 @@
   import GameBadge from '@/components/ui/GameBadge.vue';
   import { useSharedBreakpoints } from '@/composables/useSharedBreakpoints';
   import { useTaskActions, type TaskActionPayload } from '@/composables/useTaskActions';
+  import QuestKeys from '@/features/tasks/QuestKeys.vue';
+  import QuestObjectives from '@/features/tasks/QuestObjectives.vue';
+  import RelatedTasksRow from '@/features/tasks/RelatedTasksRow.vue';
+  import TaskCardRewards from '@/features/tasks/TaskCardRewards.vue';
   import { useMetadataStore } from '@/stores/useMetadata';
   import { usePreferencesStore } from '@/stores/usePreferences';
   import { useProgressStore } from '@/stores/useProgress';
@@ -459,16 +463,6 @@
       options?: { align?: 'left' | 'right'; trigger?: HTMLElement }
     ) => void;
   };
-  const QuestKeys = defineAsyncComponent(() => import('@/features/tasks/QuestKeys.vue'));
-  const QuestObjectives = defineAsyncComponent(
-    () => import('@/features/tasks/QuestObjectives.vue')
-  );
-  const TaskCardRewards = defineAsyncComponent(
-    () => import('@/features/tasks/TaskCardRewards.vue')
-  );
-  const RelatedTasksRow = defineAsyncComponent(
-    () => import('@/features/tasks/RelatedTasksRow.vue')
-  );
   const props = defineProps<{
     task: Task;
     isNested?: boolean;
