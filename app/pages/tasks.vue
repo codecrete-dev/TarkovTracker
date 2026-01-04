@@ -212,6 +212,24 @@
 
     setFilters(updates);
   };
+
+  // Ensure map/trader views always have a selection (default to first item if 'all')
+  // This handles the case where a user lands directly on the page with view=maps or view=traders
+  // but no specific map/trader selection in the URL
+  watch(
+    [getTaskPrimaryView, getTaskMapView, getTaskTraderView, maps, () => metadataStore.sortedTraders],
+    ([view, mapView, traderView, mapsData, tradersData]) => {
+      if (view === 'maps' && mapView === 'all' && mapsData.length > 0) {
+        // Default to first map when maps view is active but no map selected
+        setFilter('map', mapsData[0].id);
+      } else if (view === 'traders' && traderView === 'all' && tradersData.length > 0) {
+        // Default to first trader when traders view is active but no trader selected
+        setFilter('trader', tradersData[0].id);
+      }
+    },
+    { immediate: true }
+  );
+
   // Maps with static/fixed raid times (don't follow normal day/night cycle)
   const STATIC_TIME_MAPS: Record<string, string> = {
     '55f2d3fd4bdc2d5f408b4567': '15:28 / 03:28', // Factory
