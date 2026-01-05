@@ -11,32 +11,7 @@
       <div class="flex flex-nowrap items-center justify-between gap-3">
         <!-- Left side: Task identity + badges -->
         <div class="flex min-w-0 flex-wrap items-center gap-2">
-          <span v-tooltip="task?.name">
-            <a
-              href="#"
-              class="text-accent-700 hover:text-accent-600 dark:text-accent-400 dark:hover:text-accent-300 flex min-w-0 items-center gap-2 no-underline"
-              @click.stop.prevent="navigateToTask"
-            >
-              <div class="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-gray-800">
-                <img
-                  v-if="task?.trader?.imageLink"
-                  :src="task.trader.imageLink"
-                  :alt="task?.trader?.name || 'Trader'"
-                  class="h-full w-full object-cover"
-                />
-                <UIcon v-else name="i-mdi-account-circle" class="h-full w-full text-gray-400 dark:text-gray-400" />
-              </div>
-              <img
-                v-if="isFactionTask"
-                :src="factionImage"
-                :alt="task?.factionName"
-                class="h-6 w-6 shrink-0 object-contain invert dark:invert-0"
-              />
-              <span class="min-w-0 truncate font-semibold">
-                {{ task?.name }}
-              </span>
-            </a>
-          </span>
+          <TaskLink :task="task" />
           <!-- External link icons -->
           <div class="flex shrink-0 items-center gap-1.5">
             <a
@@ -450,6 +425,7 @@
   import QuestObjectives from '@/features/tasks/QuestObjectives.vue';
   import RelatedTasksRow from '@/features/tasks/RelatedTasksRow.vue';
   import TaskCardRewards from '@/features/tasks/TaskCardRewards.vue';
+  import TaskLink from '@/features/tasks/TaskLink.vue';
   import { useMetadataStore } from '@/stores/useMetadata';
   import { usePreferencesStore } from '@/stores/usePreferences';
   import { useProgressStore } from '@/stores/useProgress';
@@ -549,8 +525,7 @@
   const _lockedBefore = computed(() => {
     return props.task.predecessors?.filter((s) => !isTaskSuccessful(s)).length || 0;
   });
-  const isFactionTask = computed(() => props.task.factionName !== 'Any');
-  const factionImage = computed(() => `/img/factions/${props.task.factionName}.webp`);
+
   const parentTasks = computed(() => {
     if (!props.task.parents?.length) return [];
     return props.task.parents
@@ -731,12 +706,7 @@
     }
   };
 
-  /**
-   * Navigate to single-task view with status=all to ensure task is visible.
-   */
-  const navigateToTask = () => {
-    router.push(`/tasks?task=${props.task.id}&status=all`);
-  };
+
   // Expanded state for recursive cards
   const expandedTasks = ref<Set<string>>(new Set());
   const toggleExpanded = (section: 'parents' | 'children' | 'requires' | 'failed') => {
