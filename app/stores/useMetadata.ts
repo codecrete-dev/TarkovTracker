@@ -79,6 +79,9 @@ interface MetadataState {
   itemsLoading: boolean;
   prestigeLoading: boolean;
   editionsLoading: boolean;
+  // Granular task loading states
+  objectivesLoading: boolean;
+  rewardsLoading: boolean;
   error: Error | null;
   hideoutError: Error | null;
   itemsError: Error | null;
@@ -119,6 +122,8 @@ export const useMetadataStore = defineStore('metadata', {
     itemsLoading: false,
     prestigeLoading: false,
     editionsLoading: false,
+    objectivesLoading: false,
+    rewardsLoading: false,
     error: null,
     hideoutError: null,
     itemsError: null,
@@ -264,6 +269,8 @@ export const useMetadataStore = defineStore('metadata', {
         !state.loading &&
         !state.hideoutLoading &&
         !state.itemsLoading &&
+        !state.objectivesLoading &&
+        !state.rewardsLoading &&
         state.tasks.length > 0 &&
         state.hideoutStations.length > 0
       );
@@ -453,14 +460,30 @@ export const useMetadataStore = defineStore('metadata', {
       const hideoutPromise = this.fetchHideoutData(forceRefresh);
       const prestigePromise = this.fetchPrestigeData(forceRefresh);
       const editionsPromise = this.fetchEditionsData(forceRefresh);
+      // Explicitly set granular loading states to true before starting the core fetch
+      // This ensures isDataLoaded returns false until these specific fetches complete
+      this.objectivesLoading = true;
+      this.rewardsLoading = true;
+
       await this.fetchTasksCoreData(forceRefresh);
+
+      // If core data fetch failed or returned no tasks, reset granular flags
+      // to prevent infinite loading state
+      if (!this.tasks.length) {
+        this.objectivesLoading = false;
+        this.rewardsLoading = false;
+      }
+
       if (this.tasks.length) {
-        this.fetchTaskObjectivesData(forceRefresh).catch((err) =>
-          logger.error('[MetadataStore] Error fetching task objectives data:', err)
-        );
-        this.fetchTaskRewardsData(forceRefresh).catch((err) =>
-          logger.error('[MetadataStore] Error fetching task rewards data:', err)
-        );
+        // These will handle their own loading = false in finally blocks
+        this.fetchTaskObjectivesData(forceRefresh).catch((err) => {
+          logger.error('[MetadataStore] Error fetching task objectives data:', err);
+          this.objectivesLoading = false; // Ensure flag is reset on error
+        });
+        this.fetchTaskRewardsData(forceRefresh).catch((err) => {
+          logger.error('[MetadataStore] Error fetching task rewards data:', err);
+          this.rewardsLoading = false; // Ensure flag is reset on error
+        });
       }
       // Items are heavy; load in background for hydration without blocking app init.
       this.fetchItemsData(forceRefresh).catch((err) =>
@@ -590,6 +613,7 @@ export const useMetadataStore = defineStore('metadata', {
      * Uses IndexedDB cache for client-side persistence
      */
     async fetchTaskObjectivesData(forceRefresh = false) {
+      this.objectivesLoading = true;
       try {
         const apiGameMode =
           API_GAME_MODES[this.currentGameMode as keyof typeof API_GAME_MODES] ||
@@ -643,6 +667,8 @@ export const useMetadataStore = defineStore('metadata', {
         }
       } catch (err) {
         logger.error('[MetadataStore] Error fetching task objectives data:', err);
+      } finally {
+        this.objectivesLoading = false;
       }
     },
     /**
@@ -650,6 +676,7 @@ export const useMetadataStore = defineStore('metadata', {
      * Uses IndexedDB cache for client-side persistence
      */
     async fetchTaskRewardsData(forceRefresh = false) {
+      this.rewardsLoading = true;
       try {
         const apiGameMode =
           API_GAME_MODES[this.currentGameMode as keyof typeof API_GAME_MODES] ||
@@ -701,6 +728,8 @@ export const useMetadataStore = defineStore('metadata', {
         }
       } catch (err) {
         logger.error('[MetadataStore] Error fetching task rewards data:', err);
+      } finally {
+        this.rewardsLoading = false;
       }
     },
     /**

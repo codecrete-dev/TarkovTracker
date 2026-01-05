@@ -326,6 +326,7 @@
       mark_as_incomplete: 'Als unvollständig markieren',
       mark_as_complete_100: 'Als 100% abgeschlossen markieren',
       fir_required: 'Im Raid gefunden erforderlich',
+      craftable: 'Herstellbar',
       lvl_required: 'Lvl {level}',
       locked_before: '{count} davor',
       options: {

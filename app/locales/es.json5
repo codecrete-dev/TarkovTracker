@@ -245,6 +245,7 @@
       mark_as_incomplete: 'Marcar como incompleto',
       mark_as_complete_100: 'Marcar como 100% completado',
       fir_required: 'Encontrado en incursión requerido',
+      craftable: 'Fabricable',
       lvl_required: 'Nv {level}',
       locked_before: '{count} antes',
       options: {

@@ -53,11 +53,11 @@
 
   // Tooltip text with fallbacks to translations
   const craftableTitleText = computed(() => {
-    return props.craftableTitle || t('neededitems.craftable', 'Craftable');
+    return props.craftableTitle || t('page.neededitems.craftable', 'Craftable');
   });
 
   const foundInRaidTitle = computed(() => {
-    return props.foundInRaidTitle || t('neededitems.fir_required', 'Found in Raid required');
+    return props.foundInRaidTitle || t('page.neededitems.fir_required', 'Found in Raid required');
   });
 
   const kappaTitleText = computed(() => {

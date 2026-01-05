@@ -378,6 +378,7 @@
       mark_as_incomplete: 'Mark as incomplete',
       mark_as_complete_100: 'Mark as 100% complete',
       fir_required: 'Found in Raid required',
+      craftable: 'Craftable',
       lvl_required: 'Lvl {level}',
       locked_before: '{count} before',
       options: {

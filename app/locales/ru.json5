@@ -267,6 +267,7 @@
       mark_as_incomplete: 'Отметить как не завершенное',
       mark_as_complete_100: 'Отметить как завершенное на 100%',
       fir_required: 'Требуется найти в рейде',
+      craftable: 'Можно изготовить',
       lvl_required: 'Ур {level}',
       locked_before: '{count} до',
       options: {

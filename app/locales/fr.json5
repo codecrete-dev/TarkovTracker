@@ -268,6 +268,7 @@
       mark_as_incomplete: 'Marquer comme incomplet',
       mark_as_complete_100: 'Marquer comme complété à 100%',
       fir_required: 'Trouvé en raid requis',
+      craftable: 'Fabricable',
       lvl_required: 'Nv {level}',
       locked_before: '{count} avant',
       neededby: 'Requis par: {users}',
