@@ -382,13 +382,11 @@ export const useMetadataStore = defineStore('metadata', {
       const store = useTarkovStore();
       const effectiveLocale = localeOverride || useSafeLocale().value;
       logger.debug('[MetadataStore] updateLanguageAndGameMode - raw locale:', effectiveLocale);
-
       // Clear existing items to prevent stale data from being used during hydration
       // This forces the UI to wait for the new language items to load
       if (this.items.length > 0) {
         this.items = [];
       }
-
       // Update language code
       const mappedCode = LOCALE_TO_API_MAPPING[effectiveLocale];
       if (mappedCode) {
@@ -464,16 +462,13 @@ export const useMetadataStore = defineStore('metadata', {
       // This ensures isDataLoaded returns false until these specific fetches complete
       this.objectivesLoading = true;
       this.rewardsLoading = true;
-
       await this.fetchTasksCoreData(forceRefresh);
-
       // If core data fetch failed or returned no tasks, reset granular flags
       // to prevent infinite loading state
       if (!this.tasks.length) {
         this.objectivesLoading = false;
         this.rewardsLoading = false;
       }
-
       if (this.tasks.length) {
         // These will handle their own loading = false in finally blocks
         this.fetchTaskObjectivesData(forceRefresh);

@@ -19,9 +19,7 @@
 <script setup lang="ts">
   import { computed } from 'vue';
   import { useI18n } from 'vue-i18n';
-
   const { t } = useI18n({ useScope: 'global' });
-
   const props = withDefaults(
     defineProps<{
       craftableIconBaseClass?: string;
@@ -46,20 +44,16 @@
       kappaTitle: '',
     }
   );
-
   const emit = defineEmits<{
     craft: [];
   }>();
-
   // Tooltip text with fallbacks to translations
   const craftableTitleText = computed(() => {
     return props.craftableTitle || t('page.neededitems.craftable', 'Craftable');
   });
-
   const foundInRaidTitle = computed(() => {
     return props.foundInRaidTitle || t('page.neededitems.fir_required', 'Found in Raid required');
   });
-
   const kappaTitleText = computed(() => {
     return props.kappaTitle || t('task.kappa_req', 'Required for Kappa task');
   });

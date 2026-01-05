@@ -98,7 +98,6 @@
   });
   const imageElementClasses = ['rounded'];
   const hasError = ref(false);
-
   // Reset error state when src changes
   watch(
     () => props.src,
@@ -106,7 +105,6 @@
       hasError.value = false;
     }
   );
-
   const imageTileClasses = computed(() => {
     return [...imageElementClasses];
   });

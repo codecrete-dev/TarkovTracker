@@ -165,7 +165,7 @@
       : 0;
     const availableWidth = Math.max(
       0,
-      containerWidth.value - labelTotalWidth - CONTAINER_PADDING - suffixWidth
+      containerWidth.value - labelTotalWidth - CONTAINER_PADDING.value - suffixWidth
     );
     let currentWidth = 0;
     let count = 0;

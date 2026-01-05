@@ -184,7 +184,7 @@
         undouncomplete: 'Скасовано незавершення {name}',
         undofailed: 'Undid failing {name}',
         undoresetfailed: 'Restored failed status for {name}',
-        markfailedconfirm: "Позначити це завдання як неуспішне? Це слід робити лише у випадку проблем з даними, не рекомендовано та може заблокувати ланцюги завдань.",
+        markfailedconfirm: 'Позначити це завдання як неуспішне? Це слід робити лише у випадку проблем з даними, не рекомендовано та може заблокувати ланцюги завдань.',
         failedbecause: 'Failed because',
         failedbecauseunknown: 'Failed manually or data missing',
         nonkappa: 'Не потрібні для Каппа',
