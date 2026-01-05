@@ -26,6 +26,11 @@ export default defineNuxtPlugin((nuxtApp) => {
 interface TooltipOptions {
   content: string;
   placement?: Placement;
+  /**
+   * Whether content contains HTML.
+   * @warning ⚠️ XSS RISK: Only use with trusted, developer-controlled content. 
+   * Do NOT pass user input directly to this property without sanitization.
+   */
   html?: boolean;
 }
 // Store tooltip instance on element for cleanup/updates
@@ -56,6 +61,7 @@ function createTooltip(el: HTMLElement, value: string | TooltipOptions) {
   tooltip.appendChild(contentDiv);
   // Set initial content
   if (options.html) {
+    // ⚠️ XSS RISK: Caller must sanitize content if user-generated
     contentDiv.innerHTML = options.content;
   } else {
     contentDiv.textContent = options.content;
@@ -168,6 +174,7 @@ function updateTooltipContent(el: HTMLElement, value: string | TooltipOptions) {
     typeof value === 'string' ? { content: value } : value;
   const contentDiv = instance.tooltip.lastElementChild as HTMLElement; // Content is last child
   if (options.html) {
+    // ⚠️ XSS RISK: Caller must sanitize content if user-generated
     contentDiv.innerHTML = options.content;
   } else {
     contentDiv.textContent = options.content;

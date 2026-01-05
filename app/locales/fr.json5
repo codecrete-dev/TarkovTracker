@@ -264,7 +264,7 @@
       decrease_count: 'Diminuer le compte',
       increase_count: 'Augmenter le compte',
       click_to_enter_value: 'Cliquer pour entrer une valeur',
-      mark_as_incomplete: 'Marcar como incomplet',
+      mark_as_incomplete: 'Marquer comme incomplet',
       mark_as_complete_100: 'Marquer comme complété à 100%',
       fir_required: 'Trouvé en raid requis',
       lvl_required: 'Nv {level}',
@@ -583,7 +583,7 @@
       reset_cancel: 'Annuler',
       reset_confirm: 'Réinitialiser',
       reset_hint: 'Réinitialisez votre progression pour des modes de jeu spécifiques ou toutes les données.',
-      copy_account_id: "Copiar l'ID du compte",
+      copy_account_id: "Copier l'ID du compte",
     },
     danger_zone: {
       title: 'Zone de danger',

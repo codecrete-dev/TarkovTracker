@@ -23,7 +23,7 @@
         <!-- Complete Checkmark Overlay -->
         <div
           v-if="isComplete"
-          class="bg-success-500/10 absolute inset-0 flex items-center justify-center rounded z-2"
+          class="bg-success-500/10 absolute inset-0 flex items-center justify-center rounded z-20"
         >
           <UIcon name="i-mdi-check-circle" class="text-success-500/50 h-10 w-10 sm:h-12 sm:w-12" />
         </div>

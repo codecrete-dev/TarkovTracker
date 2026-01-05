@@ -55,7 +55,6 @@
       </button>
     </div>
     <!-- Mark as 100% complete button -->
-    <!-- Mark as 100% complete button -->
     <ToggleButton
       :is-active="currentCount >= neededCount"
       variant="complete"

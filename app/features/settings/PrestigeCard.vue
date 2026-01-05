@@ -87,7 +87,7 @@
     background: 'bg-surface-floating',
     shadow: 'shadow-xl',
     rounded: 'rounded-lg',
-    ring: 'ring-1 ring-base',
+    ring: 'ring-1 ring-gray-200 dark:ring-white/10',
     padding: 'p-1',
     option: {
       base: 'px-3 py-2 text-sm cursor-pointer transition-colors rounded',

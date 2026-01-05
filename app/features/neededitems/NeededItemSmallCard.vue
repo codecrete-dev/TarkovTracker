@@ -7,13 +7,12 @@
       <div class="flex flex-1 flex-col">
         <!-- Item image with count badge -->
         <div
-          :class="[
-            imageContainerClasses,
-            {
-              'hover:ring-primary-300 cursor-pointer hover:ring-1 active:scale-[0.98]':
-                hasItem && !selfCompletedNeed,
-            },
-          ]"
+            :class="[
+              imageContainerClasses,
+              {
+                'cursor-pointer active:scale-[0.98]': hasItem && !selfCompletedNeed,
+              },
+            ]"
           @click="handleCardClick"
         >
           <ItemStatusBadge
@@ -206,7 +205,13 @@
       'group/image relative z-0 flex items-center justify-center w-full shrink-0 origin-bottom overflow-hidden rounded';
     const transitionClasses = 'transition-transform duration-150 ease-out will-change-transform';
     const hoverClasses =
-      'hover:z-20 hover:-translate-y-1 hover:scale-[1.08] hover:ring-1 hover:ring-black/5 dark:hover:ring-white/10';
-    return [baseLayoutClasses, transitionClasses, hoverClasses];
+      'hover:z-20 hover:-translate-y-1 hover:scale-[1.08] hover:ring-1';
+    
+    // Conditional ring color
+    const ringColor = (hasItem.value && !selfCompletedNeed.value)
+      ? 'hover:ring-primary-300'
+      : 'hover:ring-black/5 dark:hover:ring-white/10';
+
+    return [baseLayoutClasses, transitionClasses, hoverClasses, ringColor];
   });
 </script>

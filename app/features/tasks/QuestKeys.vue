@@ -13,7 +13,7 @@
     >
       <i18n-t keypath="page.tasks.questcard.keysneeded" :plural="keyMap.keys.length" scope="global">
         <template #keys>
-          <span v-for="(key, keyIndex) in keyMap.keys" :key="keyIndex" class="inline-block" :class="{ 'ml-2': keyMap.keys.length > 1 && keyIndex === 0 }">
+          <span v-for="(key, keyIndex) in keyMap.keys" :key="keyIndex" class="inline-block" :class="{ 'ml-2': keyMap.keys.length > 1 && keyIndex > 0 }">
             <GameItem
               :item="key"
               :count="1"

@@ -295,7 +295,7 @@ export const usePreferencesStore = defineStore('preferences', {
       this.team.itemsHideNonFIR = hide;
     },
     setItemsTeamHideHideout(hide: boolean) {
-      this.team.itemsHideout = hide;
+      this.team.itemsHideHideout = hide;
     },
     setMapTeamHideAll(hide: boolean) {
       this.team.mapHideAll = hide;

@@ -174,7 +174,10 @@ const calculateVisibleItems = () => {
     while (count > 0 && (currentWidth + spaceNeeded > availableWidth)) {
         const lastIndex = count - 1;
         const lastTask = props.tasks[lastIndex];
-        if (!lastTask) continue;
+        if (!lastTask) {
+          count--;
+          continue;
+        }
         const textWidth = measureText(lastTask.name ?? '');
         const badgeWidth = Math.min(192, textWidth + PADDING_X_PER_BADGE);
         const gap = lastIndex > 0 ? GAP_WIDTH : 0;

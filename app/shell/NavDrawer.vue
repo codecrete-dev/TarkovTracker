@@ -172,7 +172,7 @@
 
   const tarkovStore = useTarkovStore();
   const router = useRouter();
-  const _t = useI18n({ useScope: 'global' }).t;
+
   const currentEditionName = computed(() => metadataStore.getEditionName(tarkovStore.gameEdition));
   // Faction cycling logic
   const factionArray = PMC_FACTIONS; // ['USEC', 'BEAR']

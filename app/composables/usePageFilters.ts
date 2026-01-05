@@ -1,4 +1,4 @@
-import { computed, ref, watch, type ComputedRef, type Ref } from 'vue';
+import { computed, ref, watch, onUnmounted, type ComputedRef, type Ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 /**
@@ -270,6 +270,13 @@ export function usePageFilters<C extends FilterConfig>(
           updateUrl({ [key]: newValue } as Partial<{ [K in keyof C]: FilterValue<C[K]> }>);
         }, paramConfig.debounceMs);
       });
+
+      // Clear timer on unmount
+      onUnmounted(() => {
+        if (debounceTimers[key]) {
+          clearTimeout(debounceTimers[key]);
+        }
+      });
     }
   }
 
@@ -399,12 +406,11 @@ export function usePageFilters<C extends FilterConfig>(
           if (urlValue !== undefined && urlValue !== null && urlValue !== '') {
             const parsedValue = parseValue(key as keyof C, urlValue);
             paramConfig.onUpdate(parsedValue);
-            console.log(`[usePageFilters] persisted ${key}=${parsedValue}`);
+            paramConfig.onUpdate(parsedValue);
           } 
           // Clear stored value if param is absent from URL (reset to default)
           else {
             paramConfig.onUpdate(paramConfig.default);
-            console.log(`[usePageFilters] cleared ${key} (reset to default)`);
           }
         }
       }
