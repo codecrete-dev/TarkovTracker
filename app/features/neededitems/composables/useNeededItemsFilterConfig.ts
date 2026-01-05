@@ -12,14 +12,14 @@ export function useNeededItemsFilterConfig(): FilterConfig {
   return {
     filter: {
       default: 'all',
-      storedDefault: () => preferencesStore.$state.neededTypeView,
+      storedDefault: () => preferencesStore.getNeededTypeView,
       onUpdate: (v) => preferencesStore.setNeededTypeView(v as string),
       validate: (v) => ['all', 'tasks', 'hideout', 'completed'].includes(v),
     },
     viewMode: {
       default: 'grid',
       storedDefault: () => {
-        const style = preferencesStore.$state.neededitemsStyle;
+        const style = preferencesStore.getNeededitemsStyle;
         return style === 'row' ? 'list' : style === 'mediumCard' ? 'grid' : null;
       },
       onUpdate: (v) => preferencesStore.setNeededItemsStyle((v as string) === 'list' ? 'row' : 'mediumCard'),
@@ -44,6 +44,11 @@ export function useNeededItemsFilterConfig(): FilterConfig {
       parse: (v) => v === '1',
       serialize: (v) => (v as boolean) ? '1' : null,
     },
-    search: { default: '', debounceMs: 300 },
+    search: {
+      default: '',
+      storedDefault: () => preferencesStore.getNeededItemsSearch ?? '',
+      onUpdate: (v) => preferencesStore.setNeededItemsSearch(v as string),
+      debounceMs: 300,
+    },
   };
 }

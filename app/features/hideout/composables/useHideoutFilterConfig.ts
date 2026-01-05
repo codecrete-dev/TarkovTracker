@@ -12,10 +12,17 @@ export function useHideoutFilterConfig(): FilterConfig {
   return {
     view: {
       default: 'available',
-      storedDefault: () => preferencesStore.$state.hideoutPrimaryView,
+      storedDefault: () => preferencesStore.getHideoutPrimaryView,
       onUpdate: (v) => preferencesStore.setHideoutPrimaryView(v as string),
       validate: (v) => ['all', 'available', 'maxed', 'locked'].includes(v),
     },
     station: { default: '' },
+    // Search - persisted to store
+    search: {
+      default: '',
+      storedDefault: () => preferencesStore.getHideoutSearch ?? '',
+      onUpdate: (v) => preferencesStore.setHideoutSearch(v as string),
+      debounceMs: 300,
+    },
   };
 }

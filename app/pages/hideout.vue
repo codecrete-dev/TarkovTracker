@@ -18,6 +18,31 @@
         </div>
       </div>
     </div>
+    <!-- Search Bar -->
+    <div class="flex justify-center">
+      <div class="w-full max-w-lg rounded-lg bg-surface-elevated px-4 py-2.5 shadow-sm">
+        <UInput
+          :model-value="searchQuery"
+          :placeholder="$t('page.hideout.search.placeholder', 'Search stations...')"
+          icon="i-mdi-magnify"
+          size="md"
+          :ui="{ trailing: 'pe-1' }"
+          class="w-full"
+          @update:model-value="searchQuery = $event"
+        >
+          <template v-if="searchQuery?.length" #trailing>
+            <UButton
+              color="neutral"
+              variant="link"
+              size="sm"
+              icon="i-mdi-close-circle"
+              aria-label="Clear search"
+              @click="searchQuery = ''"
+            />
+          </template>
+        </UInput>
+      </div>
+    </div>
     <div>
       <div v-if="isStoreLoading" class="text-surface-200 flex flex-col items-center gap-3 py-10">
         <UIcon name="i-heroicons-arrow-path" class="text-accent-500 h-8 w-8 animate-spin" />
@@ -78,7 +103,10 @@
 
   // URL-based filter state
   // Filter config is extracted to useHideoutFilterConfig for sharing with navigation
-  const { filters, setFilter } = usePageFilters(useHideoutFilterConfig());
+  const { filters, setFilter, debouncedInputs } = usePageFilters(useHideoutFilterConfig());
+
+  // Computed alias for search input
+  const searchQuery = debouncedInputs.search!;
 
   // Sync URL filter to activePrimaryView (from useHideoutFiltering)
   watch(filters.view, (newView) => {

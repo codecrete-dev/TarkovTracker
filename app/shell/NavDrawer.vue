@@ -169,7 +169,7 @@
     // Desktop: based on rail setting
     return appStore.drawerRail ? 'w-14' : 'w-56';
   });
-  const _preferencesStore = usePreferencesStore();
+
   const tarkovStore = useTarkovStore();
   const router = useRouter();
   const _t = useI18n({ useScope: 'global' }).t;

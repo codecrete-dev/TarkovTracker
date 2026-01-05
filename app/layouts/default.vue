@@ -57,7 +57,7 @@
   const systemThemeListener = ref<MediaQueryList | null>(null);
   // Handler for system theme changes
   function handleSystemThemeChange(e?: MediaQueryListEvent) {
-    if (preferencesStore.theme === 'system') {
+    if (preferencesStore.getTheme === 'system') {
       // Check current system preference
       const mediaQuery = e?.target as MediaQueryList ?? window.matchMedia('(prefers-color-scheme: dark)');
       const isDark = mediaQuery.matches;
@@ -68,7 +68,7 @@
   }
   // Sync theme preference to color mode and set up system listeners
   watch(
-    () => preferencesStore.theme,
+    () => preferencesStore.getTheme,
     (newTheme) => {
       // Clean up old listener first
       if (systemThemeListener.value) {

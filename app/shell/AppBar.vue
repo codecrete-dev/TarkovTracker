@@ -194,7 +194,7 @@
       // Set the i18n locale (this updates the UI translations)
       locale.value = newLocale;
       // Persist in preferences
-      preferencesStore.localeOverride = newLocale;
+      preferencesStore.setLocaleOverride(newLocale);
       logger.debug('[AppBar] Setting locale to:', newLocale);
       // Update metadata store and refetch data with new language
       metadataStore.updateLanguageAndGameMode(newLocale);

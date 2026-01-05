@@ -278,9 +278,23 @@
   const holidayEffectsEnabled = computed(() => preferencesStore.getEnableHolidayEffects);
   // Navigate to tasks page filtered by trader
   const navigateToTraderTasks = (traderId: string) => {
+    // Reset "sticky" filters in the store to ensure a clean view from the dashboard
+    preferencesStore.setTaskSearch('');
+    preferencesStore.setTaskId(null);
+    
+    // Set the specific view and trader
     preferencesStore.setTaskPrimaryView('traders');
     preferencesStore.setTaskTraderView(traderId);
-    router.push('/tasks');
+    
+    // Navigate directly to the desired state. 
+    // usePageFilters will use defaults for omitted parameters.
+    router.push({
+      path: '/tasks',
+      query: { 
+        view: 'traders', 
+        trader: traderId 
+      }
+    });
   };
   // Get current level
   const currentLevel = computed(() => {

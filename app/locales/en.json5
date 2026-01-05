@@ -313,6 +313,9 @@
         available: 'Available',
         maxed: 'Maxed',
       },
+      search: {
+        placeholder: 'Search stations...',
+      },
       stationcard: {
         level: 'Available to build | Level {count} | Level {count}',
         levelnotready: 'Not ready to build',

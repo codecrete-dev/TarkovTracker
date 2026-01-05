@@ -88,28 +88,32 @@ export function useHideoutFiltering() {
       return false;
     }
   });
-  // Filter stations based on current view
+  // Filter stations based on current view and search query
   const visibleStations = computed(() => {
     try {
       // Use the comprehensive loading check - don't render until everything is ready
       if (isStoreLoading.value) {
         return [];
       }
-      const hideoutStationList = hideoutStations.value as HideoutStation[];
-      // Display all upgradeable stations
+      let hideoutStationList = hideoutStations.value as HideoutStation[];
+
+      // Apply primary view filters
       if (activePrimaryView.value === 'available') {
-        return hideoutStationList.filter(isStationAvailable);
+        hideoutStationList = hideoutStationList.filter(isStationAvailable);
+      } else if (activePrimaryView.value === 'maxed') {
+        hideoutStationList = hideoutStationList.filter(isStationMaxed);
+      } else if (activePrimaryView.value === 'locked') {
+        hideoutStationList = hideoutStationList.filter(isStationLocked);
       }
-      // Display all maxed stations
-      if (activePrimaryView.value === 'maxed') {
-        return hideoutStationList.filter(isStationMaxed);
+
+      // Apply search filter if present
+      const query = preferencesStore.getHideoutSearch?.toLowerCase().trim();
+      if (query) {
+        hideoutStationList = hideoutStationList.filter((station) =>
+          station.name.toLowerCase().includes(query)
+        );
       }
-      // Display all locked stations
-      if (activePrimaryView.value === 'locked') {
-        return hideoutStationList.filter(isStationLocked);
-      }
-      // Display all stations
-      if (activePrimaryView.value === 'all') return hideoutStationList;
+
       return hideoutStationList;
     } catch (error) {
       logger.error('[useHideoutFiltering] Error computing visible stations:', error);
