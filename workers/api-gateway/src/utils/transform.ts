@@ -130,7 +130,9 @@ export function transformProgress(
   const displayName =
     (typeof progressData?.displayName === 'string' && progressData.displayName.trim()
       ? progressData.displayName.trim()
-      : null) || fallbackDisplayName || userId.substring(0, 6);
+      : null) ||
+    fallbackDisplayName ||
+    userId.substring(0, 6);
   return {
     tasksProgress,
     taskObjectivesProgress,

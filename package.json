@@ -1,19 +1,6 @@
 {
-  "name": "tarkovtracker-nuxt",
-  "type": "module",
-  "private": true,
-  "packageManager": "npm@11.6.2",
-  "scripts": {
-    "build": "nuxt build",
-    "dev": "nuxt dev",
-    "generate": "nuxt generate",
-    "preview": "nuxt preview",
-    "postinstall": "nuxt prepare",
-    "deps": "npx taze --r --I",
-    "lint": "eslint app --max-warnings=0",
-    "lint:fix": "eslint app --fix",
-    "format": "prettier --write \"app/**/*.{js,ts,tsx,vue,json,json5,css,scss,md}\" \"docs/**/*.{md,markdown}\" \"nuxt.config.ts\" \"app.config.ts\" \"vitest.config.ts\" \"test-setup.ts\" && eslint app --fix",
-    "supabase:types": "supabase gen types typescript --linked > supabase/functions/_shared/database.types.ts"
+  "__pinnedNotes": {
+    "@vueuse/core": "Previously pinned to 13.9.0 due to Nuxt/@nuxt/ui/reka-ui compatibility; updated to ^14.1.0 after upgrading Nuxt/@nuxt/ui."
   },
   "dependencies": {
     "@iconify-json/mdi": "^1.2.3",
@@ -43,13 +30,6 @@
     "vue-i18n": "^11.2.7",
     "vue-router": "^4.6.4"
   },
-  "engines": {
-    "node": ">=24.12.0",
-    "npm": ">=11.6.2"
-  },
-  "__pinnedNotes": {
-    "@vueuse/core": "Previously pinned to 13.9.0 due to Nuxt/@nuxt/ui/reka-ui compatibility; updated to ^14.1.0 after upgrading Nuxt/@nuxt/ui."
-  },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20251225.0",
     "@nuxt/test-utils": "^3.21.0",
@@ -72,8 +52,28 @@
     "tailwindcss": "^4.1.18",
     "vitest": "^3.2.4"
   },
+  "engines": {
+    "node": ">=24.12.0",
+    "npm": ">=11.6.2"
+  },
+  "name": "tarkovtracker-nuxt",
   "overrides": {
     "@tiptap/core": "3.14.0",
     "@tiptap/pm": "3.14.0"
-  }
+  },
+  "packageManager": "npm@11.6.2",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "deps": "npx taze --r --I",
+    "dev": "nuxt dev",
+    "format": "prettier --write \"app/**/*.{js,ts,tsx,vue,json,json5,css,scss,md}\" \"docs/**/*.{md,markdown}\" \"nuxt.config.ts\" \"app.config.ts\" \"vitest.config.ts\" \"test-setup.ts\" && eslint app --fix",
+    "generate": "nuxt generate",
+    "lint": "eslint app --max-warnings=0",
+    "lint:fix": "eslint app --fix",
+    "postinstall": "nuxt prepare",
+    "preview": "nuxt preview",
+    "supabase:types": "supabase gen types typescript --linked > supabase/functions/_shared/database.types.ts"
+  },
+  "type": "module"
 }

@@ -1,15 +1,12 @@
 import type { Env, ApiToken, Permission } from './types';
-
 // Valid token prefixes: tt_ (legacy), PVE_, PVP_ (game mode specific)
 const VALID_TOKEN_PREFIXES = ['tt_', 'PVE_', 'PVP_'];
-
 /**
  * Check if token has a valid prefix format
  */
 export function isValidTokenFormat(token: string): boolean {
   return VALID_TOKEN_PREFIXES.some((prefix) => token.startsWith(prefix));
 }
-
 /**
  * SHA-256 hash a string and return hex
  */
