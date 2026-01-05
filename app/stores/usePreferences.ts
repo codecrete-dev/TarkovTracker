@@ -402,7 +402,8 @@ export const usePreferencesStore = defineStore('preferences', {
 export type PreferencesStore = ReturnType<typeof usePreferencesStore>;
 // Watch for Supabase user state changing
 let stopUserWatch: (() => void) | null = null;
-if (import.meta.client) {
+const shouldInitPreferencesWatchers = import.meta.client && import.meta.env.MODE !== 'test';
+if (shouldInitPreferencesWatchers) {
   setTimeout(() => {
     try {
       const nuxtApp = useNuxtApp();
