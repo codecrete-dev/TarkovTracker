@@ -208,7 +208,7 @@
     // Conditional ring color
     const ringColor =
       hasItem.value && !selfCompletedNeed.value
-        ? 'hover:ring-primary-300'
+        ? 'hover:ring-accent-400'
         : 'hover:ring-black/5 dark:hover:ring-white/10';
     return [baseLayoutClasses, transitionClasses, hoverClasses, ringColor];
   });

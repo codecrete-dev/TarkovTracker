@@ -123,17 +123,17 @@
   const primaryViews = computed(() => [
     {
       title: t('page.hideout.primaryviews.all'),
-      icon: 'mdi-clipboard-check',
+      icon: 'mdi-format-list-bulleted',
       view: 'all',
       count: stationCounts.value.all,
-      badgeColor: 'badge-soft-filter-all',
+      badgeColor: 'badge-soft-accent',
     },
     {
       title: t('page.hideout.primaryviews.available'),
-      icon: 'mdi-tag-arrow-up-outline',
+      icon: 'mdi-clipboard-text',
       view: 'available',
       count: stationCounts.value.available,
-      badgeColor: 'badge-soft-accent',
+      badgeColor: 'plain',
     },
     {
       title: t('page.hideout.primaryviews.maxed'),

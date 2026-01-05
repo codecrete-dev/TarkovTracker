@@ -233,6 +233,7 @@
         all: 'Todos',
         tasks: 'Misiones',
         hideout: 'Escondite',
+        collected: 'Recolectado',
       },
       collect: 'Recolectar',
       uncollect: 'Deshacer recolección',

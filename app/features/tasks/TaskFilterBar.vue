@@ -84,7 +84,7 @@
         <FilterPill
           :active="secondaryView === 'all'"
           :count="statusCounts.all"
-          count-color="badge-soft-filter-all"
+          count-color="badge-soft-accent"
           @click="setSecondaryView('all')"
         >
           <template #icon>
@@ -97,7 +97,7 @@
           :label="t('page.tasks.secondaryviews.available').toUpperCase()"
           label-class="text-xs sm:text-sm"
           :count="statusCounts.available"
-          count-color="badge-soft-accent"
+          count-color="plain"
           @click="setSecondaryView('available')"
         >
           <template #icon>

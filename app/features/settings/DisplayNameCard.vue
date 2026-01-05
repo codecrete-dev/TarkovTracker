@@ -1,16 +1,15 @@
 <template>
   <GenericCard
     icon="mdi-account-edit"
-    icon-color="blue-400"
     highlight-color="blue"
     :fill-height="false"
     :title="$t('settings.display_name.title', 'Display Name')"
-    title-classes="text-lg font-semibold"
+    title-classes="text-lg font-bold sm:text-xl"
   >
     <template #content>
       <div class="space-y-4 px-4 py-4">
         <!-- Explanation Alert -->
-        <UAlert icon="i-mdi-information" color="info" variant="soft" class="text-sm">
+        <UAlert icon="i-mdi-information" color="primary" variant="soft" class="text-sm">
           <template #description>
             {{
               $t(

@@ -3,11 +3,10 @@
     <!-- Section 1: Game Settings (merged Privacy Mode + Game Edition) -->
     <GenericCard
       icon="mdi-gamepad-variant"
-      icon-color="accent-400"
       highlight-color="accent"
       :fill-height="false"
       :title="$t('settings.game_settings.title', 'Game Settings')"
-      title-classes="text-lg font-semibold"
+      title-classes="text-lg font-bold sm:text-xl"
     >
       <template #title-right>
         <UAlert
@@ -104,11 +103,10 @@
     <!-- Section 3: Data Management -->
     <GenericCard
       icon="mdi-database"
-      icon-color="warning"
       highlight-color="tan"
       :fill-height="false"
       :title="$t('settings.data_management.title', 'Data Management')"
-      title-classes="text-lg font-semibold"
+      title-classes="text-lg font-bold sm:text-xl"
     >
       <template #title-right>
         <UAlert
@@ -345,11 +343,10 @@
     <!-- Section 4: API Management -->
     <GenericCard
       icon="mdi-key-chain"
-      icon-color="purple-400"
       highlight-color="purple"
       :fill-height="false"
       :title="$t('page.settings.card.apitokens.title', 'API Tokens')"
-      title-classes="text-lg font-semibold"
+      title-classes="text-lg font-bold sm:text-xl"
     >
       <template #title-right>
         <UAlert

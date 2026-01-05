@@ -365,6 +365,7 @@
         all: 'All',
         tasks: 'Tasks',
         hideout: 'Hideout',
+        collected: 'Collected',
       },
       neededby: 'Needed by: {users}',
       collect: 'Collect',

@@ -2,10 +2,9 @@
   <div class="account-deletion-card" :class="$attrs.class">
     <GenericCard
       icon="mdi-account-cog"
-      icon-color="error-400"
       highlight-color="error"
       :title="$t('settings.account.title', 'Account Management')"
-      title-classes="text-lg font-semibold"
+      title-classes="text-lg font-bold sm:text-xl"
     >
       <template #title-right>
         <UAlert

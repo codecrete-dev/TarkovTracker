@@ -256,6 +256,7 @@
         all: 'Tous',
         tasks: 'Quêtes',
         hideout: 'Planque',
+        collected: 'Collecté',
       },
       collect: 'Collecter',
       uncollect: 'Annuler la collecte',

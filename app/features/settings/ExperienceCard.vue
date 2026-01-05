@@ -1,16 +1,15 @@
 <template>
   <GenericCard
     icon="mdi-star-circle"
-    icon-color="primary-400"
     highlight-color="accent"
     :fill-height="false"
     :title="$t('settings.experience.title', 'Experience & Level')"
-    title-classes="text-lg font-semibold"
+    title-classes="text-lg font-bold sm:text-xl"
   >
     <template #content>
       <div class="space-y-4 px-4 py-4">
         <!-- Explanation -->
-        <UAlert icon="i-mdi-information" color="info" variant="soft" class="text-sm">
+        <UAlert icon="i-mdi-information" color="primary" variant="soft" class="text-sm">
           <template #description>
             {{
               $t(

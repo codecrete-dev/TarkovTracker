@@ -5,7 +5,7 @@
     :highlight-color="getHighlightColor()"
     :avatar-height="50"
     :fill-height="false"
-    class="relative overflow-visible rounded-lg"
+    class="relative overflow-visible"
     header-classes="pb-2"
   >
     <template #header>
@@ -14,9 +14,14 @@
           <!-- Station Avatar -->
           <span
             :class="highlightClasses"
-            class="inline-block rounded-tl-lg rounded-br-lg px-3 py-1 shadow-lg dark:shadow-none"
+            class="group-hover:scale-105"
           >
-            <img :src="stationAvatar" :height="50" :style="{ height: '50px' }" class="block pt-0" />
+            <img
+              :src="stationAvatar"
+              :height="50"
+              :style="{ height: '50px' }"
+              class="block pt-0 drop-shadow-md"
+            />
           </span>
           <!-- Title -->
           <span
@@ -319,20 +324,16 @@
     const classes: Record<string, boolean> = {};
     switch (color) {
       case 'green':
-        classes[
-          'bg-gradient-to-r from-[rgba(1,36,0,0.15)] via-[rgba(15,121,9,0.15)] to-[rgba(0,83,0,0.15)]'
-        ] = true;
+        classes['badge-premium-green'] = true;
         break;
       case 'red':
-        classes[
-          'bg-gradient-to-r from-[rgba(36,0,0,0.15)] via-[rgba(121,0,0,0.15)] to-[rgba(83,0,0,0.15)]'
-        ] = true;
+        classes['badge-premium-red'] = true;
         break;
       case 'secondary':
-        classes['bg-gradient-to-br from-brand-700 via-brand-300 to-brand-500'] = true;
+        classes['badge-premium-secondary'] = true;
         break;
       default:
-        classes['bg-gradient-to-br from-accent-800 via-accent-700 to-accent-600'] = true;
+        classes['badge-premium-accent'] = true;
         break;
     }
     return classes;

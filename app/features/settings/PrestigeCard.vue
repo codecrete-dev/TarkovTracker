@@ -1,11 +1,10 @@
 <template>
   <GenericCard
     icon="mdi-trophy"
-    icon-color="gold-400"
     highlight-color="tan"
     :fill-height="false"
     :title="$t('settings.prestige.title', 'Prestige Level')"
-    title-classes="text-lg font-semibold"
+    title-classes="text-lg font-bold sm:text-xl"
   >
     <template #content>
       <div class="space-y-4 px-4 py-4">

@@ -255,6 +255,7 @@
         all: 'Все',
         tasks: 'Задания',
         hideout: 'Убежище',
+        collected: 'Собрано',
       },
       collect: 'Собрать',
       uncollect: 'Отменить сбор',

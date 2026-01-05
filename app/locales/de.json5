@@ -313,6 +313,7 @@
         all: 'Alle',
         tasks: 'Aufgaben',
         hideout: 'Versteck',
+        collected: 'Gesammelt',
       },
       neededby: 'Benötigt von: {users}',
       collect: 'Sammeln',

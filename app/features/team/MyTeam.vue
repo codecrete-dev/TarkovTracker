@@ -1,5 +1,9 @@
 <template>
-  <GenericCard icon="mdi-account-supervisor" icon-color="white" highlight-color="secondary">
+  <GenericCard
+    icon="mdi-account-supervisor"
+    highlight-color="secondary"
+    title-classes="text-lg font-bold sm:text-xl"
+  >
     <template #title>
       {{ $t('page.team.card.myteam.title') }}
     </template>

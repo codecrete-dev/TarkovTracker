@@ -338,8 +338,6 @@ select:disabled,
   --color-task-failed: var(--color-error-600);
   --color-task-blocked: var(--color-gray-600);
 
-  /* --- Filters --- */
-  --color-filter-all: var(--color-blue-400);
 
   /* --- Rewards --- */
   --color-reward-item: var(--color-surface-300);
@@ -798,13 +796,55 @@ select:disabled,
   .badge-soft-map {
     @apply bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400;
   }
-  .badge-soft-filter-all {
-    background-color: color-mix(in srgb, var(--color-filter-all), white 85%);
-    color: color-mix(in srgb, var(--color-filter-all), black 20%);
+
+  /* --- Premium Badge Utilities --- */
+  /* Tarkov-style enameled/metallic badges with proper lighting */
+  /* We define the base styles here and repeat them in specifics to avoid JIT @apply lookup errors for custom classes */
+
+  .badge-premium-base {
+    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-lg shadow-inner ring-1 ring-inset transition-all duration-300;
   }
-  .dark .badge-soft-filter-all {
-    background-color: color-mix(in srgb, var(--color-filter-all), transparent 80%);
-    color: color-mix(in srgb, var(--color-blue-300), white 20%);
+
+  /* Shine effect applies to any element with the base class or specific premium classes */
+  .badge-premium-base::before,
+  .badge-premium-accent::before,
+  .badge-premium-secondary::before,
+  .badge-premium-blue::before,
+  .badge-premium-green::before,
+  .badge-premium-red::before,
+  .badge-premium-tan::before,
+  .badge-premium-purple::before {
+    @apply absolute top-0 left-0 h-full w-full opacity-[0.25] content-[''];
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.5) 0%, transparent 40%, rgba(0, 0, 0, 0.2) 100%);
+  }
+
+  .badge-premium-accent {
+    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-lg shadow-inner ring-1 ring-inset transition-all duration-300;
+    @apply bg-accent-600 ring-accent-400/50 dark:bg-accent-700 dark:ring-accent-500/30 shadow-accent-950/20;
+  }
+  .badge-premium-secondary {
+    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-lg shadow-inner ring-1 ring-inset transition-all duration-300;
+    @apply bg-accent-600 ring-accent-400/50 dark:bg-accent-700 dark:ring-accent-500/30 shadow-accent-950/20;
+  }
+  .badge-premium-blue {
+    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-lg shadow-inner ring-1 ring-inset transition-all duration-300;
+    @apply bg-blue-600 ring-blue-400/50 dark:bg-blue-700 dark:ring-blue-500/30 shadow-blue-950/20 text-white;
+  }
+  .badge-premium-green {
+    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-lg shadow-inner ring-1 ring-inset transition-all duration-300;
+    @apply bg-success-100 ring-success-400/30 text-success-700 dark:bg-success-500/20 dark:ring-success-500/20 dark:text-success-400 shadow-success-950/10;
+  }
+  .badge-premium-red {
+    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-lg shadow-inner ring-1 ring-inset transition-all duration-300;
+    @apply bg-error-100 ring-error-400/30 text-error-700 dark:bg-error-500/20 dark:ring-error-500/20 dark:text-error-400 shadow-error-950/10;
+  }
+  .badge-premium-tan {
+    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-lg shadow-inner ring-1 ring-inset transition-all duration-300;
+    @apply bg-amber-600 ring-amber-400/50 dark:bg-amber-700 dark:ring-amber-500/30 shadow-amber-950/20 text-white;
+  }
+  .badge-premium-purple {
+    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-lg shadow-inner ring-1 ring-inset transition-all duration-300;
+    @apply bg-purple-600 ring-purple-400/50 dark:bg-purple-700 dark:ring-purple-500/30 shadow-purple-950/20 text-white;
   }
 
   /* --- Soft Task Status Badges --- */

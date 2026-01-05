@@ -42,6 +42,7 @@
     labelClass?: string; // Optional class for label span to handle responsiveness (hidden sm:inline etc)
   }>();
   const countColorClass = computed(() => {
+    if (props.countColor === 'plain') return 'bg-transparent text-current px-0 min-w-4';
     if (props.countColor) return props.countColor;
     return (props.count && props.count > 0) || props.active
       ? 'badge-soft-accent'

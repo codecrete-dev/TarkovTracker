@@ -255,6 +255,7 @@
         all: 'Усі',
         tasks: 'Завдання',
         hideout: 'Притулок',
+        collected: 'Зібрано',
       },
       collect: 'Зібрати',
       uncollect: 'Скасувати збір',

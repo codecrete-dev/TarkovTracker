@@ -119,11 +119,10 @@
 <template>
   <GenericCard
     icon="i-mdi-history"
-    icon-color="info-400"
     highlight-color="secondary"
     :fill-height="false"
     title="Admin Audit Log"
-    title-classes="text-lg font-semibold"
+    title-classes="text-lg font-bold sm:text-xl"
   >
     <template #title-right>
       <UButton
