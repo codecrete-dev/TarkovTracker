@@ -61,13 +61,12 @@
     // Fixed sizes
     const classes = ['block', 'relative', 'shrink-0'];
     if (props.size === 'xs') {
-      classes.push('h-9', 'w-9'); // 36px
+      classes.push('h-9', 'w-9');
     } else if (props.size === 'small') {
-      classes.push('h-16', 'w-16'); // 64px - hideout
+      classes.push('h-16', 'w-16');
     } else if (props.size === 'large') {
-      classes.push('h-32', 'w-32'); // 128px - list view
+      classes.push('h-32', 'w-32');
     } else {
-      // medium (default) - 96px - tasks
       classes.push('h-24', 'w-24');
     }
     return classes;

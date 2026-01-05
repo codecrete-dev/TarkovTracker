@@ -395,11 +395,16 @@ export function usePageFilters<C extends FilterConfig>(
       for (const [key, paramConfig] of Object.entries(config)) {
         if (paramConfig.onUpdate) {
           const urlValue = route.query[key] as string | undefined;
-          // Only persist if there's an explicit URL value (not empty/undefined)
+          // Persist if there's an explicit URL value
           if (urlValue !== undefined && urlValue !== null && urlValue !== '') {
             const parsedValue = parseValue(key as keyof C, urlValue);
             paramConfig.onUpdate(parsedValue);
             console.log(`[usePageFilters] persisted ${key}=${parsedValue}`);
+          } 
+          // Clear stored value if param is absent from URL (reset to default)
+          else {
+            paramConfig.onUpdate(paramConfig.default);
+            console.log(`[usePageFilters] cleared ${key} (reset to default)`);
           }
         }
       }
