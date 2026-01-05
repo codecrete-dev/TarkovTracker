@@ -476,14 +476,8 @@ export const useMetadataStore = defineStore('metadata', {
 
       if (this.tasks.length) {
         // These will handle their own loading = false in finally blocks
-        this.fetchTaskObjectivesData(forceRefresh).catch((err) => {
-          logger.error('[MetadataStore] Error fetching task objectives data:', err);
-          this.objectivesLoading = false; // Ensure flag is reset on error
-        });
-        this.fetchTaskRewardsData(forceRefresh).catch((err) => {
-          logger.error('[MetadataStore] Error fetching task rewards data:', err);
-          this.rewardsLoading = false; // Ensure flag is reset on error
-        });
+        this.fetchTaskObjectivesData(forceRefresh);
+        this.fetchTaskRewardsData(forceRefresh);
       }
       // Items are heavy; load in background for hydration without blocking app init.
       this.fetchItemsData(forceRefresh).catch((err) =>

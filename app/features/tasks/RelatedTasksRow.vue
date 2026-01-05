@@ -98,7 +98,7 @@
   const PADDING_X_PER_BADGE = 16;
   const ICON_WIDTH = 20;
   const LABEL_MARGIN = 8;
-  const CONTAINER_PADDING = props.expandable ? 16 : 0; // px-2 * 2 if expandable
+  const CONTAINER_PADDING = computed(() => (props.expandable ? 16 : 0)); // px-2 * 2 if expandable
   const SUFFIX_MARGIN = 8;
   // ... (existing imports)
   const tarkovStore = useTarkovStore();

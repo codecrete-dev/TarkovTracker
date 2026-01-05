@@ -183,7 +183,7 @@
                   :disabled="!isValidXPInput"
                   @click="applyManualXP"
                 >
-                  Apply
+                  {{ $t('page.tasks.filters.apply') }}
                 </UButton>
               </div>
             </div>

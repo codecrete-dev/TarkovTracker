@@ -203,16 +203,7 @@
   import { computed } from 'vue';
   import FilterPill from '@/components/FilterPill.vue';
   import GameBadge from '@/components/ui/GameBadge.vue';
-  type FilterType = 'all' | 'tasks' | 'hideout' | 'completed';
-  type ViewMode = 'list' | 'grid';
-  type FirFilter = 'all' | 'fir' | 'non-fir';
-  interface FilterTab {
-    label: string;
-    value: FilterType;
-    icon: string;
-    count: number;
-    badgeColor?: string;
-  }
+  import type { FilterType, ViewMode, FirFilter, FilterTab } from '@/types/neededItems';
   const props = defineProps<{
     modelValue: FilterType;
     search: string;

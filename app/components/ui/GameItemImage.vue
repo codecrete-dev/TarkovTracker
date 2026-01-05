@@ -9,7 +9,7 @@
   >
     <div :class="['overlay-stash-bg absolute inset-0', resolvedBackgroundClass]"></div>
     <img
-      v-if="isVisible && formattedSrc"
+      v-if="isVisible && formattedSrc && !hasError"
       :src="formattedSrc"
       :alt="alt || itemName || 'Item'"
       :class="[
@@ -19,6 +19,15 @@
       loading="lazy"
       @error="handleImgError"
     />
+    <div
+      v-else-if="hasError"
+      :class="[
+        'bg-surface-elevated flex h-full w-full items-center justify-center rounded',
+        imageElementClasses,
+      ]"
+    >
+      <UIcon name="i-mdi-image-off-outline" class="text-content-tertiary h-6 w-6" />
+    </div>
     <div
       v-else
       :class="[
@@ -33,7 +42,7 @@
   </div>
 </template>
 <script setup lang="ts">
-  import { computed } from 'vue';
+  import { computed, ref, watch } from 'vue';
   interface Props {
     src?: string;
     alt?: string;
@@ -88,10 +97,21 @@
     return backgroundClassMap[bgColor] ?? backgroundClassMap.default;
   });
   const imageElementClasses = ['rounded'];
+  const hasError = ref(false);
+
+  // Reset error state when src changes
+  watch(
+    () => props.src,
+    () => {
+      hasError.value = false;
+    }
+  );
+
   const imageTileClasses = computed(() => {
     return [...imageElementClasses];
   });
   const handleImgError = () => {
+    hasError.value = true;
     console.warn(`[GameItemImage] Failed to load image: ${props.src}`);
   };
 </script>

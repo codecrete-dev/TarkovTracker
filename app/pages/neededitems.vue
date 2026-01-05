@@ -111,6 +111,7 @@
   import { usePreferencesStore } from '@/stores/usePreferences';
   import { useProgressStore } from '@/stores/useProgress';
   import { useTarkovStore } from '@/stores/useTarkov';
+  import type { FilterType, FirFilter, ViewMode } from '@/types/neededItems';
   import type { NeededItemHideoutModule, NeededItemTaskObjective } from '@/types/tarkov';
   import { logger } from '@/utils/logger';
   // Page metadata
@@ -142,15 +143,15 @@
     set: (v: FirFilter) => setFilter('fir', v),
   });
   const groupByItem = computed({
-    get: () => filters.grouped.value as boolean,
+    get: () => filters.grouped.value,
     set: (v: boolean) => setFilter('grouped', v),
   });
   const kappaOnly = computed({
-    get: () => filters.kappa.value as boolean,
+    get: () => filters.kappa.value,
     set: (v: boolean) => setFilter('kappa', v),
   });
   const hideNonFirSpecialEquipment = computed({
-    get: () => filters.hideSpecial.value as boolean,
+    get: () => filters.hideSpecial.value,
     set: (v: boolean) => setFilter('hideSpecial', v),
   });
   const search = debouncedInputs.search!;

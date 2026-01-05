@@ -105,7 +105,9 @@ export function useHideoutFiltering() {
         hideoutStationList = hideoutStationList.filter(isStationLocked);
       }
       // Apply search filter if present
-      const query = preferencesStore.getHideoutSearch?.toLowerCase().trim();
+      const rawSearch = preferencesStore.getHideoutSearch;
+      const query =
+        typeof rawSearch === 'string' && rawSearch ? rawSearch.toLowerCase().trim() : undefined;
       if (query) {
         hideoutStationList = hideoutStationList.filter((station) =>
           station.name.toLowerCase().includes(query)

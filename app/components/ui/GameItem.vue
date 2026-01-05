@@ -25,7 +25,7 @@
       >
         <!-- Hover action buttons - centered overlay on image -->
         <div
-          v-if="showActions && (computedWikiLink || computedDevLink)"
+          v-if="showActions && (computedWikiLink || computedDevLink) && isVisible"
           class="bg-surface-900/80 absolute inset-0 z-20 flex items-center justify-center gap-1 rounded opacity-0 transition-opacity group-hover:opacity-100"
         >
           <a

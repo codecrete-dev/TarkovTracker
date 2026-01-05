@@ -481,7 +481,7 @@
   });
   // Clear single task filter
   const clearSingleTaskFilter = () => {
-    setFilter('task', '');
+    setFilter('task', null);
   };
   // Filter tasks by search query OR single-task mode
   const filteredTasks = computed(() => {

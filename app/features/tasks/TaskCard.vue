@@ -718,10 +718,12 @@
   // Expanded state for recursive cards
   const expandedTasks = ref<Set<string>>(new Set());
   const toggleExpanded = (section: 'parents' | 'children' | 'requires' | 'failed') => {
-    if (expandedTasks.value.has(section)) {
-      expandedTasks.value.delete(section);
+    const next = new Set(expandedTasks.value);
+    if (next.has(section)) {
+      next.delete(section);
     } else {
-      expandedTasks.value.add(section);
+      next.add(section);
     }
+    expandedTasks.value = next;
   };
 </script>

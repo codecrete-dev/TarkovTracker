@@ -120,6 +120,8 @@
   import { computed } from 'vue';
   import { useI18n } from 'vue-i18n';
   import ItemStatusBadge from '@/components/ui/ItemStatusBadge.vue';
+  import GameItem from '@/components/ui/GameItem.vue';
+  import ToggleButton from '@/components/ui/ToggleButton.vue';
   import ObjectiveCountControls from '@/features/tasks/ObjectiveCountControls.vue';
   import { useMetadataStore, type CraftSource } from '@/stores/useMetadata';
   import { useProgressStore } from '@/stores/useProgress';

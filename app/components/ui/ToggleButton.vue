@@ -73,7 +73,7 @@
   });
   const stateClass = computed(() => {
     if (props.variant === 'custom') {
-      return props.isActive ? props.activeClass : props.inactiveClass;
+      return (props.isActive ? props.activeClass : props.inactiveClass) || '';
     }
     if (props.variant === 'complete') {
       return props.isActive

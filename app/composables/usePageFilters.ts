@@ -361,7 +361,6 @@ export function usePageFilters<C extends FilterConfig>(config: C): UsePageFilter
           if (urlValue !== undefined && urlValue !== null && urlValue !== '') {
             const parsedValue = parseValue(key as keyof C, urlValue);
             paramConfig.onUpdate(parsedValue);
-            paramConfig.onUpdate(parsedValue);
           }
           // Clear stored value if param is absent from URL (reset to default)
           else {
