@@ -18,7 +18,7 @@
           "
           class="space-y-2"
         >
-          <p class="text-sm font-semibold text-content-secondary">
+          <p class="text-content-secondary text-sm font-semibold">
             {{ $t('settings.prestige.current_level', 'Current Prestige Level') }}
           </p>
           <USelectMenu
@@ -40,18 +40,18 @@
           </USelectMenu>
         </div>
         <p class="text-content-tertiary text-xs">
-            <template v-if="isPveMode">
-              {{ $t('settings.prestige.pve_hint', 'Prestige is not available in PVE mode.') }}
-            </template>
-            <template v-else>
-              {{
-                $t(
-                  'settings.prestige.hint',
-                  'Select your current prestige level. This is display-only and does not affect game progression.'
-                )
-              }}
-            </template>
-          </p>
+          <template v-if="isPveMode">
+            {{ $t('settings.prestige.pve_hint', 'Prestige is not available in PVE mode.') }}
+          </template>
+          <template v-else>
+            {{
+              $t(
+                'settings.prestige.hint',
+                'Select your current prestige level. This is display-only and does not affect game progression.'
+              )
+            }}
+          </template>
+        </p>
       </div>
     </template>
   </GenericCard>

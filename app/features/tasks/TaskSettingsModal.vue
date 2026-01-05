@@ -10,7 +10,7 @@
     </UButton>
     <template #content>
       <UCard
-        class="bg-white dark:bg-contentbackground"
+        class="dark:bg-contentbackground bg-white"
         :ui="{
           body: {
             base: 'overflow-y-auto max-h-[75vh] block',
@@ -39,7 +39,9 @@
           <!-- TASK FILTERS Section -->
           <section class="space-y-2">
             <div>
-              <p class="text-primary-600 dark:text-primary-400 text-xs font-semibold tracking-wide uppercase">
+              <p
+                class="text-primary-600 dark:text-primary-400 text-xs font-semibold tracking-wide uppercase"
+              >
                 {{ t('page.tasks.settings.tabs.filters', 'TASK FILTERS') }}
               </p>
               <p class="mt-1 text-xs text-gray-500">
@@ -71,7 +73,9 @@
           <!-- APPEARANCE Section -->
           <section class="space-y-2">
             <div>
-              <p class="text-primary-600 dark:text-primary-400 text-xs font-semibold tracking-wide uppercase">
+              <p
+                class="text-primary-600 dark:text-primary-400 text-xs font-semibold tracking-wide uppercase"
+              >
                 {{ t('page.tasks.settings.tabs.appearance', 'APPEARANCE') }}
               </p>
               <p class="mt-1 text-xs text-gray-500">
@@ -112,7 +116,9 @@
           <!-- ADVANCED Section -->
           <section class="space-y-2">
             <div>
-              <p class="text-primary-600 dark:text-primary-400 text-xs font-semibold tracking-wide uppercase">
+              <p
+                class="text-primary-600 dark:text-primary-400 text-xs font-semibold tracking-wide uppercase"
+              >
                 {{ t('page.tasks.settings.tabs.advanced', 'ADVANCED') }}
               </p>
               <p class="mt-1 text-xs text-gray-500">

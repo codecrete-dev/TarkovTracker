@@ -2,7 +2,7 @@
   <div class="flex w-full items-center justify-center">
     <template v-if="isCollapsed">
       <div class="text-center">
-        <div class="mb-1 text-[0.7em] text-content-tertiary">
+        <div class="text-content-tertiary mb-1 text-[0.7em]">
           {{ t('navigation_drawer.level') }}
         </div>
         <h1 class="text-center text-2xl leading-tight font-bold">
@@ -13,7 +13,7 @@
     <template v-else>
       <!-- Card container for expanded state -->
       <div
-        class="w-full overflow-hidden rounded-lg border border-base bg-surface-base px-2 py-1.5 backdrop-blur-sm dark:bg-surface-950"
+        class="border-base bg-surface-base dark:bg-surface-950 w-full overflow-hidden rounded-lg border px-2 py-1.5 backdrop-blur-sm"
       >
         <div class="flex min-w-0 items-center gap-1">
           <span class="shrink-0 leading-none">
@@ -38,61 +38,66 @@
                 <!-- Final fallback -->
                 <div
                   v-if="groupImageLoadFailed"
-                  class="flex h-12 w-12 items-center justify-center rounded bg-surface-200 dark:bg-surface-700"
+                  class="bg-surface-200 dark:bg-surface-700 flex h-12 w-12 items-center justify-center rounded"
                 >
-                  <UIcon name="i-heroicons-photo" class="h-6 w-6 text-content-tertiary" />
+                  <UIcon name="i-heroicons-photo" class="text-content-tertiary h-6 w-6" />
                 </div>
               </template>
               <template v-else>
                 <!-- Loading placeholder -->
-                <div class="flex h-12 w-12 items-center justify-center rounded bg-surface-200 dark:bg-surface-700">
-                  <UIcon name="i-heroicons-arrow-path" class="h-6 w-6 animate-spin text-content-tertiary" />
+                <div
+                  class="bg-surface-200 dark:bg-surface-700 flex h-12 w-12 items-center justify-center rounded"
+                >
+                  <UIcon
+                    name="i-heroicons-arrow-path"
+                    class="text-content-tertiary h-6 w-6 animate-spin"
+                  />
                 </div>
               </template>
             </div>
           </span>
           <span class="mx-0.5 min-w-0 flex-1">
-            <div class="mb-0.5 text-center text-[0.65rem] text-content-tertiary">
+            <div class="text-content-tertiary mb-0.5 text-center text-[0.65rem]">
               {{ t('navigation_drawer.level') }}
             </div>
             <div class="text-center">
-                <h1
-                  v-if="!editingLevel || useAutomaticLevel"
-                  v-tooltip="
-                    useAutomaticLevel
-                      ? t(
-                          'navigation_drawer.auto_level_enabled',
-                          'Automatic level calculation is enabled'
-                        )
-                      : undefined
-                  "
-                  :class="
-                    useAutomaticLevel
-                      ? 'mx-auto w-11 text-[2rem] leading-[0.85] text-content-primary'
-                      : 'hover:text-primary mx-auto w-11 cursor-pointer text-[2rem] leading-[0.85] text-content-primary transition-colors'
-                  "
-                  :tabindex="useAutomaticLevel ? '-1' : '0'"
-                  :role="useAutomaticLevel ? undefined : 'button'"
-                  :aria-disabled="useAutomaticLevel ? 'true' : undefined"
-                  :aria-label="
-                    useAutomaticLevel
-                      ? t(
-                          'navigation_drawer.level_display_auto',
-                          'Level {level} (automatic calculation enabled)',
-                          { level: displayedLevel }
-                        )
-                      : t(
-                          'navigation_drawer.level_display_editable',
-                          'Level {level}, click or press Enter to edit',
-                          { level: displayedLevel }
-                        )
-                  "
-                  @click="!useAutomaticLevel && startEditingLevel()"
-                  @keydown.enter="!useAutomaticLevel && startEditingLevel()"
-                  @keydown.space.prevent="!useAutomaticLevel && startEditingLevel()"
-                >
-                  {{ displayedLevel }}
-                </h1>
+              <h1
+                v-if="!editingLevel || useAutomaticLevel"
+                v-tooltip="
+                  useAutomaticLevel
+                    ? t(
+                        'navigation_drawer.auto_level_enabled',
+                        'Automatic level calculation is enabled'
+                      )
+                    : undefined
+                "
+                :class="
+                  useAutomaticLevel
+                    ? 'text-content-primary mx-auto w-11 text-[2rem] leading-[0.85]'
+                    : 'hover:text-primary text-content-primary mx-auto w-11 cursor-pointer text-[2rem] leading-[0.85] transition-colors'
+                "
+                :tabindex="useAutomaticLevel ? '-1' : '0'"
+                :role="useAutomaticLevel ? undefined : 'button'"
+                :aria-disabled="useAutomaticLevel ? 'true' : undefined"
+                :aria-label="
+                  useAutomaticLevel
+                    ? t(
+                        'navigation_drawer.level_display_auto',
+                        'Level {level} (automatic calculation enabled)',
+                        { level: displayedLevel }
+                      )
+                    : t(
+                        'navigation_drawer.level_display_editable',
+                        'Level {level}, click or press Enter to edit',
+                        { level: displayedLevel }
+                      )
+                "
+                @click="!useAutomaticLevel && startEditingLevel()"
+                @keydown.enter="!useAutomaticLevel && startEditingLevel()"
+                @keydown.space.prevent="!useAutomaticLevel && startEditingLevel()"
+              >
+                {{ displayedLevel }}
+              </h1>
               <input
                 v-else
                 ref="levelInput"
@@ -100,7 +105,7 @@
                 type="number"
                 :min="minPlayerLevel"
                 :max="maxPlayerLevel"
-                class="mx-auto w-11 appearance-none border-0 bg-transparent p-0 text-center text-[2rem] leading-[0.85] text-content-primary outline-none focus:ring-0 focus:outline-none"
+                class="text-content-primary mx-auto w-11 appearance-none border-0 bg-transparent p-0 text-center text-[2rem] leading-[0.85] outline-none focus:ring-0 focus:outline-none"
                 @input="enforceMaxLevel"
                 @blur="saveLevel"
                 @keyup.enter="saveLevel"
@@ -108,57 +113,56 @@
             </div>
           </span>
           <span class="flex w-12 shrink-0 flex-col items-center gap-0.5">
-              <button
-                v-tooltip="
-                  useAutomaticLevel
-                    ? t(
-                        'navigation_drawer.manual_disabled',
-                        'Manual level editing is disabled when automatic calculation is enabled'
-                      )
-                    : undefined
-                "
-                class="flex h-6 w-6 cursor-pointer items-center justify-center p-0 text-content-secondary transition-colors hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-40"
-                :disabled="useAutomaticLevel || displayedLevel >= maxPlayerLevel"
-                @click="incrementLevel"
-              >
-                <UIcon name="i-mdi-chevron-up" class="h-5 w-5" />
-              </button>
-              <button
-                v-tooltip="
-                  useAutomaticLevel
-                    ? t(
-                        'navigation_drawer.manual_disabled',
-                        'Manual level editing is disabled when automatic calculation is enabled'
-                      )
-                    : undefined
-                "
-                class="flex h-6 w-6 cursor-pointer items-center justify-center p-0 text-content-secondary transition-colors hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-40"
-                :disabled="useAutomaticLevel || displayedLevel <= minPlayerLevel"
-                @click="decrementLevel"
-              >
-                <UIcon name="i-mdi-chevron-down" class="h-5 w-5" />
-              </button>
+            <button
+              v-tooltip="
+                useAutomaticLevel
+                  ? t(
+                      'navigation_drawer.manual_disabled',
+                      'Manual level editing is disabled when automatic calculation is enabled'
+                    )
+                  : undefined
+              "
+              class="text-content-secondary hover:text-content-primary flex h-6 w-6 cursor-pointer items-center justify-center p-0 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+              :disabled="useAutomaticLevel || displayedLevel >= maxPlayerLevel"
+              @click="incrementLevel"
+            >
+              <UIcon name="i-mdi-chevron-up" class="h-5 w-5" />
+            </button>
+            <button
+              v-tooltip="
+                useAutomaticLevel
+                  ? t(
+                      'navigation_drawer.manual_disabled',
+                      'Manual level editing is disabled when automatic calculation is enabled'
+                    )
+                  : undefined
+              "
+              class="text-content-secondary hover:text-content-primary flex h-6 w-6 cursor-pointer items-center justify-center p-0 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+              :disabled="useAutomaticLevel || displayedLevel <= minPlayerLevel"
+              @click="decrementLevel"
+            >
+              <UIcon name="i-mdi-chevron-down" class="h-5 w-5" />
+            </button>
           </span>
         </div>
         <!-- XP Progress Display -->
         <!-- Separator -->
         <div class="my-2 h-px bg-gray-100 dark:bg-white/5"></div>
         <!-- XP Progress Display -->
-        <div
-          class="group/xp cursor-pointer px-1"
-          @click="navigateToSettings"
-        >
+        <div class="group/xp cursor-pointer px-1" @click="navigateToSettings">
           <div class="mb-1.5 flex items-center justify-between text-[0.65rem] leading-none">
-            <span class="font-medium text-content-secondary group-hover/xp:text-accent-600 dark:group-hover/xp:text-accent-400 transition-colors">
+            <span
+              class="text-content-secondary group-hover/xp:text-accent-600 dark:group-hover/xp:text-accent-400 font-medium transition-colors"
+            >
               {{ formatNumber(xpCalculation.totalXP.value) }} XP
             </span>
             <span class="text-content-tertiary">
               {{ formatNumber(xpCalculation.xpToNextLevel.value) }} needed
             </span>
           </div>
-          <div class="h-1.5 overflow-hidden rounded-full bg-surface-200 dark:bg-surface-800">
+          <div class="bg-surface-200 dark:bg-surface-800 h-1.5 overflow-hidden rounded-full">
             <div
-              class="h-full rounded-full bg-gradient-to-r from-accent-600 to-accent-500 transition-all duration-500 ease-out"
+              class="from-accent-600 to-accent-500 h-full rounded-full bg-gradient-to-r transition-all duration-500 ease-out"
               :style="{ width: `${xpCalculation.xpProgress.value}%` }"
             ></div>
           </div>

@@ -26,34 +26,34 @@
         <div class="p-4">
           <!-- Logged out state -->
           <template v-if="!isLoggedIn">
-            <div class="mb-6 rounded-lg border border-base bg-surface-elevated p-4 opacity-60">
-              <div class="mb-3 text-base font-bold text-content-secondary">Account Information</div>
+            <div class="border-base bg-surface-elevated mb-6 rounded-lg border p-4 opacity-60">
+              <div class="text-content-secondary mb-3 text-base font-bold">Account Information</div>
               <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <div class="mb-2 flex items-center">
-                    <UIcon name="i-mdi-account" class="mr-2 h-4.5 w-4.5 text-content-tertiary" />
-                    <span class="text-sm text-content-tertiary">Username: —</span>
+                    <UIcon name="i-mdi-account" class="text-content-tertiary mr-2 h-4.5 w-4.5" />
+                    <span class="text-content-tertiary text-sm">Username: —</span>
                   </div>
                   <div class="mb-2 flex items-center">
-                    <UIcon name="i-mdi-email" class="mr-2 h-4.5 w-4.5 text-content-tertiary" />
-                    <span class="text-sm text-content-tertiary">Email: —</span>
+                    <UIcon name="i-mdi-email" class="text-content-tertiary mr-2 h-4.5 w-4.5" />
+                    <span class="text-content-tertiary text-sm">Email: —</span>
                   </div>
                 </div>
                 <div>
                   <div class="mb-2 flex items-center">
-                    <UIcon name="i-mdi-login" class="mr-2 h-4.5 w-4.5 text-content-tertiary" />
-                    <span class="text-sm text-content-tertiary">Auth Method: —</span>
+                    <UIcon name="i-mdi-login" class="text-content-tertiary mr-2 h-4.5 w-4.5" />
+                    <span class="text-content-tertiary text-sm">Auth Method: —</span>
                   </div>
                   <div class="flex items-center">
-                    <UIcon name="i-mdi-calendar" class="mr-2 h-4.5 w-4.5 text-content-tertiary" />
-                    <span class="text-sm text-content-tertiary">Member since: —</span>
+                    <UIcon name="i-mdi-calendar" class="text-content-tertiary mr-2 h-4.5 w-4.5" />
+                    <span class="text-content-tertiary text-sm">Member since: —</span>
                   </div>
                 </div>
               </div>
-              <div class="my-3 border-t border-base"></div>
+              <div class="border-base my-3 border-t"></div>
               <div class="flex items-center">
-                <UIcon name="i-mdi-identifier" class="mr-2 h-4.5 w-4.5 text-content-tertiary" />
-                <span class="text-sm text-content-tertiary">Account ID: —</span>
+                <UIcon name="i-mdi-identifier" class="text-content-tertiary mr-2 h-4.5 w-4.5" />
+                <span class="text-content-tertiary text-sm">Account ID: —</span>
               </div>
             </div>
             <!-- Deletion Warning (disabled state) -->
@@ -97,12 +97,12 @@
           <!-- Logged in state -->
           <template v-else>
             <!-- Account Information (Moved to Top) -->
-            <div class="mb-6 rounded-lg border border-base bg-surface-elevated p-4">
+            <div class="border-base bg-surface-elevated mb-6 rounded-lg border p-4">
               <div class="mb-3 text-base font-bold">Account Information</div>
               <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <div class="mb-2 flex items-center">
-                    <UIcon name="i-mdi-account" class="mr-2 h-4.5 w-4.5 text-content-tertiary" />
+                    <UIcon name="i-mdi-account" class="text-content-tertiary mr-2 h-4.5 w-4.5" />
                     <span class="text-sm">
                       <span class="text-content-secondary">Username:</span>
                       <span class="ml-1 font-mono font-medium">{{ maskedUsername }}</span>
@@ -119,7 +119,7 @@
                     </span>
                   </div>
                   <div class="mb-2 flex items-center">
-                    <UIcon name="i-mdi-email" class="mr-2 h-4.5 w-4.5 text-content-tertiary" />
+                    <UIcon name="i-mdi-email" class="text-content-tertiary mr-2 h-4.5 w-4.5" />
                     <span class="text-sm">
                       <span class="text-content-secondary">Email:</span>
                       <span class="ml-1 font-mono font-medium">{{ maskedEmail }}</span>
@@ -138,9 +138,9 @@
                 </div>
                 <div>
                   <div class="mb-2 flex items-center">
-                    <UIcon name="i-mdi-login" class="mr-2 h-4.5 w-4.5 text-content-tertiary" />
+                    <UIcon name="i-mdi-login" class="text-content-tertiary mr-2 h-4.5 w-4.5" />
                     <span class="flex flex-wrap items-center gap-1 text-sm">
-                      <span class="mr-1 text-content-secondary">Auth Method:</span>
+                      <span class="text-content-secondary mr-1">Auth Method:</span>
                       <template v-if="providers.length > 0">
                         <GameBadge
                           v-for="p in providers"
@@ -161,7 +161,7 @@
                     </span>
                   </div>
                   <div class="flex items-center">
-                    <UIcon name="i-mdi-calendar" class="mr-2 h-4.5 w-4.5 text-content-tertiary" />
+                    <UIcon name="i-mdi-calendar" class="text-content-tertiary mr-2 h-4.5 w-4.5" />
                     <span class="text-sm">
                       <span class="text-content-secondary">Member since:</span>
                       <span class="ml-1 font-medium">
@@ -171,11 +171,13 @@
                   </div>
                 </div>
               </div>
-              <div class="my-3 border-t border-base"></div>
+              <div class="border-base my-3 border-t"></div>
               <div class="flex items-center">
-                <UIcon name="i-mdi-identifier" class="mr-2 h-4.5 w-4.5 text-content-tertiary" />
-                <span class="mr-2 text-sm text-content-secondary">Account ID:</span>
-                <code class="rounded bg-surface-200 px-2 py-1 text-xs dark:bg-surface-700">{{ maskedAccountId }}</code>
+                <UIcon name="i-mdi-identifier" class="text-content-tertiary mr-2 h-4.5 w-4.5" />
+                <span class="text-content-secondary mr-2 text-sm">Account ID:</span>
+                <code class="bg-surface-200 dark:bg-surface-700 rounded px-2 py-1 text-xs">
+                  {{ maskedAccountId }}
+                </code>
                 <span v-tooltip="showAccountId ? $t('common.hide') : $t('common.show')">
                   <UButton
                     size="xs"
@@ -186,7 +188,11 @@
                     @click="showAccountId = !showAccountId"
                   />
                 </span>
-                <span v-tooltip="accountIdCopied ? $t('common.copied') : $t('settings.account.copy_account_id')">
+                <span
+                  v-tooltip="
+                    accountIdCopied ? $t('common.copied') : $t('settings.account.copy_account_id')
+                  "
+                >
                   <UButton
                     size="xs"
                     variant="ghost"
@@ -260,8 +266,8 @@
   </div>
   <UModal v-model:open="showConfirmationDialog" prevent-close>
     <template #header>
-      <div class="flex items-center text-xl font-medium text-error-500">
-        <UIcon name="i-mdi-alert-circle" class="mr-2 h-6 w-6 text-error-500" />
+      <div class="text-error-500 flex items-center text-xl font-medium">
+        <UIcon name="i-mdi-alert-circle" class="text-error-500 mr-2 h-6 w-6" />
         Confirm Account Deletion
       </div>
     </template>
@@ -288,7 +294,7 @@
             :color="confirmationError ? 'error' : 'neutral'"
             @input="confirmationError = false"
           />
-          <div v-if="confirmationError" class="mt-1 text-xs text-error-500">
+          <div v-if="confirmationError" class="text-error-500 mt-1 text-xs">
             Please type exactly: DELETE MY ACCOUNT
           </div>
         </div>
@@ -315,8 +321,8 @@
   </UModal>
   <UModal v-model:open="showSuccessDialog" prevent-close>
     <template #header>
-      <div class="flex items-center text-xl font-medium text-success-500">
-        <UIcon name="i-mdi-check-circle" class="mr-2 h-6 w-6 text-success-500" />
+      <div class="text-success-500 flex items-center text-xl font-medium">
+        <UIcon name="i-mdi-check-circle" class="text-success-500 mr-2 h-6 w-6" />
         Account Deleted Successfully
       </div>
     </template>

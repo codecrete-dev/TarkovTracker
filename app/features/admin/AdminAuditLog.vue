@@ -171,7 +171,13 @@
                   {{ log.action }}
                 </GameBadge>
                 <span class="text-xs text-neutral-400">by</span>
-                <GameBadge color="neutral" variant="outline" size="xs" badge-class="font-mono" :label="getAdminDisplay(log)" />
+                <GameBadge
+                  color="neutral"
+                  variant="outline"
+                  size="xs"
+                  badge-class="font-mono"
+                  :label="getAdminDisplay(log)"
+                />
               </div>
               <span class="text-xs text-neutral-500">
                 {{ formatDate(log.created_at) }}

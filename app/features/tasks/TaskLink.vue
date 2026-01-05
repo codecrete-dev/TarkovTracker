@@ -28,10 +28,7 @@
           class="shrink-0 object-contain invert dark:invert-0"
           :class="compact ? 'h-4 w-4' : 'h-6 w-6'"
         />
-        <span
-          class="min-w-0 truncate font-semibold"
-          :class="compact ? 'text-xs' : ''"
-        >
+        <span class="min-w-0 truncate font-semibold" :class="compact ? 'text-xs' : ''">
           {{ props.task?.name }}
         </span>
       </router-link>
@@ -50,7 +47,6 @@
 <script setup>
   import { computed } from 'vue';
   import { useI18n } from 'vue-i18n';
-
   const props = defineProps({
     task: {
       type: Object,
@@ -67,24 +63,18 @@
       default: false,
     },
   });
-
   const { t } = useI18n({ useScope: 'global' });
-
   const isFactionTask = computed(() => {
     return props.task?.factionName && props.task.factionName !== 'Any';
   });
-
   const factionImage = computed(() => {
     return `/img/factions/${props.task.factionName}.webp`;
   });
-
   const factionAlt = computed(() => props.task?.factionName || 'Faction image');
   const traderAlt = computed(() => props.task?.trader?.name || 'Trader');
-
   const traderAvatarSrc = computed(() => {
     const avatar = props.task?.trader?.imageLink;
     return typeof avatar === 'string' && avatar.trim().length > 0 ? avatar : null;
   });
-
   const taskHref = computed(() => `/tasks?task=${props.task?.id}&status=all`);
 </script>

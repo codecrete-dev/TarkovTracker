@@ -7,11 +7,9 @@
           variant="ghost"
           class="flex w-full items-center justify-between rounded-none py-2 sm:p-3"
         >
-          <span class="text-base font-medium text-content-secondary">
+          <span class="text-content-secondary text-base font-medium">
             {{ item.label }}
-            <span class="font-normal text-content-tertiary">
-              &nbsp;-&nbsp;{{ displayTime }}
-            </span>
+            <span class="text-content-tertiary font-normal">&nbsp;-&nbsp;{{ displayTime }}</span>
           </span>
           <UIcon
             name="i-mdi-chevron-down"

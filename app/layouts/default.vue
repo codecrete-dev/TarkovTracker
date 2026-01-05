@@ -59,7 +59,8 @@
   function handleSystemThemeChange(e?: MediaQueryListEvent) {
     if (preferencesStore.getTheme === 'system') {
       // Check current system preference
-      const mediaQuery = e?.target as MediaQueryList ?? window.matchMedia('(prefers-color-scheme: dark)');
+      const mediaQuery =
+        (e?.target as MediaQueryList) ?? window.matchMedia('(prefers-color-scheme: dark)');
       const isDark = mediaQuery.matches;
       // Force Nuxt Color Mode to apply the system theme immediately
       // We must set the value directly to force the .dark class to be added/removed

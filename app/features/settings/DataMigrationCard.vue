@@ -109,7 +109,13 @@
               >
                 <div class="flex items-center">
                   <span>Task ID: {{ task.id }}</span>
-                  <GameBadge variant="solid" color="error" size="xs" label="Failed" badge-class="ml-2" />
+                  <GameBadge
+                    variant="solid"
+                    color="error"
+                    size="xs"
+                    label="Failed"
+                    badge-class="ml-2"
+                  />
                 </div>
                 <div class="text-sm text-gray-400">
                   This task will remain marked as failed after migration.

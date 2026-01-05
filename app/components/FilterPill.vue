@@ -5,8 +5,8 @@
       'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
       'focus:ring-accent-500 focus:ring-1 focus:outline-none',
       active
-        ? 'bg-accent-100 text-accent-900 shadow-sm dark:bg-accent-500/20 dark:text-accent-100 dark:shadow-none'
-        : 'text-gray-600 hover:text-gray-900 hover:bg-white/60 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/5',
+        ? 'bg-accent-100 text-accent-900 dark:bg-accent-500/20 dark:text-accent-100 shadow-sm dark:shadow-none'
+        : 'text-gray-600 hover:bg-white/60 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white',
     ]"
     v-bind="$attrs"
   >
@@ -21,8 +21,8 @@
     <span
       v-if="count !== undefined || $slots.count"
       :class="[
-        'inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-bold ml-0.5',
-        countColorClass
+        'ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-bold',
+        countColorClass,
       ]"
     >
       <slot name="count">{{ count }}</slot>
@@ -32,19 +32,19 @@
   </button>
 </template>
 <script setup lang="ts">
-import { computed } from 'vue';
-const props = defineProps<{
-  label?: string;
-  active?: boolean;
-  count?: number;
-  icon?: string;
-  countColor?: string; // Optional override for badge color
-  labelClass?: string; // Optional class for label span to handle responsiveness (hidden sm:inline etc)
-}>();
-const countColorClass = computed(() => {
+  import { computed } from 'vue';
+  const props = defineProps<{
+    label?: string;
+    active?: boolean;
+    count?: number;
+    icon?: string;
+    countColor?: string; // Optional override for badge color
+    labelClass?: string; // Optional class for label span to handle responsiveness (hidden sm:inline etc)
+  }>();
+  const countColorClass = computed(() => {
     if (props.countColor) return props.countColor;
-    return (props.count && props.count > 0) || props.active 
-      ? 'badge-soft-accent' 
+    return (props.count && props.count > 0) || props.active
+      ? 'badge-soft-accent'
       : 'badge-soft-surface';
-});
+  });
 </script>

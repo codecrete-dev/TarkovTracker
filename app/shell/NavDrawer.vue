@@ -14,7 +14,7 @@
   </Transition>
   <!-- Unified Sidebar - works as rail on mobile, rail/expanded on desktop -->
   <aside
-    class="border-base fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-surface-elevated shadow-sm backdrop-blur-sm transition-all duration-300 dark:bg-[linear-gradient(180deg,rgba(18,18,20,0.96)_0%,rgba(14,14,15,0.96)_45%,rgba(12,12,13,0.97)_100%)] dark:border-accent-800/60 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.03),inset_0_-1px_0_rgba(0,0,0,0.6),1px_0_0_rgba(0,0,0,0.55)]"
+    class="border-base bg-surface-elevated dark:border-accent-800/60 fixed inset-y-0 left-0 z-50 flex flex-col border-r shadow-sm backdrop-blur-sm transition-all duration-300 dark:bg-[linear-gradient(180deg,rgba(18,18,20,0.96)_0%,rgba(14,14,15,0.96)_45%,rgba(12,12,13,0.97)_100%)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.03),inset_0_-1px_0_rgba(0,0,0,0.6),1px_0_0_rgba(0,0,0,0.55)]"
     :class="[sidebarWidth]"
   >
     <div
@@ -40,10 +40,12 @@
           />
         </div>
         <div v-if="!isCollapsed" class="mt-1 text-center">
-          <div class="text-base leading-tight font-medium text-content-primary">TarkovTracker.org</div>
+          <div class="text-content-primary text-base leading-tight font-medium">
+            TarkovTracker.org
+          </div>
         </div>
       </NuxtLink>
-      <div class="mx-3 my-1 h-px shrink-0 bg-divider dark:bg-accent-800/40" />
+      <div class="bg-divider dark:bg-accent-800/40 mx-3 my-1 h-px shrink-0" />
       <div class="flex flex-col items-center gap-1.5 px-4 py-2">
         <DrawerLevel :is-collapsed="isCollapsed" />
         <!-- Faction and Game Mode Cycling Buttons Row -->
@@ -51,12 +53,18 @@
           <!-- Game Mode Cycling Button -->
           <span v-tooltip="`Switch to ${nextGameModeLabel}`" class="flex-1">
             <button
-              class="w-full h-full rounded border px-2 py-2.5 flex items-center justify-center transition-colors border-base hover:bg-surface-200 dark:border-accent-800/50 dark:hover:border-accent-600 dark:hover:bg-white/5"
+              class="border-base hover:bg-surface-200 dark:border-accent-800/50 dark:hover:border-accent-600 flex h-full w-full items-center justify-center rounded border px-2 py-2.5 transition-colors dark:hover:bg-white/5"
               :class="currentGameModeColorClass"
               @click="cycleGameMode"
             >
-              <div class="flex items-center justify-center gap-1.5 text-md font-semibold uppercase tracking-wide">
-                <UIcon :name="currentGameModeIcon" class="h-10 w-10" :class="currentGameModeIconClass" />
+              <div
+                class="text-md flex items-center justify-center gap-1.5 font-semibold tracking-wide uppercase"
+              >
+                <UIcon
+                  :name="currentGameModeIcon"
+                  class="h-10 w-10"
+                  :class="currentGameModeIconClass"
+                />
                 <span class="opacity-70">{{ currentGameModeLabel }}</span>
               </div>
             </button>
@@ -64,7 +72,7 @@
           <!-- Faction Cycling Button -->
           <span v-tooltip="`Switch to ${nextFaction}`" class="flex">
             <button
-              class="aspect-square flex items-center justify-center rounded border p-2 text-center transition-colors border-base hover:bg-surface-200 dark:border-accent-800/50 dark:hover:border-accent-600 dark:hover:bg-white/5"
+              class="border-base hover:bg-surface-200 dark:border-accent-800/50 dark:hover:border-accent-600 flex aspect-square items-center justify-center rounded border p-2 text-center transition-colors dark:hover:bg-white/5"
               @click="cycleFaction"
             >
               <NuxtImg
@@ -79,15 +87,15 @@
         </div>
         <button
           v-if="!isCollapsed"
-          class="w-full rounded border px-2 py-2.5 text-center text-xs font-medium transition-colors border-base text-content-secondary hover:text-content-primary dark:border-accent-800/50 dark:hover:border-accent-600 dark:text-white/80 dark:hover:text-white"
+          class="border-base text-content-secondary hover:text-content-primary dark:border-accent-800/50 dark:hover:border-accent-600 w-full rounded border px-2 py-2.5 text-center text-xs font-medium transition-colors dark:text-white/80 dark:hover:text-white"
           @click="navigateToSettings"
         >
           {{ currentEditionName }}
         </button>
       </div>
-      <div class="mx-3 my-1 h-px shrink-0 bg-divider dark:bg-accent-800/40" />
+      <div class="bg-divider dark:bg-accent-800/40 mx-3 my-1 h-px shrink-0" />
       <DrawerLinks :is-collapsed="isCollapsed" class="mt-1" />
-      <div class="mx-3 my-1 h-px shrink-0 bg-divider dark:bg-accent-800/40" />
+      <div class="bg-divider dark:bg-accent-800/40 mx-3 my-1 h-px shrink-0" />
       <div class="flex flex-col gap-1">
         <ul class="flex flex-col gap-1 px-1">
           <DrawerItem
@@ -169,10 +177,8 @@
     // Desktop: based on rail setting
     return appStore.drawerRail ? 'w-14' : 'w-56';
   });
-
   const tarkovStore = useTarkovStore();
   const router = useRouter();
-
   const currentEditionName = computed(() => metadataStore.getEditionName(tarkovStore.gameEdition));
   // Faction cycling logic
   const factionArray = PMC_FACTIONS; // ['USEC', 'BEAR']
@@ -193,14 +199,14 @@
   // Game mode cycling logic
   const gameModeArray = [GAME_MODES.PVP, GAME_MODES.PVE];
   const gameModeConfig = {
-    [GAME_MODES.PVP]: { 
-      label: 'PvP', 
+    [GAME_MODES.PVP]: {
+      label: 'PvP',
       icon: 'i-mdi-sword-cross',
       colorClass: 'dark:text-primary-100',
       iconClass: 'text-pvp-600 dark:text-pvp-600',
     },
-    [GAME_MODES.PVE]: { 
-      label: 'PvE', 
+    [GAME_MODES.PVE]: {
+      label: 'PvE',
       icon: 'i-mdi-account-group',
       colorClass: 'dark:text-pve-100',
       iconClass: 'text-pve-600 dark:text-pve-400',

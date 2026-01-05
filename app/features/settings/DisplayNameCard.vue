@@ -21,9 +21,11 @@
           </template>
         </UAlert>
         <!-- Current Game Mode Indicator -->
-        <div class="rounded-lg border border-base bg-surface-elevated p-3 dark:border-accent-700/30">
+        <div
+          class="border-base bg-surface-elevated dark:border-accent-700/30 rounded-lg border p-3"
+        >
           <div class="mb-2 flex items-center justify-between">
-            <span class="text-sm font-semibold text-content-secondary">
+            <span class="text-content-secondary text-sm font-semibold">
               {{ $t('settings.display_name.current_mode', 'Current Game Mode') }}
             </span>
             <span
@@ -33,15 +35,17 @@
               {{ currentMode }}
             </span>
           </div>
-          <p class="text-xs text-content-tertiary">
+          <p class="text-content-tertiary text-xs">
             {{ $t('settings.display_name.mode_hint', { mode: currentMode.toUpperCase() }) }}
           </p>
         </div>
         <!-- Display Name Input -->
         <div class="space-y-2">
-          <label class="text-sm font-semibold text-content-secondary">
+          <label class="text-content-secondary text-sm font-semibold">
             {{ $t('settings.display_name.label', 'Display Name') }}
-            <span class="ml-2 text-xs text-content-tertiary">({{ currentMode.toUpperCase() }})</span>
+            <span class="text-content-tertiary ml-2 text-xs">
+              ({{ currentMode.toUpperCase() }})
+            </span>
           </label>
           <div class="flex max-w-sm items-center gap-2">
             <UInput
@@ -64,7 +68,7 @@
             </UButton>
           </div>
           <div class="flex items-center justify-between">
-            <p class="text-xs text-content-tertiary">
+            <p class="text-content-tertiary text-xs">
               {{ localDisplayName?.length || 0 }} / {{ displayNameMaxLength }} characters
             </p>
             <UButton
@@ -80,8 +84,10 @@
           </div>
         </div>
         <!-- Preview Section -->
-        <div class="rounded-lg border border-base bg-surface-elevated p-3 dark:border-accent-700/30">
-          <div class="mb-2 text-sm font-semibold text-content-secondary">
+        <div
+          class="border-base bg-surface-elevated dark:border-accent-700/30 rounded-lg border p-3"
+        >
+          <div class="text-content-secondary mb-2 text-sm font-semibold">
             {{ $t('settings.display_name.preview', 'Preview') }}
           </div>
           <div class="flex items-center gap-3">
@@ -94,11 +100,11 @@
               size="sm"
               alt="Preview avatar"
             />
-            <span class="text-sm text-content-secondary">
+            <span class="text-content-secondary text-sm">
               {{ previewName }}
             </span>
           </div>
-          <p class="mt-2 text-xs italic text-content-tertiary">
+          <p class="text-content-tertiary mt-2 text-xs italic">
             {{
               $t(
                 'settings.display_name.preview_hint',

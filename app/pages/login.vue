@@ -1,7 +1,7 @@
 <template>
-  <div class="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-surface-950">
+  <div class="dark:bg-surface-950 flex min-h-screen items-center justify-center bg-gray-50 p-4">
     <UCard
-      class="w-full max-w-xl shadow-2xl ring-1 ring-gray-200 dark:bg-surface-900 dark:ring-white/10 bg-surface-elevated"
+      class="dark:bg-surface-900 bg-surface-elevated w-full max-w-xl shadow-2xl ring-1 ring-gray-200 dark:ring-white/10"
       :ui="{
         body: 'p-0',
         header: 'p-0',
@@ -10,10 +10,10 @@
     >
       <!-- Header Section -->
       <div class="flex flex-col items-center px-10 pt-10 pb-8 text-center">
-        <h1 class="mb-4 text-4xl font-bold tracking-tight text-content-primary">
+        <h1 class="text-content-primary mb-4 text-4xl font-bold tracking-tight">
           {{ $t('page.login.title') }}
         </h1>
-        <p class="text-lg text-content-secondary">
+        <p class="text-content-secondary text-lg">
           {{ $t('page.login.subtitle') }}
         </p>
       </div>
@@ -79,7 +79,7 @@
         </div>
       </div>
       <!-- Footer Links -->
-      <div class="rounded-b-lg border-t border-base bg-surface-50 px-8 py-5 dark:bg-black/20">
+      <div class="border-base bg-surface-50 rounded-b-lg border-t px-8 py-5 dark:bg-black/20">
         <div class="flex items-center justify-between">
           <UButton
             to="/privacy"
@@ -87,7 +87,7 @@
             variant="ghost"
             color="neutral"
             size="sm"
-            class="text-content-secondary transition-colors hover:text-content-primary"
+            class="text-content-secondary hover:text-content-primary transition-colors"
           >
             {{ $t('page.login.privacy_policy') }}
           </UButton>
@@ -97,7 +97,7 @@
             variant="ghost"
             color="neutral"
             size="sm"
-            class="text-content-secondary transition-colors hover:text-content-primary"
+            class="text-content-secondary hover:text-content-primary transition-colors"
           >
             {{ $t('page.login.terms_of_service') }}
           </UButton>

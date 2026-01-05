@@ -5,27 +5,14 @@
     preventing "Runtime directive used on component with non-element root node" warnings.
   -->
   <div v-if="tooltip" v-tooltip="tooltip" class="inline-flex" v-bind="wrapperAttrs">
-    <UBadge
-      v-bind="$attrs"
-      :size="size"
-      :color="color"
-      :variant="variant"
-      :class="badgeClass"
-    >
+    <UBadge v-bind="$attrs" :size="size" :color="color" :variant="variant" :class="badgeClass">
       <slot>
         <UIcon v-if="icon" :name="icon" class="h-3 w-3" aria-hidden="true" />
         <span v-if="label">{{ label }}</span>
       </slot>
     </UBadge>
   </div>
-  <UBadge
-    v-else
-    v-bind="$attrs"
-    :size="size"
-    :color="color"
-    :variant="variant"
-    :class="badgeClass"
-  >
+  <UBadge v-else v-bind="$attrs" :size="size" :color="color" :variant="variant" :class="badgeClass">
     <slot>
       <UIcon v-if="icon" :name="icon" class="h-3 w-3" aria-hidden="true" />
       <span v-if="label">{{ label }}</span>

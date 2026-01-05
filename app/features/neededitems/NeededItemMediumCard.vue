@@ -1,14 +1,8 @@
 <template>
   <div class="flex h-full flex-col rounded" :class="itemCardClasses">
     <!-- Item image - fixed aspect ratio -->
-    <div class="relative flex items-center justify-center w-full shrink-0 overflow-hidden">
-      <GameItem
-        v-if="imageItem"
-        :item="imageItem"
-        :is-visible="true"
-        size="large"
-        simple-mode
-      />
+    <div class="relative flex w-full shrink-0 items-center justify-center overflow-hidden">
+      <GameItem v-if="imageItem" :item="imageItem" :is-visible="true" size="large" simple-mode />
     </div>
     <!-- Item name - fixed height with line clamp -->
     <div v-if="item" class="flex h-12 shrink-0 items-center justify-center px-2 pt-2">

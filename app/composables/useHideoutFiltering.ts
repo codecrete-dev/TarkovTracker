@@ -96,7 +96,6 @@ export function useHideoutFiltering() {
         return [];
       }
       let hideoutStationList = hideoutStations.value as HideoutStation[];
-
       // Apply primary view filters
       if (activePrimaryView.value === 'available') {
         hideoutStationList = hideoutStationList.filter(isStationAvailable);
@@ -105,7 +104,6 @@ export function useHideoutFiltering() {
       } else if (activePrimaryView.value === 'locked') {
         hideoutStationList = hideoutStationList.filter(isStationLocked);
       }
-
       // Apply search filter if present
       const query = preferencesStore.getHideoutSearch?.toLowerCase().trim();
       if (query) {
@@ -113,7 +111,6 @@ export function useHideoutFiltering() {
           station.name.toLowerCase().includes(query)
         );
       }
-
       return hideoutStationList;
     } catch (error) {
       logger.error('[useHideoutFiltering] Error computing visible stations:', error);

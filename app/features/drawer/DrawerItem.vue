@@ -8,11 +8,10 @@
       class="group flex cursor-pointer items-center rounded-md px-3 py-2.5 text-base font-medium transition-colors duration-150"
       :class="[
         isActive
-          ? 'border-l-2 border-accent-500 bg-accent-100 text-accent-900 dark:bg-accent-500/20 dark:text-accent-100'
-          : 'border-l-2 border-transparent text-content-secondary hover:bg-surface-200 dark:hover:bg-white/5 hover:text-content-primary',
+          ? 'border-accent-500 bg-accent-100 text-accent-900 dark:bg-accent-500/20 dark:text-accent-100 border-l-2'
+          : 'text-content-secondary hover:bg-surface-200 hover:text-content-primary border-l-2 border-transparent dark:hover:bg-white/5',
         props.isCollapsed ? 'justify-center' : '',
       ]"
-
     >
       <!-- Icon / Avatar -->
       <div
@@ -46,7 +45,7 @@
       rel="noopener noreferrer"
       class="group flex cursor-pointer items-center rounded-md px-3 py-2.5 text-sm font-medium transition-colors duration-150"
       :class="[
-        'border-l-2 border-transparent text-content-secondary hover:bg-surface-200 dark:hover:bg-white/5 hover:text-content-primary',
+        'text-content-secondary hover:bg-surface-200 hover:text-content-primary border-l-2 border-transparent dark:hover:bg-white/5',
         props.isCollapsed ? 'justify-center' : '',
       ]"
       @click="visitHref()"
@@ -82,7 +81,7 @@
     <!-- Non-link item (fallback) -->
     <div
       v-else
-      class="group flex cursor-pointer items-center rounded-md border-l-4 border-transparent px-3 py-2.5 text-base font-medium text-content-tertiary transition-colors duration-200 hover:bg-surface-200 dark:hover:bg-white/5 hover:text-content-primary"
+      class="group text-content-tertiary hover:bg-surface-200 hover:text-content-primary flex cursor-pointer items-center rounded-md border-l-4 border-transparent px-3 py-2.5 text-base font-medium transition-colors duration-200 dark:hover:bg-white/5"
       :class="[props.isCollapsed ? 'justify-center' : '']"
     >
       <!-- Icon / Avatar -->
@@ -120,10 +119,8 @@
   import { useI18n } from 'vue-i18n';
   import { useRoute } from 'vue-router';
   import { getPreferredNavUrl } from '@/composables/usePageFilterRegistry';
-  
   const { t } = useI18n({ useScope: 'global' });
   const route = useRoute();
-  
   const props = defineProps({
     icon: {
       type: String,
@@ -170,7 +167,6 @@
       required: true,
     },
   });
-  
   // Check if this page path is active (for styling)
   const isActive = computed(() => {
     if (props.to) {
@@ -178,16 +174,12 @@
     }
     return false;
   });
-  
   const iconClasses = computed(() => {
     if (isActive.value) {
-      return props.iconColor
-        ? `text-${props.iconColor}`
-        : 'text-accent-600 dark:text-accent-400';
+      return props.iconColor ? `text-${props.iconColor}` : 'text-accent-600 dark:text-accent-400';
     }
     return 'text-content-tertiary group-hover:text-content-primary';
   });
-  
   /**
    * Compute the navigation URL based on current location:
    * - If already on this page: return base path (reset to defaults)
@@ -203,12 +195,10 @@
     // Navigating from another page: include stored filter preferences
     return getPreferredNavUrl(props.to);
   });
-  
   /**
    * Use NuxtLink component for navigation.
    */
   const linkComponent = resolveComponent('NuxtLink');
-  
   const visitHref = () => {
     if (props.href !== null) {
       window.open(props.href, '_blank');

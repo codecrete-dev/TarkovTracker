@@ -2,7 +2,7 @@
   <div class="mb-6 space-y-3">
     <!-- Primary Filter: ALL / TASKS / HIDEOUT (Centered) -->
     <div
-      class="flex flex-wrap items-center justify-center gap-1 overflow-x-auto rounded-lg bg-surface-elevated px-2 py-2 shadow-sm sm:gap-2 sm:px-4 sm:py-3"
+      class="bg-surface-elevated flex flex-wrap items-center justify-center gap-1 overflow-x-auto rounded-lg px-2 py-2 shadow-sm sm:gap-2 sm:px-4 sm:py-3"
     >
       <FilterPill
         v-for="tab in filterTabs"
@@ -21,7 +21,7 @@
     <div class="flex w-full flex-wrap gap-3">
       <!-- Section 1: Search bar -->
       <div
-        class="flex min-w-[250px] flex-1 items-center rounded-lg bg-surface-elevated px-4 py-3 shadow-sm"
+        class="bg-surface-elevated flex min-w-[250px] flex-1 items-center rounded-lg px-4 py-3 shadow-sm"
       >
         <UInput
           :model-value="search"
@@ -47,7 +47,7 @@
         </UInput>
       </div>
       <!-- Section 2: Filters (Popover) -->
-      <div class="flex items-center rounded-lg bg-surface-elevated px-4 py-3 shadow-sm">
+      <div class="bg-surface-elevated flex items-center rounded-lg px-4 py-3 shadow-sm">
         <UPopover>
           <UButton
             icon="i-mdi-filter-variant"
@@ -56,7 +56,9 @@
             size="sm"
             class="shrink-0"
           >
-            <span class="hidden sm:inline">{{ $t('page.neededitems.filters.label', 'Filters') }}</span>
+            <span class="hidden sm:inline">
+              {{ $t('page.neededitems.filters.label', 'Filters') }}
+            </span>
             <GameBadge
               v-if="activeFiltersCount > 0"
               color="primary"
@@ -68,7 +70,7 @@
           </UButton>
           <template #content>
             <div class="w-80 space-y-3 p-3">
-              <div class="text-xs font-medium text-content-tertiary">
+              <div class="text-content-tertiary text-xs font-medium">
                 {{ $t('page.neededitems.filters.sections.items', 'ITEMS') }}
               </div>
               <div class="flex flex-wrap gap-2">
@@ -90,59 +92,57 @@
                   <UIcon name="i-mdi-checkbox-blank-circle-outline" class="mr-1 h-4 w-4" />
                   {{ $t('page.neededitems.filters.non_fir', 'NON-FIR') }}
                 </UButton>
-                  <span
-                    v-tooltip="
-                      $t(
-                        'page.neededitems.filters.hide_non_fir_special_equipment_title',
-                        'Hide non-FIR special equipment (e.g., MS2000 Markers, Wi-Fi Cameras)'
-                      )
-                    "
-                    class="inline-flex"
+                <span
+                  v-tooltip="
+                    $t(
+                      'page.neededitems.filters.hide_non_fir_special_equipment_title',
+                      'Hide non-FIR special equipment (e.g., MS2000 Markers, Wi-Fi Cameras)'
+                    )
+                  "
+                  class="inline-flex"
+                >
+                  <UButton
+                    :variant="hideNonFirSpecialEquipment ? 'soft' : 'ghost'"
+                    :color="hideNonFirSpecialEquipment ? 'primary' : 'neutral'"
+                    size="sm"
+                    @click="$emit('update:hideNonFirSpecialEquipment', !hideNonFirSpecialEquipment)"
                   >
-                    <UButton
-                      :variant="hideNonFirSpecialEquipment ? 'soft' : 'ghost'"
-                      :color="hideNonFirSpecialEquipment ? 'primary' : 'neutral'"
-                      size="sm"
-                      @click="
-                        $emit('update:hideNonFirSpecialEquipment', !hideNonFirSpecialEquipment)
-                      "
-                    >
-                      <UIcon name="i-mdi-briefcase-outline" class="mr-1 h-4 w-4" />
-                      {{
-                        hideNonFirSpecialEquipment
-                          ? $t('page.neededitems.filters.no_special', 'NO-SPECIAL')
-                          : $t('page.neededitems.filters.special', 'SPECIAL')
-                      }}
-                    </UButton>
-                  </span>
-                  <span
-                    v-tooltip="
-                      isKappaDisabled
-                        ? $t(
-                            'page.neededitems.filters.kappa_only_disabled_tooltip',
-                            'Kappa filter applies to tasks only.'
-                          )
-                        : $t(
-                            'page.neededitems.filters.kappa_only_tooltip',
-                            'Show only items required for Kappa quests'
-                          )
-                    "
-                    class="inline-flex"
+                    <UIcon name="i-mdi-briefcase-outline" class="mr-1 h-4 w-4" />
+                    {{
+                      hideNonFirSpecialEquipment
+                        ? $t('page.neededitems.filters.no_special', 'NO-SPECIAL')
+                        : $t('page.neededitems.filters.special', 'SPECIAL')
+                    }}
+                  </UButton>
+                </span>
+                <span
+                  v-tooltip="
+                    isKappaDisabled
+                      ? $t(
+                          'page.neededitems.filters.kappa_only_disabled_tooltip',
+                          'Kappa filter applies to tasks only.'
+                        )
+                      : $t(
+                          'page.neededitems.filters.kappa_only_tooltip',
+                          'Show only items required for Kappa quests'
+                        )
+                  "
+                  class="inline-flex"
+                >
+                  <UButton
+                    :variant="kappaOnly ? 'soft' : 'ghost'"
+                    :color="kappaOnly ? 'warning' : 'neutral'"
+                    size="sm"
+                    :disabled="isKappaDisabled"
+                    @click="$emit('update:kappaOnly', !kappaOnly)"
                   >
-                    <UButton
-                      :variant="kappaOnly ? 'soft' : 'ghost'"
-                      :color="kappaOnly ? 'warning' : 'neutral'"
-                      size="sm"
-                      :disabled="isKappaDisabled"
-                      @click="$emit('update:kappaOnly', !kappaOnly)"
-                    >
-                      <UIcon name="i-mdi-trophy" class="mr-1 h-4 w-4" />
-                      {{ $t('page.neededitems.filters.kappa_only', 'KAPPA') }}
-                    </UButton>
-                  </span>
+                    <UIcon name="i-mdi-trophy" class="mr-1 h-4 w-4" />
+                    {{ $t('page.neededitems.filters.kappa_only', 'KAPPA') }}
+                  </UButton>
+                </span>
               </div>
-              <div class="border-t border-base pt-3">
-                <div class="mb-2 text-xs font-medium text-content-tertiary">
+              <div class="border-base border-t pt-3">
+                <div class="text-content-tertiary mb-2 text-xs font-medium">
                   {{ $t('page.neededitems.filters.sections.team', 'TEAM') }}
                 </div>
                 <UButton
@@ -165,14 +165,14 @@
         </UPopover>
       </div>
       <!-- Section 3: View Mode & Item Count -->
-      <div class="flex items-center gap-3 rounded-lg bg-surface-elevated px-4 py-3 shadow-sm">
+      <div class="bg-surface-elevated flex items-center gap-3 rounded-lg px-4 py-3 shadow-sm">
         <GameBadge color="neutral" variant="soft" size="md" badge-class="px-3 py-1 text-sm">
           <template v-if="groupByItem && ungroupedCount !== totalCount">
             {{ totalCount }} unique ({{ ungroupedCount }} total)
           </template>
           <template v-else>{{ totalCount }} {{ $t('page.neededitems.items', 'items') }}</template>
         </GameBadge>
-        <div class="flex gap-1 border-l border-base pl-3">
+        <div class="border-base flex gap-1 border-l pl-3">
           <UButton
             icon="i-mdi-view-list"
             :color="!groupByItem && viewMode === 'list' ? 'primary' : 'neutral'"

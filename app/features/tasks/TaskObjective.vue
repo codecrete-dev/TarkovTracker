@@ -16,22 +16,22 @@
       :class="
         isComplete
           ? 'text-success-500 dark:text-success-300'
-          : 'text-gray-500 group-hover:text-gray-700 dark:text-content-tertiary dark:group-hover:text-content-secondary'
+          : 'dark:text-content-tertiary dark:group-hover:text-content-secondary text-gray-500 group-hover:text-gray-700'
       "
     />
     <div class="flex flex-1 flex-nowrap items-center gap-2">
       <div class="min-w-0">
-        <div class="text-sm leading-5 text-content-primary">
+        <div class="text-content-primary text-sm leading-5">
           {{ props.objective?.description }}
         </div>
-          <div
-            v-if="userHasTeam && activeUserView === 'all' && userNeeds.length > 0"
-            v-tooltip="userNeedsTitle"
-            class="mt-1 inline-flex items-center gap-1 text-[11px] text-content-tertiary"
-          >
-            <UIcon name="i-mdi-account-multiple-outline" aria-hidden="true" class="h-3.5 w-3.5" />
-            <span>{{ userNeeds.length }}</span>
-          </div>
+        <div
+          v-if="userHasTeam && activeUserView === 'all' && userNeeds.length > 0"
+          v-tooltip="userNeedsTitle"
+          class="text-content-tertiary mt-1 inline-flex items-center gap-1 text-[11px]"
+        >
+          <UIcon name="i-mdi-account-multiple-outline" aria-hidden="true" class="h-3.5 w-3.5" />
+          <span>{{ userNeeds.length }}</span>
+        </div>
       </div>
       <div class="flex shrink-0 items-center gap-2" @click.stop>
         <ObjectiveCountControls

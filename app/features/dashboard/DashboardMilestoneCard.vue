@@ -2,22 +2,37 @@
   <div
     :class="[
       'relative overflow-hidden rounded-xl border p-6 transition-all',
-      isAchieved ? achievedClasses : 'border-base bg-surface-elevated opacity-50 dark:bg-surface-900/50 dark:border-accent-700/30',
+      isAchieved
+        ? achievedClasses
+        : 'border-base bg-surface-elevated dark:bg-surface-900/50 dark:border-accent-700/30 opacity-50',
     ]"
   >
     <div class="relative z-10">
       <UIcon
         :name="isAchieved ? achievedIcon : unachievedIcon"
-        :class="['mb-3 h-12 w-12', isAchieved ? iconColorClass : 'text-content-tertiary dark:text-surface-600']"
+        :class="[
+          'mb-3 h-12 w-12',
+          isAchieved ? iconColorClass : 'text-content-tertiary dark:text-surface-600',
+        ]"
       />
-      <div class="mb-1 text-3xl font-bold text-content-primary">{{ title }}</div>
-      <div class="text-xs tracking-wider uppercase text-content-secondary dark:text-surface-400">{{ subtitle }}</div>
+      <div class="text-content-primary mb-1 text-3xl font-bold">{{ title }}</div>
+      <div class="text-content-secondary dark:text-surface-400 text-xs tracking-wider uppercase">
+        {{ subtitle }}
+      </div>
     </div>
   </div>
 </template>
 <script setup lang="ts">
   import { computed } from 'vue';
-  export type MilestoneColor = 'primary' | 'accent' | 'info' | 'success' | 'warning' | 'purple' | 'kappa' | 'lightkeeper';
+  export type MilestoneColor =
+    | 'primary'
+    | 'accent'
+    | 'info'
+    | 'success'
+    | 'warning'
+    | 'purple'
+    | 'kappa'
+    | 'lightkeeper';
   const props = withDefaults(
     defineProps<{
       title: string;

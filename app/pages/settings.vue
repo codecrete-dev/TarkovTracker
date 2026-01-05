@@ -28,7 +28,7 @@
         <div class="grid gap-6 px-4 py-4 md:grid-cols-2 lg:grid-cols-3">
           <!-- Privacy Mode -->
           <div class="space-y-2">
-            <p class="text-sm font-semibold text-gray-900 dark:text-surface-200">
+            <p class="dark:text-surface-200 text-sm font-semibold text-gray-900">
               {{ $t('settings.general.privacy_mode', 'Privacy Mode') }}
             </p>
             <div class="flex items-center gap-3">
@@ -37,7 +37,7 @@
                 :disabled="!user.loggedIn || streamerModeCooldown"
                 label=""
               />
-              <span class="text-xs text-gray-500 dark:text-surface-400">
+              <span class="dark:text-surface-400 text-xs text-gray-500">
                 {{
                   $t(
                     'settings.general.privacy_mode_hint',
@@ -49,7 +49,7 @@
           </div>
           <!-- Game Edition -->
           <div class="space-y-2">
-            <p class="text-sm font-semibold text-gray-900 dark:text-surface-200">
+            <p class="dark:text-surface-200 text-sm font-semibold text-gray-900">
               {{ $t('settings.game_profile.game_edition', 'Game Edition') }}
             </p>
             <USelectMenu
@@ -61,13 +61,13 @@
               :ui-menu="selectMenuUi"
             >
               <template #leading>
-                <UIcon name="i-mdi-gift-open" class="h-4 w-4 text-gray-400 dark:text-surface-300" />
+                <UIcon name="i-mdi-gift-open" class="dark:text-surface-300 h-4 w-4 text-gray-400" />
               </template>
             </USelectMenu>
           </div>
           <!-- Prestige Level -->
           <div class="space-y-2">
-            <p class="text-sm font-semibold text-gray-900 dark:text-surface-200">
+            <p class="dark:text-surface-200 text-sm font-semibold text-gray-900">
               {{ $t('settings.prestige.current_level', 'Current Prestige Level') }}
             </p>
             <USelectMenu
@@ -82,7 +82,7 @@
                 <UIcon name="i-mdi-trophy" class="text-gold-400 h-4 w-4" />
               </template>
             </USelectMenu>
-            <p class="text-xs text-gray-500 dark:text-surface-400">
+            <p class="dark:text-surface-400 text-xs text-gray-500">
               {{
                 $t(
                   'settings.prestige.hint',
@@ -166,7 +166,7 @@
               {{ $t('settings.data_management.reset_all_data', 'Reset All Data') }}
             </UButton>
           </div>
-          <p class="text-center text-xs text-gray-500 dark:text-surface-400">
+          <p class="dark:text-surface-400 text-center text-xs text-gray-500">
             {{
               $t(
                 'settings.data_management.reset_hint',
@@ -200,7 +200,7 @@
               )
             "
           />
-          <p class="text-sm text-gray-600 dark:text-surface-200">
+          <p class="dark:text-surface-200 text-sm text-gray-600">
             {{
               $t(
                 'settings.data_management.reset_pvp_warning',
@@ -255,7 +255,7 @@
               )
             "
           />
-          <p class="text-sm text-gray-600 dark:text-surface-200">
+          <p class="dark:text-surface-200 text-sm text-gray-600">
             {{
               $t(
                 'settings.data_management.reset_pve_warning',
@@ -310,7 +310,7 @@
               )
             "
           />
-          <p class="text-sm text-gray-600 dark:text-surface-200">
+          <p class="dark:text-surface-200 text-sm text-gray-600">
             {{
               $t(
                 'settings.data_management.reset_all_warning',
@@ -438,9 +438,11 @@
     padding: 'p-1',
     option: {
       base: 'px-3 py-2 text-sm cursor-pointer transition-colors rounded',
-      inactive: 'text-gray-700 hover:bg-gray-100 dark:text-surface-200 dark:hover:bg-surface-800 dark:hover:text-white',
+      inactive:
+        'text-gray-700 hover:bg-gray-100 dark:text-surface-200 dark:hover:bg-surface-800 dark:hover:text-white',
       active: 'bg-gray-100 text-gray-900 dark:bg-surface-800 dark:text-white',
-      selected: 'bg-primary-50 text-primary-600 ring-1 ring-primary-500 dark:bg-primary-500/10 dark:text-primary-100',
+      selected:
+        'bg-primary-50 text-primary-600 ring-1 ring-primary-500 dark:bg-primary-500/10 dark:text-primary-100',
     },
   };
   // Reactive state

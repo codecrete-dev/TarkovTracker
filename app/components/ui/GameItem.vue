@@ -26,30 +26,30 @@
         <!-- Hover action buttons - centered overlay on image -->
         <div
           v-if="showActions && (computedWikiLink || computedDevLink)"
-          class="absolute inset-0 z-20 flex items-center justify-center gap-1 rounded bg-surface-900/80 opacity-0 transition-opacity group-hover:opacity-100"
+          class="bg-surface-900/80 absolute inset-0 z-20 flex items-center justify-center gap-1 rounded opacity-0 transition-opacity group-hover:opacity-100"
         >
-            <a
-              v-if="computedWikiLink"
-              v-tooltip="'View on Wiki'"
-              :href="computedWikiLink"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="inline-flex items-center justify-center rounded p-0.5 text-gray-200 transition-colors hover:bg-white/20 hover:text-white"
-              @click.stop
-            >
-              <img src="/img/logos/wikilogo.webp" alt="Wiki" :class="overlayIconClasses" />
-            </a>
-            <a
-              v-if="computedDevLink"
-              v-tooltip="'View on tarkov.dev'"
-              :href="computedDevLink"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="inline-flex items-center justify-center rounded p-0.5 text-gray-200 transition-colors hover:bg-white/20 hover:text-white"
-              @click.stop
-            >
-              <img src="/img/logos/tarkovdevlogo.webp" alt="tarkov.dev" :class="overlayIconClasses" />
-            </a>
+          <a
+            v-if="computedWikiLink"
+            v-tooltip="'View on Wiki'"
+            :href="computedWikiLink"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center justify-center rounded p-0.5 text-gray-200 transition-colors hover:bg-white/20 hover:text-white"
+            @click.stop
+          >
+            <img src="/img/logos/wikilogo.webp" alt="Wiki" :class="overlayIconClasses" />
+          </a>
+          <a
+            v-if="computedDevLink"
+            v-tooltip="'View on tarkov.dev'"
+            :href="computedDevLink"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center justify-center rounded p-0.5 text-gray-200 transition-colors hover:bg-white/20 hover:text-white"
+            @click.stop
+          >
+            <img src="/img/logos/tarkovdevlogo.webp" alt="tarkov.dev" :class="overlayIconClasses" />
+          </a>
         </div>
       </GameItemImage>
       <!-- Counter controls for multi-item objectives -->
@@ -63,7 +63,10 @@
         />
       </div>
       <!-- Simple count display for single items -->
-      <div v-else-if="props.count" class="mr-2 text-sm font-medium text-gray-600 dark:text-gray-300">
+      <div
+        v-else-if="props.count"
+        class="mr-2 text-sm font-medium text-gray-600 dark:text-gray-300"
+      >
         {{ formatNumber(props.count) }}
       </div>
       <div
@@ -264,7 +267,7 @@
       props.item?.backgroundColor ||
       props.imageItem?.backgroundColor ||
       'default'
-    )
+    );
   });
   const overlayIconClasses = computed(() => {
     if (props.size === 'xs') {
@@ -298,7 +301,12 @@
   };
   const handleContextMenu = (event: MouseEvent) => {
     // Only show context menu if there are links available
-    if (computedDevLink.value || computedWikiLink.value || computedItemName.value || props.taskWikiLink) {
+    if (
+      computedDevLink.value ||
+      computedWikiLink.value ||
+      computedItemName.value ||
+      props.taskWikiLink
+    ) {
       contextMenu.value?.open(event);
     }
   };

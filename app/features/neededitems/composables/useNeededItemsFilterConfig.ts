@@ -1,6 +1,5 @@
 import type { FilterConfig } from '@/composables/usePageFilters';
 import { usePreferencesStore } from '@/stores/usePreferences';
-
 /**
  * Returns the filter configuration for the Needed Items page.
  * This is extracted so it can be used by both the page (for URL-based filtering)
@@ -8,7 +7,6 @@ import { usePreferencesStore } from '@/stores/usePreferences';
  */
 export function useNeededItemsFilterConfig(): FilterConfig {
   const preferencesStore = usePreferencesStore();
-  
   return {
     filter: {
       default: 'all',
@@ -22,7 +20,8 @@ export function useNeededItemsFilterConfig(): FilterConfig {
         const style = preferencesStore.getNeededitemsStyle;
         return style === 'row' ? 'list' : style === 'mediumCard' ? 'grid' : null;
       },
-      onUpdate: (v) => preferencesStore.setNeededItemsStyle((v as string) === 'list' ? 'row' : 'mediumCard'),
+      onUpdate: (v) =>
+        preferencesStore.setNeededItemsStyle((v as string) === 'list' ? 'row' : 'mediumCard'),
       validate: (v) => ['list', 'grid'].includes(v),
     },
     fir: {
@@ -32,17 +31,17 @@ export function useNeededItemsFilterConfig(): FilterConfig {
     grouped: {
       default: false,
       parse: (v) => v === '1',
-      serialize: (v) => (v as boolean) ? '1' : null,
+      serialize: (v) => ((v as boolean) ? '1' : null),
     },
     kappa: {
       default: false,
       parse: (v) => v === '1',
-      serialize: (v) => (v as boolean) ? '1' : null,
+      serialize: (v) => ((v as boolean) ? '1' : null),
     },
     hideSpecial: {
       default: false,
       parse: (v) => v === '1',
-      serialize: (v) => (v as boolean) ? '1' : null,
+      serialize: (v) => ((v as boolean) ? '1' : null),
     },
     search: {
       default: '',

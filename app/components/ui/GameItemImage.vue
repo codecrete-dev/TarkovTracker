@@ -1,19 +1,19 @@
 <template>
   <div
     :class="[
-      'relative overflow-hidden bg-stash-cell rounded',
+      'bg-stash-cell relative overflow-hidden rounded',
       containerClasses,
       imageTileClasses,
       'flex items-center justify-center',
     ]"
   >
-    <div :class="['absolute inset-0 overlay-stash-bg', resolvedBackgroundClass]"></div>
+    <div :class="['overlay-stash-bg absolute inset-0', resolvedBackgroundClass]"></div>
     <img
       v-if="isVisible && formattedSrc"
       :src="formattedSrc"
       :alt="alt || itemName || 'Item'"
       :class="[
-        'max-h-full max-w-full object-contain p-1 rounded relative z-1',
+        'relative z-1 max-h-full max-w-full rounded object-contain p-1',
         imageElementClasses,
       ]"
       loading="lazy"

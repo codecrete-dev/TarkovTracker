@@ -9,7 +9,7 @@
         v-tooltip="t('page.neededitems.decrease_count')"
         type="button"
         :disabled="currentCount <= 0"
-        class="cursor-pointer focus-visible:ring-accent-500 focus-visible:ring-offset-surface-900 flex h-7 w-7 items-center justify-center rounded-l-md text-gray-500 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 active:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-white/10 dark:active:bg-white/15"
+        class="focus-visible:ring-accent-500 focus-visible:ring-offset-surface-900 flex h-7 w-7 cursor-pointer items-center justify-center rounded-l-md text-gray-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none active:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-white/10 dark:active:bg-white/15"
         :aria-label="t('page.neededitems.decrease_count')"
         @click="$emit('decrease')"
       >
@@ -47,7 +47,7 @@
         v-tooltip="t('page.neededitems.increase_count')"
         type="button"
         :disabled="currentCount >= neededCount"
-        class="cursor-pointer focus-visible:ring-accent-500 focus-visible:ring-offset-surface-900 flex h-7 w-7 items-center justify-center rounded-r-md text-gray-500 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 active:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-white/10 dark:active:bg-white/15"
+        class="focus-visible:ring-accent-500 focus-visible:ring-offset-surface-900 flex h-7 w-7 cursor-pointer items-center justify-center rounded-r-md text-gray-500 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none active:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-white/10 dark:active:bg-white/15"
         :aria-label="t('page.neededitems.increase_count')"
         @click="$emit('increase')"
       >
@@ -59,9 +59,15 @@
       :is-active="currentCount >= neededCount"
       variant="complete"
       :tooltip="
-        currentCount >= neededCount ? t('page.neededitems.mark_as_incomplete') : t('page.neededitems.mark_as_complete_100')
+        currentCount >= neededCount
+          ? t('page.neededitems.mark_as_incomplete')
+          : t('page.neededitems.mark_as_complete_100')
       "
-      :aria-label="currentCount >= neededCount ? t('page.neededitems.mark_as_incomplete') : t('page.neededitems.mark_as_complete_100')"
+      :aria-label="
+        currentCount >= neededCount
+          ? t('page.neededitems.mark_as_incomplete')
+          : t('page.neededitems.mark_as_complete_100')
+      "
       @toggle="$emit('toggle')"
     />
   </div>

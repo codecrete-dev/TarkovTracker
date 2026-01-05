@@ -1,7 +1,11 @@
 <template>
   <div class="space-y-2 px-2 py-2">
     <div class="flex items-start gap-4">
-      <UIcon :name="`i-${iconName}`" aria-hidden="true" class="h-5 w-5 shrink-0 text-gray-500 dark:text-gray-400" />
+      <UIcon
+        :name="`i-${iconName}`"
+        aria-hidden="true"
+        class="h-5 w-5 shrink-0 text-gray-500 dark:text-gray-400"
+      />
       <div class="min-w-0 pt-0.5">
         <div class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ title }}</div>
       </div>
@@ -15,7 +19,9 @@
           row.allComplete
             ? 'border-success-500/50 bg-success-100 text-success-900 dark:bg-success-500/10 dark:text-success-100'
             : 'border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-white/5',
-          isParentTaskLocked ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-gray-100 dark:hover:bg-white/10',
+          isParentTaskLocked
+            ? 'cursor-not-allowed opacity-70'
+            : 'cursor-pointer hover:bg-gray-100 dark:hover:bg-white/10',
         ]"
         @click.stop="toggleCountForRow(row)"
       >
@@ -67,7 +73,12 @@
             rel="noopener noreferrer"
             class="inline-flex items-center justify-center rounded p-0.5 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-600 dark:hover:bg-white/20 dark:hover:text-white"
           >
-            <img src="/img/logos/tarkovdevlogo.webp" alt="tarkov.dev" aria-hidden="true" class="h-4 w-4" />
+            <img
+              src="/img/logos/tarkovdevlogo.webp"
+              alt="tarkov.dev"
+              aria-hidden="true"
+              class="h-4 w-4"
+            />
           </a>
         </div>
         <!-- Single set of controls per item - updates all related objectives together -->
@@ -318,9 +329,7 @@
       const currentLevel = progressStore.hideoutLevels?.[source.stationId]?.self ?? 0;
       return currentLevel >= source.stationLevel;
     });
-    return isAvailable
-      ? 'text-success-600 dark:text-success-400'
-      : 'text-surface-400';
+    return isAvailable ? 'text-success-600 dark:text-success-400' : 'text-surface-400';
   };
   const getCraftableTitle = (row: ConsolidatedRow): string => {
     const sources = getCraftSourcesForRow(row);
@@ -354,10 +363,17 @@
     const statuses = sources.map((source) => {
       const currentLevel = progressStore.hideoutLevels?.[source.stationId]?.self ?? 0;
       const isAvailable = currentLevel >= source.stationLevel;
-      return { ...source, currentLevel, isAvailable, missingLevels: Math.max(0, source.stationLevel - currentLevel) };
+      return {
+        ...source,
+        currentLevel,
+        isAvailable,
+        missingLevels: Math.max(0, source.stationLevel - currentLevel),
+      };
     });
     // Prefer available stations, sorted by level (lowest first)
-    const available = statuses.filter((s) => s.isAvailable).sort((a, b) => a.stationLevel - b.stationLevel);
+    const available = statuses
+      .filter((s) => s.isAvailable)
+      .sort((a, b) => a.stationLevel - b.stationLevel);
     let targetId = available[0]?.stationId;
     if (!targetId) {
       // Find the closest to being available
@@ -393,7 +409,7 @@
     if (parentTaskIds.value.length === 0) return false;
     // If ANY associated task is NOT available (locked, complete, failed, or blocked),
     // we consider the group locked for safety. Usually these are all the same task anyway.
-    return parentTaskIds.value.some(taskId => {
+    return parentTaskIds.value.some((taskId) => {
       const isUnlocked = progressStore.unlockedTasks[taskId]?.self === true;
       const isComplete = tarkovStore.isTaskComplete(taskId);
       const isFailed = tarkovStore.isTaskFailed(taskId);

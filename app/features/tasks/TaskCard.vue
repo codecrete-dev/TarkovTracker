@@ -1,7 +1,7 @@
 <template>
   <UCard
     :id="`task-${task.id}`"
-    class="relative overflow-hidden border border-base bg-surface-elevated shadow-md dark:shadow-sm"
+    class="border-base bg-surface-elevated relative overflow-hidden border shadow-md dark:shadow-sm"
     :class="taskClasses"
     :ui="{ body: cardBodyClass }"
     @contextmenu.prevent="openOverflowMenu"
@@ -20,7 +20,7 @@
               :href="task.wikiLink"
               target="_blank"
               rel="noopener noreferrer"
-              class="focus-visible:ring-accent-500 focus-visible:ring-offset-surface-900 inline-flex items-center justify-center rounded p-1 text-gray-500 transition-colors hover:bg-surface-200 hover:text-content-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:text-gray-400"
+              class="focus-visible:ring-accent-500 focus-visible:ring-offset-surface-900 hover:bg-surface-200 hover:text-content-secondary inline-flex items-center justify-center rounded p-1 text-gray-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:text-gray-400"
               :aria-label="t('page.tasks.questcard.viewOnWiki', 'View on Wiki')"
               @click.stop
             >
@@ -31,7 +31,7 @@
               :href="tarkovDevTaskUrl"
               target="_blank"
               rel="noopener noreferrer"
-              class="focus-visible:ring-accent-500 focus-visible:ring-offset-surface-900 inline-flex items-center justify-center rounded p-1 text-gray-500 transition-colors hover:bg-surface-200 hover:text-content-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:text-gray-400"
+              class="focus-visible:ring-accent-500 focus-visible:ring-offset-surface-900 hover:bg-surface-200 hover:text-content-secondary inline-flex items-center justify-center rounded p-1 text-gray-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:text-gray-400"
               :aria-label="t('page.tasks.questcard.viewOnTarkovDev', 'View on tarkov.dev')"
               @click.stop
             >
@@ -59,7 +59,7 @@
               "
               :badge-class="[
                 'cursor-help text-xs',
-                meetsLevelRequirement ? 'badge-soft-success' : 'badge-soft-error'
+                meetsLevelRequirement ? 'badge-soft-success' : 'badge-soft-error',
               ]"
               :label="t('page.tasks.questcard.levelBadge', { count: task.minPlayerLevel })"
             />
@@ -70,10 +70,10 @@
               :tooltip="task?.map?.name || t('page.tasks.questcard.anyMap', 'Any')"
               badge-class="badge-soft-map inline-flex max-w-[10rem] items-center gap-1 text-xs"
             >
-              <UIcon 
-                :name="task?.map?.name ? 'i-mdi-map-marker' : 'i-mdi-earth'" 
-                class="h-3 w-3" 
-                aria-hidden="true" 
+              <UIcon
+                :name="task?.map?.name ? 'i-mdi-map-marker' : 'i-mdi-earth'"
+                class="h-3 w-3"
+                aria-hidden="true"
               />
               <span class="truncate">
                 {{ task?.map?.name || t('page.tasks.questcard.anyMap', 'Any') }}
@@ -133,14 +133,16 @@
             />
             <!-- Progress Badge (only on available tasks) -->
             <GameBadge
-              v-if="objectiveProgress.total > 0 && !isLocked && !isComplete && !isFailed && !isInvalid"
+              v-if="
+                objectiveProgress.total > 0 && !isLocked && !isComplete && !isFailed && !isInvalid
+              "
               variant="solid"
               color="gray"
               :badge-class="[
                 'inline-flex items-center gap-1 text-xs',
                 objectiveProgress.done === objectiveProgress.total
                   ? 'badge-soft-task-complete'
-                  : 'badge-soft-reward-item'
+                  : 'badge-soft-reward-item',
               ]"
               icon="i-mdi-progress-check"
               :label="t('page.tasks.questcard.progress', objectiveProgress)"
@@ -157,7 +159,7 @@
               icon="i-mdi-clipboard-text"
               color="neutral"
               variant="soft"
-              class="shrink-0 badge-soft-task-available font-semibold hover:opacity-90"
+              class="badge-soft-task-available shrink-0 font-semibold hover:opacity-90"
               @click.stop="markTaskAvailable()"
             >
               {{ t('page.tasks.questcard.availablebutton', 'Available').toUpperCase() }}
@@ -169,7 +171,7 @@
               icon="i-mdi-check-circle"
               color="neutral"
               variant="soft"
-              class="shrink-0 badge-soft-success font-semibold hover:opacity-90"
+              class="badge-soft-success shrink-0 font-semibold hover:opacity-90"
               @click.stop="markTaskComplete()"
             >
               {{ t('page.tasks.questcard.completebutton', 'Complete').toUpperCase() }}
@@ -181,7 +183,7 @@
               icon="i-mdi-clipboard-text"
               color="neutral"
               variant="soft"
-              class="shrink-0 badge-soft-task-available font-semibold hover:opacity-90"
+              class="badge-soft-task-available shrink-0 font-semibold hover:opacity-90"
               @click.stop="markTaskUncomplete()"
             >
               {{ t('page.tasks.questcard.availablebutton', 'Available').toUpperCase() }}
@@ -243,20 +245,20 @@
           />
         </div>
       </RelatedTasksRow>
-      <div v-else-if="isFailed" class="mt-1 text-xs text-error-700 dark:text-error-300">
-         <span class="text-error-600/90 dark:text-error-200/70">
-           {{ t('page.tasks.questcard.failedbecause', 'Failed because') }}:
-         </span>
-         <span class="ml-2 text-error-700/80 dark:text-error-200/80">
-           {{ t('page.tasks.questcard.failedbecauseunknown', 'Failed manually or data missing') }}
-         </span>
+      <div v-else-if="isFailed" class="text-error-700 dark:text-error-300 mt-1 text-xs">
+        <span class="text-error-600/90 dark:text-error-200/70">
+          {{ t('page.tasks.questcard.failedbecause', 'Failed because') }}:
+        </span>
+        <span class="text-error-700/80 dark:text-error-200/80 ml-2">
+          {{ t('page.tasks.questcard.failedbecauseunknown', 'Failed manually or data missing') }}
+        </span>
       </div>
       <!-- 3) Body: objectives (Secondary Body) -->
       <div class="relative -mx-1 -my-1 overflow-hidden p-1">
         <!-- Background Icon (The Background) -->
         <div
           v-if="showBackgroundIcon"
-          class="pointer-events-none absolute inset-0 z-0 flex transform items-center justify-center opacity-80 rotate-12"
+          class="pointer-events-none absolute inset-0 z-0 flex rotate-12 transform items-center justify-center opacity-80"
           :class="[backgroundIconColor]"
         >
           <UIcon
@@ -266,11 +268,11 @@
           />
         </div>
         <!-- Objective Content (The Existing Body) -->
-        <div 
+        <div
           class="relative z-10"
           :class="[
             isCompact ? 'space-y-3' : 'space-y-4',
-            !isInteractive ? 'cursor-not-allowed opacity-60' : ''
+            !isInteractive ? 'cursor-not-allowed opacity-60' : '',
           ]"
         >
           <QuestKeys v-if="task?.neededKeys?.length" :needed-keys="task.neededKeys" />
@@ -308,14 +310,20 @@
         >
           <template #suffix>
             <!-- Stats: Remaining -->
-            <div 
-              v-if="impactCount > 0" 
-              v-tooltip="{ content: t('page.tasks.questcard.remainingTooltip', 'Tasks blocked by this task, but not unlocked by completing it'), placement: 'top-end' }"
+            <div
+              v-if="impactCount > 0"
+              v-tooltip="{
+                content: t(
+                  'page.tasks.questcard.remainingTooltip',
+                  'Tasks blocked by this task, but not unlocked by completing it'
+                ),
+                placement: 'top-end',
+              }"
               class="flex cursor-help items-center text-xs font-medium text-gray-500"
             >
-                <span>
-                  {{ t('page.tasks.questcard.remainingLabel', 'Remaining') }}: {{ impactCount }}
-                </span>
+              <span>
+                {{ t('page.tasks.questcard.remainingLabel', 'Remaining') }}: {{ impactCount }}
+              </span>
             </div>
           </template>
           <div class="flex flex-col gap-2">
@@ -492,10 +500,13 @@
   });
   const taskClasses = computed(() => {
     const cursor = props.isNested ? 'cursor-pointer' : 'cursor-default';
-    if (isComplete.value && !isFailed.value) return `border-success-500/25 bg-success-500/10 ${cursor}`;
+    if (isComplete.value && !isFailed.value)
+      return `border-success-500/25 bg-success-500/10 ${cursor}`;
     if (isFailed.value) return `border-error-500/25 bg-error-500/10 ${cursor}`; // Red for failed
-    if (isInvalid.value) return `border-[var(--color-task-blocked)]/25 bg-[var(--color-task-blocked)]/10 ${cursor}`; // Gray for blocked
-    if (isLocked.value) return `border-[var(--color-task-locked)]/25 bg-[var(--color-task-locked)]/10 ${cursor}`; // Amber/orange for locked
+    if (isInvalid.value)
+      return `border-[var(--color-task-blocked)]/25 bg-[var(--color-task-blocked)]/10 ${cursor}`; // Gray for blocked
+    if (isLocked.value)
+      return `border-[var(--color-task-locked)]/25 bg-[var(--color-task-locked)]/10 ${cursor}`; // Amber/orange for locked
     return `border-base ${cursor}`;
   });
   const isCompact = computed(() => preferencesStore.getTaskCardDensity === 'compact');
@@ -525,7 +536,6 @@
   const _lockedBefore = computed(() => {
     return props.task.predecessors?.filter((s) => !isTaskSuccessful(s)).length || 0;
   });
-
   const parentTasks = computed(() => {
     if (!props.task.parents?.length) return [];
     return props.task.parents
@@ -549,7 +559,7 @@
       sourceIds.add(task.id);
     });
     return Array.from(sourceIds)
-      .map(id => tasks.value.find(t => t.id === id))
+      .map((id) => tasks.value.find((t) => t.id === id))
       .filter((t): t is Task => t !== undefined);
   });
   const pendingParentTasks = computed(() => {
@@ -705,8 +715,6 @@
       window.open(props.task.wikiLink, '_blank');
     }
   };
-
-
   // Expanded state for recursive cards
   const expandedTasks = ref<Set<string>>(new Set());
   const toggleExpanded = (section: 'parents' | 'children' | 'requires' | 'failed') => {

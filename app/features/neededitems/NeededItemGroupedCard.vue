@@ -7,12 +7,7 @@
     <div class="flex items-stretch">
       <!-- Item image - fills top-left corner -->
       <div class="relative h-24 w-24 shrink-0 overflow-hidden rounded-tl-lg">
-        <GameItem
-          :item="groupedItem.item"
-          :is-visible="true"
-          size="fluid"
-          simple-mode
-        />
+        <GameItem :item="groupedItem.item" :is-visible="true" size="fluid" simple-mode />
       </div>
       <!-- Item name + Total - with padding -->
       <div class="flex min-w-0 flex-1 flex-col justify-center p-3">

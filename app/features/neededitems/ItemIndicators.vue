@@ -1,9 +1,6 @@
 <template>
   <span v-if="foundInRaid" v-tooltip="foundInRaidTitle" class="inline-flex">
-    <UIcon
-      name="i-mdi-checkbox-marked-circle-outline"
-      :class="firIconClass"
-    />
+    <UIcon name="i-mdi-checkbox-marked-circle-outline" :class="firIconClass" />
   </span>
   <button
     v-if="isCraftable"
@@ -16,10 +13,7 @@
     <UIcon name="i-mdi-hammer-wrench" :class="[craftableIconBaseClass, craftableIconClass]" />
   </button>
   <span v-if="kappaRequired" v-tooltip="kappaTitleText" class="inline-flex">
-    <UIcon
-      name="i-mdi-trophy"
-      :class="kappaIconClass"
-    />
+    <UIcon name="i-mdi-trophy" :class="kappaIconClass" />
   </span>
 </template>
 <script setup lang="ts">

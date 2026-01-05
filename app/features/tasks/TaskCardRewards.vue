@@ -30,7 +30,9 @@
       </span>
       <!-- Skill Rewards -->
       <template v-for="skill in skillRewards" :key="`skill-${skill.name}`">
-        <span class="badge-soft-accent inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium">
+        <span
+          class="badge-soft-accent inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium"
+        >
           <UIcon name="i-mdi-arm-flex" aria-hidden="true" class="h-3.5 w-3.5" />
           <span>+{{ skill.level }}</span>
           <span>{{ skill.name }}</span>
@@ -46,14 +48,16 @@
       </span>
       <!-- Trader Standing Rewards -->
       <template v-for="standing in traderStandingRewards" :key="`standing-${standing.trader.id}`">
-        <span class="badge-soft-reward-item inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium">
-          <UIcon
-            name="i-mdi-handshake"
-            aria-hidden="true"
-            class="h-4 w-4"
-          />
+        <span
+          class="badge-soft-reward-item inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium"
+        >
+          <UIcon name="i-mdi-handshake" aria-hidden="true" class="h-4 w-4" />
           <span
-            :class="standing.standing >= 0 ? 'text-success-600 font-bold' : 'text-error-600 dark:text-error-400 font-bold'"
+            :class="
+              standing.standing >= 0
+                ? 'text-success-600 font-bold'
+                : 'text-error-600 dark:text-error-400 font-bold'
+            "
           >
             {{ standing.standing >= 0 ? '+' : '' }}{{ standing.standing.toFixed(2) }}
           </span>
@@ -61,22 +65,22 @@
         </span>
       </template>
       <!-- Item Rewards Summary -->
-        <span
-          v-if="itemRewards.length > 0"
-          v-tooltip="itemRewardsSummaryTooltip"
-          class="badge-soft-reward-item inline-flex cursor-help items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium"
-        >
-          <UIcon name="i-mdi-package-variant" aria-hidden="true" class="h-4 w-4" />
-          <span>
-            {{
-              t(
-                'page.tasks.questcard.itemsCount',
-                { count: itemRewards.length },
-                `${itemRewards.length} item${itemRewards.length === 1 ? '' : 's'}`
-              )
-            }}
-          </span>
+      <span
+        v-if="itemRewards.length > 0"
+        v-tooltip="itemRewardsSummaryTooltip"
+        class="badge-soft-reward-item inline-flex cursor-help items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium"
+      >
+        <UIcon name="i-mdi-package-variant" aria-hidden="true" class="h-4 w-4" />
+        <span>
+          {{
+            t(
+              'page.tasks.questcard.itemsCount',
+              { count: itemRewards.length },
+              `${itemRewards.length} item${itemRewards.length === 1 ? '' : 's'}`
+            )
+          }}
         </span>
+      </span>
       <!-- Offer Unlock Summary -->
       <span
         v-if="offerUnlockRewards.length > 0"
@@ -95,8 +99,7 @@
         </span>
       </span>
       <!-- Chain info & Dropdown toggle -->
-      <div class="ml-auto flex items-center gap-4">
-      </div>
+      <div class="ml-auto flex items-center gap-4"></div>
     </div>
     <div
       v-if="showDetails && hasExpandableDetails"
@@ -113,46 +116,41 @@
         >
           <!-- Item Rewards (Left) -->
           <div v-if="itemRewards.length > 0" class="flex min-w-0 flex-1 flex-col gap-2">
-            <div class="text-xs font-medium text-content-tertiary">
+            <div class="text-content-tertiary text-xs font-medium">
               {{ t('page.tasks.questcard.rewardItems', 'Items') }}:
             </div>
             <div class="flex flex-wrap gap-2">
-                <span
-                  v-for="(reward, index) in itemRewards"
-                  :key="`item-${reward.item?.id || index}`"
-                  v-tooltip="getItemTooltip(reward.item)"
+              <span
+                v-for="(reward, index) in itemRewards"
+                :key="`item-${reward.item?.id || index}`"
+                v-tooltip="getItemTooltip(reward.item)"
+              >
+                <component
+                  :is="reward.item?.id ? 'a' : 'span'"
+                  :href="reward.item?.id ? `https://tarkov.dev/item/${reward.item?.id}` : undefined"
+                  :target="reward.item?.id ? '_blank' : undefined"
+                  :rel="reward.item?.id ? 'noopener noreferrer' : undefined"
+                  :class="rewardItemCardClass"
+                  @contextmenu.prevent.stop="$emit('item-context-menu', $event, reward.item)"
+                  @click.stop
                 >
-                  <component
-                    :is="reward.item?.id ? 'a' : 'span'"
-                    :href="reward.item?.id ? `https://tarkov.dev/item/${reward.item?.id}` : undefined"
-                    :target="reward.item?.id ? '_blank' : undefined"
-                    :rel="reward.item?.id ? 'noopener noreferrer' : undefined"
-                    :class="rewardItemCardClass"
-                    @contextmenu.prevent.stop="$emit('item-context-menu', $event, reward.item)"
-                    @click.stop
-                  >
-                    <GameItem
-                      v-if="reward.item"
-                      :item="reward.item"
-                      size="medium"
-                      simple-mode
-                      class="mx-auto"
-                    />
-                    <div class="flex flex-col items-center gap-0.5">
-                      <span
-                        class="max-w-[72px] truncate text-center text-xs text-content-primary"
-                      >
-                        {{ reward.item?.shortName || reward.item?.name || '' }}
-                      </span>
-                      <span
-                        v-if="reward.count > 1"
-                        class="text-xs font-medium text-content-tertiary"
-                      >
-                        x{{ formatNumber(reward.count) }}
-                      </span>
-                    </div>
-                  </component>
-                </span>
+                  <GameItem
+                    v-if="reward.item"
+                    :item="reward.item"
+                    size="medium"
+                    simple-mode
+                    class="mx-auto"
+                  />
+                  <div class="flex flex-col items-center gap-0.5">
+                    <span class="text-content-primary max-w-[72px] truncate text-center text-xs">
+                      {{ reward.item?.shortName || reward.item?.name || '' }}
+                    </span>
+                    <span v-if="reward.count > 1" class="text-content-tertiary text-xs font-medium">
+                      x{{ formatNumber(reward.count) }}
+                    </span>
+                  </div>
+                </component>
+              </span>
             </div>
           </div>
           <!-- Offer Unlocks (Right) -->
@@ -160,43 +158,41 @@
             v-if="offerUnlockRewards.length > 0"
             class="flex min-w-0 flex-1 flex-col items-end gap-2 text-right"
           >
-            <div class="text-xs font-medium text-content-tertiary">
+            <div class="text-content-tertiary text-xs font-medium">
               {{ t('page.tasks.questcard.unlocksPurchase', 'Unlocks purchase') }}:
             </div>
             <div class="flex flex-wrap justify-end gap-2 text-left">
-                <span
-                  v-for="offer in offerUnlockRewards"
-                  :key="`offer-${offer.id}`"
-                  v-tooltip="getItemTooltip(offer.item)"
+              <span
+                v-for="offer in offerUnlockRewards"
+                :key="`offer-${offer.id}`"
+                v-tooltip="getItemTooltip(offer.item)"
+              >
+                <component
+                  :is="offer.item?.id ? 'a' : 'span'"
+                  :href="offer.item?.id ? `https://tarkov.dev/item/${offer.item?.id}` : undefined"
+                  :target="offer.item?.id ? '_blank' : undefined"
+                  :rel="offer.item?.id ? 'noopener noreferrer' : undefined"
+                  :class="rewardItemCardClass"
+                  @contextmenu.prevent.stop="$emit('item-context-menu', $event, offer.item)"
+                  @click.stop
                 >
-                  <component
-                    :is="offer.item?.id ? 'a' : 'span'"
-                    :href="offer.item?.id ? `https://tarkov.dev/item/${offer.item?.id}` : undefined"
-                    :target="offer.item?.id ? '_blank' : undefined"
-                    :rel="offer.item?.id ? 'noopener noreferrer' : undefined"
-                    :class="rewardItemCardClass"
-                    @contextmenu.prevent.stop="$emit('item-context-menu', $event, offer.item)"
-                    @click.stop
-                  >
-                    <GameItem
-                      v-if="offer.item"
-                      :item="offer.item"
-                      size="medium"
-                      simple-mode
-                      class="mx-auto"
-                    />
-                    <div class="flex flex-col items-center gap-0.5">
-                      <span
-                        class="max-w-[72px] truncate text-center text-xs text-content-primary"
-                      >
-                        {{ offer.item?.shortName || offer.item?.name || '' }}
-                      </span>
-                      <span class="text-xs text-content-tertiary">
-                        {{ offer.trader.name }} LL{{ offer.level }}
-                      </span>
-                    </div>
-                  </component>
-                </span>
+                  <GameItem
+                    v-if="offer.item"
+                    :item="offer.item"
+                    size="medium"
+                    simple-mode
+                    class="mx-auto"
+                  />
+                  <div class="flex flex-col items-center gap-0.5">
+                    <span class="text-content-primary max-w-[72px] truncate text-center text-xs">
+                      {{ offer.item?.shortName || offer.item?.name || '' }}
+                    </span>
+                    <span class="text-content-tertiary text-xs">
+                      {{ offer.trader.name }} LL{{ offer.level }}
+                    </span>
+                  </div>
+                </component>
+              </span>
             </div>
           </div>
         </div>
@@ -223,12 +219,24 @@
     name: string;
   }
   interface ItemReward {
-    item?: { id: string; name?: string; shortName?: string; iconLink?: string; backgroundColor?: string };
+    item?: {
+      id: string;
+      name?: string;
+      shortName?: string;
+      iconLink?: string;
+      backgroundColor?: string;
+    };
     count: number;
   }
   interface OfferUnlock {
     id: string;
-    item?: { id: string; name?: string; shortName?: string; iconLink?: string; backgroundColor?: string };
+    item?: {
+      id: string;
+      name?: string;
+      shortName?: string;
+      iconLink?: string;
+      backgroundColor?: string;
+    };
     trader: { name: string };
     level: number;
   }

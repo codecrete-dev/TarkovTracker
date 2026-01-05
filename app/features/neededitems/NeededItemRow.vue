@@ -8,7 +8,7 @@
       <div class="px-3 py-2">
         <div class="mx-0 flex flex-nowrap items-center">
           <div class="flex min-w-0 flex-1 items-center p-0">
-            <div 
+            <div
               class="group/image relative shrink-0 cursor-pointer transition-transform hover:scale-105"
               :class="{ 'pointer-events-none': selfCompletedNeed }"
               @click.stop="!selfCompletedNeed && $emit('toggleCount')"
@@ -29,7 +29,9 @@
                 <span
                   class="rounded bg-black/60 px-2 py-1 text-xs font-bold tracking-wide text-white backdrop-blur-sm"
                 >
-                  {{ isCollected ? t('page.neededitems.uncollect') : t('page.neededitems.collect') }}
+                  {{
+                    isCollected ? t('page.neededitems.uncollect') : t('page.neededitems.collect')
+                  }}
                 </span>
               </div>
             </div>
