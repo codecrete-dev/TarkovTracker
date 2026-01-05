@@ -102,7 +102,7 @@ export function transformProgress(
   ).map(([id, data]) => ({
     id,
     complete: data.complete || false,
-    count: data.count,
+    count: data.count ?? 0,
     invalid: invalidObjectives[id] || false,
   }));
   // Transform hideout modules
@@ -118,7 +118,7 @@ export function transformProgress(
   ).map(([id, data]) => ({
     id,
     complete: data.complete || false,
-    count: data.count,
+    count: data.count ?? 0,
   }));
   // Apply hideout auto-complete based on game edition
   applyHideoutAutoComplete(

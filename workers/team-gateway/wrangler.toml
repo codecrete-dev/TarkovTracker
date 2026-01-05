@@ -9,6 +9,9 @@ compatibility_date = "2025-11-27"
 # SUPABASE_SERVICE_ROLE_KEY = "<service role key>"
 # ALLOWED_ORIGIN = "https://tarkovtracker.org, http://localhost:3000"
 
-[[kv_namespaces]]
-binding = "TEAM_GATEWAY_KV"
-id = "f3f56d4879694eee9b9de1e43db252d6"
+[durable_objects]
+bindings = [{ name = "TEAM_GATEWAY_LIMITER", class_name = "TeamGatewayRateLimiter" }]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["TeamGatewayRateLimiter"]

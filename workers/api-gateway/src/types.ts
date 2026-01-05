@@ -103,7 +103,7 @@ export interface ProgressResponseTask {
 export interface ProgressResponseObjective {
   id: string;
   complete: boolean;
-  count?: number;
+  count: number;
   invalid?: boolean;
 }
 export interface ProgressResponseHideoutModule {
@@ -113,7 +113,7 @@ export interface ProgressResponseHideoutModule {
 export interface ProgressResponseHideoutPart {
   id: string;
   complete: boolean;
-  count?: number;
+  count: number;
 }
 export interface ProgressResponseData {
   tasksProgress: ProgressResponseTask[];

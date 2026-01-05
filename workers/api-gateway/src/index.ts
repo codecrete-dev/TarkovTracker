@@ -6,6 +6,7 @@ import {
   handleUpdateLevel,
   handleUpdateObjective,
 } from './handlers/progress';
+import { handleGetTeamProgress } from './handlers/team';
 import { handleGetToken } from './handlers/token';
 import type { Env, TaskState, BatchTaskUpdate, LegacyTokenResponse } from './types';
 /**
@@ -218,6 +219,28 @@ export default {
         const effectiveGameMode = validation.token.game_mode;
         const progress = await handleGetProgress(env, validation.token, effectiveGameMode);
         return successResponse(progress, undefined, 200, origin, reqOrigin);
+      }
+      // GET /team/progress - Team progress (requires TP permission)
+      if (apiPath === '/team/progress' && request.method === 'GET') {
+        const validation = await validateToken(env, rawToken, 'TP');
+        if (!validation.valid) {
+          return errorResponse(validation.error, validation.status, origin, reqOrigin);
+        }
+        const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
+        const rlKey = `progress-read:${clientIp}:${rawToken.slice(-16)}`;
+        if (
+          !(await rateLimit(
+            env,
+            rlKey,
+            RATE_LIMITS['progress-read'].limit,
+            RATE_LIMITS['progress-read'].windowSec
+          ))
+        ) {
+          return errorResponse('Rate limit exceeded', 429, origin, reqOrigin);
+        }
+        const effectiveGameMode = validation.token.game_mode;
+        const teamProgress = await handleGetTeamProgress(env, validation.token, effectiveGameMode);
+        return successResponse(teamProgress, undefined, 200, origin, reqOrigin);
       }
       // POST /progress/level/:levelValue - Update player level
       const levelMatch = apiPath.match(/^\/progress\/level\/(\d+)$/);
