@@ -1,8 +1,5 @@
 <template>
-  <GenericCard
-    icon="mdi-database-import-outline"
-    title-classes="text-lg font-bold sm:text-xl"
-  >
+  <GenericCard icon="mdi-database-import-outline" title-classes="text-lg font-bold sm:text-xl">
     <template #title>Data Migration</template>
     <template #content>
       <p class="mb-4">Migrate your progress data from the old TarkovTracker site.</p>

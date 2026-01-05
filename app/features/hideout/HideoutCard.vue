@@ -12,10 +12,7 @@
       <div class="flex items-center justify-between gap-4 pr-4 pb-2">
         <div class="flex items-center gap-3">
           <!-- Station Avatar -->
-          <span
-            :class="highlightClasses"
-            class="group-hover:scale-105"
-          >
+          <span :class="highlightClasses" class="group-hover:scale-105">
             <img
               :src="stationAvatar"
               :height="50"

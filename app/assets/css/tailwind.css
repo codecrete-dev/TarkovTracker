@@ -338,7 +338,6 @@ select:disabled,
   --color-task-failed: var(--color-error-600);
   --color-task-blocked: var(--color-gray-600);
 
-
   /* --- Rewards --- */
   --color-reward-item: var(--color-surface-300);
   --color-reward-item-text: var(--color-surface-500);
@@ -802,7 +801,7 @@ select:disabled,
   /* We define the base styles here and repeat them in specifics to avoid JIT @apply lookup errors for custom classes */
 
   .badge-premium-base {
-    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-lg shadow-inner ring-1 ring-inset transition-all duration-300;
+    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-inner shadow-lg ring-1 transition-all duration-300 ring-inset;
   }
 
   /* Shine effect applies to any element with the base class or specific premium classes */
@@ -815,36 +814,41 @@ select:disabled,
   .badge-premium-tan::before,
   .badge-premium-purple::before {
     @apply absolute top-0 left-0 h-full w-full opacity-[0.25] content-[''];
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.5) 0%, transparent 40%, rgba(0, 0, 0, 0.2) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.5) 0%,
+      transparent 40%,
+      rgba(0, 0, 0, 0.2) 100%
+    );
   }
 
   .badge-premium-accent {
-    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-lg shadow-inner ring-1 ring-inset transition-all duration-300;
+    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-inner shadow-lg ring-1 transition-all duration-300 ring-inset;
     @apply bg-accent-600 ring-accent-400/50 dark:bg-accent-700 dark:ring-accent-500/30 shadow-accent-950/20;
   }
   .badge-premium-secondary {
-    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-lg shadow-inner ring-1 ring-inset transition-all duration-300;
+    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-inner shadow-lg ring-1 transition-all duration-300 ring-inset;
     @apply bg-accent-600 ring-accent-400/50 dark:bg-accent-700 dark:ring-accent-500/30 shadow-accent-950/20;
   }
   .badge-premium-blue {
-    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-lg shadow-inner ring-1 ring-inset transition-all duration-300;
-    @apply bg-blue-600 ring-blue-400/50 dark:bg-blue-700 dark:ring-blue-500/30 shadow-blue-950/20 text-white;
+    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-inner shadow-lg ring-1 transition-all duration-300 ring-inset;
+    @apply bg-blue-600 text-white shadow-blue-950/20 ring-blue-400/50 dark:bg-blue-700 dark:ring-blue-500/30;
   }
   .badge-premium-green {
-    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-lg shadow-inner ring-1 ring-inset transition-all duration-300;
+    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-inner shadow-lg ring-1 transition-all duration-300 ring-inset;
     @apply bg-success-100 ring-success-400/30 text-success-700 dark:bg-success-500/20 dark:ring-success-500/20 dark:text-success-400 shadow-success-950/10;
   }
   .badge-premium-red {
-    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-lg shadow-inner ring-1 ring-inset transition-all duration-300;
+    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-inner shadow-lg ring-1 transition-all duration-300 ring-inset;
     @apply bg-error-100 ring-error-400/30 text-error-700 dark:bg-error-500/20 dark:ring-error-500/20 dark:text-error-400 shadow-error-950/10;
   }
   .badge-premium-tan {
-    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-lg shadow-inner ring-1 ring-inset transition-all duration-300;
-    @apply bg-amber-600 ring-amber-400/50 dark:bg-amber-700 dark:ring-amber-500/30 shadow-amber-950/20 text-white;
+    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-inner shadow-lg ring-1 transition-all duration-300 ring-inset;
+    @apply bg-amber-600 text-white shadow-amber-950/20 ring-amber-400/50 dark:bg-amber-700 dark:ring-amber-500/30;
   }
   .badge-premium-purple {
-    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-lg shadow-inner ring-1 ring-inset transition-all duration-300;
-    @apply bg-purple-600 ring-purple-400/50 dark:bg-purple-700 dark:ring-purple-500/30 shadow-purple-950/20 text-white;
+    @apply relative inline-flex items-center justify-center overflow-hidden rounded-tl-lg rounded-br-lg p-2.5 shadow-inner shadow-lg ring-1 transition-all duration-300 ring-inset;
+    @apply bg-purple-600 text-white shadow-purple-950/20 ring-purple-400/50 dark:bg-purple-700 dark:ring-purple-500/30;
   }
 
   /* --- Soft Task Status Badges --- */
