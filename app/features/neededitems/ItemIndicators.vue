@@ -17,6 +17,11 @@
   </span>
 </template>
 <script setup lang="ts">
+  import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
+
+  const { t } = useI18n({ useScope: 'global' });
+
   const props = withDefaults(
     defineProps<{
       craftableIconBaseClass?: string;
@@ -33,24 +38,29 @@
     {
       craftableIconBaseClass: 'ml-1 h-5 w-5',
       craftableIconClass: '',
-      craftableTitle: 'Craftable',
+      craftableTitle: '',
       firIconClass: 'ml-1 h-5 w-5',
-      foundInRaidTitle: 'Found in Raid required',
+      foundInRaidTitle: '',
       kappaIconClass: 'ml-1 h-5 w-5 text-entity-kappa',
       kappaRequired: false,
-      kappaTitle: 'Required for Kappa quest',
+      kappaTitle: '',
     }
   );
+
   const emit = defineEmits<{
     craft: [];
   }>();
-  // Parents may pass an empty/whitespace string; trim so tooltip/aria-label are never blank.
+
+  // Tooltip text with fallbacks to translations
   const craftableTitleText = computed(() => {
-    const title = props.craftableTitle?.trim();
-    return title && title.length > 0 ? title : 'Craftable';
+    return props.craftableTitle || t('neededitems.craftable', 'Craftable');
   });
+
+  const foundInRaidTitle = computed(() => {
+    return props.foundInRaidTitle || t('neededitems.fir_required', 'Found in Raid required');
+  });
+
   const kappaTitleText = computed(() => {
-    const title = props.kappaTitle?.trim();
-    return title && title.length > 0 ? title : 'Required for Kappa quest';
+    return props.kappaTitle || t('task.kappa_req', 'Required for Kappa task');
   });
 </script>

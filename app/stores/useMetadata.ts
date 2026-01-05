@@ -263,6 +263,7 @@ export const useMetadataStore = defineStore('metadata', {
       return (
         !state.loading &&
         !state.hideoutLoading &&
+        !state.itemsLoading &&
         state.tasks.length > 0 &&
         state.hideoutStations.length > 0
       );
@@ -374,6 +375,13 @@ export const useMetadataStore = defineStore('metadata', {
       const store = useTarkovStore();
       const effectiveLocale = localeOverride || useSafeLocale().value;
       logger.debug('[MetadataStore] updateLanguageAndGameMode - raw locale:', effectiveLocale);
+
+      // Clear existing items to prevent stale data from being used during hydration
+      // This forces the UI to wait for the new language items to load
+      if (this.items.length > 0) {
+        this.items = [];
+      }
+
       // Update language code
       const mappedCode = LOCALE_TO_API_MAPPING[effectiveLocale];
       if (mappedCode) {
