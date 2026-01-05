@@ -45,7 +45,7 @@
             </li>
             <li class="leading-relaxed">
               <strong>Game Progress Data:</strong>
-              Quest completions, hideout upgrade status, player level information, faction progress,
+              Task completions, hideout upgrade status, player level information, faction progress,
               and game mode selections (PvP/PvE)
             </li>
             <li class="leading-relaxed">
@@ -273,7 +273,7 @@
               Your display name, avatar, and basic profile information
             </li>
             <li class="leading-relaxed">
-              Your game progress data (quest completions, hideout status, player level)
+              Your game progress data (task completions, hideout status, player level)
             </li>
             <li class="leading-relaxed">Your team activity and participation status</li>
           </ul>

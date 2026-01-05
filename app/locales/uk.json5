@@ -98,16 +98,16 @@
           details: 'Кількість виконаних вами завдань.',
         },
         taskItems: {
-          stat: 'Предмети Квесту',
+          stat: 'Предмети завдань',
           details: 'Включає предмети знайдені та не знайдені в рейді.',
         },
         allObjectives: {
-          stat: 'Завдання Квесту',
-          details: 'Загальна кількість унікальних завдань у квестах.',
+          stat: 'Цілі завдань',
+          details: 'Загальна кількість унікальних цілей у завданнях.',
         },
         kappaTasks: {
           stat: 'Завдання Каппа',
-          details: 'Завдання необхідні для квесту контейнера Каппа.',
+          details: 'Завдання необхідні для завдання контейнера Каппа.',
         },
       },
     },
@@ -184,7 +184,7 @@
         undouncomplete: 'Скасовано незавершення {name}',
         undofailed: 'Undid failing {name}',
         undoresetfailed: 'Restored failed status for {name}',
-        markfailedconfirm: "Mark this task as failed? This is only for data issues, isn't recommended, and may block questlines.",
+        markfailedconfirm: "Mark this task as failed? This is only for data issues, isn't recommended, and may block task chains.",
         failedbecause: 'Failed because',
         failedbecauseunknown: 'Failed manually or data missing',
         nonkappa: 'Не потрібні для Каппа',
@@ -581,6 +581,6 @@
     loading: 'Завантаження...',
     error: 'Помилка',
   },
-  'task.kappa_req': 'Потрібно для квесту Каппа',
+  'task.kappa_req': 'Потрібно для завдання Каппа',
   'task.level_req': 'Потрібний рівень: {level}',
 }
