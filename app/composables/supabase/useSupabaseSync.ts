@@ -18,6 +18,18 @@ interface SupabaseUserData {
   pve_data?: UserProgressData;
   [key: string]: unknown;
 }
+// Fast hash for change detection - avoids full JSON comparison
+function hashState(obj: unknown): string {
+  const str = JSON.stringify(obj);
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return hash.toString(36);
+}
+
 export function useSupabaseSync({
   store,
   table,
@@ -28,6 +40,8 @@ export function useSupabaseSync({
   const { $supabase } = useNuxtApp();
   const isSyncing = ref(false);
   const isPaused = ref(false);
+  let lastSyncedHash: string | null = null;
+
   const syncToSupabase = async (inputState: unknown) => {
     const state = inputState as Record<string, unknown>;
     logger.debug('[Sync] syncToSupabase called', {
@@ -55,6 +69,13 @@ export function useSupabaseSync({
       if (!dataToSave.user_id) {
         dataToSave.user_id = $supabase.user.id;
       }
+      // Skip sync if data hasn't changed (reduces egress significantly)
+      const currentHash = hashState(dataToSave);
+      if (currentHash === lastSyncedHash) {
+        logger.debug('[Sync] Skipping - data unchanged');
+        isSyncing.value = false;
+        return;
+      }
       // Log detailed info about what we're syncing (dev only)
       if (import.meta.env.DEV) {
         if (table === 'user_progress') {
@@ -76,6 +97,7 @@ export function useSupabaseSync({
       if (error) {
         logger.error(`[Sync] Error syncing to ${table}:`, error);
       } else {
+        lastSyncedHash = currentHash; // Update hash on successful sync
         logger.debug(`[Sync] ✅ Successfully synced to ${table}`);
       }
     } catch (err) {

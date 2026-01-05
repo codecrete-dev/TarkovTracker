@@ -888,7 +888,7 @@ export async function initializeTarkovSync() {
       syncController = useSupabaseSync({
         store: tarkovStore,
         table: 'user_progress',
-        debounceMs: 1000,
+        debounceMs: 5000, // Increased from 1s to reduce egress
         transform: (state: unknown) => {
           const userState = state as UserState;
           return {

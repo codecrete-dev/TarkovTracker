@@ -82,7 +82,6 @@ export default defineNuxtConfig({
             'Complete Escape from Tarkov progress tracker for patch 1.0+. Track quests, storyline, hideout, and needed items. Team collaboration features and API integration with TarkovMonitor and RatScanner.',
         },
         { name: 'theme-color', content: '#c8a882' },
-
         // OpenGraph tags
         { property: 'og:site_name', content: 'TarkovTracker' },
         { property: 'og:type', content: 'website' },

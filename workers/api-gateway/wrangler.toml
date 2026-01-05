@@ -1,10 +1,27 @@
 name = "api-gateway"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
+workers_dev = false
+preview_urls = false
 routes = [
   { pattern = "tarkovtracker.org/api/v2/*", zone_name = "tarkovtracker.org" },
   { pattern = "www.tarkovtracker.org/api/v2/*", zone_name = "tarkovtracker.org" },
+  { pattern = "tarkovtracker.org/health", zone_name = "tarkovtracker.org" },
+  { pattern = "www.tarkovtracker.org/health", zone_name = "tarkovtracker.org" },
+  { pattern = "tarkovtracker.org/api/token*", zone_name = "tarkovtracker.org" },
+  { pattern = "tarkovtracker.org/api/progress*", zone_name = "tarkovtracker.org" },
+  { pattern = "tarkovtracker.org/api/team/progress*", zone_name = "tarkovtracker.org" },
+  { pattern = "www.tarkovtracker.org/api/token*", zone_name = "tarkovtracker.org" },
+  { pattern = "www.tarkovtracker.org/api/progress*", zone_name = "tarkovtracker.org" },
+  { pattern = "www.tarkovtracker.org/api/team/progress*", zone_name = "tarkovtracker.org" },
+  { pattern = "api.tarkovtracker.org/health", zone_name = "tarkovtracker.org" },
+  { pattern = "api.tarkovtracker.org/token*", zone_name = "tarkovtracker.org" },
+  { pattern = "api.tarkovtracker.org/progress*", zone_name = "tarkovtracker.org" },
+  { pattern = "api.tarkovtracker.org/team/progress*", zone_name = "tarkovtracker.org" },
 ]
+
+[placement]
+mode = "smart"
 
 [dev]
 port = 8787
@@ -14,9 +31,12 @@ ip = "0.0.0.0"
 [observability]
 enabled = true
 
-[[kv_namespaces]]
-binding = "API_GATEWAY_KV"
-id = "1fb2cf9cc958412c97439298532e367d"
+[durable_objects]
+bindings = [{ name = "API_GATEWAY_LIMITER", class_name = "ApiGatewayRateLimiter" }]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ApiGatewayRateLimiter"]
 
 [vars]
-ALLOWED_ORIGIN = "https://tarkovtracker.org,https://www.tarkovtracker.org,http://localhost:3000"
+ALLOWED_ORIGIN = "https://tarkovtracker.org,https://www.tarkovtracker.org,https://tarkov.dev,https://www.tarkov.dev,http://localhost:3000"

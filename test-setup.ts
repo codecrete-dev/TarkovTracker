@@ -1,19 +1,19 @@
-import { cleanup } from '@vue/test-utils';
+import { enableAutoUnmount } from '@vue/test-utils';
 import 'fake-indexeddb/auto';
 import { beforeAll, afterEach, vi } from 'vitest';
-
 type FetchInput = string | Request | URL;
-
 const getFetchUrl = (input: FetchInput) => {
   if (typeof input === 'string') return input;
   if (input instanceof URL) return input.toString();
   return input.url;
 };
-
 const mockFetch = vi.fn(async (input: FetchInput, _init?: RequestInit) => {
   const url = getFetchUrl(input);
   if (url.includes('/api/tarkov/data')) {
     return { data: { tasks: [], maps: [], traders: [], playerLevels: [] } };
+  }
+  if (url.includes('/api/tarkov/bootstrap')) {
+    return { data: { playerLevels: [] } };
   }
   if (url.includes('/api/tarkov/hideout')) {
     return { data: { hideoutStations: [] } };
@@ -24,13 +24,20 @@ const mockFetch = vi.fn(async (input: FetchInput, _init?: RequestInit) => {
   if (url.includes('/api/tarkov/items')) {
     return { data: { items: [] } };
   }
+  if (url.includes('/api/tarkov/tasks-core')) {
+    return { data: { tasks: [], maps: [], traders: [] } };
+  }
   if (url.includes('tarkov-data-overlay') || url.includes('/overlay.json')) {
     return { editions: {} };
   }
   if (url.includes('/_nuxt/builds/meta/')) {
     // Mock Nuxt's build manifest requests during test initialization
     return {
-      matcher: { entries: () => [] },
+      matcher: {
+        dynamic: {},
+        static: {},
+        wildcard: {},
+      },
       prerendered: [],
       routes: { entries: () => [] },
     };
@@ -38,17 +45,9 @@ const mockFetch = vi.fn(async (input: FetchInput, _init?: RequestInit) => {
   // Fail fast for unmatched URLs to maintain test isolation
   throw new Error(`Unmocked fetch call to: ${url}. Add a mock for this URL in test-setup.ts`);
 });
-
 vi.stubGlobal('$fetch', mockFetch);
-// Cleanup after each test
-afterEach(() => {
-  try {
-    cleanup();
-  } catch {
-    // Ignore cleanup errors - newer versions of @vue/test-utils might not need explicit cleanup
-    // when using Nuxt test environment
-  }
-});
+// Auto-unmount VTU wrappers after each test
+enableAutoUnmount(afterEach);
 // Global setup for Nuxt testing
 beforeAll(() => {
   // Mock console methods that might be noisy in tests

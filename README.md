@@ -39,6 +39,12 @@ VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anonymous_key
 ```
 
+## Cloudflare Workers (API Gateway)
+
+The `workers/api-gateway` Worker uses a Durable Object binding for rate limiting:
+
+- `API_GATEWAY_LIMITER` (Durable Object)
+
 ## Development
 
 Start the development server:

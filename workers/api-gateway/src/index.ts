@@ -43,19 +43,137 @@ const RATE_LIMITS: Record<Action, { limit: number; windowSec: number }> = {
   'progress-write': { limit: 30, windowSec: 60 },
   'token-info': { limit: 60, windowSec: 60 },
 };
+type RateLimitState = {
+  count: number;
+  resetAt: number;
+  windowSec: number;
+};
+type RateLimitResponse = {
+  allowed: boolean;
+  remaining: number;
+  resetAt: number;
+};
+type RateLimitResult = {
+  allowed: boolean;
+  status?: number;
+  message?: string;
+};
+const RATE_LIMIT_TIMEOUT_MS = 3000;
+const RATE_LIMIT_SLOW_MS = 200;
+export class ApiGatewayRateLimiter {
+  private data?: RateLimitState;
+  constructor(private state: DurableObjectState) {}
+  private json(body: RateLimitResponse) {
+    return new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
+  private async load() {
+    if (this.data) return;
+    const stored = await this.state.storage.get<RateLimitState>('state');
+    if (stored) this.data = stored;
+  }
+  async fetch(request: Request): Promise<Response> {
+    if (request.method !== 'POST') {
+      return new Response('Method Not Allowed', { status: 405 });
+    }
+    let payload: { limit?: number; windowSec?: number } = {};
+    try {
+      payload = (await request.json()) as { limit?: number; windowSec?: number };
+    } catch {
+      return new Response('Bad Request', { status: 400 });
+    }
+    const limit = Number(payload.limit);
+    const windowSec = Number(payload.windowSec);
+    if (!Number.isFinite(limit) || !Number.isFinite(windowSec) || limit <= 0 || windowSec <= 0) {
+      return new Response('Bad Request', { status: 400 });
+    }
+    await this.load();
+    const now = Date.now();
+    const windowMs = windowSec * 1000;
+    if (!this.data || this.data.windowSec !== windowSec || now >= this.data.resetAt) {
+      this.data = { count: 0, resetAt: now + windowMs, windowSec };
+    }
+    if (this.data.count >= limit) {
+      return this.json({
+        allowed: false,
+        remaining: 0,
+        resetAt: this.data.resetAt,
+      });
+    }
+    this.data.count += 1;
+    await this.state.storage.put('state', this.data);
+    return this.json({
+      allowed: true,
+      remaining: Math.max(limit - this.data.count, 0),
+      resetAt: this.data.resetAt,
+    });
+  }
+}
 async function rateLimit(
   env: Env,
   key: string,
   limit: number,
   windowSec: number
-): Promise<boolean> {
-  const now = Date.now();
-  const bucket = Math.floor(now / (windowSec * 1000));
-  const kvKey = `rl:${bucket}:${key}`;
-  const current = Number(await env.API_GATEWAY_KV.get(kvKey)) || 0;
-  if (current >= limit) return false;
-  await env.API_GATEWAY_KV.put(kvKey, String(current + 1), { expirationTtl: windowSec });
-  return true;
+): Promise<RateLimitResult> {
+  const action = key.split(':', 1)[0] || 'unknown';
+  const id = env.API_GATEWAY_LIMITER.idFromName(key);
+  const stub = env.API_GATEWAY_LIMITER.get(id);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), RATE_LIMIT_TIMEOUT_MS);
+  const startedAt = Date.now();
+  try {
+    const res = await stub.fetch('https://rate-limit', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ limit, windowSec }),
+      signal: controller.signal,
+    });
+    const durationMs = Date.now() - startedAt;
+    if (durationMs >= RATE_LIMIT_SLOW_MS) {
+      console.log('rateLimit slow', { action, durationMs, ok: res.ok });
+    }
+    if (!res.ok) {
+      return {
+        allowed: false,
+        status: 503,
+        message: 'Rate limiter unavailable',
+      };
+    }
+    let data: { allowed?: boolean } = {};
+    try {
+      data = (await res.json()) as { allowed?: boolean };
+    } catch {
+      return {
+        allowed: false,
+        status: 503,
+        message: 'Rate limiter unavailable',
+      };
+    }
+    if (data.allowed === false) {
+      return {
+        allowed: false,
+        status: 429,
+        message: 'Rate limit exceeded',
+      };
+    }
+    return { allowed: true };
+  } catch (error) {
+    const durationMs = Date.now() - startedAt;
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.warn('rateLimit timeout', { action, durationMs, timeoutMs: RATE_LIMIT_TIMEOUT_MS });
+    } else {
+      console.error('rateLimit error', { action, durationMs, error });
+    }
+    return {
+      allowed: false,
+      status: 503,
+      message: 'Rate limiter unavailable',
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 function resolveOrigin(envOrigin?: string, requestOrigin?: string): string {
   if (!envOrigin || envOrigin === '*') return '*';
@@ -141,6 +259,7 @@ function errorResponse(
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    const host = url.hostname.toLowerCase();
     const path = '/' + url.pathname.split('/').filter(Boolean).join('/');
     const origin = env.ALLOWED_ORIGIN;
     const reqOrigin = request.headers.get('Origin') || undefined;
@@ -164,12 +283,31 @@ export default {
         reqOrigin
       );
     }
-    // Match API routes (support both /api and /api/v2 prefixes)
-    const apiMatch = path.match(/^\/api(?:\/v2)?(.*)$/);
-    if (!apiMatch) {
+    const apiHostPrefix = host === 'api.tarkovtracker.org';
+    // Extract the API path based on host
+    let apiPath: string | null = null;
+    if (apiHostPrefix) {
+      // On api subdomain, support clean URLs without /api or /v2 prefix
+      // Strip any existing prefix for backwards compatibility
+      if (path.startsWith('/api/v2/') || path === '/api/v2') {
+        apiPath = path.slice(7) || '/';
+      } else if (path.startsWith('/api/') || path === '/api') {
+        apiPath = path.slice(4) || '/';
+      } else if (path.startsWith('/v2/') || path === '/v2') {
+        apiPath = path.slice(3) || '/';
+      } else {
+        apiPath = path;
+      }
+    } else {
+      // On other hosts, require /api or /api/v2 prefix
+      const apiMatch = path.match(/^\/api(?:\/v2)?(.*)$/);
+      if (apiMatch) {
+        apiPath = apiMatch[1] || '/';
+      }
+    }
+    if (!apiPath) {
       return new Response('Not Found', { status: 404, headers });
     }
-    const apiPath = apiMatch[1] || '/';
     // Extract and validate token
     const authHeader = request.headers.get('Authorization');
     const rawToken = extractBearerToken(authHeader);
@@ -185,15 +323,19 @@ export default {
         }
         const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
         const rlKey = `token-info:${clientIp}:${rawToken.slice(-16)}`;
-        if (
-          !(await rateLimit(
-            env,
-            rlKey,
-            RATE_LIMITS['token-info'].limit,
-            RATE_LIMITS['token-info'].windowSec
-          ))
-        ) {
-          return errorResponse('Rate limit exceeded', 429, origin, reqOrigin);
+        const rl = await rateLimit(
+          env,
+          rlKey,
+          RATE_LIMITS['token-info'].limit,
+          RATE_LIMITS['token-info'].windowSec
+        );
+        if (!rl.allowed) {
+          return errorResponse(
+            rl.message || 'Rate limit exceeded',
+            rl.status || 429,
+            origin,
+            reqOrigin
+          );
         }
         const tokenResponse = handleGetToken(validation.token, rawToken);
         return tokenFlatResponse(tokenResponse, origin, reqOrigin);
@@ -206,15 +348,19 @@ export default {
         }
         const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
         const rlKey = `progress-read:${clientIp}:${rawToken.slice(-16)}`;
-        if (
-          !(await rateLimit(
-            env,
-            rlKey,
-            RATE_LIMITS['progress-read'].limit,
-            RATE_LIMITS['progress-read'].windowSec
-          ))
-        ) {
-          return errorResponse('Rate limit exceeded', 429, origin, reqOrigin);
+        const rl = await rateLimit(
+          env,
+          rlKey,
+          RATE_LIMITS['progress-read'].limit,
+          RATE_LIMITS['progress-read'].windowSec
+        );
+        if (!rl.allowed) {
+          return errorResponse(
+            rl.message || 'Rate limit exceeded',
+            rl.status || 429,
+            origin,
+            reqOrigin
+          );
         }
         const effectiveGameMode = validation.token.game_mode;
         const progress = await handleGetProgress(env, validation.token, effectiveGameMode);
@@ -228,15 +374,19 @@ export default {
         }
         const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
         const rlKey = `progress-read:${clientIp}:${rawToken.slice(-16)}`;
-        if (
-          !(await rateLimit(
-            env,
-            rlKey,
-            RATE_LIMITS['progress-read'].limit,
-            RATE_LIMITS['progress-read'].windowSec
-          ))
-        ) {
-          return errorResponse('Rate limit exceeded', 429, origin, reqOrigin);
+        const rl = await rateLimit(
+          env,
+          rlKey,
+          RATE_LIMITS['progress-read'].limit,
+          RATE_LIMITS['progress-read'].windowSec
+        );
+        if (!rl.allowed) {
+          return errorResponse(
+            rl.message || 'Rate limit exceeded',
+            rl.status || 429,
+            origin,
+            reqOrigin
+          );
         }
         const effectiveGameMode = validation.token.game_mode;
         const teamProgress = await handleGetTeamProgress(env, validation.token, effectiveGameMode);
@@ -251,15 +401,19 @@ export default {
         }
         const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
         const rlKey = `progress-write:${clientIp}:${rawToken.slice(-16)}`;
-        if (
-          !(await rateLimit(
-            env,
-            rlKey,
-            RATE_LIMITS['progress-write'].limit,
-            RATE_LIMITS['progress-write'].windowSec
-          ))
-        ) {
-          return errorResponse('Rate limit exceeded', 429, origin, reqOrigin);
+        const rl = await rateLimit(
+          env,
+          rlKey,
+          RATE_LIMITS['progress-write'].limit,
+          RATE_LIMITS['progress-write'].windowSec
+        );
+        if (!rl.allowed) {
+          return errorResponse(
+            rl.message || 'Rate limit exceeded',
+            rl.status || 429,
+            origin,
+            reqOrigin
+          );
         }
         const level = parseInt(levelMatch[1], 10);
         if (isNaN(level) || level < 1 || level > 79) {
@@ -278,15 +432,19 @@ export default {
         }
         const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
         const rlKey = `progress-write:${clientIp}:${rawToken.slice(-16)}`;
-        if (
-          !(await rateLimit(
-            env,
-            rlKey,
-            RATE_LIMITS['progress-write'].limit,
-            RATE_LIMITS['progress-write'].windowSec
-          ))
-        ) {
-          return errorResponse('Rate limit exceeded', 429, origin, reqOrigin);
+        const rl = await rateLimit(
+          env,
+          rlKey,
+          RATE_LIMITS['progress-write'].limit,
+          RATE_LIMITS['progress-write'].windowSec
+        );
+        if (!rl.allowed) {
+          return errorResponse(
+            rl.message || 'Rate limit exceeded',
+            rl.status || 429,
+            origin,
+            reqOrigin
+          );
         }
         const body = (await request.json()) as { state?: string; count?: number };
         if (!body.state && body.count === undefined) {
@@ -319,15 +477,19 @@ export default {
         }
         const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
         const rlKey = `progress-write:${clientIp}:${rawToken.slice(-16)}`;
-        if (
-          !(await rateLimit(
-            env,
-            rlKey,
-            RATE_LIMITS['progress-write'].limit,
-            RATE_LIMITS['progress-write'].windowSec
-          ))
-        ) {
-          return errorResponse('Rate limit exceeded', 429, origin, reqOrigin);
+        const rl = await rateLimit(
+          env,
+          rlKey,
+          RATE_LIMITS['progress-write'].limit,
+          RATE_LIMITS['progress-write'].windowSec
+        );
+        if (!rl.allowed) {
+          return errorResponse(
+            rl.message || 'Rate limit exceeded',
+            rl.status || 429,
+            origin,
+            reqOrigin
+          );
         }
         const body = (await request.json()) as { state?: string };
         const state = body.state as TaskState;
@@ -352,15 +514,19 @@ export default {
         }
         const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
         const rlKey = `progress-write:${clientIp}:${rawToken.slice(-16)}`;
-        if (
-          !(await rateLimit(
-            env,
-            rlKey,
-            RATE_LIMITS['progress-write'].limit,
-            RATE_LIMITS['progress-write'].windowSec
-          ))
-        ) {
-          return errorResponse('Rate limit exceeded', 429, origin, reqOrigin);
+        const rl = await rateLimit(
+          env,
+          rlKey,
+          RATE_LIMITS['progress-write'].limit,
+          RATE_LIMITS['progress-write'].windowSec
+        );
+        if (!rl.allowed) {
+          return errorResponse(
+            rl.message || 'Rate limit exceeded',
+            rl.status || 429,
+            origin,
+            reqOrigin
+          );
         }
         const body = await request.json();
         // Support both legacy object format and new array format

@@ -3,11 +3,7 @@ main = "src/index.ts"
 compatibility_date = "2025-11-27"
 
 [vars]
-# Set at deploy time:
-# SUPABASE_URL = "https://<project>.supabase.co"
-# SUPABASE_ANON_KEY = "<anon key>"
-# SUPABASE_SERVICE_ROLE_KEY = "<service role key>"
-# ALLOWED_ORIGIN = "https://tarkovtracker.org, http://localhost:3000"
+ALLOWED_ORIGIN = "https://tarkovtracker.org,https://www.tarkovtracker.org,http://localhost:3000"
 
 [durable_objects]
 bindings = [{ name = "TEAM_GATEWAY_LIMITER", class_name = "TeamGatewayRateLimiter" }]

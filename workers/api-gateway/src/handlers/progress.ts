@@ -1,4 +1,5 @@
 import { getTasks, getHideoutStations } from '../services/tarkov';
+import { getMemoryCache, setMemoryCache } from '../utils/memory-cache';
 import { extractGameModeData, transformProgress } from '../utils/transform';
 import type {
   Env,
@@ -59,7 +60,7 @@ function extractDisplayName(
 }
 async function getUserDisplayName(env: Env, userId: string): Promise<string | null> {
   const cacheKey = `user-display:${userId}`;
-  const cached = await env.API_GATEWAY_KV.get(cacheKey);
+  const cached = getMemoryCache<string>(cacheKey);
   if (cached) return cached;
   try {
     const url = `${env.SUPABASE_URL}/auth/v1/admin/users/${userId}`;
@@ -86,9 +87,7 @@ async function getUserDisplayName(env: Env, userId: string): Promise<string | nu
     const displayName = extractDisplayName(userMetadata, provider, username);
     const resolved = displayName || username || (email ? email.split('@')[0] : null);
     if (resolved) {
-      await env.API_GATEWAY_KV.put(cacheKey, resolved, {
-        expirationTtl: DISPLAY_NAME_CACHE_TTL_SECONDS,
-      });
+      setMemoryCache(cacheKey, resolved, DISPLAY_NAME_CACHE_TTL_SECONDS);
     }
     return resolved;
   } catch {
@@ -122,7 +121,7 @@ export async function handleGetProgress(
   const fallbackDisplayName =
     progressData?.displayName?.trim() || (await getUserDisplayName(env, token.user_id));
   // Fetch task and hideout data (cached)
-  const [tasks, hideoutStations] = await Promise.all([getTasks(env), getHideoutStations(env)]);
+  const [tasks, hideoutStations] = await Promise.all([getTasks(), getHideoutStations()]);
   // Transform to API response format
   const data = transformProgress(
     progressData,

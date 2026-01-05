@@ -1,4 +1,5 @@
 import { getTasks, getHideoutStations } from '../services/tarkov';
+import { getMemoryCache, setMemoryCache } from '../utils/memory-cache';
 import { extractGameModeData, transformProgress } from '../utils/transform';
 import type { Env, ApiToken, UserProgressRow, ProgressResponseData } from '../types';
 // Team member from database
@@ -24,7 +25,7 @@ export interface TeamProgressResponse {
  */
 async function getUserDisplayName(env: Env, userId: string): Promise<string | null> {
   const cacheKey = `user-display:${userId}`;
-  const cached = await env.API_GATEWAY_KV.get(cacheKey);
+  const cached = getMemoryCache<string>(cacheKey);
   if (cached) return cached;
   try {
     const url = `${env.SUPABASE_URL}/auth/v1/admin/users/${userId}`;
@@ -61,7 +62,7 @@ async function getUserDisplayName(env: Env, userId: string): Promise<string | nu
     }
     const resolved = displayName || (email ? email.split('@')[0] : null);
     if (resolved) {
-      await env.API_GATEWAY_KV.put(cacheKey, resolved, { expirationTtl: 86400 });
+      setMemoryCache(cacheKey, resolved, 86400);
     }
     return resolved;
   } catch {
@@ -124,7 +125,7 @@ export async function handleGetTeamProgress(
   }
   const progressRows = (await progressRes.json()) as UserProgressRow[];
   // Step 4: Fetch task and hideout data (cached)
-  const [tasks, hideoutStations] = await Promise.all([getTasks(env), getHideoutStations(env)]);
+  const [tasks, hideoutStations] = await Promise.all([getTasks(), getHideoutStations()]);
   // Step 5: Transform progress for each team member
   const teamProgress: ProgressResponseData[] = await Promise.all(
     memberIds.map(async (memberId) => {
@@ -176,7 +177,7 @@ async function getSoloProgress(
   const progressData = extractGameModeData(row, gameMode);
   const fallbackDisplayName =
     progressData?.displayName?.trim() || (await getUserDisplayName(env, token.user_id));
-  const [tasks, hideoutStations] = await Promise.all([getTasks(env), getHideoutStations(env)]);
+  const [tasks, hideoutStations] = await Promise.all([getTasks(), getHideoutStations()]);
   const data = transformProgress(
     progressData,
     token.user_id,

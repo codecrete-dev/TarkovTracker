@@ -1,4 +1,5 @@
-import type { Env, TarkovTask, TarkovHideoutStation } from '../types';
+import { getMemoryCache, setMemoryCache } from '../utils/memory-cache';
+import type { TarkovHideoutStation, TarkovTask } from '../types';
 const CACHE_TTL = 3600; // 1 hour
 const TASKS_CACHE_KEY = 'tarkov:tasks';
 const HIDEOUT_CACHE_KEY = 'tarkov:hideout';
@@ -42,10 +43,10 @@ interface TasksResponse {
 interface HideoutResponse {
   hideoutStations: TarkovHideoutStation[];
 }
-export async function getTasks(env: Env): Promise<TarkovTask[]> {
+export async function getTasks(): Promise<TarkovTask[]> {
   // Check cache first
-  const cached = await env.API_GATEWAY_KV.get(TASKS_CACHE_KEY, 'json');
-  if (cached) return cached as TarkovTask[];
+  const cached = getMemoryCache<TarkovTask[]>(TASKS_CACHE_KEY);
+  if (cached) return cached;
   // Fetch from API
   const data = await fetchGraphQL<TasksResponse>(TASKS_QUERY);
   if (!data?.tasks) return [];
@@ -55,21 +56,17 @@ export async function getTasks(env: Env): Promise<TarkovTask[]> {
     alternatives: (task.alternatives as unknown as { id: string }[] | undefined)?.map((a) => a.id),
   }));
   // Cache result
-  await env.API_GATEWAY_KV.put(TASKS_CACHE_KEY, JSON.stringify(tasks), {
-    expirationTtl: CACHE_TTL,
-  });
+  setMemoryCache(TASKS_CACHE_KEY, tasks, CACHE_TTL);
   return tasks;
 }
-export async function getHideoutStations(env: Env): Promise<TarkovHideoutStation[]> {
+export async function getHideoutStations(): Promise<TarkovHideoutStation[]> {
   // Check cache first
-  const cached = await env.API_GATEWAY_KV.get(HIDEOUT_CACHE_KEY, 'json');
-  if (cached) return cached as TarkovHideoutStation[];
+  const cached = getMemoryCache<TarkovHideoutStation[]>(HIDEOUT_CACHE_KEY);
+  if (cached) return cached;
   // Fetch from API
   const data = await fetchGraphQL<HideoutResponse>(HIDEOUT_QUERY);
   if (!data?.hideoutStations) return [];
   // Cache result
-  await env.API_GATEWAY_KV.put(HIDEOUT_CACHE_KEY, JSON.stringify(data.hideoutStations), {
-    expirationTtl: CACHE_TTL,
-  });
+  setMemoryCache(HIDEOUT_CACHE_KEY, data.hideoutStations, CACHE_TTL);
   return data.hideoutStations;
 }
