@@ -8,7 +8,7 @@
   >
     <div class="relative z-10 flex h-full flex-col" :class="isCompact ? 'gap-2' : 'gap-3'">
       <!--1) Header: identity + state -->
-      <div class="flex flex-nowrap items-center justify-between gap-3">
+      <div class="flex flex-nowrap items-start justify-between gap-3">
         <!-- Left side: Task identity + badges -->
         <div class="flex min-w-0 flex-wrap items-center gap-2">
           <TaskLink :task="task" />
@@ -166,7 +166,7 @@
           </div>
         </div>
         <!-- Right side: Action buttons -->
-        <div class="flex shrink-0 flex-nowrap items-center justify-end gap-2.5">
+        <div class="flex shrink-0 flex-nowrap items-start justify-end gap-2.5">
           <template v-if="isOurFaction">
             <!-- 1) Locked state: Primary "AVAILABLE" button -->
             <UButton
@@ -206,9 +206,13 @@
             </UButton>
           </template>
           <!-- Menu button -->
-          <span v-if="isOurFaction" v-tooltip="t('page.tasks.questcard.more', 'More')">
+          <span
+            v-if="isOurFaction"
+            v-tooltip="t('page.tasks.questcard.more', 'More')"
+            class="inline-flex"
+          >
             <UButton
-              size="xs"
+              :size="actionButtonSize"
               color="neutral"
               variant="ghost"
               class="shrink-0"
@@ -620,7 +624,7 @@
   const _completeButtonUi = {
     base: 'bg-success-500 text-white border border-success-700',
   };
-  const actionButtonSize = computed(() => (xs.value ? 'xs' : 'sm'));
+  const actionButtonSize = computed(() => (xs.value ? 'md' : 'lg'));
   const isHotWheelsTask = computed(() => props.task.id === HOT_WHEELS_TASK_ID);
   const _showHotWheelsFail = computed(
     () => isHotWheelsTask.value && !isComplete.value && !isLocked.value
