@@ -521,7 +521,14 @@
     { rootMargin: '200px', threshold: 0.1, enabled: infiniteScrollEnabled }
   );
   watch(
-    [searchQuery, getTaskSecondaryView, getTaskPrimaryView, getTaskMapView, getTaskTraderView],
+    [
+      searchQuery,
+      getTaskSecondaryView,
+      getTaskPrimaryView,
+      getTaskMapView,
+      getTaskTraderView,
+      userGameEdition,
+    ],
     () => {
       displayCount.value = 15;
     }
