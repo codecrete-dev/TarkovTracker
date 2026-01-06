@@ -152,6 +152,7 @@
               v-if="exclusiveEditionBadge"
               variant="solid"
               color="primary"
+              icon="i-mdi-crown"
               :tooltip="
                 t(
                   'page.tasks.questcard.editionExclusiveTooltip',
@@ -159,7 +160,7 @@
                   `This quest is only available to players with ${exclusiveEditions.join(', ')} edition`
                 )
               "
-              badge-class="badge-soft-accent cursor-help text-xs"
+              badge-class="badge-soft-edition cursor-help text-xs"
               :label="exclusiveEditionBadge"
             />
           </div>

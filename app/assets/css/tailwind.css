@@ -801,6 +801,14 @@ select:disabled,
     background-color: color-mix(in srgb, var(--color-reward-skill), transparent 80%);
     color: color-mix(in srgb, var(--color-reward-skill), white 20%);
   }
+  .badge-soft-edition {
+    background-color: color-mix(in srgb, var(--color-primary-500), white 85%);
+    color: color-mix(in srgb, var(--color-primary-500), black 20%);
+  }
+  .dark .badge-soft-edition {
+    background-color: color-mix(in srgb, var(--color-primary-500), transparent 75%);
+    color: color-mix(in srgb, var(--color-primary-500), white 20%);
+  }
   .badge-soft-reward-trader {
     background-color: color-mix(in srgb, var(--color-reward-trader), white 85%);
     color: color-mix(in srgb, var(--color-reward-trader), black 20%);
