@@ -30,7 +30,10 @@
   const x = ref(0);
   const y = ref(0);
   const menuRef = ref<HTMLElement>();
-  const open = (event: MouseEvent, options?: { align?: 'left' | 'right'; trigger?: HTMLElement }) => {
+  const open = (
+    event: MouseEvent,
+    options?: { align?: 'left' | 'right'; trigger?: HTMLElement }
+  ) => {
     event.preventDefault();
     event.stopPropagation();
     let clientX = event.clientX;

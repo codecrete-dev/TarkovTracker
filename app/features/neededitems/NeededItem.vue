@@ -11,7 +11,7 @@
     </div>
   </template>
   <template v-else-if="props.itemStyle == 'row'">
-    <div class="w-full mb-2">
+    <div class="mb-2 w-full">
       <NeededItemRow
         :need="props.need"
         @decrease-count="decreaseCount()"
@@ -37,7 +37,7 @@
     },
     itemStyle: {
       type: String,
-      default: 'mediumCard',
+      default: 'card',
     },
   });
   const progressStore = useProgressStore();

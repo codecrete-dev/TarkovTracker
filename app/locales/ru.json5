@@ -98,16 +98,16 @@
           details: 'Количество выполненных вами заданий.',
         },
         taskItems: {
-          stat: 'Предметы квеста',
+          stat: 'Предметы задания',
           details: 'Включает предметы найденные в рейде и не найденные в рейде.',
         },
         allObjectives: {
-          stat: 'Задачи квеста',
-          details: 'Общее количество уникальных задач в квестах.',
+          stat: 'Задачи задания',
+          details: 'Общее количество уникальных задач в заданиях.',
         },
         kappaTasks: {
           stat: 'Задания Каппа',
-          details: 'Задания необходимые для квеста контейнера Каппа.',
+          details: 'Задания необходимые для задания контейнера Каппа.',
         },
       },
     },
@@ -184,7 +184,7 @@
         undouncomplete: 'Отменено незавершение {name}',
         undofailed: 'Undid failing {name}',
         undoresetfailed: 'Restored failed status for {name}',
-        markfailedconfirm: "Mark this task as failed? This is only for data issues, isn't recommended, and may block questlines.",
+        markfailedconfirm: "Mark this task as failed? This is only for data issues, isn't recommended, and may block task chains.",
         failedbecause: 'Failed because',
         failedbecauseunknown: 'Failed manually or data missing',
         nonkappa: 'Не требуются для Каппа',
@@ -255,6 +255,7 @@
         all: 'Все',
         tasks: 'Задания',
         hideout: 'Убежище',
+        collected: 'Собрано',
       },
       collect: 'Собрать',
       uncollect: 'Отменить сбор',
@@ -266,6 +267,7 @@
       mark_as_incomplete: 'Отметить как не завершенное',
       mark_as_complete_100: 'Отметить как завершенное на 100%',
       fir_required: 'Требуется найти в рейде',
+      craftable: 'Можно изготовить',
       lvl_required: 'Ур {level}',
       locked_before: '{count} до',
       options: {
@@ -568,6 +570,6 @@
     loading: 'Загрузка...',
     error: 'Ошибка',
   },
-  'task.kappa_req': 'Требуется для квеста Каппа',
+  'task.kappa_req': 'Требуется для задания Каппа',
   'task.level_req': 'Требуемый уровень: {level}',
 }

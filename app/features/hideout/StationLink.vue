@@ -1,7 +1,7 @@
 <template>
   <router-link
     :to="stationHref"
-    class="text-blue-400 no-underline hover:text-blue-300"
+    class="hover-effect rounded text-blue-400 no-underline"
     :aria-label="`Go to ${props.station.name} card`"
   >
     <div class="flex max-w-full min-w-0 items-center overflow-hidden">

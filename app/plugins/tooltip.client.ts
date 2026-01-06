@@ -26,6 +26,11 @@ export default defineNuxtPlugin((nuxtApp) => {
 interface TooltipOptions {
   content: string;
   placement?: Placement;
+  /**
+   * Whether content contains HTML.
+   * @warning ⚠️ XSS RISK: Only use with trusted, developer-controlled content.
+   * Do NOT pass user input directly to this property without sanitization.
+   */
   html?: boolean;
 }
 // Store tooltip instance on element for cleanup/updates
@@ -41,8 +46,7 @@ const tooltipMap = new WeakMap<
 >();
 function createTooltip(el: HTMLElement, value: string | TooltipOptions) {
   if (!value) return;
-  const options: TooltipOptions =
-    typeof value === 'string' ? { content: value } : value;
+  const options: TooltipOptions = typeof value === 'string' ? { content: value } : value;
   // Create tooltip element
   const tooltip = document.createElement('div');
   tooltip.className =
@@ -56,6 +60,7 @@ function createTooltip(el: HTMLElement, value: string | TooltipOptions) {
   tooltip.appendChild(contentDiv);
   // Set initial content
   if (options.html) {
+    // ⚠️ XSS RISK: Caller must sanitize content if user-generated
     contentDiv.innerHTML = options.content;
   } else {
     contentDiv.textContent = options.content;
@@ -69,12 +74,7 @@ function createTooltip(el: HTMLElement, value: string | TooltipOptions) {
     const config: ComputePositionConfig = {
       placement,
       strategy: 'fixed',
-      middleware: [
-        offset(6),
-        flip(),
-        shift({ padding: 5 }),
-        arrow({ element: arrowElement }),
-      ],
+      middleware: [offset(6), flip(), shift({ padding: 5 }), arrow({ element: arrowElement })],
     };
     computePosition(el, tooltip, config).then(({ x, y, placement, middlewareData }) => {
       Object.assign(tooltip.style, {
@@ -115,8 +115,8 @@ function createTooltip(el: HTMLElement, value: string | TooltipOptions) {
     cleanup = autoUpdate(el, tooltip, updatePosition);
     // Small delay to allow display block to render before opacity transition
     rafId = requestAnimationFrame(() => {
-        tooltip.style.opacity = '1';
-        rafId = null;
+      tooltip.style.opacity = '1';
+      rafId = null;
     });
   };
   const hide = () => {
@@ -131,12 +131,12 @@ function createTooltip(el: HTMLElement, value: string | TooltipOptions) {
     tooltip.style.opacity = '0';
     // Wait for transition
     timeoutId = setTimeout(() => {
-        tooltip.style.display = 'none';
-        if (cleanup) {
-            cleanup();
-            cleanup = null;
-        }
-        timeoutId = null;
+      tooltip.style.display = 'none';
+      if (cleanup) {
+        cleanup();
+        cleanup = null;
+      }
+      timeoutId = null;
     }, 200);
   };
   // Event listeners
@@ -144,14 +144,20 @@ function createTooltip(el: HTMLElement, value: string | TooltipOptions) {
   el.addEventListener('mouseleave', hide);
   el.addEventListener('focus', show);
   el.addEventListener('blur', hide);
-  tooltipMap.set(el, { tooltip, cleanup: () => {
-     if (cleanup) cleanup();
-     el.removeEventListener('mouseenter', show);
-     el.removeEventListener('mouseleave', hide);
-     el.removeEventListener('focus', show);
-     el.removeEventListener('blur', hide);
-     tooltip.remove();
-  }, arrowElement, show, hide });
+  tooltipMap.set(el, {
+    tooltip,
+    cleanup: () => {
+      if (cleanup) cleanup();
+      el.removeEventListener('mouseenter', show);
+      el.removeEventListener('mouseleave', hide);
+      el.removeEventListener('focus', show);
+      el.removeEventListener('blur', hide);
+      tooltip.remove();
+    },
+    arrowElement,
+    show,
+    hide,
+  });
 }
 function updateTooltipContent(el: HTMLElement, value: string | TooltipOptions) {
   const instance = tooltipMap.get(el);
@@ -164,10 +170,10 @@ function updateTooltipContent(el: HTMLElement, value: string | TooltipOptions) {
     destroyTooltip(el);
     return;
   }
-  const options: TooltipOptions =
-    typeof value === 'string' ? { content: value } : value;
+  const options: TooltipOptions = typeof value === 'string' ? { content: value } : value;
   const contentDiv = instance.tooltip.lastElementChild as HTMLElement; // Content is last child
   if (options.html) {
+    // ⚠️ XSS RISK: Caller must sanitize content if user-generated
     contentDiv.innerHTML = options.content;
   } else {
     contentDiv.textContent = options.content;

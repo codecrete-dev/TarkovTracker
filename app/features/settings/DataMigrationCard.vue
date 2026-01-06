@@ -1,5 +1,5 @@
 <template>
-  <GenericCard icon="mdi-database-import-outline" icon-color="white">
+  <GenericCard icon="mdi-database-import-outline" title-classes="text-lg font-bold sm:text-xl">
     <template #title>Data Migration</template>
     <template #content>
       <p class="mb-4">Migrate your progress data from the old TarkovTracker site.</p>
@@ -109,7 +109,13 @@
               >
                 <div class="flex items-center">
                   <span>Task ID: {{ task.id }}</span>
-                  <GameBadge variant="solid" color="error" size="xs" label="Failed" badge-class="ml-2" />
+                  <GameBadge
+                    variant="solid"
+                    color="error"
+                    size="xs"
+                    label="Failed"
+                    badge-class="ml-2"
+                  />
                 </div>
                 <div class="text-sm text-gray-400">
                   This task will remain marked as failed after migration.

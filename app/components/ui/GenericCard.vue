@@ -1,6 +1,6 @@
 <template>
   <div
-    class="overflow-hidden rounded bg-white shadow-md dark:bg-surface-800 border border-gray-200 dark:border-surface-700"
+    class="dark:bg-surface-800 dark:border-surface-700 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-md"
     :class="{ 'h-full': props.fillHeight, [props.cardClass]: true }"
   >
     <div class="m-0 h-full p-0">
@@ -12,7 +12,7 @@
             <!-- Default header with icon and title -->
             <div
               v-if="props.title || props.icon"
-              class="flex items-center justify-between pb-2 text-xl"
+              class="flex items-center justify-between gap-4 pr-4 pb-2 text-xl"
               :class="headerClasses"
             >
               <!-- Left side content (icon and title) -->
@@ -21,27 +21,27 @@
                 <span
                   v-if="props.icon || props.avatar"
                   :class="highlightClasses"
-                  class="inline-block rounded-br-lg px-3 py-1 shadow-lg"
+                  class="group-hover:scale-105"
                 >
                   <img
                     v-if="props.avatar"
                     :src="props.avatar"
                     :height="avatarHeight"
                     :style="{ height: `${avatarHeight}px` }"
-                    class="block pt-0"
+                    class="block pt-0 drop-shadow-md"
                     :class="avatarClass"
                   />
                   <UIcon
                     v-else
                     :name="props.icon?.startsWith('mdi-') ? `i-${props.icon}` : props.icon"
-                    :class="`text-${props.iconColor}`"
-                    class="h-6 w-6"
+                    :class="props.iconColor ? `text-${props.iconColor}` : ''"
+                    class="h-[50px] w-[50px] drop-shadow-md"
                   />
                 </span>
                 <!-- Title -->
                 <span
                   v-if="props.title"
-                  class="inline-block px-2 text-left leading-6"
+                  class="text-content-primary inline-block text-left leading-6"
                   :class="titleClasses"
                 >
                   {{ props.title }}
@@ -53,7 +53,7 @@
                 class="flex items-center gap-2 text-right"
               >
                 <slot name="title-right">
-                  <span v-if="props.subtitle" class="text-xs text-gray-500 dark:text-surface-400">
+                  <span v-if="props.subtitle" class="dark:text-surface-400 text-xs text-gray-500">
                     {{ props.subtitle }}
                   </span>
                 </slot>
@@ -63,7 +63,7 @@
           <!-- Divider (only if there's content below) -->
           <div
             v-if="showDivider && (hasContent || hasFooter)"
-            class="mx-4 border-b border-gray-200 dark:border-surface-700"
+            class="dark:border-surface-700 mx-4 border-b border-gray-200"
           ></div>
         </header>
         <!-- Content Section -->
@@ -106,7 +106,7 @@
     subtitle: '',
     icon: '',
     avatar: '',
-    iconColor: 'white',
+    iconColor: null,
     titleClasses: '',
     headerClasses: '',
     highlightColor: 'accent',
@@ -125,39 +125,29 @@
   const hasFooter = computed(() => !!slots.footer);
   const highlightClasses = computed(() => {
     const classes: Record<string, boolean> = {};
-    // Map highlight colors to Tailwind gradient classes
+    // Map highlight colors to Premium Badge utilities
     switch (props.highlightColor) {
       case 'green':
-        classes[
-          'bg-gradient-to-r from-[rgba(1,36,0,0.15)] via-[rgba(15,121,9,0.15)] to-[rgba(0,83,0,0.15)]'
-        ] = true;
+        classes['badge-premium-green'] = true;
         break;
       case 'blue':
-        classes[
-          'bg-gradient-to-r from-[rgba(0,0,36,0.15)] via-[rgba(0,0,121,0.15)] to-[rgba(0,0,83,0.15)]'
-        ] = true;
+        classes['badge-premium-blue'] = true;
         break;
       case 'red':
-        classes[
-          'bg-gradient-to-r from-[rgba(36,0,0,0.15)] via-[rgba(121,0,0,0.15)] to-[rgba(83,0,0,0.15)]'
-        ] = true;
+        classes['badge-premium-red'] = true;
         break;
       case 'tan':
-        classes[
-          'bg-gradient-to-r from-[rgba(36,36,0,0.15)] via-[rgba(121,121,0,0.15)] to-[rgba(83,83,0,0.15)]'
-        ] = true;
+        classes['badge-premium-tan'] = true;
         break;
       case 'purple':
-        classes[
-          'bg-gradient-to-r from-[rgba(36,0,36,0.15)] via-[rgba(121,0,121,0.15)] to-[rgba(83,0,83,0.15)]'
-        ] = true;
+        classes['badge-premium-purple'] = true;
         break;
       case 'secondary':
-        classes['bg-gradient-to-br from-brand-700 via-brand-300 to-brand-500'] = true;
+        classes['badge-premium-secondary'] = true;
         break;
       case 'accent':
       default:
-        classes['bg-gradient-to-br from-accent-800 via-accent-700 to-accent-600'] = true;
+        classes['badge-premium-accent'] = true;
         break;
     }
     return classes;

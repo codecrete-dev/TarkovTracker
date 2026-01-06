@@ -1,22 +1,22 @@
 <template>
   <div>
     <div class="px-4 py-6">
+      <!-- Task Filter Bar -->
+      <TaskFilterBar
+        v-model:search-query="searchQuery"
+        :single-task-id="singleTaskId"
+        :primary-view="getTaskPrimaryView"
+        :secondary-view="getTaskSecondaryView"
+        :map-view="getTaskMapView"
+        :trader-view="getTaskTraderView"
+        @clear-single-task="clearSingleTaskFilter"
+        @update:primary-view="handlePrimaryViewChange"
+        @update:secondary-view="(v) => setFilters({ status: v, task: null })"
+        @update:map-view="(v) => setFilters({ map: v, task: null })"
+        @update:trader-view="(v) => setFilters({ trader: v, task: null })"
+      />
       <TaskLoadingState v-if="isLoading" />
       <div v-else>
-        <!-- Task Filter Bar -->
-        <TaskFilterBar
-          v-model:search-query="searchQuery"
-          :single-task-id="singleTaskId"
-          :primary-view="getTaskPrimaryView"
-          :secondary-view="getTaskSecondaryView"
-          :map-view="getTaskMapView"
-          :trader-view="getTaskTraderView"
-          @clear-single-task="clearSingleTaskFilter"
-          @update:primary-view="handlePrimaryViewChange"
-          @update:secondary-view="(v) => setFilters({ status: v, task: null })"
-          @update:map-view="(v) => setFilters({ map: v, task: null })"
-          @update:trader-view="(v) => setFilters({ trader: v, task: null })"
-        />
         <!-- Map Display (shown when MAPS view is selected) -->
         <div v-if="showMapDisplay" class="mb-6">
           <div class="bg-surface-base dark:bg-surface-800/50 rounded-lg">
@@ -152,11 +152,10 @@
   const { visibleTasks, reloadingTasks, updateVisibleTasks } = useTaskFiltering();
   const tarkovStore = useTarkovStore();
   const { tarkovTime } = useTarkovTime();
-
   // URL-based filter state (URL is single source of truth)
   // Filter config is extracted to useTasksFilterConfig for sharing with navigation
-  const { filters, setFilter, setFilters, debouncedInputs } = usePageFilters(useTasksFilterConfig());
-
+  const { filters, setFilter, setFilters, debouncedInputs } =
+    usePageFilters(useTasksFilterConfig());
   // Computed aliases for cleaner template/code access
   const getTaskPrimaryView = filters.view;
   const getTaskSecondaryView = filters.status;
@@ -170,7 +169,6 @@
     return taskExists ? taskId : null;
   });
   const searchQuery = debouncedInputs.search!;
-
   // Handle primary view changes with scoped URL params + localStorage persistence
   // - URL only contains params relevant to current view
   // - Switching views saves outgoing state to localStorage and restores incoming state
@@ -178,17 +176,14 @@
     maps: 'tarkovTracker.tasks.lastMap',
     traders: 'tarkovTracker.tasks.lastTrader',
   } as const;
-
   const handlePrimaryViewChange = (view: string) => {
     const currentView = getTaskPrimaryView.value;
-
     // Save outgoing view's state to localStorage before switching
     if (currentView === 'maps' && getTaskMapView.value !== 'all') {
       localStorage.setItem(VIEW_STORAGE_KEYS.maps, getTaskMapView.value);
     } else if (currentView === 'traders' && getTaskTraderView.value !== 'all') {
       localStorage.setItem(VIEW_STORAGE_KEYS.traders, getTaskTraderView.value);
     }
-
     // Build updates with ONLY params scoped to the target view
     // Also clear task param to exit single-task mode
     const updates: Record<string, string | null> = {
@@ -198,26 +193,30 @@
       map: null,
       trader: null,
     };
-
     // Restore target view's state from localStorage (or use first item as fallback)
     if (view === 'maps') {
       const lastMap = localStorage.getItem(VIEW_STORAGE_KEYS.maps);
       const validMap = lastMap && maps.value.some((m) => m.id === lastMap);
-      updates.map = validMap ? lastMap : maps.value[0]?.id ?? 'all';
+      updates.map = validMap ? lastMap : (maps.value[0]?.id ?? 'all');
     } else if (view === 'traders') {
       const lastTrader = localStorage.getItem(VIEW_STORAGE_KEYS.traders);
-      const validTrader = lastTrader && metadataStore.sortedTraders.some((t) => t.id === lastTrader);
-      updates.trader = validTrader ? lastTrader : metadataStore.sortedTraders[0]?.id ?? 'all';
+      const validTrader =
+        lastTrader && metadataStore.sortedTraders.some((t) => t.id === lastTrader);
+      updates.trader = validTrader ? lastTrader : (metadataStore.sortedTraders[0]?.id ?? 'all');
     }
-
     setFilters(updates);
   };
-
   // Ensure map/trader views always have a selection (default to first item if 'all')
   // This handles the case where a user lands directly on the page with view=maps or view=traders
   // but no specific map/trader selection in the URL
   watch(
-    [getTaskPrimaryView, getTaskMapView, getTaskTraderView, maps, () => metadataStore.sortedTraders],
+    [
+      getTaskPrimaryView,
+      getTaskMapView,
+      getTaskTraderView,
+      maps,
+      () => metadataStore.sortedTraders,
+    ],
     ([view, mapView, traderView, mapsData, tradersData]) => {
       if (view === 'maps' && mapView === 'all' && mapsData.length > 0) {
         // Default to first map when maps view is active but no map selected
@@ -229,7 +228,6 @@
     },
     { immediate: true }
   );
-
   // Maps with static/fixed raid times (don't follow normal day/night cycle)
   const STATIC_TIME_MAPS: Record<string, string> = {
     '55f2d3fd4bdc2d5f408b4567': '15:28 / 03:28', // Factory
@@ -271,13 +269,11 @@
     if (!selectedMapData.value) return [];
     const mapId = selectedMapData.value.id;
     const marks: MapObjectiveMark[] = [];
-
     // In single-task mode, only show objectives for the selected task
     // Otherwise, show objectives for all visible tasks
     const tasksToShow = singleTaskId.value
       ? tasks.value.filter((t) => t.id === singleTaskId.value)
       : visibleTasks.value;
-
     tasksToShow.forEach((task) => {
       if (!task.objectives) return;
       const objectiveMaps = metadataStore.objectiveMaps?.[task.id] ?? [];
@@ -410,21 +406,17 @@
   const isLoading = computed(
     () => !metadataStore.hasInitialized || tasksLoading.value || reloadingTasks.value
   );
-
   // When entering single-task mode, scroll to top and auto-set map view if task has map objectives
   // IMPORTANT: Use router.replace (not setFilters) to avoid creating duplicate history entries.
   // The user navigated to /tasks?task=xxx - any auto-adjustments should replace, not push.
   watch(singleTaskId, (taskId, oldTaskId) => {
     if (!taskId) return;
-
     // Scroll to top when entering single-task mode
     if (!oldTaskId) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-
     // Find the task and determine best map to show
     const task = tasks.value.find((t) => t.id === taskId);
-    
     // Build the replacement query - start with current query params
     const newQuery: Record<string, string> = {};
     for (const [key, value] of Object.entries(router.currentRoute.value.query)) {
@@ -432,31 +424,26 @@
         newQuery[key] = value;
       }
     }
-    
     // Always set status to 'all' so task is visible regardless of completion state
     newQuery.status = 'all';
-    
     if (task && Array.isArray(task.objectives)) {
       const mapIncompleteStatus = new Map<string, boolean>();
       const orderedMapIds: string[] = [];
-
       for (const obj of task.objectives) {
         if (!Array.isArray(obj.maps)) continue;
         const isComplete = tarkovStore.isTaskObjectiveComplete(obj.id);
-
         // Cast to access location properties
         const objectiveWithLocations = obj as typeof obj & {
           zones?: Array<{ map?: { id: string }; outline?: unknown[]; position?: unknown }>;
           possibleLocations?: Array<{ map?: { id: string }; positions?: unknown[] }>;
         };
-
         // Only consider objectives that have actual displayable location data
-        const hasLocationData = 
-          (Array.isArray(objectiveWithLocations.zones) && objectiveWithLocations.zones.length > 0) ||
-          (Array.isArray(objectiveWithLocations.possibleLocations) && objectiveWithLocations.possibleLocations.length > 0);
-
+        const hasLocationData =
+          (Array.isArray(objectiveWithLocations.zones) &&
+            objectiveWithLocations.zones.length > 0) ||
+          (Array.isArray(objectiveWithLocations.possibleLocations) &&
+            objectiveWithLocations.possibleLocations.length > 0);
         if (!hasLocationData) continue;
-
         for (const objMap of obj.maps) {
           if (!objMap?.id) continue;
           if (!orderedMapIds.includes(objMap.id)) {
@@ -469,10 +456,8 @@
           }
         }
       }
-
       const firstIncompleteMap = orderedMapIds.find((id) => mapIncompleteStatus.get(id) === true);
       const targetMap = firstIncompleteMap ?? orderedMapIds[0];
-
       if (targetMap) {
         // Task has map objectives - switch to maps view with that map
         newQuery.view = 'maps';
@@ -491,14 +476,12 @@
       delete newQuery.map;
       delete newQuery.trader;
     }
-    
     // Replace the current URL in place (no new history entry)
     router.replace({ query: newQuery });
   });
-
   // Clear single task filter
   const clearSingleTaskFilter = () => {
-    setFilter('task', '');
+    setFilter('task', null);
   };
   // Filter tasks by search query OR single-task mode
   const filteredTasks = computed(() => {

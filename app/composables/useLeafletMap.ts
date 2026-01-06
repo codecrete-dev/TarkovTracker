@@ -186,8 +186,11 @@ export function useLeafletMap(options: UseLeafletMapOptions): UseLeafletMapRetur
   };
   const onMouseUp = () => {
     if (!mapInstance.value) return;
-    // Re-enable dragging after any mouse button release
-    mapInstance.value.dragging.enable();
+    // Re-enable dragging after mouse release, but only if we weren't in idle mode
+    // (where dragging is disabled to allow smooth scroll-zoom)
+    if (!isIdle.value) {
+      mapInstance.value.dragging.enable();
+    }
   };
   // Idle detection timer
   let idleTimer: ReturnType<typeof setTimeout> | null = null;

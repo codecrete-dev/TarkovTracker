@@ -3,11 +3,11 @@
     <!-- Single Task Mode Indicator -->
     <div
       v-if="singleTaskId"
-      class="flex items-center justify-between rounded-lg bg-accent-100 px-4 py-2.5 dark:bg-accent-500/20"
+      class="bg-accent-100 dark:bg-accent-500/20 flex items-center justify-between rounded-lg px-4 py-2.5"
     >
       <div class="flex items-center gap-2">
-        <UIcon name="i-mdi-filter" class="h-5 w-5 text-accent-600 dark:text-accent-400" />
-        <span class="text-sm font-medium text-accent-800 dark:text-accent-200">
+        <UIcon name="i-mdi-filter" class="text-accent-600 dark:text-accent-400 h-5 w-5" />
+        <span class="text-accent-800 dark:text-accent-200 text-sm font-medium">
           {{ t('page.tasks.filters.singleTaskMode', 'Viewing a single task') }}
         </span>
       </div>
@@ -21,7 +21,9 @@
       />
     </div>
     <!-- Top Bar: Search (left) | Primary View Tabs (center) | Settings (right) -->
-    <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-lg bg-surface-elevated px-4 py-2.5">
+    <div
+      class="bg-surface-elevated grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-lg px-4 py-2.5"
+    >
       <!-- Search - larger width -->
       <div class="w-56 shrink-0 justify-self-start sm:w-64 lg:w-72">
         <UInput
@@ -76,13 +78,13 @@
       </div>
     </div>
     <!-- Secondary filters: Status Filters + User View (centered) -->
-    <div class="flex items-center justify-center gap-3 rounded-lg bg-surface-elevated px-4 py-2.5">
+    <div class="bg-surface-elevated flex items-center justify-center gap-3 rounded-lg px-4 py-2.5">
       <!-- Status filters (ALL / AVAILABLE / LOCKED / COMPLETED) -->
       <div class="flex items-center gap-1">
         <FilterPill
           :active="secondaryView === 'all'"
           :count="statusCounts.all"
-          count-color="badge-soft-filter-all"
+          count-color="badge-soft-accent"
           @click="setSecondaryView('all')"
         >
           <template #icon>
@@ -95,12 +97,12 @@
           :label="t('page.tasks.secondaryviews.available').toUpperCase()"
           label-class="text-xs sm:text-sm"
           :count="statusCounts.available"
-          count-color="badge-soft-accent"
+          count-color="plain"
           @click="setSecondaryView('available')"
         >
-            <template #icon>
-              <UIcon name="i-mdi-clipboard-text" class="hidden h-4 w-4 sm:mr-1 sm:block" />
-            </template>
+          <template #icon>
+            <UIcon name="i-mdi-clipboard-text" class="hidden h-4 w-4 sm:mr-1 sm:block" />
+          </template>
         </FilterPill>
         <FilterPill
           :active="secondaryView === 'locked'"
@@ -110,9 +112,9 @@
           count-color="badge-soft-surface"
           @click="setSecondaryView('locked')"
         >
-            <template #icon>
-              <UIcon name="i-mdi-lock" class="hidden h-4 w-4 sm:mr-1 sm:block" />
-            </template>
+          <template #icon>
+            <UIcon name="i-mdi-lock" class="hidden h-4 w-4 sm:mr-1 sm:block" />
+          </template>
         </FilterPill>
         <FilterPill
           :active="secondaryView === 'completed'"
@@ -122,9 +124,9 @@
           count-color="badge-soft-success"
           @click="setSecondaryView('completed')"
         >
-            <template #icon>
-              <UIcon name="i-mdi-check-circle" class="hidden h-4 w-4 sm:mr-1 sm:block" />
-            </template>
+          <template #icon>
+            <UIcon name="i-mdi-check-circle" class="hidden h-4 w-4 sm:mr-1 sm:block" />
+          </template>
         </FilterPill>
         <FilterPill
           :active="secondaryView === 'failed'"
@@ -134,13 +136,13 @@
           count-color="badge-soft-error"
           @click="setSecondaryView('failed')"
         >
-            <template #icon>
-              <UIcon name="i-mdi-close-circle" class="hidden h-4 w-4 sm:mr-1 sm:block" />
-            </template>
+          <template #icon>
+            <UIcon name="i-mdi-close-circle" class="hidden h-4 w-4 sm:mr-1 sm:block" />
+          </template>
         </FilterPill>
       </div>
       <!-- Divider -->
-      <div class="h-6 w-px shrink-0 bg-divider" />
+      <div class="bg-divider h-6 w-px shrink-0" />
       <!-- Player/Team view buttons -->
       <div class="flex items-center gap-1">
         <FilterPill
@@ -151,7 +153,13 @@
         >
           {{ currentUserDisplayName.toUpperCase() }}
           <template #badge>
-              <GameBadge size="xs" color="neutral" variant="solid" badge-class="badge-soft-success ml-1" label="YOU" />
+            <GameBadge
+              size="xs"
+              color="neutral"
+              variant="solid"
+              badge-class="badge-soft-success ml-1"
+              label="YOU"
+            />
           </template>
         </FilterPill>
         <FilterPill
@@ -176,7 +184,7 @@
     <!-- Map selector (shown when MAPS is selected) - Horizontal scrollable -->
     <div v-if="primaryView === 'maps' && maps.length > 0" class="w-full overflow-x-auto">
       <div
-        class="flex w-max min-w-full justify-center gap-1 rounded-lg bg-surface-elevated px-4 py-2.5"
+        class="bg-surface-elevated flex w-max min-w-full justify-center gap-1 rounded-lg px-4 py-2.5"
       >
         <FilterPill
           v-for="mapOption in mapOptions"
@@ -192,7 +200,7 @@
     <!-- Trader selector (shown when TRADERS is selected) - Horizontal scrollable -->
     <div v-if="primaryView === 'traders' && traders.length > 0" class="w-full overflow-x-auto">
       <div
-        class="flex w-max min-w-full justify-center gap-1 rounded-lg bg-surface-elevated px-4 py-2.5"
+        class="bg-surface-elevated flex w-max min-w-full justify-center gap-1 rounded-lg px-4 py-2.5"
       >
         <FilterPill
           v-for="trader in traders"
@@ -204,14 +212,18 @@
           @click="onTraderSelect({ label: trader.name, value: trader.id })"
         >
           <template #icon>
-            <div class="h-6 w-6 overflow-hidden rounded-full bg-surface-base">
+            <div class="bg-surface-base h-6 w-6 overflow-hidden rounded-full">
               <img
                 v-if="trader.imageLink"
                 :src="trader.imageLink"
                 :alt="trader.name"
                 class="h-full w-full object-cover"
               />
-              <UIcon v-else name="i-mdi-account-circle" class="h-full w-full text-content-tertiary" />
+              <UIcon
+                v-else
+                name="i-mdi-account-circle"
+                class="text-content-tertiary h-full w-full"
+              />
             </div>
           </template>
         </FilterPill>
@@ -241,7 +253,7 @@
   }>();
   const emit = defineEmits<{
     'update:searchQuery': [value: string];
-    'clearSingleTask': [];
+    clearSingleTask: [];
     // Filter change events
     'update:primaryView': [value: string];
     'update:secondaryView': [value: string];

@@ -3,7 +3,7 @@
     <!-- Unavailable map placeholder -->
     <div
       v-if="isMapUnavailable"
-      class="flex h-[400px] w-full flex-col items-center justify-center rounded bg-gray-100 dark:bg-surface-900 sm:h-[500px] lg:h-[600px]"
+      class="dark:bg-surface-900 flex h-[400px] w-full flex-col items-center justify-center rounded bg-gray-100 sm:h-[500px] lg:h-[600px]"
     >
       <UIcon name="i-mdi-map-marker-off" class="mb-4 h-16 w-16 text-gray-400 dark:text-gray-500" />
       <h3 class="mb-2 text-lg font-semibold text-gray-900 dark:text-gray-300">Map Not Available</h3>
@@ -17,7 +17,7 @@
       <!-- Floor selector (positioned below Leaflet zoom controls) -->
       <div
         v-if="hasMultipleFloors"
-        class="absolute top-20 left-2 z-[1000] flex flex-col gap-1 rounded bg-white/90 p-1.5 dark:bg-surface-800/90"
+        class="dark:bg-surface-800/90 absolute top-20 left-2 z-[1000] flex flex-col gap-1 rounded bg-white/90 p-1.5"
       >
         <span class="px-1 text-[10px] font-medium tracking-wide text-gray-400 uppercase">
           Floors
@@ -40,12 +40,14 @@
       <!-- Loading indicator -->
       <div
         v-if="isLoading"
-        class="absolute inset-0 z-[1001] flex items-center justify-center bg-gray-100/50 dark:bg-surface-900/50"
+        class="dark:bg-surface-900/50 absolute inset-0 z-[1001] flex items-center justify-center bg-gray-100/50"
       >
         <UIcon name="i-mdi-loading" class="text-accent-500 h-8 w-8 animate-spin" />
       </div>
       <!-- Map controls (top right) -->
-      <div class="absolute top-2 right-2 z-[1000] flex gap-2 rounded bg-white/90 p-1.5 dark:bg-surface-800/90">
+      <div
+        class="dark:bg-surface-800/90 absolute top-2 right-2 z-[1000] flex gap-2 rounded bg-white/90 p-1.5"
+      >
         <!-- Reset view button -->
         <UButton
           color="primary"
@@ -82,7 +84,7 @@
       <!-- Map container -->
       <div
         ref="mapContainer"
-        class="h-[400px] w-full rounded bg-gray-100 dark:bg-surface-900 sm:h-[500px] lg:h-[600px]"
+        class="dark:bg-surface-900 h-[400px] w-full rounded bg-gray-100 sm:h-[500px] lg:h-[600px]"
       />
       <!-- Legends Footer -->
       <div class="mt-2 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
@@ -127,11 +129,19 @@
           class="ml-auto flex flex-wrap-reverse items-center justify-end gap-x-4 gap-y-1 text-[10px] font-medium text-gray-500 dark:text-gray-400"
         >
           <div v-if="hasMultipleFloors" class="flex items-center gap-1">
-            <kbd class="rounded bg-gray-200 px-1 py-0.5 font-mono text-gray-700 dark:bg-surface-700 dark:text-gray-300">Ctrl</kbd>
+            <kbd
+              class="dark:bg-surface-700 rounded bg-gray-200 px-1 py-0.5 font-mono text-gray-700 dark:text-gray-300"
+            >
+              Ctrl
+            </kbd>
             <span>+ Scroll to Cycle Floors</span>
           </div>
           <div class="flex items-center gap-1">
-            <kbd class="rounded bg-gray-200 px-1 py-0.5 font-mono text-gray-700 dark:bg-surface-700 dark:text-gray-300">Shift</kbd>
+            <kbd
+              class="dark:bg-surface-700 rounded bg-gray-200 px-1 py-0.5 font-mono text-gray-700 dark:text-gray-300"
+            >
+              Shift
+            </kbd>
             <span>+ Scroll to Zoom</span>
           </div>
         </div>
@@ -297,8 +307,8 @@
     props.marks.forEach((mark) => {
       const objective = metadataStore.objectives.find((obj) => obj.id === mark.id);
       const task = objective ? metadataStore.tasks.find((t) => t.id === objective.taskId) : null;
-        const styles = getPopupStyles();
-        const popupContent =
+      const styles = getPopupStyles();
+      const popupContent =
         task || objective
           ? `
           <div style="${styles.container}">
@@ -319,8 +329,12 @@
         const latLng = gameToLatLng(pos.x, pos.z);
         const isSelf = mark.users?.includes('self') ?? false;
         const markerColor = isSelf
-          ? getComputedStyle(document.documentElement).getPropertyValue('--color-map-marker-self').trim() || '#ef4444'
-          : getComputedStyle(document.documentElement).getPropertyValue('--color-map-marker-team').trim() || '#f97316';
+          ? getComputedStyle(document.documentElement)
+              .getPropertyValue('--color-map-marker-self')
+              .trim() || '#ef4444'
+          : getComputedStyle(document.documentElement)
+              .getPropertyValue('--color-map-marker-team')
+              .trim() || '#f97316';
         const marker = L.circleMarker([latLng.lat, latLng.lng], {
           radius: 8,
           fillColor: markerColor,
@@ -338,8 +352,12 @@
         if (latLngs.length < 3) return;
         const isSelf = mark.users?.includes('self') ?? false;
         const zoneColor = isSelf
-          ? getComputedStyle(document.documentElement).getPropertyValue('--color-map-marker-self').trim() || '#ef4444'
-          : getComputedStyle(document.documentElement).getPropertyValue('--color-map-marker-team').trim() || '#f97316';
+          ? getComputedStyle(document.documentElement)
+              .getPropertyValue('--color-map-marker-self')
+              .trim() || '#ef4444'
+          : getComputedStyle(document.documentElement)
+              .getPropertyValue('--color-map-marker-team')
+              .trim() || '#f97316';
         const polygon = L.polygon(
           latLngs.map((ll) => [ll.lat, ll.lng]),
           {
@@ -367,7 +385,7 @@
             className: 'leaflet-tooltip-reset',
             opacity: 1,
             sticky: false,
-            direction: 'top'
+            direction: 'top',
           });
         }
         polygon.on('mouseover', () => polygon.setStyle({ fillOpacity: 0.35, weight: 3 }));
@@ -412,20 +430,28 @@
       // Color based on faction
       let markerColor: string;
       switch (extract.faction) {
-      case 'pmc':
-        markerColor = getComputedStyle(document.documentElement).getPropertyValue('--color-map-extract-pmc').trim() || '#22c55e';
-        break;
-      case 'scav':
-        markerColor = getComputedStyle(document.documentElement).getPropertyValue('--color-map-extract-scav').trim() || '#f59e0b';
-        break;
-      case 'shared':
-        markerColor = isCoop 
-          ? getComputedStyle(document.documentElement).getPropertyValue('--color-map-extract-coop').trim() || '#0284c7' 
-          : '#38bdf8'; // Keep simpler blue for generic shared
-        break;
-      default:
-        markerColor = '#3b82f6';
-        break;
+        case 'pmc':
+          markerColor =
+            getComputedStyle(document.documentElement)
+              .getPropertyValue('--color-map-extract-pmc')
+              .trim() || '#22c55e';
+          break;
+        case 'scav':
+          markerColor =
+            getComputedStyle(document.documentElement)
+              .getPropertyValue('--color-map-extract-scav')
+              .trim() || '#f59e0b';
+          break;
+        case 'shared':
+          markerColor = isCoop
+            ? getComputedStyle(document.documentElement)
+                .getPropertyValue('--color-map-extract-coop')
+                .trim() || '#0284c7'
+            : '#38bdf8'; // Keep simpler blue for generic shared
+          break;
+        default:
+          markerColor = '#3b82f6';
+          break;
       }
       const iconHtml = `<span style="
       display: inline-block;

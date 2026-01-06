@@ -1,7 +1,7 @@
 <template>
   <div v-if="hasContent" class="peer/indicators absolute top-0 left-0 z-40">
     <div
-      class="flex items-center gap-1 px-2 py-1 shadow-lg bg-surface-elevated bg-clip-padding rounded-tl rounded-br-lg"
+      class="bg-surface-elevated flex items-center gap-1 rounded-tl rounded-br-lg bg-clip-padding px-2 py-1 shadow-lg"
       :class="[sizeClasses]"
     >
       <template v-if="showCount">

@@ -452,7 +452,11 @@ export function useTaskFiltering() {
             mergedMaps
           );
           // Apply status and user filters
-          visibleTaskList = filterTasksByStatus(visibleTaskList, activeSecondaryView, activeUserView);
+          visibleTaskList = filterTasksByStatus(
+            visibleTaskList,
+            activeSecondaryView,
+            activeUserView
+          );
           // Sort by impact (number of incomplete successor tasks) - highest impact first
           visibleTaskList = sortTasksByImpact(visibleTaskList, activeUserView);
           visibleTasks.value = visibleTaskList;

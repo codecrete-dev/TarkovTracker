@@ -69,7 +69,9 @@
     return tasks.value.find((task) => task.id == relatedObjective.value?.taskId);
   });
   const markerColor = computed(() => {
-    return props.mark.users.includes('self') ? 'text-[var(--color-map-marker-self)]' : 'text-[var(--color-map-marker-team)]';
+    return props.mark.users.includes('self')
+      ? 'text-[var(--color-map-marker-self)]'
+      : 'text-[var(--color-map-marker-team)]';
   });
   const relativeLocation = computed(() => {
     // Add safety check for bounds

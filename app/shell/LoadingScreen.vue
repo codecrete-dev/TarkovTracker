@@ -21,7 +21,7 @@
       <div class="flex flex-col items-center gap-2 text-center">
         <h2
           id="loading-screen-title"
-          class="focus-visible:ring-accent-500 rounded-sm text-xl font-semibold text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 dark:text-gray-100"
+          class="rounded-sm text-xl font-semibold text-gray-900 focus:outline-none dark:text-gray-100"
         >
           {{ hasErrors ? $t('loading.title_error') : $t('loading.title') }}
         </h2>
@@ -61,7 +61,10 @@
         </div>
       </div>
       <!-- User Reassurance or Error Actions -->
-      <div v-if="!hasErrors" class="mt-4 max-w-md text-center text-xs text-gray-600 dark:text-gray-400">
+      <div
+        v-if="!hasErrors"
+        class="mt-4 max-w-md text-center text-xs text-gray-600 dark:text-gray-400"
+      >
         {{ $t('loading.first_load_note') }}
       </div>
       <div v-else class="mt-4 flex flex-col items-center gap-3">
@@ -69,7 +72,9 @@
           {{ $t('loading.partial_data_note') }}
         </p>
         <div class="flex gap-3">
-          <UButton color="primary" variant="solid" @click="handleRetry">{{ $t('loading.retry') }}</UButton>
+          <UButton color="primary" variant="solid" @click="handleRetry">
+            {{ $t('loading.retry') }}
+          </UButton>
           <UButton color="neutral" variant="outline" @click="handleContinue">
             {{ $t('loading.continue') }}
           </UButton>

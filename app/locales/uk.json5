@@ -98,16 +98,16 @@
           details: 'Кількість виконаних вами завдань.',
         },
         taskItems: {
-          stat: 'Предмети Квесту',
+          stat: 'Предмети завдань',
           details: 'Включає предмети знайдені та не знайдені в рейді.',
         },
         allObjectives: {
-          stat: 'Завдання Квесту',
-          details: 'Загальна кількість унікальних завдань у квестах.',
+          stat: 'Цілі завдань',
+          details: 'Загальна кількість унікальних цілей у завданнях.',
         },
         kappaTasks: {
           stat: 'Завдання Каппа',
-          details: 'Завдання необхідні для квесту контейнера Каппа.',
+          details: 'Завдання необхідні для завдання контейнера Каппа.',
         },
       },
     },
@@ -184,7 +184,7 @@
         undouncomplete: 'Скасовано незавершення {name}',
         undofailed: 'Undid failing {name}',
         undoresetfailed: 'Restored failed status for {name}',
-        markfailedconfirm: "Mark this task as failed? This is only for data issues, isn't recommended, and may block questlines.",
+        markfailedconfirm: 'Позначити це завдання як неуспішне? Це слід робити лише у випадку проблем з даними, не рекомендовано та може заблокувати ланцюги завдань.',
         failedbecause: 'Failed because',
         failedbecauseunknown: 'Failed manually or data missing',
         nonkappa: 'Не потрібні для Каппа',
@@ -255,6 +255,7 @@
         all: 'Усі',
         tasks: 'Завдання',
         hideout: 'Притулок',
+        collected: 'Зібрано',
       },
       collect: 'Зібрати',
       uncollect: 'Скасувати збір',
@@ -266,6 +267,7 @@
       mark_as_incomplete: 'Відзначити як не завершене',
       mark_as_complete_100: 'Відзначити як завершене на 100%',
       fir_required: 'Потрібно знайти в рейді',
+      craftable: 'Можна виготовити',
       lvl_required: 'Рів {level}',
       locked_before: '{count} до',
       options: {
@@ -580,6 +582,6 @@
     loading: 'Завантаження...',
     error: 'Помилка',
   },
-  'task.kappa_req': 'Потрібно для квесту Каппа',
+  'task.kappa_req': 'Потрібно для завдання Каппа',
   'task.level_req': 'Потрібний рівень: {level}',
 }

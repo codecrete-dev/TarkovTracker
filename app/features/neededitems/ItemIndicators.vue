@@ -1,9 +1,6 @@
 <template>
   <span v-if="foundInRaid" v-tooltip="foundInRaidTitle" class="inline-flex">
-    <UIcon
-      name="i-mdi-checkbox-marked-circle-outline"
-      :class="firIconClass"
-    />
+    <UIcon name="i-mdi-checkbox-marked-circle-outline" :class="firIconClass" />
   </span>
   <button
     v-if="isCraftable"
@@ -16,13 +13,13 @@
     <UIcon name="i-mdi-hammer-wrench" :class="[craftableIconBaseClass, craftableIconClass]" />
   </button>
   <span v-if="kappaRequired" v-tooltip="kappaTitleText" class="inline-flex">
-    <UIcon
-      name="i-mdi-trophy"
-      :class="kappaIconClass"
-    />
+    <UIcon name="i-mdi-trophy" :class="kappaIconClass" />
   </span>
 </template>
 <script setup lang="ts">
+  import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
+  const { t } = useI18n({ useScope: 'global' });
   const props = withDefaults(
     defineProps<{
       craftableIconBaseClass?: string;
@@ -39,24 +36,25 @@
     {
       craftableIconBaseClass: 'ml-1 h-5 w-5',
       craftableIconClass: '',
-      craftableTitle: 'Craftable',
+      craftableTitle: '',
       firIconClass: 'ml-1 h-5 w-5',
-      foundInRaidTitle: 'Found in Raid required',
+      foundInRaidTitle: '',
       kappaIconClass: 'ml-1 h-5 w-5 text-entity-kappa',
       kappaRequired: false,
-      kappaTitle: 'Required for Kappa quest',
+      kappaTitle: '',
     }
   );
   const emit = defineEmits<{
     craft: [];
   }>();
-  // Parents may pass an empty/whitespace string; trim so tooltip/aria-label are never blank.
+  // Tooltip text with fallbacks to translations
   const craftableTitleText = computed(() => {
-    const title = props.craftableTitle?.trim();
-    return title && title.length > 0 ? title : 'Craftable';
+    return props.craftableTitle || t('page.neededitems.craftable', 'Craftable');
+  });
+  const foundInRaidTitle = computed(() => {
+    return props.foundInRaidTitle || t('page.neededitems.fir_required', 'Found in Raid required');
   });
   const kappaTitleText = computed(() => {
-    const title = props.kappaTitle?.trim();
-    return title && title.length > 0 ? title : 'Required for Kappa quest';
+    return props.kappaTitle || t('task.kappa_req', 'Required for Kappa task');
   });
 </script>

@@ -8,7 +8,13 @@
             <h3 class="truncate text-xl font-bold sm:text-2xl">
               {{ displayName }}
             </h3>
-            <GameBadge v-if="isOwner" color="primary" variant="solid" size="sm" :label="$t('page.team.card.manageteam.membercard.owner')" />
+            <GameBadge
+              v-if="isOwner"
+              color="primary"
+              variant="solid"
+              size="sm"
+              :label="$t('page.team.card.manageteam.membercard.owner')"
+            />
           </div>
           <div v-if="props.teammember == $supabase.user.id" class="mt-1">
             <span class="text-primary text-sm font-medium">

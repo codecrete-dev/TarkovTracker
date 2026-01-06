@@ -1,6 +1,5 @@
-import { computed, ref, watch, type ComputedRef, type Ref } from 'vue';
+import { computed, ref, watch, onUnmounted, type ComputedRef, type Ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-
 /**
  * Configuration for a single filter parameter.
  */
@@ -32,24 +31,21 @@ export interface FilterParamConfig<T = string> {
     values: string[];
   };
 }
-
 /**
  * Filter configuration map - keys are URL param names.
  */
 export type FilterConfig = Record<string, FilterParamConfig<unknown>>;
-
 /**
  * Infer the value type for a filter config.
  */
-type FilterValue<C extends FilterParamConfig<unknown>> = C extends FilterParamConfig<infer T> ? T : string;
-
+type FilterValue<C extends FilterParamConfig<unknown>> =
+  C extends FilterParamConfig<infer T> ? T : string;
 /**
  * Typed filters object - computed refs for each filter.
  */
 export type Filters<C extends FilterConfig> = {
   [K in keyof C]: ComputedRef<FilterValue<C[K]>>;
 };
-
 /**
  * Return type of usePageFilters composable.
  */
@@ -65,14 +61,13 @@ export interface UsePageFiltersReturn<C extends FilterConfig> {
   /** Debounced refs for inputs that need debouncing (e.g., search) */
   debouncedInputs: { [K in keyof C]?: Ref<FilterValue<C[K]>> };
 }
-
 /**
  * Build a URL path with query params from stored preferences.
  * Used by navigation links to construct URLs that restore user preferences.
- * 
+ *
  * Respects scope rules: params with a `scope` property are only included
  * when the dependsOn param has one of the specified values.
- * 
+ *
  * @param basePath - The base path (e.g., '/tasks')
  * @param config - Filter configuration with storedDefault getters
  * @returns Full path with query string (e.g., '/tasks?view=traders&status=completed')
@@ -80,7 +75,6 @@ export interface UsePageFiltersReturn<C extends FilterConfig> {
 export function buildPreferredUrl<C extends FilterConfig>(basePath: string, config: C): string {
   // First pass: collect all stored values that differ from defaults
   const storedValues: Record<string, unknown> = {};
-  
   for (const [key, paramConfig] of Object.entries(config)) {
     if (paramConfig.storedDefault) {
       const stored = paramConfig.storedDefault();
@@ -96,14 +90,11 @@ export function buildPreferredUrl<C extends FilterConfig>(basePath: string, conf
       }
     }
   }
-  
   // Second pass: build URL with only scoped params
   const params = new URLSearchParams();
-  
   for (const [key, paramConfig] of Object.entries(config)) {
     const value = storedValues[key];
     if (value === undefined) continue;
-    
     // Check scope - skip params that don't match the current view context
     if (paramConfig.scope) {
       const dependsOnValue = storedValues[paramConfig.scope.dependsOn];
@@ -113,7 +104,6 @@ export function buildPreferredUrl<C extends FilterConfig>(basePath: string, conf
         continue; // Skip - not in scope for the current view
       }
     }
-    
     // Serialize the value
     let serialized: string | null;
     if (paramConfig.serialize) {
@@ -123,26 +113,23 @@ export function buildPreferredUrl<C extends FilterConfig>(basePath: string, conf
     } else {
       serialized = String(value);
     }
-    
     if (serialized !== null) {
       params.set(key, serialized);
     }
   }
-  
   const queryString = params.toString();
   return queryString ? `${basePath}?${queryString}` : basePath;
 }
-
 /**
  * Composable for URL-based filter state management.
- * 
+ *
  * URL is the single source of truth. Components read from computed refs
  * that derive from route.query. User actions update the URL via router.push.
- * 
+ *
  * Navigation intelligence is handled by the navigation links, not this composable.
  * Nav links use buildPreferredUrl() to construct URLs with stored preferences
  * when navigating from other pages, or navigate to clean URLs to reset.
- * 
+ *
  * @example
  * ```ts
  * const { filters, setFilter } = usePageFilters({
@@ -151,23 +138,19 @@ export function buildPreferredUrl<C extends FilterConfig>(basePath: string, conf
  *   search: { default: '', debounceMs: 300 },
  *   kappa: { default: false, parse: v => v === '1', serialize: v => v ? '1' : null },
  * });
- * 
+ *
  * // Read: filters.view.value
  * // Write: setFilter('view', 'maps')
  * // Debounced input: v-model="debouncedInputs.search"
  * ```
  */
-export function usePageFilters<C extends FilterConfig>(
-  config: C
-): UsePageFiltersReturn<C> {
+export function usePageFilters<C extends FilterConfig>(config: C): UsePageFiltersReturn<C> {
   const route = useRoute();
   const router = useRouter();
-
   // Debounce timers for params with debounceMs
   const debounceTimers: Record<string, ReturnType<typeof setTimeout>> = {};
   // Local refs for debounced inputs
   const debouncedInputRefs: Record<string, Ref<unknown>> = {};
-
   /**
    * Parse a URL string value to typed value using config.
    * URL is the single source of truth - if param is absent, use static default.
@@ -178,59 +161,45 @@ export function usePageFilters<C extends FilterConfig>(
   ): FilterValue<C[K]> => {
     const paramConfig = config[key];
     const defaultValue = paramConfig.default as FilterValue<C[K]>;
-
     if (urlValue === undefined || urlValue === null || urlValue === '') {
       // URL is empty - use static default (not storedDefault)
       // storedDefault is only used by nav links to build URLs
       return defaultValue;
     }
-
     // Validate if validator provided
     if (paramConfig.validate && !paramConfig.validate(urlValue)) {
       return defaultValue;
     }
-
     // Parse if parser provided
     if (paramConfig.parse) {
       return paramConfig.parse(urlValue) as FilterValue<C[K]>;
     }
-
     // Default: return as-is for strings, handle booleans
     if (typeof defaultValue === 'boolean') {
       return (urlValue === '1' || urlValue === 'true') as FilterValue<C[K]>;
     }
-
     return urlValue as FilterValue<C[K]>;
   };
-
   /**
    * Serialize a typed value to URL string using config.
    */
-  const serializeValue = <K extends keyof C>(
-    key: K,
-    value: FilterValue<C[K]>
-  ): string | null => {
+  const serializeValue = <K extends keyof C>(key: K, value: FilterValue<C[K]>): string | null => {
     const paramConfig = config[key];
     const defaultValue = paramConfig.default;
-
     // Don't include default values in URL (clean URLs)
     if (value === defaultValue) {
       return null;
     }
-
     // Use custom serializer if provided
     if (paramConfig.serialize) {
       return paramConfig.serialize(value);
     }
-
     // Default: handle booleans as '1', others as string
     if (typeof value === 'boolean') {
       return value ? '1' : null;
     }
-
     return String(value);
   };
-
   /**
    * Build computed refs for each filter.
    */
@@ -241,7 +210,6 @@ export function usePageFilters<C extends FilterConfig>(
       return parseValue(key, urlValue);
     }) as Filters<C>[typeof key];
   }
-
   /**
    * Build debounced input refs for filters with debounceMs.
    */
@@ -252,7 +220,6 @@ export function usePageFilters<C extends FilterConfig>(
       const localRef = ref(filters[key as keyof C].value);
       debouncedInputRefs[key] = localRef;
       debouncedInputs[key as keyof C] = localRef as Ref<FilterValue<C[keyof C]>>;
-
       // Watch URL changes and sync to local ref (for back/forward nav)
       watch(
         () => filters[key as keyof C].value,
@@ -260,7 +227,6 @@ export function usePageFilters<C extends FilterConfig>(
           localRef.value = newValue;
         }
       );
-
       // Watch local ref and debounce updates to URL
       watch(localRef, (newValue) => {
         if (debounceTimers[key]) {
@@ -270,37 +236,40 @@ export function usePageFilters<C extends FilterConfig>(
           updateUrl({ [key]: newValue } as Partial<{ [K in keyof C]: FilterValue<C[K]> }>);
         }, paramConfig.debounceMs);
       });
+      // Clear timer on unmount
+      onUnmounted(() => {
+        if (debounceTimers[key]) {
+          clearTimeout(debounceTimers[key]);
+        }
+      });
     }
   }
-
   /**
    * Update URL with new filter values.
    * Pass null to explicitly reset a param to its default (removing it from URL).
    */
   const updateUrl = (updates: Partial<{ [K in keyof C]: FilterValue<C[K]> | null }>) => {
     const newQuery: Record<string, string> = {};
-
     // Build query from current filters + updates
     for (const key of Object.keys(config) as Array<keyof C>) {
       // If update is explicitly null, use default value (will be omitted from URL)
       // If update is provided, use it; otherwise use current filter value
       const updateValue = updates[key];
-      const value = updateValue === null 
-        ? config[key].default as FilterValue<C[typeof key]>
-        : (key in updates ? updateValue : filters[key].value) as FilterValue<C[typeof key]>;
+      const value =
+        updateValue === null
+          ? (config[key].default as FilterValue<C[typeof key]>)
+          : ((key in updates ? updateValue : filters[key].value) as FilterValue<C[typeof key]>);
       const serialized = serializeValue(key, value);
       if (serialized !== null) {
         newQuery[key as string] = serialized;
       }
     }
-
     // Preserve query params not managed by this composable
     for (const [key, value] of Object.entries(route.query)) {
       if (!(key in config) && typeof value === 'string') {
         newQuery[key] = value;
       }
     }
-
     // Only push if query actually changed
     const currentQueryStr = JSON.stringify(
       Object.fromEntries(
@@ -310,16 +279,12 @@ export function usePageFilters<C extends FilterConfig>(
       )
     );
     const newQueryStr = JSON.stringify(
-      Object.fromEntries(
-        Object.entries(newQuery).sort(([a], [b]) => a.localeCompare(b))
-      )
+      Object.fromEntries(Object.entries(newQuery).sort(([a], [b]) => a.localeCompare(b)))
     );
-
     if (currentQueryStr !== newQueryStr) {
       router.push({ query: newQuery });
     }
   };
-
   /**
    * Set a single filter value.
    */
@@ -336,7 +301,6 @@ export function usePageFilters<C extends FilterConfig>(
     }
     updateUrl({ [key]: value } as Partial<{ [K in keyof C]: FilterValue<C[K]> }>);
   };
-
   /**
    * Set multiple filter values at once.
    * Pass null to explicitly reset a param to its default (removing it from URL).
@@ -351,18 +315,19 @@ export function usePageFilters<C extends FilterConfig>(
         }
       }
     }
-    // Handle debounced inputs
+    // Handle debounced inputs and collect remaining updates
+    const remainingUpdates: Partial<{ [K in keyof C]: FilterValue<C[K]> | null }> = {};
     for (const [key, value] of Object.entries(updates)) {
       if (debouncedInputRefs[key]) {
         debouncedInputRefs[key].value = value;
-        delete updates[key as keyof C];
+      } else {
+        remainingUpdates[key as keyof C] = value as FilterValue<C[keyof C]> | null;
       }
     }
-    if (Object.keys(updates).length > 0) {
-      updateUrl(updates);
+    if (Object.keys(remainingUpdates).length > 0) {
+      updateUrl(remainingUpdates);
     }
   };
-
   /**
    * Reset all filters to defaults.
    */
@@ -380,12 +345,11 @@ export function usePageFilters<C extends FilterConfig>(
     }
     router.push({ query: newQuery });
   };
-
   /**
    * Persist URL params to storage on route changes.
    * This ensures "last view is remembered" when user explicitly visits a URL with params
    * (click on filter, shared link, bookmark).
-   * 
+   *
    * IMPORTANT: Only persist explicit URL params. When URL has no params,
    * we should NOT overwrite stored prefs - the restoration logic will handle it.
    */
@@ -399,23 +363,19 @@ export function usePageFilters<C extends FilterConfig>(
           if (urlValue !== undefined && urlValue !== null && urlValue !== '') {
             const parsedValue = parseValue(key as keyof C, urlValue);
             paramConfig.onUpdate(parsedValue);
-            console.log(`[usePageFilters] persisted ${key}=${parsedValue}`);
-          } 
+          }
           // Clear stored value if param is absent from URL (reset to default)
           else {
             paramConfig.onUpdate(paramConfig.default);
-            console.log(`[usePageFilters] cleared ${key} (reset to default)`);
           }
         }
       }
     },
     { immediate: true }
   );
-
   // NOTE: Preference restoration is now handled by nav links pre-computing URLs
   // with stored preferences (via getPreferredNavUrl in DrawerItem.vue).
   // This eliminates the "one-two" flash and avoids history manipulation issues.
-
   return {
     filters,
     setFilter,

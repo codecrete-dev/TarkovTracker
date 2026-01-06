@@ -7,12 +7,7 @@
     <div class="flex items-stretch">
       <!-- Item image - fills top-left corner -->
       <div class="relative h-24 w-24 shrink-0 overflow-hidden rounded-tl-lg">
-        <GameItem
-          :item="groupedItem.item"
-          :is-visible="true"
-          size="fluid"
-          simple-mode
-        />
+        <GameItem :item="groupedItem.item" :is-visible="true" size="fluid" simple-mode />
       </div>
       <!-- Item name + Total - with padding -->
       <div class="flex min-w-0 flex-1 flex-col justify-center p-3">
@@ -69,7 +64,7 @@
         </div>
         <div class="flex gap-3">
           <div v-if="groupedItem.taskFir > 0" class="flex items-baseline gap-1">
-            <span v-tooltip="'Found in Raid required'" class="inline-flex items-center">
+            <span v-tooltip="$t('neededitems.fir_required')" class="inline-flex items-center">
               <UIcon
                 name="i-mdi-checkbox-marked-circle-outline"
                 class="h-3 w-3"
@@ -131,7 +126,7 @@
         </div>
         <div class="flex gap-3">
           <div v-if="groupedItem.hideoutFir > 0" class="flex items-baseline gap-1">
-            <span v-tooltip="'Found in Raid required'" class="inline-flex items-center">
+            <span v-tooltip="$t('neededitems.fir_required')" class="inline-flex items-center">
               <UIcon
                 name="i-mdi-checkbox-marked-circle-outline"
                 class="h-3 w-3"

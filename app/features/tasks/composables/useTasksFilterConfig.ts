@@ -1,6 +1,5 @@
 import type { FilterConfig } from '@/composables/usePageFilters';
 import { usePreferencesStore } from '@/stores/usePreferences';
-
 /**
  * Returns the filter configuration for the Tasks page.
  * This is extracted so it can be used by both the page (for URL-based filtering)
@@ -8,7 +7,6 @@ import { usePreferencesStore } from '@/stores/usePreferences';
  */
 export function useTasksFilterConfig(): FilterConfig {
   const preferencesStore = usePreferencesStore();
-  
   return {
     // Primary view selector - always included in nav URLs
     view: {
@@ -39,7 +37,7 @@ export function useTasksFilterConfig(): FilterConfig {
       scope: { dependsOn: 'view', values: ['traders'] },
     },
     // Single-task mode - persisted to store
-    task: { 
+    task: {
       default: '',
       storedDefault: () => preferencesStore.getTaskId ?? '',
       onUpdate: (v) => preferencesStore.setTaskId(v as string),

@@ -19,7 +19,6 @@ export interface UseCraftableItemReturn {
   craftableTitle: ComputedRef<string>;
   goToCraftStation: () => Promise<void>;
 }
-
 /**
  * Composable for craftable item logic.
  * Provides craft source information, availability status, and navigation.
@@ -95,7 +94,7 @@ export function useCraftableItem(
     const view = isCraftableAvailable.value ? 'available' : 'locked';
     return `/hideout?station=${craftStationTargetId.value}&view=${view}`;
   });
-const craftableTitle = computed(() => {
+  const craftableTitle = computed(() => {
     if (!isCraftable.value) {
       return '';
     }

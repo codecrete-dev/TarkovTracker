@@ -4,8 +4,8 @@ import { watch } from 'vue';
 import { useSupabaseSync } from '@/composables/supabase/useSupabaseSync';
 import { pinia as pluginPinia } from '@/plugins/01.pinia.client';
 import { logger } from '@/utils/logger';
-import { STORAGE_KEYS } from '@/utils/storageKeys';
 import { flattenPreferences, unflattenPreferences } from '@/utils/preferenceMapper';
+import { STORAGE_KEYS } from '@/utils/storageKeys';
 import { useNuxtApp } from '#imports';
 // Define the state structure
 export interface PreferencesState {
@@ -295,7 +295,7 @@ export const usePreferencesStore = defineStore('preferences', {
       this.team.itemsHideNonFIR = hide;
     },
     setItemsTeamHideHideout(hide: boolean) {
-      this.team.itemsHideout = hide;
+      this.team.itemsHideHideout = hide;
     },
     setMapTeamHideAll(hide: boolean) {
       this.team.mapHideAll = hide;

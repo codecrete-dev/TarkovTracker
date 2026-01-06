@@ -1,16 +1,15 @@
 <template>
   <GenericCard
     icon="mdi-brain"
-    icon-color="cyan-400"
     highlight-color="blue"
     :fill-height="false"
     :title="$t('settings.skills.title', 'Skills Management')"
-    title-classes="text-lg font-semibold"
+    title-classes="text-lg font-bold sm:text-xl"
   >
     <template #content>
       <div class="space-y-4 px-4 py-4">
         <!-- Explanation -->
-        <UAlert icon="i-mdi-information" color="info" variant="soft" class="text-sm">
+        <UAlert icon="i-mdi-information" color="primary" variant="soft" class="text-sm">
           <template #description>
             {{
               $t(
@@ -28,7 +27,7 @@
           <div
             v-for="skill in visibleSkills"
             :key="skill.name"
-            class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-surface-700 dark:bg-surface-800/30"
+            class="dark:border-surface-700 dark:bg-surface-800/30 rounded-lg border border-gray-200 bg-gray-50 p-3"
           >
             <!-- Skill Header -->
             <div class="mb-2 flex items-center gap-3">
@@ -44,35 +43,45 @@
                 <!-- Fallback placeholder if no image -->
                 <div
                   v-else
-                  class="flex h-10 w-10 items-center justify-center rounded bg-gray-200 text-xs text-gray-400 dark:bg-surface-700"
+                  class="dark:bg-surface-700 flex h-10 w-10 items-center justify-center rounded bg-gray-200 text-xs text-gray-400"
                 >
                   ?
                 </div>
               </div>
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-1.5">
-                  <span class="truncate text-base font-semibold text-gray-900 dark:text-surface-100">
+                  <span
+                    class="dark:text-surface-100 truncate text-base font-semibold text-gray-900"
+                  >
                     {{ formatSkillName(skill.name) }}
                   </span>
                   <!-- Required Badge -->
-                    <span
-                      v-if="skill.requiredByTasks.length > 0"
-                      v-tooltip="$t('settings.skills.required_for', { tasks: skill.requiredByTasks.join(', ') })"
-                      class="shrink-0 rounded bg-orange-500/20 px-1.5 py-0.5 text-xs text-orange-400"
-                    >
-                      Req
-                    </span>
+                  <span
+                    v-if="skill.requiredByTasks.length > 0"
+                    v-tooltip="
+                      $t('settings.skills.required_for', {
+                        tasks: skill.requiredByTasks.join(', '),
+                      })
+                    "
+                    class="shrink-0 rounded bg-orange-500/20 px-1.5 py-0.5 text-xs text-orange-400"
+                  >
+                    Req
+                  </span>
                   <!-- Required Levels Badge -->
-                    <span
-                      v-if="skill.requiredLevels.length > 0"
-                      v-tooltip="$t('settings.skills.required_levels', { levels: skill.requiredLevels.join(', ') })"
-                      class="shrink-0 rounded bg-amber-500/20 px-1.5 py-0.5 text-xs text-amber-400"
-                    >
-                      Lv {{ formatRequiredLevels(skill.requiredLevels) }}
-                    </span>
+                  <span
+                    v-if="skill.requiredLevels.length > 0"
+                    v-tooltip="
+                      $t('settings.skills.required_levels', {
+                        levels: skill.requiredLevels.join(', '),
+                      })
+                    "
+                    class="shrink-0 rounded bg-amber-500/20 px-1.5 py-0.5 text-xs text-amber-400"
+                  >
+                    Lv {{ formatRequiredLevels(skill.requiredLevels) }}
+                  </span>
                 </div>
                 <!-- Skill Info -->
-                <div class="truncate text-xs text-gray-500 dark:text-surface-500">
+                <div class="dark:text-surface-500 truncate text-xs text-gray-500">
                   <span v-if="skill.requiredByTasks.length > 0">
                     Req: {{ skill.requiredByTasks.length }}
                   </span>
@@ -88,21 +97,23 @@
                 </div>
               </div>
               <!-- Total Level -->
-              <span class="shrink-0 text-base font-bold text-primary-600 dark:text-primary-400">
+              <span class="text-primary-600 dark:text-primary-400 shrink-0 text-base font-bold">
                 {{ getSkillLevel(skill.name) }}
               </span>
             </div>
             <!-- Breakdown -->
             <div class="mb-2 flex gap-3 text-xs">
-              <div class="flex-1 text-gray-600 dark:text-surface-300">
+              <div class="dark:text-surface-300 flex-1 text-gray-600">
                 Quest:
-                <span class="font-medium text-gray-900 dark:text-surface-100">
+                <span class="dark:text-surface-100 font-medium text-gray-900">
                   {{ getQuestSkillLevel(skill.name) }}
                 </span>
               </div>
-              <div class="flex-1 text-gray-600 dark:text-surface-300">
+              <div class="dark:text-surface-300 flex-1 text-gray-600">
                 Offset:
-                <span class="font-medium text-gray-900 dark:text-surface-100">{{ getSkillOffset(skill.name) }}</span>
+                <span class="dark:text-surface-100 font-medium text-gray-900">
+                  {{ getSkillOffset(skill.name) }}
+                </span>
               </div>
             </div>
             <!-- Skill Level Input -->
@@ -140,7 +151,10 @@
           />
         </div>
         <!-- No Skills State -->
-        <div v-if="allGameSkills.length === 0" class="py-6 text-center text-sm text-gray-500 dark:text-surface-400">
+        <div
+          v-if="allGameSkills.length === 0"
+          class="dark:text-surface-400 py-6 text-center text-sm text-gray-500"
+        >
           {{ $t('settings.skills.no_skills', 'No skills found in game data.') }}
         </div>
       </div>

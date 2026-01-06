@@ -109,7 +109,11 @@
         <!-- Not Required label (Non-Kappa) -->
         <div v-if="preferencesStore.getShowNotRequiredLabels && nonKappa" class="mb-1 flex">
           <div class="mr-1">
-            <GameBadge variant="outline" color="error" :label="t('page.tasks.questcard.nonkappa')" />
+            <GameBadge
+              variant="outline"
+              color="error"
+              :label="t('page.tasks.questcard.nonkappa')"
+            />
           </div>
         </div>
         <InfoRow
@@ -122,7 +126,7 @@
           </i18n-t>
         </InfoRow>
         <!-- Task ID -->
-        <div v-if="preferencesStore.getShowTaskIds" class="mt-2 text-xs text-content-secondary">
+        <div v-if="preferencesStore.getShowTaskIds" class="text-content-secondary mt-2 text-xs">
           ID: {{ task.id }}
         </div>
       </div>

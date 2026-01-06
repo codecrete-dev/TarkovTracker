@@ -1,6 +1,8 @@
 <template>
   <div class="flex items-center gap-1">
-    <div class="flex items-center rounded-md border border-gray-300 bg-white dark:border-white/10 dark:bg-white/5">
+    <div
+      class="flex items-center rounded-md border border-gray-300 bg-white dark:border-white/10 dark:bg-white/5"
+    >
       <span
         v-tooltip="t('page.tasks.questcard.decrease', 'Decrease')"
         class="inline-flex"
@@ -11,7 +13,7 @@
           type="button"
           :disabled="disabled || currentCount <= 0"
           :aria-label="t('page.tasks.questcard.decrease', 'Decrease')"
-          class="focus-visible:ring-accent-500 focus-visible:ring-offset-surface-900 flex h-7 w-7 items-center justify-center rounded-l-md text-gray-500 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 active:bg-gray-200 disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-50 dark:text-gray-300 dark:hover:bg-white/10 dark:active:bg-white/15"
+          class="hover-effect focus-ring flex h-7 w-7 items-center justify-center rounded-l-md text-gray-500 transition-colors disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300"
           @click="$emit('decrease')"
         >
           <UIcon name="i-mdi-minus" aria-hidden="true" class="h-4 w-4" />
@@ -20,8 +22,8 @@
       <!-- Editable count display -->
       <div
         v-if="!isEditing"
-        class="flex h-7 min-w-14 items-center justify-center px-2 text-[11px] font-semibold tabular-nums text-gray-900 dark:text-gray-100"
-        :class="disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-100 dark:hover:bg-white/10'"
+        class="flex h-7 min-w-14 items-center justify-center px-2 text-[11px] font-semibold text-gray-900 tabular-nums dark:text-gray-100"
+        :class="disabled ? 'cursor-not-allowed opacity-50' : 'hover-effect cursor-pointer'"
         :title="t('page.tasks.questcard.clickToEdit', 'Click to edit')"
         @click.stop="startEditing"
       >
@@ -40,7 +42,9 @@
           @keydown.enter="commitEdit"
           @keydown.escape="cancelEdit"
         />
-        <span class="text-[11px] font-semibold text-gray-900 dark:text-gray-100">/{{ neededCount }}</span>
+        <span class="text-[11px] font-semibold text-gray-900 dark:text-gray-100">
+          /{{ neededCount }}
+        </span>
       </div>
       <span
         v-tooltip="t('page.tasks.questcard.increase', 'Increase')"
@@ -52,29 +56,29 @@
           type="button"
           :disabled="disabled || currentCount >= neededCount"
           :aria-label="t('page.tasks.questcard.increase', 'Increase')"
-          class="focus-visible:ring-accent-500 focus-visible:ring-offset-surface-900 flex h-7 w-7 items-center justify-center rounded-r-md text-gray-500 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 active:bg-gray-200 disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-50 dark:text-gray-300 dark:hover:bg-white/10 dark:active:bg-white/15"
+          class="hover-effect focus-ring flex h-7 w-7 items-center justify-center rounded-r-md text-gray-500 transition-colors disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300"
           @click="$emit('increase')"
         >
           <UIcon name="i-mdi-plus" aria-hidden="true" class="h-4 w-4" />
         </button>
       </span>
     </div>
-      <ToggleButton
-        :is-active="currentCount >= neededCount"
-        :disabled="disabled"
-        variant="complete"
-        :tooltip="
-          currentCount >= neededCount
-            ? t('page.tasks.questcard.complete', 'Complete')
-            : t('page.tasks.questcard.markComplete', 'Mark complete')
-        "
-        :aria-label="
-          currentCount >= neededCount
-            ? t('page.tasks.questcard.complete', 'Complete')
-            : t('page.tasks.questcard.markComplete', 'Mark complete')
-        "
-        @toggle="$emit('toggle')"
-      />
+    <ToggleButton
+      :is-active="currentCount >= neededCount"
+      :disabled="disabled"
+      variant="complete"
+      :tooltip="
+        currentCount >= neededCount
+          ? t('page.tasks.questcard.complete', 'Complete')
+          : t('page.tasks.questcard.markComplete', 'Mark complete')
+      "
+      :aria-label="
+        currentCount >= neededCount
+          ? t('page.tasks.questcard.complete', 'Complete')
+          : t('page.tasks.questcard.markComplete', 'Mark complete')
+      "
+      @toggle="$emit('toggle')"
+    />
   </div>
 </template>
 <script setup lang="ts">

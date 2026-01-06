@@ -1,7 +1,7 @@
 <template>
   <UCard
     :id="`task-${task.id}`"
-    class="relative overflow-hidden border border-base bg-surface-elevated shadow-md dark:shadow-sm"
+    class="border-base bg-surface-elevated relative overflow-hidden border shadow-md dark:shadow-sm"
     :class="taskClasses"
     :ui="{ body: cardBodyClass }"
     @contextmenu.prevent="openOverflowMenu"
@@ -11,32 +11,7 @@
       <div class="flex flex-nowrap items-center justify-between gap-3">
         <!-- Left side: Task identity + badges -->
         <div class="flex min-w-0 flex-wrap items-center gap-2">
-          <span v-tooltip="task?.name">
-            <a
-              href="#"
-              class="text-accent-700 hover:text-accent-600 dark:text-accent-400 dark:hover:text-accent-300 flex min-w-0 items-center gap-2 no-underline"
-              @click.stop.prevent="navigateToTask"
-            >
-              <div class="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-gray-800">
-                <img
-                  v-if="task?.trader?.imageLink"
-                  :src="task.trader.imageLink"
-                  :alt="task?.trader?.name || 'Trader'"
-                  class="h-full w-full object-cover"
-                />
-                <UIcon v-else name="i-mdi-account-circle" class="h-full w-full text-gray-400 dark:text-gray-400" />
-              </div>
-              <img
-                v-if="isFactionTask"
-                :src="factionImage"
-                :alt="task?.factionName"
-                class="h-6 w-6 shrink-0 object-contain invert dark:invert-0"
-              />
-              <span class="min-w-0 truncate font-semibold">
-                {{ task?.name }}
-              </span>
-            </a>
-          </span>
+          <TaskLink :task="task" />
           <!-- External link icons -->
           <div class="flex shrink-0 items-center gap-1.5">
             <a
@@ -45,7 +20,7 @@
               :href="task.wikiLink"
               target="_blank"
               rel="noopener noreferrer"
-              class="focus-visible:ring-accent-500 focus-visible:ring-offset-surface-900 inline-flex items-center justify-center rounded p-1 text-gray-500 transition-colors hover:bg-surface-200 hover:text-content-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:text-gray-400"
+              class="hover-effect focus-ring hover:text-content-secondary inline-flex items-center justify-center rounded p-1 text-gray-500 transition-colors dark:text-gray-400"
               :aria-label="t('page.tasks.questcard.viewOnWiki', 'View on Wiki')"
               @click.stop
             >
@@ -56,7 +31,7 @@
               :href="tarkovDevTaskUrl"
               target="_blank"
               rel="noopener noreferrer"
-              class="focus-visible:ring-accent-500 focus-visible:ring-offset-surface-900 inline-flex items-center justify-center rounded p-1 text-gray-500 transition-colors hover:bg-surface-200 hover:text-content-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:text-gray-400"
+              class="hover-effect focus-ring hover:text-content-secondary inline-flex items-center justify-center rounded p-1 text-gray-500 transition-colors dark:text-gray-400"
               :aria-label="t('page.tasks.questcard.viewOnTarkovDev', 'View on tarkov.dev')"
               @click.stop
             >
@@ -84,7 +59,7 @@
               "
               :badge-class="[
                 'cursor-help text-xs',
-                meetsLevelRequirement ? 'badge-soft-success' : 'badge-soft-error'
+                meetsLevelRequirement ? 'badge-soft-success' : 'badge-soft-error',
               ]"
               :label="t('page.tasks.questcard.levelBadge', { count: task.minPlayerLevel })"
             />
@@ -95,10 +70,10 @@
               :tooltip="task?.map?.name || t('page.tasks.questcard.anyMap', 'Any')"
               badge-class="badge-soft-map inline-flex max-w-[10rem] items-center gap-1 text-xs"
             >
-              <UIcon 
-                :name="task?.map?.name ? 'i-mdi-map-marker' : 'i-mdi-earth'" 
-                class="h-3 w-3" 
-                aria-hidden="true" 
+              <UIcon
+                :name="task?.map?.name ? 'i-mdi-map-marker' : 'i-mdi-earth'"
+                class="h-3 w-3"
+                aria-hidden="true"
               />
               <span class="truncate">
                 {{ task?.map?.name || t('page.tasks.questcard.anyMap', 'Any') }}
@@ -158,14 +133,16 @@
             />
             <!-- Progress Badge (only on available tasks) -->
             <GameBadge
-              v-if="objectiveProgress.total > 0 && !isLocked && !isComplete && !isFailed && !isInvalid"
+              v-if="
+                objectiveProgress.total > 0 && !isLocked && !isComplete && !isFailed && !isInvalid
+              "
               variant="solid"
               color="gray"
               :badge-class="[
                 'inline-flex items-center gap-1 text-xs',
                 objectiveProgress.done === objectiveProgress.total
                   ? 'badge-soft-task-complete'
-                  : 'badge-soft-reward-item'
+                  : 'badge-soft-reward-item',
               ]"
               icon="i-mdi-progress-check"
               :label="t('page.tasks.questcard.progress', objectiveProgress)"
@@ -182,7 +159,7 @@
               icon="i-mdi-clipboard-text"
               color="neutral"
               variant="soft"
-              class="shrink-0 badge-soft-task-available font-semibold hover:opacity-90"
+              class="badge-soft-task-available hover-effect shrink-0 font-semibold"
               @click.stop="markTaskAvailable()"
             >
               {{ t('page.tasks.questcard.availablebutton', 'Available').toUpperCase() }}
@@ -194,7 +171,7 @@
               icon="i-mdi-check-circle"
               color="neutral"
               variant="soft"
-              class="shrink-0 badge-soft-success font-semibold hover:opacity-90"
+              class="badge-soft-success hover-effect shrink-0 font-semibold"
               @click.stop="markTaskComplete()"
             >
               {{ t('page.tasks.questcard.completebutton', 'Complete').toUpperCase() }}
@@ -206,7 +183,7 @@
               icon="i-mdi-clipboard-text"
               color="neutral"
               variant="soft"
-              class="shrink-0 badge-soft-task-available font-semibold hover:opacity-90"
+              class="badge-soft-task-available hover-effect shrink-0 font-semibold"
               @click.stop="markTaskUncomplete()"
             >
               {{ t('page.tasks.questcard.availablebutton', 'Available').toUpperCase() }}
@@ -268,20 +245,20 @@
           />
         </div>
       </RelatedTasksRow>
-      <div v-else-if="isFailed" class="mt-1 text-xs text-error-700 dark:text-error-300">
-         <span class="text-error-600/90 dark:text-error-200/70">
-           {{ t('page.tasks.questcard.failedbecause', 'Failed because') }}:
-         </span>
-         <span class="ml-2 text-error-700/80 dark:text-error-200/80">
-           {{ t('page.tasks.questcard.failedbecauseunknown', 'Failed manually or data missing') }}
-         </span>
+      <div v-else-if="isFailed" class="text-error-700 dark:text-error-300 mt-1 text-xs">
+        <span class="text-error-600/90 dark:text-error-200/70">
+          {{ t('page.tasks.questcard.failedbecause', 'Failed because') }}:
+        </span>
+        <span class="text-error-700/80 dark:text-error-200/80 ml-2">
+          {{ t('page.tasks.questcard.failedbecauseunknown', 'Failed manually or data missing') }}
+        </span>
       </div>
       <!-- 3) Body: objectives (Secondary Body) -->
       <div class="relative -mx-1 -my-1 overflow-hidden p-1">
         <!-- Background Icon (The Background) -->
         <div
           v-if="showBackgroundIcon"
-          class="pointer-events-none absolute inset-0 z-0 flex transform items-center justify-center opacity-80 rotate-12"
+          class="pointer-events-none absolute inset-0 z-0 flex rotate-12 transform items-center justify-center opacity-80"
           :class="[backgroundIconColor]"
         >
           <UIcon
@@ -291,11 +268,11 @@
           />
         </div>
         <!-- Objective Content (The Existing Body) -->
-        <div 
+        <div
           class="relative z-10"
           :class="[
             isCompact ? 'space-y-3' : 'space-y-4',
-            !isInteractive ? 'cursor-not-allowed opacity-60' : ''
+            !isInteractive ? 'cursor-not-allowed opacity-60' : '',
           ]"
         >
           <QuestKeys v-if="task?.neededKeys?.length" :needed-keys="task.neededKeys" />
@@ -333,14 +310,20 @@
         >
           <template #suffix>
             <!-- Stats: Remaining -->
-            <div 
-              v-if="impactCount > 0" 
-              v-tooltip="{ content: t('page.tasks.questcard.remainingTooltip', 'Tasks blocked by this task, but not unlocked by completing it'), placement: 'top-end' }"
-              class="flex cursor-help items-center text-xs font-medium text-gray-500"
+            <div
+              v-if="impactCount > 0"
+              v-tooltip="{
+                content: t(
+                  'page.tasks.questcard.remainingTooltip',
+                  'Tasks blocked by this task, but not unlocked by completing it'
+                ),
+                placement: 'top-end',
+              }"
+              class="flex cursor-help items-center rounded text-xs font-medium text-gray-500"
             >
-                <span>
-                  {{ t('page.tasks.questcard.remainingLabel', 'Remaining') }}: {{ impactCount }}
-                </span>
+              <span>
+                {{ t('page.tasks.questcard.remainingLabel', 'Remaining') }}: {{ impactCount }}
+              </span>
             </div>
           </template>
           <div class="flex flex-col gap-2">
@@ -450,6 +433,7 @@
   import QuestObjectives from '@/features/tasks/QuestObjectives.vue';
   import RelatedTasksRow from '@/features/tasks/RelatedTasksRow.vue';
   import TaskCardRewards from '@/features/tasks/TaskCardRewards.vue';
+  import TaskLink from '@/features/tasks/TaskLink.vue';
   import { useMetadataStore } from '@/stores/useMetadata';
   import { usePreferencesStore } from '@/stores/usePreferences';
   import { useProgressStore } from '@/stores/useProgress';
@@ -516,10 +500,13 @@
   });
   const taskClasses = computed(() => {
     const cursor = props.isNested ? 'cursor-pointer' : 'cursor-default';
-    if (isComplete.value && !isFailed.value) return `border-success-500/25 bg-success-500/10 ${cursor}`;
+    if (isComplete.value && !isFailed.value)
+      return `border-success-500/25 bg-success-500/10 ${cursor}`;
     if (isFailed.value) return `border-error-500/25 bg-error-500/10 ${cursor}`; // Red for failed
-    if (isInvalid.value) return `border-[var(--color-task-blocked)]/25 bg-[var(--color-task-blocked)]/10 ${cursor}`; // Gray for blocked
-    if (isLocked.value) return `border-[var(--color-task-locked)]/25 bg-[var(--color-task-locked)]/10 ${cursor}`; // Amber/orange for locked
+    if (isInvalid.value)
+      return `border-[var(--color-task-blocked)]/25 bg-[var(--color-task-blocked)]/10 ${cursor}`; // Gray for blocked
+    if (isLocked.value)
+      return `border-[var(--color-task-locked)]/25 bg-[var(--color-task-locked)]/10 ${cursor}`; // Amber/orange for locked
     return `border-base ${cursor}`;
   });
   const isCompact = computed(() => preferencesStore.getTaskCardDensity === 'compact');
@@ -549,8 +536,6 @@
   const _lockedBefore = computed(() => {
     return props.task.predecessors?.filter((s) => !isTaskSuccessful(s)).length || 0;
   });
-  const isFactionTask = computed(() => props.task.factionName !== 'Any');
-  const factionImage = computed(() => `/img/factions/${props.task.factionName}.webp`);
   const parentTasks = computed(() => {
     if (!props.task.parents?.length) return [];
     return props.task.parents
@@ -574,7 +559,7 @@
       sourceIds.add(task.id);
     });
     return Array.from(sourceIds)
-      .map(id => tasks.value.find(t => t.id === id))
+      .map((id) => tasks.value.find((t) => t.id === id))
       .filter((t): t is Task => t !== undefined);
   });
   const pendingParentTasks = computed(() => {
@@ -604,7 +589,7 @@
   const itemRewards = computed(() => props.task.finishRewards?.items ?? []);
   const offerUnlockRewards = computed(() => props.task.finishRewards?.offerUnlock ?? []);
   const _completeButtonUi = {
-    base: 'bg-success-500 hover:bg-success-600 active:bg-success-700 text-white border border-success-700',
+    base: 'bg-success-500 text-white border border-success-700',
   };
   const actionButtonSize = computed(() => (xs.value ? 'xs' : 'sm'));
   const isHotWheelsTask = computed(() => props.task.id === HOT_WHEELS_TASK_ID);
@@ -730,20 +715,15 @@
       window.open(props.task.wikiLink, '_blank');
     }
   };
-
-  /**
-   * Navigate to single-task view with status=all to ensure task is visible.
-   */
-  const navigateToTask = () => {
-    router.push(`/tasks?task=${props.task.id}&status=all`);
-  };
   // Expanded state for recursive cards
   const expandedTasks = ref<Set<string>>(new Set());
   const toggleExpanded = (section: 'parents' | 'children' | 'requires' | 'failed') => {
-    if (expandedTasks.value.has(section)) {
-      expandedTasks.value.delete(section);
+    const next = new Set(expandedTasks.value);
+    if (next.has(section)) {
+      next.delete(section);
     } else {
-      expandedTasks.value.add(section);
+      next.add(section);
     }
+    expandedTasks.value = next;
   };
 </script>

@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col gap-2">
-    <div class="text-xs font-medium text-content-secondary">
+    <div class="text-content-secondary text-xs font-medium">
       {{ $t('page.tasks.questcard.keysHeader', 'Suggested Keys') }}
       <span class="font-normal text-gray-500">
         {{ $t('page.tasks.questcard.keysSubtext', '(may help but not always required)') }}
@@ -13,14 +13,13 @@
     >
       <i18n-t keypath="page.tasks.questcard.keysneeded" :plural="keyMap.keys.length" scope="global">
         <template #keys>
-          <span v-for="(key, keyIndex) in keyMap.keys" :key="keyIndex" class="inline-block" :class="{ 'ml-2': keyMap.keys.length > 1 && keyIndex === 0 }">
-            <GameItem
-              :item="key"
-              :count="1"
-              size="medium"
-              class="mr-2"
-              :show-actions="true"
-            />
+          <span
+            v-for="(key, keyIndex) in keyMap.keys"
+            :key="keyIndex"
+            class="inline-block"
+            :class="{ 'ml-2': keyMap.keys.length > 1 && keyIndex > 0 }"
+          >
+            <GameItem :item="key" :count="1" size="medium" class="mr-2" :show-actions="true" />
           </span>
         </template>
         <template #map>

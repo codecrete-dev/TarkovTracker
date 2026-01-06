@@ -1,6 +1,6 @@
 <template>
   <header
-    class="fixed top-0 right-0 z-40 h-16 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur-sm dark:bg-transparent dark:from-surface-800/95 dark:to-surface-950/95 dark:border-accent-800/60 dark:bg-linear-to-tr dark:shadow-[0_1px_0_rgba(0,0,0,0.4)]"
+    class="dark:from-surface-800/95 dark:to-surface-950/95 dark:border-accent-800/60 fixed top-0 right-0 z-40 h-16 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur-sm dark:bg-transparent dark:bg-linear-to-tr dark:shadow-[0_1px_0_rgba(0,0,0,0.4)]"
   >
     <div class="flex h-full items-center gap-1 px-2 sm:gap-3 sm:px-3">
       <!-- Left: Toggle Button -->
@@ -15,16 +15,12 @@
         />
       </span>
       <!-- Center: Page Title -->
-      <span class="min-w-0 flex-1 truncate text-xl font-bold text-content-primary">
+      <span class="text-content-primary min-w-0 flex-1 truncate text-xl font-bold">
         {{ pageTitle }}
       </span>
       <!-- Right: Status Icons & Settings -->
       <div class="ml-auto flex items-center gap-1 sm:gap-2">
-        <span
-          v-if="dataError"
-          v-tooltip="t('app_bar.error_loading')"
-          class="inline-flex rounded"
-        >
+        <span v-if="dataError" v-tooltip="t('app_bar.error_loading')" class="inline-flex rounded">
           <UIcon name="i-mdi-database-alert" class="text-error-500 h-6 w-6" />
         </span>
         <span
@@ -42,7 +38,7 @@
           trailing-icon=""
           :popper="{ placement: 'bottom-end', strategy: 'fixed' }"
           :ui="{
-            base: 'bg-surface-elevated border border-base ring-1 ring-gray-200/50 rounded-md px-2 py-1.5 dark:bg-surface-900/90 dark:border-white/15 dark:ring-white/10',
+            base: 'hover-effect bg-surface-elevated border border-base ring-1 ring-gray-200/50 rounded-md px-2 py-1.5 dark:bg-surface-900/90 dark:border-white/15 dark:ring-white/10',
           }"
           :ui-menu="{
             container: 'z-[9999]',
@@ -54,43 +50,61 @@
             padding: 'p-1',
             option: {
               base: 'px-3 py-2 text-sm cursor-pointer transition-colors rounded',
-              inactive: 'text-content-secondary hover:bg-surface-200 dark:hover:bg-surface-800 hover:text-content-primary dark:text-surface-200 dark:hover:text-white',
-              active: 'bg-surface-200 text-content-primary dark:bg-surface-800 dark:text-white',
-              selected: 'bg-accent-50 text-accent-600 ring-1 ring-accent-500 dark:bg-accent-500/10 dark:text-accent-100',
+              inactive:
+                'hover-effect text-content-secondary hover:text-content-primary dark:text-surface-200 dark:hover:text-white',
+              active:
+                'hover-effect bg-surface-200 text-content-primary dark:bg-surface-800 dark:text-white',
+              selected:
+                'bg-accent-50 text-accent-600 ring-1 ring-accent-500 dark:bg-accent-500/10 dark:text-accent-100',
             },
           }"
           class="h-auto min-w-0"
         >
           <template #leading>
-            <UIcon name="i-mdi-translate" class="h-4 w-4 text-content-tertiary dark:text-surface-300" />
+            <UIcon
+              name="i-mdi-translate"
+              class="text-content-tertiary dark:text-surface-300 h-4 w-4"
+            />
           </template>
           <template #default>
-            <span class="text-xs font-medium uppercase text-content-secondary dark:text-white/80">{{ locale }}</span>
+            <span class="text-content-secondary text-xs font-medium uppercase dark:text-white/80">
+              {{ locale }}
+            </span>
           </template>
           <template #trailing>
-            <UIcon name="i-mdi-chevron-down" class="h-3 w-3 text-content-tertiary" />
+            <UIcon name="i-mdi-chevron-down" class="text-content-tertiary h-3 w-3" />
           </template>
         </USelectMenu>
         <!-- Theme toggle -->
-          <span v-tooltip="nextThemeLabel" class="inline-flex">
-            <button
-              type="button"
-              class="bg-surface-elevated border-base flex items-center justify-center rounded-md border px-2 py-1.5 ring-1 ring-gray-200/50 transition-colors hover:bg-surface-100 dark:bg-surface-900/90 dark:border-white/15 dark:ring-white/10 dark:hover:bg-surface-800"
-              :aria-label="nextThemeLabel"
-              @click="cycleTheme"
-            >
-              <UIcon
-                :name="currentThemeIcon"
-                class="text-content-tertiary h-4 w-4 transition-transform duration-200"
-              />
-            </button>
-          </span>
+        <span v-tooltip="nextThemeLabel" class="inline-flex">
+          <button
+            type="button"
+            class="hover-effect focus-ring bg-surface-elevated border-base dark:bg-surface-900/90 flex items-center justify-center rounded-md border px-2 py-1.5 transition-colors dark:border-white/15"
+            :aria-label="nextThemeLabel"
+            @click="cycleTheme"
+          >
+            <UIcon
+              :name="currentThemeIcon"
+              class="text-content-tertiary h-4 w-4 transition-transform duration-200"
+            />
+          </button>
+        </span>
         <!-- User/Login control -->
         <template v-if="isLoggedIn">
-          <UDropdownMenu :items="accountItems" :content="{ side: 'bottom', align: 'end' }">
+          <UDropdownMenu
+            :items="accountItems"
+            :content="{ side: 'bottom', align: 'end' }"
+            :ui="{
+              content:
+                'z-[9999] min-w-32 p-1 bg-surface-floating dark:bg-surface-900 ring-1 ring-gray-200 dark:ring-white/10 rounded-lg shadow-xl',
+              item: {
+                base: 'hover-effect px-2.5 py-1.5 text-sm cursor-pointer rounded transition-colors text-content-secondary hover:text-content-primary',
+              },
+            }"
+          >
             <button
               type="button"
-              class="bg-surface-elevated border-base flex items-center justify-center rounded-md border p-1 ring-1 ring-gray-200/50 transition-colors hover:bg-surface-100 dark:bg-surface-900/90 dark:border-white/15 dark:ring-white/10 dark:hover:bg-surface-800"
+              class="hover-effect focus-ring bg-surface-elevated border-base dark:bg-surface-900/90 flex items-center justify-center rounded-md border p-1 transition-colors dark:border-white/15"
             >
               <UAvatar :src="avatarSrc" size="xs" alt="User avatar" />
             </button>
@@ -99,9 +113,9 @@
         <template v-else>
           <NuxtLink
             to="/login"
-            class="bg-surface-elevated border-base flex items-center justify-center rounded-md border px-2 py-1.5 ring-1 ring-gray-200/50 transition-colors hover:bg-surface-100 dark:bg-surface-900/90 dark:border-white/15 dark:ring-white/10 dark:hover:bg-surface-800"
+            class="hover-effect focus-ring bg-surface-elevated border-base dark:bg-surface-900/90 flex items-center justify-center rounded-md border px-2 py-1.5 transition-colors dark:border-white/15"
           >
-            <UIcon name="i-mdi-fingerprint" class="h-4 w-4 text-content-tertiary" />
+            <UIcon name="i-mdi-fingerprint" class="text-content-tertiary h-4 w-4" />
           </NuxtLink>
         </template>
       </div>
@@ -127,7 +141,7 @@
   // User/Login state
   const isLoggedIn = computed(() => $supabase.user?.loggedIn ?? false);
   const avatarSrc = computed(() => {
-    return preferencesStore.getStreamerMode || !$supabase.user.photoURL
+    return preferencesStore.getStreamerMode || !$supabase.user?.photoURL
       ? '/img/default-avatar.svg'
       : $supabase.user.photoURL;
   });

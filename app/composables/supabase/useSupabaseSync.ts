@@ -24,12 +24,11 @@ function hashState(obj: unknown): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32bit integer
   }
   return hash.toString(36);
 }
-
 export function useSupabaseSync({
   store,
   table,
@@ -41,7 +40,6 @@ export function useSupabaseSync({
   const isSyncing = ref(false);
   const isPaused = ref(false);
   let lastSyncedHash: string | null = null;
-
   const syncToSupabase = async (inputState: unknown) => {
     const state = inputState as Record<string, unknown>;
     logger.debug('[Sync] syncToSupabase called', {

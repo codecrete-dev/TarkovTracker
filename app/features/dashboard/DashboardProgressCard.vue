@@ -1,7 +1,7 @@
 <template>
   <div
     :class="[
-      'cursor-pointer rounded-xl border border-base bg-surface-elevated p-6 shadow-lg dark:bg-surface-900 dark:border-accent-700/30',
+      'border-base bg-surface-elevated dark:bg-surface-900 dark:border-accent-700/30 cursor-pointer rounded-xl border p-6 shadow-lg',
       'transition-colors',
       hoverBorderClass,
     ]"
@@ -21,15 +21,17 @@
           <UIcon :name="icon" class="h-5 w-5" :class="iconColorClass" />
         </div>
         <div>
-          <div class="text-sm tracking-wider uppercase text-content-secondary dark:text-surface-400">
+          <div
+            class="text-content-secondary dark:text-surface-400 text-sm tracking-wider uppercase"
+          >
             {{ label }}
           </div>
-          <div class="text-2xl font-bold text-content-primary">{{ completed }}/{{ total }}</div>
+          <div class="text-content-primary text-2xl font-bold">{{ completed }}/{{ total }}</div>
         </div>
       </div>
       <div class="text-3xl font-bold" :class="percentageColorClass">{{ percentageDisplay }}%</div>
     </div>
-    <div class="relative h-3 overflow-hidden rounded-full bg-surface-200 dark:bg-surface-800">
+    <div class="bg-surface-200 dark:bg-surface-800 relative h-3 overflow-hidden rounded-full">
       <div
         class="absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ease-out"
         :class="holidayEffectsEnabled ? 'candy-cane' : barGradientClass"
@@ -45,7 +47,16 @@
 </template>
 <script setup lang="ts">
   import { usePreferencesStore } from '@/stores/usePreferences';
-  export type ProgressCardColor = 'primary' | 'accent' | 'info' | 'success' | 'warning' | 'purple' | 'kappa' | 'lightkeeper' | 'item';
+  export type ProgressCardColor =
+    | 'primary'
+    | 'accent'
+    | 'info'
+    | 'success'
+    | 'warning'
+    | 'purple'
+    | 'kappa'
+    | 'lightkeeper'
+    | 'item';
   const props = defineProps<{
     icon: string;
     label: string;
@@ -115,21 +126,24 @@
     },
     kappa: {
       hover: 'hover:border-[color-mix(in_srgb,var(--color-entity-kappa),transparent_50%)]',
-      iconBg: 'bg-[color-mix(in_srgb,var(--color-entity-kappa),white_90%)] dark:bg-[color-mix(in_srgb,var(--color-entity-kappa),transparent_85%)]',
+      iconBg:
+        'bg-[color-mix(in_srgb,var(--color-entity-kappa),white_90%)] dark:bg-[color-mix(in_srgb,var(--color-entity-kappa),transparent_85%)]',
       icon: 'text-[var(--color-entity-kappa)]',
       percentage: 'text-[var(--color-entity-kappa)]',
       bar: 'bg-[var(--color-entity-kappa)]',
     },
     lightkeeper: {
       hover: 'hover:border-[color-mix(in_srgb,var(--color-entity-lightkeeper),transparent_50%)]',
-      iconBg: 'bg-[color-mix(in_srgb,var(--color-entity-lightkeeper),white_90%)] dark:bg-[color-mix(in_srgb,var(--color-entity-lightkeeper),transparent_85%)]',
+      iconBg:
+        'bg-[color-mix(in_srgb,var(--color-entity-lightkeeper),white_90%)] dark:bg-[color-mix(in_srgb,var(--color-entity-lightkeeper),transparent_85%)]',
       icon: 'text-[var(--color-entity-lightkeeper)]',
       percentage: 'text-[var(--color-entity-lightkeeper)]',
       bar: 'bg-[var(--color-entity-lightkeeper)]',
     },
     item: {
       hover: 'hover:border-[color-mix(in_srgb,var(--color-reward-item),transparent_50%)]',
-      iconBg: 'bg-[color-mix(in_srgb,var(--color-reward-item),white_90%)] dark:bg-[color-mix(in_srgb,var(--color-reward-item),transparent_85%)]',
+      iconBg:
+        'bg-[color-mix(in_srgb,var(--color-reward-item),white_90%)] dark:bg-[color-mix(in_srgb,var(--color-reward-item),transparent_85%)]',
       icon: 'text-[var(--color-reward-item)]',
       percentage: 'text-[var(--color-reward-item)]',
       bar: 'bg-[var(--color-reward-item)]',

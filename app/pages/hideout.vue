@@ -1,7 +1,7 @@
 <template>
   <div class="container mx-auto min-h-[calc(100vh-250px)] space-y-4 px-4 py-6">
     <div class="flex justify-center">
-      <div class="w-full max-w-4xl rounded-lg bg-surface-elevated px-4 py-3 shadow-sm">
+      <div class="bg-surface-elevated w-full max-w-4xl rounded-lg px-4 py-3 shadow-sm">
         <div class="flex flex-wrap justify-center gap-2">
           <FilterPill
             v-for="view in primaryViews"
@@ -20,7 +20,7 @@
     </div>
     <!-- Search Bar -->
     <div class="flex justify-center">
-      <div class="w-full max-w-lg rounded-lg bg-surface-elevated px-4 py-2.5 shadow-sm">
+      <div class="bg-surface-elevated w-full max-w-lg rounded-lg px-4 py-2.5 shadow-sm">
         <UInput
           :model-value="searchQuery"
           :placeholder="$t('page.hideout.search.placeholder', 'Search stations...')"
@@ -79,10 +79,9 @@
   import RefreshButton from '@/components/ui/RefreshButton.vue';
   import { useHideoutFiltering } from '@/composables/useHideoutFiltering';
   import { usePageFilters } from '@/composables/usePageFilters';
-  import HideoutCard from '@/features/hideout/HideoutCard.vue';
   import { useHideoutFilterConfig } from '@/features/hideout/composables/useHideoutFilterConfig';
+  import HideoutCard from '@/features/hideout/HideoutCard.vue';
   import { useMetadataStore } from '@/stores/useMetadata';
-  import { usePreferencesStore } from '@/stores/usePreferences';
   import { useProgressStore } from '@/stores/useProgress';
   // Page metadata
   useSeoMeta({
@@ -95,26 +94,24 @@
   const metadataStore = useMetadataStore();
   const { hideoutStations } = storeToRefs(metadataStore);
   const progressStore = useProgressStore();
-  const preferencesStore = usePreferencesStore();
-
   // Hideout filtering composable
   const { activePrimaryView, isStoreLoading, visibleStations, stationCounts } =
     useHideoutFiltering();
-
   // URL-based filter state
   // Filter config is extracted to useHideoutFilterConfig for sharing with navigation
   const { filters, setFilter, debouncedInputs } = usePageFilters(useHideoutFilterConfig());
-
   // Computed alias for search input
   const searchQuery = debouncedInputs.search!;
-
   // Sync URL filter to activePrimaryView (from useHideoutFiltering)
-  watch(filters.view, (newView) => {
-    if (newView !== activePrimaryView.value) {
-      activePrimaryView.value = newView;
-    }
-  }, { immediate: true });
-
+  watch(
+    filters.view,
+    (newView) => {
+      if (newView !== activePrimaryView.value) {
+        activePrimaryView.value = newView;
+      }
+    },
+    { immediate: true }
+  );
   // Sync activePrimaryView changes back to URL
   watch(activePrimaryView, (newView) => {
     if (newView !== filters.view.value) {
@@ -124,17 +121,17 @@
   const primaryViews = computed(() => [
     {
       title: t('page.hideout.primaryviews.all'),
-      icon: 'mdi-clipboard-check',
+      icon: 'mdi-format-list-bulleted',
       view: 'all',
       count: stationCounts.value.all,
-      badgeColor: 'badge-soft-filter-all',
+      badgeColor: 'badge-soft-accent',
     },
     {
       title: t('page.hideout.primaryviews.available'),
-      icon: 'mdi-tag-arrow-up-outline',
+      icon: 'mdi-clipboard-text',
       view: 'available',
       count: stationCounts.value.available,
-      badgeColor: 'badge-soft-accent',
+      badgeColor: 'plain',
     },
     {
       title: t('page.hideout.primaryviews.maxed'),
@@ -176,19 +173,9 @@
       if (stationElement) {
         stationElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         // Add a brief highlight effect
-        stationElement.classList.add(
-          'ring-2',
-          'ring-accent-500',
-          'ring-offset-2',
-          'ring-offset-surface-900'
-        );
+        stationElement.classList.add('ring-2', 'ring-inset', 'ring-accent-500');
         setTimeout(() => {
-          stationElement.classList.remove(
-            'ring-2',
-            'ring-accent-500',
-            'ring-offset-2',
-            'ring-offset-surface-900'
-          );
+          stationElement.classList.remove('ring-2', 'ring-inset', 'ring-accent-500');
         }, 2000);
       }
     }, 100);

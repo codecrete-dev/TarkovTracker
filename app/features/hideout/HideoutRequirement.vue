@@ -1,7 +1,7 @@
 <template>
   <!-- Compact Card Layout - Works for ALL items -->
   <div
-    class="group relative flex h-full cursor-pointer flex-col items-center justify-center rounded-lg border p-2 transition-all select-none hover:bg-surface-elevated/50"
+    class="group hover-effect relative flex h-full cursor-pointer flex-col items-center justify-center rounded-lg border p-2 transition-all select-none"
     :class="[
       isComplete
         ? 'border-success-400 bg-success-50 dark:border-success-500/30 dark:bg-success-900/10'
@@ -14,16 +14,11 @@
     <div class="flex h-full w-full flex-col items-center gap-1 pt-1">
       <!-- Image Area - relative container for overlays -->
       <div class="relative">
-        <GameItem
-          :item="requirement.item"
-          size="small"
-          :show-actions="false"
-          simple-mode
-        />
+        <GameItem :item="requirement.item" size="small" :show-actions="false" simple-mode />
         <!-- Complete Checkmark Overlay -->
         <div
           v-if="isComplete"
-          class="bg-success-500/10 absolute inset-0 flex items-center justify-center rounded z-2"
+          class="bg-success-500/10 absolute inset-0 z-20 flex items-center justify-center rounded"
         >
           <UIcon name="i-mdi-check-circle" class="text-success-500/50 h-10 w-10 sm:h-12 sm:w-12" />
         </div>
@@ -39,7 +34,7 @@
       </div>
       <!-- Item Name -->
       <div
-        class="line-clamp-2 w-full px-1 text-center text-[10px] leading-tight font-medium text-content-primary sm:text-xs"
+        class="text-content-primary line-clamp-2 w-full px-1 text-center text-[10px] leading-tight font-medium sm:text-xs"
       >
         {{ requirement.item.name }}
       </div>
@@ -48,9 +43,7 @@
   <!-- Context Menu for Manual Count Adjustment -->
   <ContextMenu ref="contextMenu">
     <template #default="{ close }">
-      <div
-        class="border-b border-base px-2 py-1 text-xs font-medium text-content-tertiary"
-      >
+      <div class="border-base text-content-tertiary border-b px-2 py-1 text-xs font-medium">
         {{ requirement.item.name }}
       </div>
       <ContextMenuItem
@@ -90,7 +83,7 @@
               type="number"
               :min="0"
               :max="requirement.count"
-              class="border-primary-500 focus:ring-primary-500 w-20 rounded border bg-gray-700 px-2 py-1 text-center text-sm font-bold focus:ring-1 focus:outline-none"
+              class="border-primary-500 w-20 rounded border bg-gray-700 px-2 py-1 text-center text-sm font-bold"
               :class="isComplete ? 'text-success-400' : 'text-gray-300'"
               @input="handleInput"
               @click.stop
