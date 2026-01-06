@@ -6,7 +6,7 @@ A comprehensive Escape from Tarkov progress tracker built with Nuxt 4, featuring
 
 - **Dual Game Mode Support**: Track progress separately for PvP and PvE modes
 - **Team Collaboration**: Share progress with teammates in real-time
-- **Task Tracking**: Monitor quest completions and objectives
+- **Task Tracking**: Monitor task completions and objectives
 - **Hideout Progress**: Track module upgrades and parts
 - **Player Level Progress**: Monitor leveling across different factions
 - **Real-time Sync**: Automatic synchronization via Supabase

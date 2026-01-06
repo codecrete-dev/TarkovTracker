@@ -84,6 +84,7 @@
 <script setup lang="ts">
   import { ref, nextTick } from 'vue';
   import { useI18n } from 'vue-i18n';
+  import ToggleButton from '@/components/ui/ToggleButton.vue';
   const props = defineProps<{
     currentCount: number;
     neededCount: number;

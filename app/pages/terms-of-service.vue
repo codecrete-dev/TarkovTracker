@@ -371,7 +371,7 @@
                   profile information)
                 </li>
                 <li class="leading-relaxed">
-                  User progress data (quest completions, hideout progress, level tracking)
+                  User progress data (task completions, hideout progress, level tracking)
                 </li>
                 <li class="leading-relaxed">
                   Team collaboration data (team memberships, shared progress)

@@ -82,7 +82,7 @@
   import { computed, nextTick, onMounted, ref, watch, useSlots } from 'vue';
   import { useProgressStore } from '@/stores/useProgress';
   import { useTarkovStore } from '@/stores/useTarkov';
-  import type { Task } from '@/types/tarkov'; // Extra safety margin for suffix
+  import type { Task } from '@/types/tarkov';
   const props = defineProps<{
     tasks: Task[];
     label: string;
@@ -105,7 +105,7 @@
   const ICON_WIDTH = 20;
   const LABEL_MARGIN = 8;
   const CONTAINER_PADDING = computed(() => (props.expandable ? 16 : 0)); // px-2 * 2 if expandable
-  const SUFFIX_MARGIN = 8;
+  const SUFFIX_MARGIN = 8; // Extra safety margin for suffix
   // ... (existing imports)
   const tarkovStore = useTarkovStore();
   const progressStore = useProgressStore();

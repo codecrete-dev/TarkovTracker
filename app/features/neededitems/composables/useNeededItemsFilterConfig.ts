@@ -18,7 +18,9 @@ export function useNeededItemsFilterConfig(): FilterConfig {
       default: 'grid',
       storedDefault: () => {
         const style = preferencesStore.getNeededItemsStyle;
-        return ['row', 'mediumCard'].includes(style as string) ? style : null;
+        if (style === 'row') return 'list';
+        if (style === 'mediumCard') return 'grid';
+        return null; // Invalid or unset stored values shouldn't override defaults
       },
       onUpdate: (v) =>
         preferencesStore.setNeededItemsStyle((v as string) === 'list' ? 'row' : 'mediumCard'),

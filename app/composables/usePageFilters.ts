@@ -221,14 +221,14 @@ export function usePageFilters<C extends FilterConfig>(config: C): UsePageFilter
       debouncedInputRefs[key] = localRef;
       debouncedInputs[key as keyof C] = localRef as Ref<FilterValue<C[keyof C]>>;
       // Watch URL changes and sync to local ref (for back/forward nav)
-      watch(
+      const stopUrlWatch = watch(
         () => filters[key as keyof C].value,
         (newValue) => {
           localRef.value = newValue;
         }
       );
       // Watch local ref and debounce updates to URL
-      watch(localRef, (newValue) => {
+      const stopLocalWatch = watch(localRef, (newValue) => {
         if (debounceTimers[key]) {
           clearTimeout(debounceTimers[key]);
         }
@@ -236,8 +236,11 @@ export function usePageFilters<C extends FilterConfig>(config: C): UsePageFilter
           updateUrl({ [key]: newValue } as Partial<{ [K in keyof C]: FilterValue<C[K]> }>);
         }, paramConfig.debounceMs);
       });
-      // Clear timer on unmount
+
+      // Cleanup on unmount
       onUnmounted(() => {
+        stopUrlWatch();
+        stopLocalWatch();
         if (debounceTimers[key]) {
           clearTimeout(debounceTimers[key]);
         }
