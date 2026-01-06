@@ -66,11 +66,6 @@
               @update:model-value="preferencesStore.setHideNonKappaTasks(!$event)"
             />
             <SettingsToggle
-              v-model="showEodTasks"
-              :label="labelShowEodTasks"
-              :tooltip="tooltipShowEodTasks"
-            />
-            <SettingsToggle
               v-model="showLightkeeperTasks"
               :label="labelShowLightkeeperTasks"
               :tooltip="tooltipShowLightkeeperTasks"
@@ -197,13 +192,13 @@
   const labelShowNonSpecialTasks = computed(() =>
     t(
       'page.tasks.settings.filters.showNonSpecialTasks',
-      'Show tasks without Lightkeeper, Kappa, or EOD requirement'
+      'Show tasks without Lightkeeper or Kappa requirement'
     )
   );
   const tooltipShowNonSpecialTasks = computed(() =>
     t(
       'page.tasks.settings.filters.showNonSpecialTasksTooltip',
-      'Show regular tasks that do not require Kappa, Lightkeeper, or EOD edition'
+      'Show regular tasks that do not require Kappa or Lightkeeper'
     )
   );
   const labelShowKappaTasks = computed(() =>
@@ -213,15 +208,6 @@
     t(
       'page.tasks.settings.filters.showKappaTasksTooltip',
       'Show tasks required for Kappa container'
-    )
-  );
-  const labelShowEodTasks = computed(() =>
-    t('page.tasks.settings.filters.showEodTasks', 'Show EOD-only tasks')
-  );
-  const tooltipShowEodTasks = computed(() =>
-    t(
-      'page.tasks.settings.filters.showEodTasksTooltip',
-      'Show tasks exclusive to Edge of Darkness edition owners'
     )
   );
   const labelShowLightkeeperTasks = computed(() =>
@@ -314,10 +300,6 @@
   const showNonSpecialTasks = computed({
     get: () => preferencesStore.getShowNonSpecialTasks,
     set: (value) => preferencesStore.setShowNonSpecialTasks(value),
-  });
-  const showEodTasks = computed({
-    get: () => preferencesStore.getShowEodTasks,
-    set: (value) => preferencesStore.setShowEodTasks(value),
   });
   const showLightkeeperTasks = computed({
     get: () => preferencesStore.getShowLightkeeperTasks,

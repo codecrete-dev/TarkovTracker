@@ -4,6 +4,7 @@ import { useProgressStore } from '@/stores/useProgress';
 import { useTarkovStore } from '@/stores/useTarkov';
 import type { TaskObjective } from '@/types/tarkov';
 import { CURRENCY_ITEM_IDS } from '@/utils/constants';
+import { isTaskAvailableForEdition as checkTaskEdition } from '@/utils/editionHelpers';
 export function useDashboardStats() {
   const progressStore = useProgressStore();
   const metadataStore = useMetadataStore();
@@ -12,12 +13,18 @@ export function useDashboardStats() {
     tarkovStore.isTaskComplete(taskId) && !tarkovStore.isTaskFailed(taskId);
   // Check if a task is invalid (failed, blocked by failed prereqs, wrong faction, etc.)
   const isTaskInvalid = (taskId: string) => progressStore.invalidTasks[taskId]?.self === true;
-  // Memoize tasks filtered by faction to avoid repeated filtering
+  // Check if a task is available for the user's edition (uses shared helper)
+  const isTaskAvailableForEdition = (taskId: string): boolean =>
+    checkTaskEdition(taskId, tarkovStore.getGameEdition(), metadataStore.editions);
+  // Memoize tasks filtered by faction and edition to avoid repeated filtering
   const relevantTasks = computed(() => {
     if (!metadataStore.tasks) return [];
     const currentFaction = tarkovStore.getPMCFaction();
     return metadataStore.tasks.filter(
-      (task) => task && (task.factionName === 'Any' || task.factionName === currentFaction)
+      (task) =>
+        task &&
+        (task.factionName === 'Any' || task.factionName === currentFaction) &&
+        isTaskAvailableForEdition(task.id)
     );
   });
   // Available tasks count
@@ -97,7 +104,7 @@ export function useDashboardStats() {
     if (!relevantTasks.value.length) return 0;
     return relevantTasks.value.filter((task) => isTaskSuccessful(task.id)).length;
   });
-  // Helper to check if objective is relevant for current faction
+  // Helper to check if objective is relevant for current faction and edition
   const isObjectiveRelevant = (objective: TaskObjective | null | undefined) => {
     if (!objective) return false;
     const primaryItem = objective.item ?? objective.items?.[0];
@@ -111,6 +118,8 @@ export function useDashboardStats() {
       (task) => task && objective.taskId && task.id === objective.taskId
     );
     if (!relatedTask) return false;
+    // Exclude objectives from tasks not available for user's edition
+    if (!isTaskAvailableForEdition(relatedTask.id)) return false;
     // Exclude objectives from failed tasks
     if (tarkovStore.isTaskFailed(relatedTask.id)) return false;
     // Exclude objectives from incomplete invalid tasks (but include from completed tasks)

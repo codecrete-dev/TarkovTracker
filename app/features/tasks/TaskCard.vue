@@ -147,6 +147,21 @@
               icon="i-mdi-progress-check"
               :label="t('page.tasks.questcard.progress', objectiveProgress)"
             />
+            <!-- Edition Exclusive Badge -->
+            <GameBadge
+              v-if="exclusiveEditionBadge"
+              variant="solid"
+              color="primary"
+              :tooltip="
+                t(
+                  'page.tasks.questcard.editionExclusiveTooltip',
+                  { editions: exclusiveEditions.join(', ') },
+                  `This quest is only available to players with ${exclusiveEditions.join(', ')} edition`
+                )
+              "
+              badge-class="badge-soft-accent cursor-help text-xs"
+              :label="exclusiveEditionBadge"
+            />
           </div>
         </div>
         <!-- Right side: Action buttons -->
@@ -440,6 +455,7 @@
   import { useTarkovStore } from '@/stores/useTarkov';
   import type { Task } from '@/types/tarkov';
   import { HOT_WHEELS_TASK_ID } from '@/utils/constants';
+  import { getExclusiveEditionsForTask } from '@/utils/editionHelpers';
   import { useLocaleNumberFormatter } from '@/utils/formatters';
   type ContextMenuRef = {
     open: (
@@ -498,6 +514,18 @@
     const minLevel = props.task.minPlayerLevel ?? 0;
     return minLevel <= 0 || tarkovStore.playerLevel() >= minLevel;
   });
+  // Get the editions that a task is exclusive to
+  const exclusiveEditions = computed(() => {
+    return getExclusiveEditionsForTask(props.task.id, metadataStore.editions ?? []).map(
+      (e) => e.name
+    );
+  });
+  const exclusiveEditionBadge = computed(() => {
+    if (exclusiveEditions.value.length === 0) return null;
+    if (exclusiveEditions.value.length === 1) return exclusiveEditions.value[0];
+    return t('page.tasks.questcard.editionsCount', { count: exclusiveEditions.value.length });
+  });
+  // Short display names for edition badges
   const taskClasses = computed(() => {
     const cursor = props.isNested ? 'cursor-pointer' : 'cursor-default';
     if (isComplete.value && !isFailed.value)

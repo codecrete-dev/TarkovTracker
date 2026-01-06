@@ -186,12 +186,10 @@
         },
         filters: {
           hint: 'Control which tasks appear.',
-          showNonSpecialTasks: 'Show tasks without Lightkeeper, Kappa, or EOD requirement',
-          showNonSpecialTasksTooltip: 'Show regular tasks that do not require Kappa, Lightkeeper, or EOD edition',
+          showNonSpecialTasks: 'Show tasks without Lightkeeper or Kappa requirement',
+          showNonSpecialTasksTooltip: 'Show regular tasks that do not require Kappa or Lightkeeper',
           showKappaTasks: 'Show "Kappa Required" tasks',
           showKappaTasksTooltip: 'Show tasks required for Kappa container',
-          showEodTasks: 'Show EOD-only tasks',
-          showEodTasksTooltip: 'Show tasks exclusive to Edge of Darkness edition owners',
           showLightkeeperTasks: 'Show Lightkeeper Tasks and Lightkeeper-required Tasks',
           showLightkeeperTasksTooltip: 'Show tasks from Lightkeeper trader and tasks required for Lightkeeper',
         },
@@ -298,6 +296,8 @@
         min_level_required: 'Minimum level required to access task',
         blocked: 'Blocked',
         blockedTooltip: 'This task is permanently blocked and can never be completed due to choices made in other tasks',
+        editionExclusiveTooltip: 'This task is only available to players with {editions} edition',
+        editionsCount: '{count} Editions',
       },
     },
     traders: {

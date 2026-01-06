@@ -113,6 +113,7 @@
   import { useTarkovStore } from '@/stores/useTarkov';
   import type { FilterType, FirFilter, ViewMode } from '@/types/neededItems';
   import type { NeededItemHideoutModule, NeededItemTaskObjective } from '@/types/tarkov';
+  import { isTaskAvailableForEdition } from '@/utils/editionHelpers';
   import { logger } from '@/utils/logger';
   // Page metadata
   useSeoMeta({
@@ -185,6 +186,8 @@
   }
   // Get user's faction for filtering task objectives
   const userFaction = computed(() => progressStore.playerFaction['self'] ?? 'USEC');
+  // Get user's game edition for filtering task objectives
+  const userEdition = computed(() => tarkovStore.getGameEdition());
   const allItems = computed(() => {
     const combined = [
       ...(neededItemTaskObjectives.value || []),
@@ -197,6 +200,10 @@
       let key: string;
       let itemId: string | undefined;
       if (need.needType === 'taskObjective') {
+        // Filter by edition: skip task objectives for tasks not available for user's edition
+        if (!isTaskAvailableForEdition(need.taskId, userEdition.value, metadataStore.editions)) {
+          continue;
+        }
         // Filter by faction: skip task objectives for tasks that don't match user's faction
         const task = metadataStore.getTaskById(need.taskId);
         if (task && task.factionName !== 'Any' && task.factionName !== userFaction.value) {

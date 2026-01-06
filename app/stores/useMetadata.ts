@@ -41,6 +41,11 @@ import {
   sortMapsByGameOrder,
   sortTradersByGameOrder,
 } from '@/utils/constants';
+import {
+  getExcludedTaskIdsForEdition as getExcludedTaskIds,
+  getExclusiveEditionsForTask as getTaskExclusiveEditions,
+  isTaskAvailableForEdition as checkTaskEdition,
+} from '@/utils/editionHelpers';
 import { createGraph } from '@/utils/graphHelpers';
 import { normalizeTaskObjectives } from '@/utils/helpers';
 import { logger } from '@/utils/logger';
@@ -176,6 +181,37 @@ export const useMetadataStore = defineStore('metadata', {
         const found = state.editions.find((e) => e.value === edition);
         return found ? found.title : `Edition ${edition}`;
       },
+    // Get edition data by value
+    getEditionByValue:
+      (state) =>
+      (editionValue: number | undefined): GameEdition | undefined => {
+        if (editionValue == null) return undefined;
+        return state.editions.find((e) => e.value === editionValue);
+      },
+    /**
+     * Get all task IDs that should be excluded for a given edition.
+     * Uses shared helper from editionHelpers.ts
+     */
+    getExcludedTaskIdsForEdition:
+      (state) =>
+      (editionValue: number | undefined): Set<string> =>
+        getExcludedTaskIds(editionValue, state.editions),
+    /**
+     * Check if a task is available for a given edition.
+     * Uses shared helper from editionHelpers.ts
+     */
+    isTaskAvailableForEdition:
+      (state) =>
+      (taskId: string, editionValue: number | undefined): boolean =>
+        checkTaskEdition(taskId, editionValue, state.editions),
+    /**
+     * Get editions that a task is exclusive to.
+     * Returns array of editions that have this task in their exclusiveTaskIds.
+     */
+    getExclusiveEditionsForTask:
+      (state) =>
+      (taskId: string): GameEdition[] =>
+        getTaskExclusiveEditions(taskId, state.editions),
     // Computed properties for maps with merged static data
     mapsWithSvg: (state): TarkovMap[] => {
       if (!state.maps.length || !state.staticMapData) {

@@ -27,6 +27,10 @@ export interface GameEdition {
   defaultCultistCircleLevel: number;
   /** Bonus reputation values per trader granted by this edition */
   traderRepBonus: Record<Trader['id'], number>;
+  /** Task IDs that are exclusive to this edition (only available to this edition) */
+  exclusiveTaskIds?: string[];
+  /** Task IDs that are excluded from this edition (not available to this edition) */
+  excludedTaskIds?: string[];
 }
 export interface ItemCategory {
   id: string;

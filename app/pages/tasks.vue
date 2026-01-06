@@ -136,21 +136,20 @@
   const router = useRouter();
   const { t } = useI18n({ useScope: 'global' });
   const preferencesStore = usePreferencesStore();
-  const {
-    getTaskUserView,
-    getHideNonKappaTasks,
-    getShowNonSpecialTasks,
-    getShowLightkeeperTasks,
-    getShowEodTasks,
-  } = storeToRefs(preferencesStore);
+  const { getTaskUserView, getHideNonKappaTasks, getShowNonSpecialTasks, getShowLightkeeperTasks } =
+    storeToRefs(preferencesStore);
   const metadataStore = useMetadataStore();
   const { tasks, loading: tasksLoading } = storeToRefs(metadataStore);
   // Use mapsWithSvg getter to get maps with merged SVG config from maps.json
   const maps = computed(() => metadataStore.mapsWithSvg);
+  // Edition data for filtering (reactive to trigger refresh when edition changes)
+  const editions = computed(() => metadataStore.editions);
   const progressStore = useProgressStore();
-  const { tasksCompletions, unlockedTasks, tasksFailed: _tasksFailed } = storeToRefs(progressStore);
+  const { tasksCompletions, unlockedTasks, tasksFailed } = storeToRefs(progressStore);
   const { visibleTasks, reloadingTasks, updateVisibleTasks } = useTaskFiltering();
   const tarkovStore = useTarkovStore();
+  // Game edition for filtering (reactive to trigger refresh when edition changes)
+  const userGameEdition = computed(() => tarkovStore.getGameEdition());
   const { tarkovTime } = useTarkovTime();
   // URL-based filter state (URL is single source of truth)
   // Filter config is extracted to useTasksFilterConfig for sharing with navigation
@@ -391,12 +390,14 @@
       getHideNonKappaTasks,
       getShowNonSpecialTasks,
       getShowLightkeeperTasks,
-      getShowEodTasks,
       tasksLoading,
       tasks,
       maps,
       tasksCompletions,
       unlockedTasks,
+      tasksFailed,
+      userGameEdition,
+      editions,
     ],
     () => {
       refreshVisibleTasks();

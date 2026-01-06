@@ -243,23 +243,27 @@ export function useTaskFiltering() {
     return withFaction;
   };
   /**
-   * Filter tasks by type settings (Kappa, Lightkeeper, EOD, non-special)
+   * Filter tasks by type settings (Kappa, Lightkeeper, non-special)
    * Uses OR logic: show task if it matches ANY enabled category
+   * Also filters out tasks not available for the user's game edition
    */
   const filterTasksByTypeSettings = (taskList: Task[]): Task[] => {
     const showKappa = !preferencesStore.getHideNonKappaTasks; // Show Kappa Required tasks
     const showLightkeeper = preferencesStore.getShowLightkeeperTasks;
     const showNonSpecial = preferencesStore.getShowNonSpecialTasks;
-    // EOD filter stored for future use when EOD task data is available
-    const _showEod = preferencesStore.getShowEodTasks;
     const lightkeeperTraderId = metadataStore.getTraderByName('lightkeeper')?.id;
     // Get prestige filtering data
     const userPrestigeLevel = tarkovStore.getPrestigeLevel();
     const prestigeTaskMap = metadataStore.prestigeTaskMap;
     const prestigeTaskIds = metadataStore.prestigeTaskIds;
+    // Get edition-based excluded tasks
+    const userEdition = tarkovStore.getGameEdition();
+    const excludedTaskIds = metadataStore.getExcludedTaskIdsForEdition(userEdition);
     return taskList.filter((task) => {
       // Skip excluded tasks (Scav Karma)
       if (EXCLUDED_SCAV_KARMA_TASKS.includes(task.id)) return false;
+      // Filter out tasks not available for user's game edition
+      if (excludedTaskIds.has(task.id)) return false;
       // Filter prestige-gated tasks ("New Beginning")
       // Only show the task that matches the user's current prestige level
       if (prestigeTaskIds.includes(task.id)) {
@@ -482,9 +486,14 @@ export function useTaskFiltering() {
     const userPrestigeLevel = tarkovStore.getPrestigeLevel();
     const prestigeTaskMap = metadataStore.prestigeTaskMap;
     const prestigeTaskIds = metadataStore.prestigeTaskIds;
+    // Get edition-based excluded tasks
+    const userEdition = tarkovStore.getGameEdition();
+    const excludedTaskIds = metadataStore.getExcludedTaskIdsForEdition(userEdition);
     for (const task of taskList) {
       // Skip excluded tasks
       if (EXCLUDED_SCAV_KARMA_TASKS.includes(task.id)) continue;
+      // Skip tasks not available for user's game edition
+      if (excludedTaskIds.has(task.id)) continue;
       // Skip prestige tasks that don't match user's prestige level
       if (prestigeTaskIds.includes(task.id)) {
         const taskPrestigeLevel = prestigeTaskMap.get(task.id);
@@ -560,9 +569,14 @@ export function useTaskFiltering() {
     const userPrestigeLevel = tarkovStore.getPrestigeLevel();
     const prestigeTaskMap = metadataStore.prestigeTaskMap;
     const prestigeTaskIds = metadataStore.prestigeTaskIds;
+    // Get edition-based excluded tasks
+    const userEdition = tarkovStore.getGameEdition();
+    const excludedTaskIds = metadataStore.getExcludedTaskIdsForEdition(userEdition);
     for (const task of taskList) {
       // Skip excluded tasks
       if (EXCLUDED_SCAV_KARMA_TASKS.includes(task.id)) continue;
+      // Skip tasks not available for user's game edition
+      if (excludedTaskIds.has(task.id)) continue;
       // Skip prestige tasks that don't match user's prestige level
       if (prestigeTaskIds.includes(task.id)) {
         const taskPrestigeLevel = prestigeTaskMap.get(task.id);
