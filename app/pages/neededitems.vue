@@ -79,7 +79,7 @@
         <div v-if="visibleCount < displayItems.length" ref="listSentinel" class="h-1"></div>
       </div>
       <!-- Grid View -->
-      <div v-else class="p-2">
+      <div v-else>
         <div
           class="grid grid-cols-2 items-stretch gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7"
         >

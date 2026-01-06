@@ -21,7 +21,7 @@
     <div class="flex w-full flex-wrap gap-3">
       <!-- Section 1: Search bar -->
       <div
-        class="bg-surface-elevated flex min-w-[250px] flex-1 items-center rounded-lg px-4 py-3 shadow-sm"
+        class="bg-surface-elevated flex min-w-0 flex-1 items-center rounded-lg px-4 py-3 shadow-sm"
       >
         <UInput
           :model-value="search"
@@ -47,7 +47,7 @@
         </UInput>
       </div>
       <!-- Section 2: Filters (Popover) -->
-      <div class="bg-surface-elevated flex items-center rounded-lg px-4 py-3 shadow-sm">
+      <div class="bg-surface-elevated flex shrink-0 items-center rounded-lg px-4 py-3 shadow-sm">
         <UPopover>
           <UButton
             icon="i-mdi-filter-variant"
@@ -166,7 +166,9 @@
         </UPopover>
       </div>
       <!-- Section 3: View Mode & Item Count -->
-      <div class="bg-surface-elevated flex items-center gap-3 rounded-lg px-4 py-3 shadow-sm">
+      <div
+        class="bg-surface-elevated flex w-full shrink-0 items-center justify-between gap-3 rounded-lg px-4 py-3 shadow-sm md:w-auto sm:justify-start"
+      >
         <GameBadge color="neutral" variant="soft" size="md" badge-class="px-3 py-1 text-sm">
           <template v-if="groupByItem && ungroupedCount !== totalCount">
             {{ totalCount }} unique ({{ ungroupedCount }} total)
