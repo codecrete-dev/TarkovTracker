@@ -55,6 +55,7 @@
             <button
               class="hover-effect border-base dark:border-accent-800/50 flex h-full w-full items-center justify-center rounded border px-2 py-2.5 transition-colors"
               :class="currentGameModeColorClass"
+              :style="{ '--color-hover-tint': nextGameModeHoverTint }"
               @click="cycleGameMode"
             >
               <div
@@ -223,6 +224,11 @@
   });
   const nextGameModeLabel = computed(() => {
     return gameModeConfig[nextGameMode.value].label;
+  });
+  const nextGameModeHoverTint = computed(() => {
+    return nextGameMode.value === GAME_MODES.PVE
+      ? 'var(--color-hover-tint-pve)'
+      : 'var(--color-hover-tint-pvp)';
   });
   function setGameMode(mode: GameMode) {
     if (mode !== currentGameMode.value) {

@@ -507,7 +507,9 @@ select:disabled,
 
   /* Hover Tint Defaults (PvP/Warm) */
   /* Light mode: Warm gold/tan tint - Increased visibility */
-  --color-hover-tint: rgba(133, 93, 40, 0.12);
+  --color-hover-tint-pvp: rgba(133, 93, 40, 0.12);
+  --color-hover-tint-pve: rgba(40, 90, 160, 0.12);
+  --color-hover-tint: var(--color-hover-tint-pvp);
 }
 
 :root.dark {
@@ -545,7 +547,9 @@ select:disabled,
   --color-stash-default: rgba(255, 255, 255, 0.22);
 
   /* Dark mode: Lighter warm tint for contrast - Increased visibility */
-  --color-hover-tint: rgba(255, 220, 150, 0.15);
+  --color-hover-tint-pvp: rgba(255, 220, 150, 0.15);
+  --color-hover-tint-pve: rgba(150, 190, 255, 0.15);
+  --color-hover-tint: var(--color-hover-tint-pvp);
 }
 
 /* =========================================
@@ -587,11 +591,11 @@ select:disabled,
 /* PvE Override for Hover Tints */
 :root.pve-mode {
   /* Light mode PvE: Cool blue tint - Increased visibility */
-  --color-hover-tint: rgba(40, 90, 160, 0.12);
+  --color-hover-tint: var(--color-hover-tint-pve);
 }
 :root.pve-mode.dark {
   /* Dark mode PvE: Lighter cool blue tint - Increased visibility */
-  --color-hover-tint: rgba(150, 190, 255, 0.15);
+  --color-hover-tint: var(--color-hover-tint-pve);
 }
 
 /* =========================================
