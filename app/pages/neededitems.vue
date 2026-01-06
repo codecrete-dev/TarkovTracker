@@ -140,7 +140,7 @@
     set: (v: ViewMode) => setFilter('viewMode', v),
   });
   const firFilter = computed({
-    get: () => filters.fir.value as FirFilter,
+    get: () => (filters.fir?.value ?? 'all') as FirFilter,
     set: (v: FirFilter) => setFilter('fir', v),
   });
   const groupByItem = computed({

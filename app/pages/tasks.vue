@@ -492,10 +492,10 @@
       return task ? [task] : [];
     }
     // Normal filtering
-    if (!searchQuery.value.trim()) {
+    if (!searchQuery.value?.trim()) {
       return visibleTasks.value;
     }
-    const query = searchQuery.value.toLowerCase().trim();
+    const query = (searchQuery.value || '').toLowerCase().trim();
     return visibleTasks.value.filter((task) => task.name?.toLowerCase().includes(query));
   });
   /*

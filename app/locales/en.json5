@@ -284,7 +284,6 @@
         showDetails: 'Show Details',
         hideDetails: 'Hide Details',
         unlocksTrader: 'Unlocks: {trader}',
-
         remainingTooltip: 'Tasks blocked by this task, but not unlocked by completing it',
         previousQuests: 'Previous Tasks',
         nextQuests: 'Next Tasks',

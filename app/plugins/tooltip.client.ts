@@ -147,6 +147,8 @@ function createTooltip(el: HTMLElement, value: string | TooltipOptions) {
   tooltipMap.set(el, {
     tooltip,
     cleanup: () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (rafId) cancelAnimationFrame(rafId);
       if (cleanup) cleanup();
       el.removeEventListener('mouseenter', show);
       el.removeEventListener('mouseleave', hide);

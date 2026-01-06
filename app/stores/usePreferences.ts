@@ -244,7 +244,7 @@ export const usePreferencesStore = defineStore('preferences', {
     getHideNonKappaTasks: (state) => {
       return state.tasks.filters.hideNonKappa ?? false;
     },
-    getNeededitemsStyle: (state) => {
+    getNeededItemsStyle: (state) => {
       return state.neededItems.views.style ?? 'mediumCard';
     },
     getHideoutPrimaryView: (state) => {
@@ -475,7 +475,10 @@ if (shouldInitPreferencesWatchers) {
                 if (data) {
                   logger.debug('[PreferencesStore] Loading preferences from Supabase:', data);
                   // Update store with server data using mapper
-                  const nestedData = unflattenPreferences(data, preferencesDefaultState);
+                  const nestedData = unflattenPreferences(
+                    data as Record<string, unknown>,
+                    preferencesDefaultState as unknown as Record<string, unknown>
+                  );
                   preferencesStore.$patch(nestedData);
                 }
                 // Set up sync to Supabase
@@ -489,7 +492,7 @@ if (shouldInitPreferencesWatchers) {
                       '[PreferencesStore] Transform called - preparing preferences for sync'
                     );
                     // Convert nested state to flat snake_case for Supabase
-                    const flat = flattenPreferences(preferencesState);
+                    const flat = flattenPreferences(preferencesState as unknown as Record<string, unknown>);
                     return {
                       user_id: $supabase.user.id,
                       ...flat,

@@ -11,7 +11,7 @@
   </UApp>
 </template>
 <script setup lang="ts">
-  import { computed, watchEffect } from 'vue';
+  import { computed, watchEffect, onMounted } from 'vue';
   import { useAppInitialization } from '@/composables/useAppInitialization';
   import { useTarkovStore } from '@/stores/useTarkov';
   // Initialize app (auth, locale, migrations)
@@ -19,8 +19,10 @@
   // Game mode class toggler for accent color switching
   const tarkovStore = useTarkovStore();
   const gameMode = computed(() => tarkovStore.getCurrentGameMode());
-  watchEffect(() => {
-    document.documentElement.classList.toggle('pve-mode', gameMode.value === 'pve');
+  onMounted(() => {
+    watchEffect(() => {
+      document.documentElement.classList.toggle('pve-mode', gameMode.value === 'pve');
+    });
   });
   const config = useRuntimeConfig();
   const route = useRoute();

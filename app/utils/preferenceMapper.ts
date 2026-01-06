@@ -68,7 +68,10 @@ export function flattenPreferences(nested: Record<string, unknown>): FlatPrefere
       } else {
         const columnName =
           PROPERTY_TO_COLUMN_MAP[newPath] ||
-          key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+          key.replace(
+            /(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])/g,
+            '_'
+          ).toLowerCase();
         result[columnName] = value;
       }
     }
@@ -92,10 +95,15 @@ export function unflattenPreferences(
       const parts = propPath.split('.');
       let current = result;
       for (let i = 0; i < parts.length - 1; i++) {
-        if (!current[parts[i]]) current[parts[i]] = {};
-        current = current[parts[i]];
+        const part = parts[i];
+        if (!part) continue;
+        if (!current[part]) current[part] = {};
+        current = current[part] as Record<string, unknown>;
       }
-      current[parts[parts.length - 1]] = value;
+      const lastPart = parts[parts.length - 1];
+      if (lastPart) {
+        current[lastPart] = value;
+      }
     } else {
       // Fallback for fields not in map (try camelCase conversion)
       const camelKey = colName.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
