@@ -162,7 +162,7 @@
       notasksfound: 'Задания не найдены. Попробуйте изменить фильтры или обновить уровень.',
       showing_all_sources: 'Показать все источники',
       loading: 'Загружаем задания',
-      questcard: {
+      taskcard: {
         level: 'Требуемый уровень: {count}',
         wiki: 'Wiki страница',
         lockedbefore: 'Заданий до: {count}',

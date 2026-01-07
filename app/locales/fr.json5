@@ -162,7 +162,7 @@
       notasksfound: 'Aucune tâche trouvée. Essayez de modifier vos filtres ou de mettre à jour votre niveau.',
       showing_all_sources: 'Afficher toutes les sources',
       loading: 'Chargement des tâches',
-      questcard: {
+      taskcard: {
         level: 'Niveau requis : {count}',
         wiki: 'Wiki',
         lockedbefore: 'Tâches avant : {count}',

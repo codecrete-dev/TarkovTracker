@@ -54,7 +54,7 @@
                 t(
                   'page.tasks.questcard.levelBadgeTooltip',
                   { level: task.minPlayerLevel },
-                  `Minimum player level ${task.minPlayerLevel} required to unlock this quest`
+                  `Minimum player level ${task.minPlayerLevel} required to unlock this task`
                 )
               "
               :badge-class="[
@@ -88,7 +88,7 @@
               :tooltip="
                 t(
                   'page.tasks.questcard.kappaTooltip',
-                  'This quest is required to obtain the Kappa Secure Container'
+                  'This task is required to obtain the Kappa Secure Container'
                 )
               "
               badge-class="badge-soft-kappa cursor-help text-xs"
@@ -103,7 +103,7 @@
               :tooltip="
                 t(
                   'page.tasks.questcard.lightkeeperTooltip',
-                  'This quest is required to unlock the Lightkeeper trader'
+                  'This task is required to unlock the Lightkeeper trader'
                 )
               "
               badge-class="badge-soft-lightkeeper cursor-help text-xs"
@@ -125,7 +125,7 @@
               :tooltip="
                 t(
                   'page.tasks.questcard.blockedTooltip',
-                  'This quest is permanently blocked and can never be completed due to choices made in other quests'
+                  'This task is permanently blocked and can never be completed due to choices made in other tasks'
                 )
               "
               badge-class="badge-soft-surface cursor-help text-xs"
@@ -157,7 +157,7 @@
                 t(
                   'page.tasks.questcard.editionExclusiveTooltip',
                   { editions: exclusiveEditions.join(', ') },
-                  `This quest is only available to players with ${exclusiveEditions.join(', ')} edition`
+                  `This task is only available to players with ${exclusiveEditions.join(', ')} edition`
                 )
               "
               badge-class="badge-soft-edition cursor-help text-xs"
@@ -322,7 +322,7 @@
       <div v-if="childTasks.length > 0">
         <RelatedTasksRow
           :tasks="childTasks"
-          :label="t('page.tasks.questcard.nextQuests', 'Next Quests')"
+          :label="t('page.tasks.questcard.nextQuests', 'Next Tasks')"
           expandable
           :expanded="expandedTasks.has('children')"
           intent="gray"
@@ -361,7 +361,7 @@
       <div v-if="filteredPreviousTasks.length > 0">
         <RelatedTasksRow
           :tasks="filteredPreviousTasks"
-          :label="t('page.tasks.questcard.previousQuests', 'Previous Quests')"
+          :label="t('page.tasks.questcard.previousQuests', 'Previous Tasks')"
           expandable
           :expanded="expandedTasks.has('parents')"
           intent="gray"
@@ -715,7 +715,7 @@
     const confirmed = window.confirm(
       t(
         'page.tasks.questcard.markfailedconfirm',
-        "Mark this task as failed? This is only for data issues, isn't recommended, and may block questlines."
+        "Mark this task as failed? This is only for data issues, isn't recommended, and may block task chains."
       )
     );
     if (!confirmed) return;

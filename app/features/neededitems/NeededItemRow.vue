@@ -22,7 +22,7 @@
                 :is-craftable-available="isCraftableAvailable"
                 :craftable-title="craftableTitle"
                 :is-kappa-required="isKappaRequired"
-                :kappa-title="$t('task.kappa_req', 'Required for Kappa quest')"
+                :kappa-title="$t('task.kappa_req', 'Required for Kappa task')"
                 :show-count="false"
                 :show-icons="false"
                 size="md"
@@ -64,7 +64,7 @@
                   :is-craftable-available="isCraftableAvailable"
                   :craftable-title="craftableTitle"
                   :kappa-required="isKappaRequired"
-                  :kappa-title="$t('task.kappa_req', 'Required for Kappa quest')"
+                  :kappa-title="$t('task.kappa_req', 'Required for Kappa task')"
                   @craft="goToCraftStation"
                 />
               </span>
@@ -118,7 +118,7 @@
                         :is-craftable-available="isCraftableAvailable"
                         :craftable-title="craftableTitle"
                         :is-kappa-required="isKappaRequired"
-                        :kappa-title="$t('task.kappa_req', 'Required for Kappa quest')"
+                        :kappa-title="$t('task.kappa_req', 'Required for Kappa task')"
                         :show-count="false"
                         :show-icons="false"
                         size="md"
@@ -148,7 +148,7 @@
                         :is-craftable-available="isCraftableAvailable"
                         :craftable-title="craftableTitle"
                         :is-kappa-required="isKappaRequired"
-                        :kappa-title="$t('task.kappa_req', 'Required for Kappa quest')"
+                        :kappa-title="$t('task.kappa_req', 'Required for Kappa task')"
                         @craft="goToCraftStation"
                       />
                     </div>

@@ -131,7 +131,7 @@
   useSeoMeta({
     title: 'Tasks',
     description:
-      'Track your Escape from Tarkov quest progress. View quest objectives, rewards, and dependencies for both PVP and PVE game modes.',
+      'Track your Escape from Tarkov task progress. View task objectives, rewards, and dependencies for both PVP and PVE game modes.',
   });
   const router = useRouter();
   const { t } = useI18n({ useScope: 'global' });

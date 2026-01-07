@@ -14,7 +14,7 @@
             {{
               $t(
                 'settings.skills.explanation',
-                'All skills from game data are shown below. Quest rewards are auto-calculated. Use offsets to add skills gained through gameplay.'
+                'All skills from game data are shown below. Task rewards are auto-calculated. Use offsets to add skills gained through gameplay.'
               )
             }}
           </template>
@@ -104,7 +104,7 @@
             <!-- Breakdown -->
             <div class="mb-2 flex gap-3 text-xs">
               <div class="dark:text-surface-300 flex-1 text-gray-600">
-                Quest:
+                Task:
                 <span class="dark:text-surface-100 font-medium text-gray-900">
                   {{ getQuestSkillLevel(skill.name) }}
                 </span>

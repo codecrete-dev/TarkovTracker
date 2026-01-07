@@ -162,7 +162,7 @@
       notasksfound: 'Завдання не знайдено. Спробуйте змінити фільтри або оновити рівень.',
       showing_all_sources: 'Показати всі джерела',
       loading: 'Завантажуємо завдання',
-      questcard: {
+      taskcard: {
         level: 'Потрібний рівень: {count}',
         wiki: 'Wiki сторінка',
         lockedbefore: 'Завдань до: {count}',

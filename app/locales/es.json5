@@ -140,7 +140,7 @@
       notasksfound: 'No se han encontrado tareas. Prueba a cambiar los filtros o actualizar el nivel.',
       showing_all_sources: 'Mostrar todas las fuentes',
       loading: 'Cargando tareas',
-      questcard: {
+      taskcard: {
         level: 'Nivel requerido: {count}',
         wiki: 'Wiki',
         lockedbefore: 'Tareas previas: {count}',

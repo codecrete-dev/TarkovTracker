@@ -124,7 +124,7 @@
                         )
                       : $t(
                           'page.neededitems.filters.kappa_only_tooltip',
-                          'Show only items required for Kappa quests'
+                          'Show only items required for Kappa tasks'
                         )
                   "
                   class="inline-flex"

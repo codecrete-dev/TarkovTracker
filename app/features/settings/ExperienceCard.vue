@@ -14,7 +14,7 @@
             {{
               $t(
                 'settings.experience.explanation',
-                'Quest XP is auto-calculated. Use the offset to add XP from daily quests, kills, and other gameplay.'
+                'Task XP is auto-calculated. Use the offset to add XP from daily tasks, kills, and other gameplay.'
               )
             }}
           </template>
@@ -100,7 +100,7 @@
             <div class="flex flex-col gap-1 font-mono text-sm">
               <!-- Quest XP -->
               <div class="text-content-secondary flex items-center justify-between">
-                <span>Quest XP</span>
+                <span>Task XP</span>
                 <span>{{ formatNumber(xpCalculation.calculatedQuestXP.value) }}</span>
               </div>
               <!-- Manual Offset -->

@@ -24,7 +24,7 @@
             :is-craftable-available="isCraftableAvailable"
             :craftable-title="craftableTitle"
             :is-kappa-required="isKappaRequired"
-            :kappa-title="$t('task.kappa_req', 'Required for Kappa quest')"
+            :kappa-title="$t('task.kappa_req', 'Required for Kappa task')"
             :show-count="!isSingleItem"
             size="md"
             @craft="goToCraftStation"

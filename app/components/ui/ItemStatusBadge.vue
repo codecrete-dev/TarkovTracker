@@ -52,7 +52,7 @@
     isCraftableAvailable: false,
     craftableTitle: 'Craftable',
     isKappaRequired: false,
-    kappaTitle: 'Required for Kappa quest',
+    kappaTitle: 'Required for Kappa task',
     size: 'md',
     showIcons: true,
   });

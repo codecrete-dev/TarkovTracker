@@ -259,7 +259,7 @@
     )
   );
   const labelShowNextQuests = computed(() =>
-    t('page.tasks.settings.appearance.showNextQuests', 'Show next quests')
+    t('page.tasks.settings.appearance.showNextQuests', 'Show next tasks')
   );
   const tooltipShowNextQuests = computed(() =>
     t(
@@ -268,7 +268,7 @@
     )
   );
   const labelShowPreviousQuests = computed(() =>
-    t('page.tasks.settings.appearance.showPreviousQuests', 'Show previous quests')
+    t('page.tasks.settings.appearance.showPreviousQuests', 'Show previous tasks')
   );
   const tooltipShowPreviousQuests = computed(() =>
     t(

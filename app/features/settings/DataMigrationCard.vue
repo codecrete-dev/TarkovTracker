@@ -99,7 +99,7 @@
           <div class="space-y-3">
             <p>
               These tasks are marked as "failed" in your data. This typically happens when you chose
-              a different quest branch or when a task became unavailable.
+              a different task branch or when a task became unavailable.
             </p>
             <div class="mt-2 space-y-2">
               <div
