@@ -98,7 +98,7 @@
             <span class="text-content-secondary text-sm font-medium">
               {{ $t('settings.experience.task_xp', 'Task XP') }}
             </span>
-            <div class="text-content-primary font-mono text-xl font-semibold pr-2 text-right">
+            <div class="text-content-primary pr-2 text-right font-mono text-xl font-semibold">
               {{ formatNumber(xpCalculation.calculatedQuestXP.value) }}
             </div>
             <!-- Row 2: Manual Offset -->
@@ -110,9 +110,9 @@
                 v-if="tarkovStore.getXpOffset() !== 0"
                 icon="i-mdi-undo"
                 variant="link"
-                color="gray"
+                color="neutral"
                 size="xs"
-                class="h-4 p-0 text-accent-400"
+                class="text-accent-400 h-4 p-0"
                 :title="$t('settings.experience.reset_offset', 'Reset XP Offset')"
                 @click="resetOffset"
               >
@@ -120,20 +120,20 @@
               </UButton>
             </div>
             <div
-              class="font-mono text-xl font-semibold pr-2 text-right"
+              class="pr-2 text-right font-mono text-xl font-semibold"
               :class="
                 tarkovStore.getXpOffset() >= 0
                   ? 'text-green-600 dark:text-green-400'
                   : 'text-red-500 dark:text-red-400'
               "
             >
-              <span class="opacity-50 mr-1">{{ tarkovStore.getXpOffset() >= 0 ? '+' : '' }}</span>
+              <span class="mr-1 opacity-50">{{ tarkovStore.getXpOffset() >= 0 ? '+' : '' }}</span>
               {{ formatNumber(tarkovStore.getXpOffset()) }}
             </div>
             <!-- Math Divider -->
             <div class="border-base col-span-2 my-2 border-b-2"></div>
             <!-- Row 3: Total XP Input -->
-            <label class="text-content-primary text-sm font-bold uppercase tracking-wider">
+            <label class="text-content-primary text-sm font-bold tracking-wider uppercase">
               {{ $t('settings.experience.total_xp', 'Total XP') }}
             </label>
             <UInput
@@ -162,7 +162,7 @@
                 color="primary"
                 variant="solid"
                 size="md"
-                class="shadow-sm w-full justify-center"
+                class="w-full justify-center shadow-sm"
                 :disabled="!isValidXPInput"
                 @click="applyManualXP"
               >

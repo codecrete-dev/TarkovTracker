@@ -81,10 +81,16 @@
   import { useLocaleNumberFormatter } from '@/utils/formatters';
   const { t } = useI18n();
   const formatNumber = useLocaleNumberFormatter();
-  const props = defineProps<{
-    currentCount: number;
-    neededCount: number;
-  }>();
+  const props = withDefaults(
+    defineProps<{
+      currentCount: number;
+      neededCount: number;
+      disabled?: boolean;
+    }>(),
+    {
+      disabled: false,
+    }
+  );
   const emit = defineEmits<{
     decrease: [];
     increase: [];

@@ -156,10 +156,10 @@
   const { filters, setFilter, setFilters, debouncedInputs } =
     usePageFilters(useTasksFilterConfig());
   // Computed aliases for cleaner template/code access
-  const getTaskPrimaryView = filters.view;
-  const getTaskSecondaryView = filters.status;
-  const getTaskMapView = filters.map;
-  const getTaskTraderView = filters.trader;
+  const getTaskPrimaryView = filters.view!;
+  const getTaskSecondaryView = filters.status!;
+  const getTaskMapView = filters.map!;
+  const getTaskTraderView = filters.trader!;
   const singleTaskId = computed(() => {
     const taskId = filters.task.value;
     if (!taskId) return null;

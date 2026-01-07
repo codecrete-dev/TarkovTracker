@@ -130,11 +130,11 @@
   const { filters, setFilter, debouncedInputs } = usePageFilters(useNeededItemsFilterConfig());
   // Computed aliases for template bindings
   const activeFilter = computed({
-    get: () => filters.filter.value as FilterType,
+    get: () => filters.filter!.value as FilterType,
     set: (v: FilterType) => setFilter('filter', v),
   });
   const viewMode = computed({
-    get: () => filters.viewMode.value as ViewMode,
+    get: () => filters.viewMode!.value as ViewMode,
     set: (v: ViewMode) => setFilter('viewMode', v),
   });
   const firFilter = computed({
@@ -142,15 +142,15 @@
     set: (v: FirFilter) => setFilter('fir', v),
   });
   const groupByItem = computed({
-    get: () => filters.grouped.value,
+    get: () => filters.grouped!.value,
     set: (v: boolean) => setFilter('grouped', v),
   });
   const kappaOnly = computed({
-    get: () => filters.kappa.value,
+    get: () => filters.kappa!.value,
     set: (v: boolean) => setFilter('kappa', v),
   });
   const hideNonFirSpecialEquipment = computed({
-    get: () => filters.hideSpecial.value,
+    get: () => filters.hideSpecial!.value,
     set: (v: boolean) => setFilter('hideSpecial', v),
   });
   const search = debouncedInputs.search!;

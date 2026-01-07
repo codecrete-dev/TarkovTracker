@@ -16,12 +16,7 @@
     </UButton>
     <template #content>
       <UCard
-        class="dark:bg-contentbackground bg-white"
-        :ui="{
-          body: {
-            base: 'overflow-y-auto max-h-[75vh] block',
-          },
-        }"
+        :ui="modalUiConfig"
       >
         <template #header>
           <div class="flex items-center justify-between">
@@ -189,6 +184,11 @@
   const tarkovStore = useTarkovStore();
   const isOpen = ref(false);
   // Labels and tooltips (defined in script to avoid template quoting issues)
+  const modalUiConfig = {
+    body: {
+      base: 'overflow-y-auto max-h-[75vh] block',
+    },
+  } as any;
   const labelShowNonSpecialTasks = computed(() =>
     t(
       'page.tasks.settings.filters.showNonSpecialTasks',

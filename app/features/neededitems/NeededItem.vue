@@ -150,6 +150,7 @@
     isCraftable: baseIsCraftable,
     isCraftableAvailable,
     craftableTitle,
+    craftableIconClass,
     goToCraftStation,
   } = useCraftableItem(() => item.value?.id);
   const isCraftable = computed(() => {
@@ -350,6 +351,7 @@
     imageItem,
     isCraftableAvailable,
     craftableTitle,
+    craftableIconClass,
     isCraftable,
     goToCraftStation,
   });

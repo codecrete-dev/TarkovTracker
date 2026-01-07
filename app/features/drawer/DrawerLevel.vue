@@ -115,7 +115,7 @@
                   : undefined
               "
               class="text-content-secondary hover:text-content-primary flex h-6 w-6 items-center justify-center rounded p-0 transition-colors disabled:opacity-40"
-              :class="{ 'disabled': useAutomaticLevel || displayedLevel >= maxPlayerLevel }"
+              :class="{ disabled: useAutomaticLevel || displayedLevel >= maxPlayerLevel }"
               :disabled="useAutomaticLevel || displayedLevel >= maxPlayerLevel"
               @click="incrementLevel"
             >
@@ -131,7 +131,7 @@
                   : undefined
               "
               class="text-content-secondary hover:text-content-primary flex h-6 w-6 items-center justify-center rounded p-0 transition-colors disabled:opacity-40"
-              :class="{ 'disabled': useAutomaticLevel || displayedLevel <= minPlayerLevel }"
+              :class="{ disabled: useAutomaticLevel || displayedLevel <= minPlayerLevel }"
               :disabled="useAutomaticLevel || displayedLevel <= minPlayerLevel"
               @click="decrementLevel"
             >

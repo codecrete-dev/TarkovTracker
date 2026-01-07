@@ -1,10 +1,7 @@
 <template>
   <div
     class="group relative"
-    :class="[
-      containerClasses,
-      { 'h-full w-full': size === 'fluid', 'clickable': clickable },
-    ]"
+    :class="[containerClasses, { 'h-full w-full': size === 'fluid', clickable: clickable }]"
     @click="handleClick"
     @contextmenu="handleContextMenu"
   >

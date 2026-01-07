@@ -1,10 +1,7 @@
 <template>
   <div
     class="group flex w-full items-center gap-4 rounded-md px-2 py-2 transition-colors"
-    :class="[
-      isComplete ? 'bg-success-500/10' : '',
-      isParentTaskLocked ? 'disabled' : 'clickable',
-    ]"
+    :class="[isComplete ? 'bg-success-500/10' : '', isParentTaskLocked ? 'disabled' : 'clickable']"
     @click="handleRowClick($event)"
     @mouseenter="objectiveMouseEnter()"
     @mouseleave="objectiveMouseLeave()"

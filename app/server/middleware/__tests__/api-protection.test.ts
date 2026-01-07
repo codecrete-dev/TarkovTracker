@@ -66,7 +66,7 @@ describe('API Protection Middleware', () => {
       } as Record<string, unknown>,
       method: 'GET',
       context: {},
-    };
+    } as any;
   });
   describe('Route filtering', () => {
     it('should skip non-API routes', async () => {

@@ -37,9 +37,7 @@
           value-key="value"
           trailing-icon=""
           :popper="{ placement: 'bottom-end', strategy: 'fixed' }"
-          :ui="{
-            base: 'bg-surface-elevated border border-base ring-1 ring-gray-200/50 rounded-md px-2 py-1.5 dark:bg-surface-900/90 dark:border-white/15 dark:ring-white/10',
-          }"
+          :ui="selectMenuUiConfig"
           :ui-menu="{
             container: 'z-[9999]',
             width: 'w-auto min-w-32',
@@ -50,8 +48,7 @@
             padding: 'p-1',
             option: {
               base: 'px-3 py-2 text-sm cursor-pointer transition-colors rounded',
-              inactive:
-                'clickable text-content-secondary dark:text-surface-200',
+              inactive: 'clickable text-content-secondary dark:text-surface-200',
               active:
                 'clickable bg-surface-200 text-content-primary dark:bg-surface-800 dark:text-white',
               selected:
@@ -145,6 +142,9 @@
       ? '/img/default-avatar.svg'
       : $supabase.user.photoURL;
   });
+  const selectMenuUiConfig = {
+    base: 'bg-surface-elevated border border-base ring-1 ring-gray-200/50 rounded-md px-2 py-1.5 dark:bg-surface-900/90 dark:border-white/15 dark:ring-white/10',
+  } as any;
   function logout() {
     $supabase.signOut();
   }

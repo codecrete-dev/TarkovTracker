@@ -47,7 +47,8 @@
       :class="activeFilter === 'all' || activeFilter === 'completed' ? 'grid grid-cols-2' : ''"
     >
       <!-- Tasks section -->
-      <div v-if="activeFilter !== 'hideout'" class="bg-surface-elevated flex flex-col gap-1 p-2">
+      <!-- Tasks section -->
+      <div class="bg-surface-elevated flex flex-col gap-1 p-2">
         <div
           v-if="activeFilter === 'all' || activeFilter === 'completed'"
           class="text-content-tertiary flex items-center gap-1"
@@ -109,7 +110,7 @@
         </div>
       </div>
       <!-- Hideout section -->
-      <div v-if="activeFilter !== 'tasks'" class="bg-surface-elevated flex flex-col gap-1 p-2">
+      <div class="bg-surface-elevated flex flex-col gap-1 p-2">
         <div
           v-if="activeFilter === 'all' || activeFilter === 'completed'"
           class="text-content-tertiary flex items-center gap-1"
@@ -215,6 +216,5 @@
       'bg-surface-elevated': !isComplete.value,
     };
   });
-  const { isCraftable, isCraftableAvailable } =
-    useCraftableItem(itemId);
+  const { isCraftable, isCraftableAvailable } = useCraftableItem(itemId);
 </script>

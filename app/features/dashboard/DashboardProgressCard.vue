@@ -148,7 +148,6 @@
       bar: 'bg-[var(--color-reward-item)]',
     },
   };
-  const hoverBorderClass = computed(() => colorClasses[props.color].hover);
   const iconBgClass = computed(() => colorClasses[props.color].iconBg);
   const iconColorClass = computed(() => colorClasses[props.color].icon);
   const percentageColorClass = computed(() => colorClasses[props.color].percentage);

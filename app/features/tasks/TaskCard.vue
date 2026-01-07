@@ -290,10 +290,7 @@
         <!-- Objective Content (The Existing Body) -->
         <div
           class="relative z-10"
-          :class="[
-            isCompact ? 'space-y-3' : 'space-y-4',
-            !isInteractive ? 'disabled' : '',
-          ]"
+          :class="[isCompact ? 'space-y-3' : 'space-y-4', !isInteractive ? 'disabled' : '']"
         >
           <QuestKeys v-if="task?.neededKeys?.length" :needed-keys="task.neededKeys" />
           <QuestObjectives
@@ -522,7 +519,7 @@
   // Get the editions that a task is exclusive to
   const exclusiveEditions = computed(() => {
     return getExclusiveEditionsForTask(props.task.id, metadataStore.editions ?? []).map(
-      (e) => e.name
+      (e) => e.title
     );
   });
   const exclusiveEditionBadge = computed(() => {

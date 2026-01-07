@@ -14,7 +14,7 @@
     <div class="flex h-full w-full flex-col items-center gap-1 pt-1">
       <!-- Image Area - relative container for overlays -->
       <div class="relative">
-        <GameItem :item="requirement.item" size="small" :show-actions="false" simple-mode />
+        <GameItem :item="adaptedItem" size="small" :show-actions="false" simple-mode />
         <!-- Complete Checkmark Overlay -->
         <div
           v-if="isComplete"
@@ -169,6 +169,12 @@
   const formatNumber = useLocaleNumberFormatter();
   const requirementId = computed(() => props.requirement.id);
   const requiredCount = computed(() => props.requirement.count);
+  // Adapt item to match TarkovItem interface (convert nulls to undefined)
+  const adaptedItem = computed(() => ({
+    ...props.requirement.item,
+    link: props.requirement.item.link ?? undefined,
+    wikiLink: props.requirement.item.wikiLink ?? undefined,
+  }));
   // Context menu
   const contextMenu = ref<InstanceType<typeof ContextMenu>>();
   const metadataStore = useMetadataStore();

@@ -90,7 +90,7 @@
     titleClasses?: string;
     headerClasses?: string;
     // Styling props
-    highlightColor?: 'green' | 'blue' | 'red' | 'tan' | 'purple' | 'secondary' | 'accent';
+    highlightColor?: 'green' | 'blue' | 'red' | 'tan' | 'purple' | 'secondary' | 'accent' | 'error';
     fillHeight?: boolean;
     showDivider?: boolean;
     // Layout props
@@ -106,7 +106,7 @@
     subtitle: '',
     icon: '',
     avatar: '',
-    iconColor: null,
+    iconColor: undefined,
     titleClasses: '',
     headerClasses: '',
     highlightColor: 'accent',
@@ -134,6 +134,7 @@
         classes['badge-premium-blue'] = true;
         break;
       case 'red':
+      case 'error':
         classes['badge-premium-red'] = true;
         break;
       case 'tan':

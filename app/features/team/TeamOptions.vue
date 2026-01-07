@@ -11,7 +11,7 @@
       <div class="space-y-4 p-4">
         <div class="flex items-center justify-between">
           <div class="text-sm font-medium">{{ $t(taskHideAllLabel) }}</div>
-          <label class="relative inline-flex clickable items-center">
+          <label class="clickable relative inline-flex items-center">
             <input v-model="taskHideAll" type="checkbox" class="peer sr-only" />
             <div
               class="peer h-6 w-11 rounded-full bg-gray-700 peer-checked:bg-red-600 peer-focus:ring-2 peer-focus:ring-red-300 peer-focus:outline-none after:absolute after:top-0.5 after:left-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"
@@ -20,7 +20,7 @@
         </div>
         <div class="flex items-center justify-between">
           <div class="text-sm font-medium">{{ $t(itemsHideAllLabel) }}</div>
-          <label class="relative inline-flex clickable items-center">
+          <label class="clickable relative inline-flex items-center">
             <input v-model="itemsHideAll" type="checkbox" class="peer sr-only" />
             <div
               class="peer h-6 w-11 rounded-full bg-gray-700 peer-checked:bg-red-600 peer-focus:ring-2 peer-focus:ring-red-300 peer-focus:outline-none after:absolute after:top-0.5 after:left-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"
@@ -31,7 +31,7 @@
           <div class="text-sm font-medium" :class="{ 'opacity-50': itemsHideAll }">
             {{ $t(itemsHideNonFIRLabel) }}
           </div>
-          <label class="relative inline-flex clickable items-center">
+          <label class="clickable relative inline-flex items-center">
             <input
               v-model="itemsHideNonFIR"
               type="checkbox"
@@ -47,7 +47,7 @@
           <div class="text-sm font-medium" :class="{ 'opacity-50': itemsHideAll }">
             {{ $t(itemsHideHideoutLabel) }}
           </div>
-          <label class="relative inline-flex clickable items-center">
+          <label class="clickable relative inline-flex items-center">
             <input
               v-model="itemsHideHideout"
               type="checkbox"
@@ -61,7 +61,7 @@
         </div>
         <div class="flex items-center justify-between">
           <div class="text-sm font-medium">{{ $t(mapHideAllLabel) }}</div>
-          <label class="relative inline-flex clickable items-center">
+          <label class="clickable relative inline-flex items-center">
             <input v-model="mapHideAll" type="checkbox" class="peer sr-only" />
             <div
               class="peer h-6 w-11 rounded-full bg-gray-700 peer-checked:bg-red-600 peer-focus:ring-2 peer-focus:ring-red-300 peer-focus:outline-none after:absolute after:top-0.5 after:left-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"

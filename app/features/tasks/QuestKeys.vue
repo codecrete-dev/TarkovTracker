@@ -19,7 +19,13 @@
             class="inline-block"
             :class="{ 'ml-2': keyMap.keys.length > 1 && keyIndex > 0 }"
           >
-            <GameItem :item="key" :count="1" size="medium" class="mr-2 !cursor-default" :show-actions="true" />
+            <GameItem
+              :item="key"
+              :count="1"
+              size="medium"
+              class="mr-2 !cursor-default"
+              :show-actions="true"
+            />
           </span>
         </template>
         <template #map>

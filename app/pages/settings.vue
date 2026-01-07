@@ -286,10 +286,7 @@
       </template>
     </UModal>
     <!-- Reset All Modal -->
-    <UModal
-      v-model:open="showResetAllDialog"
-      @close="resetAllConfirmText = ''"
-    >
+    <UModal v-model:open="showResetAllDialog" @close="resetAllConfirmText = ''">
       <template #header>
         <div class="flex items-center gap-2">
           <UIcon name="i-mdi-alert-octagon" class="text-error-400 h-5 w-5" />
@@ -321,13 +318,11 @@
           </p>
           <div class="space-y-2">
             <p class="text-surface-100 text-sm font-medium">
-              Type <strong class="text-error-400">DELETE</strong> to confirm:
+              Type
+              <strong class="text-error-400">DELETE</strong>
+              to confirm:
             </p>
-            <UInput
-              v-model="resetAllConfirmText"
-              placeholder="DELETE"
-              class="font-mono"
-            />
+            <UInput v-model="resetAllConfirmText" placeholder="DELETE" class="font-mono" />
           </div>
         </div>
       </template>

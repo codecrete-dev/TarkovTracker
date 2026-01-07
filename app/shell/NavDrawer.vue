@@ -20,10 +20,7 @@
     <div
       class="nav-drawer-scroll relative z-10 flex h-full flex-col overflow-x-hidden overflow-y-auto"
     >
-      <NuxtLink
-        to="/"
-        class="group mt-1 flex flex-col items-center px-3 py-1.5 transition-opacity"
-      >
+      <NuxtLink to="/" class="group mt-1 flex flex-col items-center px-3 py-1.5 transition-opacity">
         <div
           :class="isCollapsed ? 'w-8' : 'w-32.5'"
           class="relative mx-auto transition-all duration-200"
@@ -188,7 +185,7 @@
   const nextFaction = computed<PMCFaction>(() => {
     const currentIndex = factionArray.indexOf(currentFaction.value);
     const nextIndex = (currentIndex + 1) % factionArray.length;
-    return factionArray[nextIndex];
+    return factionArray[nextIndex]!;
   });
   function setFaction(faction: PMCFaction) {
     if (faction !== currentFaction.value) {
@@ -226,7 +223,7 @@
   const nextGameMode = computed<GameMode>(() => {
     const currentIndex = gameModeArray.indexOf(currentGameMode.value);
     const nextIndex = (currentIndex + 1) % gameModeArray.length;
-    return gameModeArray[nextIndex];
+    return gameModeArray[nextIndex]!;
   });
   const nextGameModeLabel = computed(() => {
     return gameModeConfig[nextGameMode.value].label;

@@ -118,7 +118,7 @@
   import { useMetadataStore, type CraftSource } from '@/stores/useMetadata';
   import { useProgressStore } from '@/stores/useProgress';
   import { useTarkovStore } from '@/stores/useTarkov';
-  import type { TaskObjective } from '@/types/tarkov';
+  import type { TaskObjective, TarkovItem } from '@/types/tarkov';
   const props = defineProps<{
     title: string;
     iconName: string;
@@ -129,16 +129,7 @@
   const progressStore = useProgressStore();
   const metadataStore = useMetadataStore();
   type ObjectiveMeta = {
-    item?: {
-      id?: string;
-      name?: string;
-      shortName?: string;
-      iconLink?: string;
-      image512pxLink?: string;
-      image8xLink?: string;
-      backgroundColor?: string;
-      properties?: { defaultPreset?: unknown };
-    };
+    item?: TarkovItem;
     neededCount: number;
     currentCount: number;
     itemName: string;

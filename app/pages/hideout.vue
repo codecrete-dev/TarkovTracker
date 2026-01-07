@@ -104,7 +104,7 @@
   const searchQuery = debouncedInputs.search!;
   // Sync URL filter to activePrimaryView (from useHideoutFiltering)
   watch(
-    filters.view,
+    filters.view!,
     (newView) => {
       if (newView !== activePrimaryView.value) {
         activePrimaryView.value = newView;
@@ -114,7 +114,7 @@
   );
   // Sync activePrimaryView changes back to URL
   watch(activePrimaryView, (newView) => {
-    if (newView !== filters.view.value) {
+    if (newView !== filters.view!.value) {
       setFilter('view', newView);
     }
   });

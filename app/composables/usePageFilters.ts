@@ -344,6 +344,7 @@ export function usePageFilters<C extends FilterConfig>(
       debouncedInputRefs[key as string]!.value = value;
       return;
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     updateUrl({ [key]: value } as unknown as any);
   };
   /**

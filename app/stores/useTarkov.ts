@@ -603,14 +603,11 @@ export const useTarkovStore = defineStore('swapTarkov', {
             const safetyBuffer = 512 * 1024; // 512KB buffer
             // If we're close to quota, clean up old backups
             if (currentUsage + neededSpace > estimatedQuota - safetyBuffer) {
-              logger.warn(
-                '[TarkovStore] localStorage quota low, cleaning up old backups',
-                {
-                  currentUsage: Math.round(currentUsage / 1024) + 'KB',
-                  needed: Math.round(neededSpace / 1024) + 'KB',
-                  quota: Math.round(estimatedQuota / 1024) + 'KB',
-                }
-              );
+              logger.warn('[TarkovStore] localStorage quota low, cleaning up old backups', {
+                currentUsage: Math.round(currentUsage / 1024) + 'KB',
+                needed: Math.round(neededSpace / 1024) + 'KB',
+                quota: Math.round(estimatedQuota / 1024) + 'KB',
+              });
               // Get all backup keys sorted by timestamp (oldest first)
               const backupKeys = Object.keys(localStorage)
                 .filter((k) => k.startsWith(STORAGE_KEYS.progressBackupPrefix))
@@ -895,34 +892,37 @@ export async function initializeTarkovSync() {
         return { ok: false, hadRemoteData };
       }
       let success = true; // Use simple variable to track success from within rAF
-
       // Wrap heavy data processing in rAF to avoid blocking the main thread
       await new Promise<void>((resolve) => {
         requestAnimationFrame(async () => {
           // Normalize Supabase data with defaults for safety
           const normalizedRemote = data
             ? ({
-                currentGameMode: data.current_game_mode || GAME_MODES.PVP,
-                gameEdition: data.game_edition || defaultState.gameEdition,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                currentGameMode: (data as any).current_game_mode || GAME_MODES.PVP,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                gameEdition: (data as any).game_edition || defaultState.gameEdition,
                 // Use structuredClone for deep copy of defaults
-                pvp: { ...structuredClone(defaultState.pvp), ...(data.pvp_data || {}) },
-                pve: { ...structuredClone(defaultState.pve), ...(data.pve_data || {}) },
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                pvp: { ...structuredClone(defaultState.pvp), ...((data as any).pvp_data || {}) },
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                pve: { ...structuredClone(defaultState.pve), ...((data as any).pve_data || {}) },
               } as UserState)
             : null;
-
           const remoteScore = normalizedRemote ? progressScore(normalizedRemote) : 0;
           const localScore = progressScore(localState);
-
           if (data) {
-            const remoteUpdatedAt = data.updated_at ? Date.parse(data.updated_at) : null;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const remoteUpdatedAt = (data as any).updated_at
+              ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                Date.parse((data as any).updated_at)
+              : null;
             const localOwnedByUser = storedUserId === currentUserId;
-
             if (hasLocalProgress && !localOwnedByUser && storedUserId === null) {
               notifyLocalIgnored(
                 'Found local guest progress on this device; your cloud progress was kept.'
               );
             }
-
             let shouldPreferLocal = false;
             // Conflict resolution logic
             if (localOwnedByUser && localTimestamp && remoteUpdatedAt) {
@@ -932,7 +932,6 @@ export async function initializeTarkovSync() {
             } else if (localOwnedByUser && !localTimestamp && !remoteUpdatedAt) {
               shouldPreferLocal = localScore > remoteScore;
             }
-
             // If local has more progress than remote, protect local and push it to Supabase.
             if (shouldPreferLocal) {
               logger.warn('[TarkovStore] Local progress ahead of Supabase; preserving local data', {
@@ -947,7 +946,6 @@ export async function initializeTarkovSync() {
                 pvp_data: localState.pvp || defaultState.pvp,
                 pve_data: localState.pve || defaultState.pve,
               });
-
               if (upsertError) {
                 logger.error(
                   '[TarkovStore] Error syncing local progress to Supabase:',
@@ -973,7 +971,6 @@ export async function initializeTarkovSync() {
             const { error: upsertError } = await $supabase.client
               .from('user_progress')
               .upsert(migrateData);
-
             if (upsertError) {
               logger.error('[TarkovStore] Error migrating local data to Supabase:', upsertError);
             } else {
@@ -982,16 +979,13 @@ export async function initializeTarkovSync() {
           } else {
             // SAFETY CHECKS: Before treating as "new user", verify this isn't Issue #71 scenario
             // Issue #71: User links a second OAuth provider → race condition → false "no data" → overwrites
-            
             // Check 1: Account age
             const accountCreatedAt = $supabase.user.createdAt;
             const accountAgeMs = accountCreatedAt ? Date.now() - Date.parse(accountCreatedAt) : 0;
             const isRecentlyCreated = accountAgeMs < 5000; // 5 seconds threshold
-
             // Check 2: Multiple OAuth providers - strongest signal of Issue #71
             const linkedProviders = $supabase.user.providers || [];
             const hasMultipleProviders = linkedProviders.length > 1;
-
             // ONLY block if hasMultipleProviders (Issue #71 scenario)
             // OLD accounts with single provider are legitimate first-time users who waited to log in
             if (hasMultipleProviders) {
@@ -1006,11 +1000,9 @@ export async function initializeTarkovSync() {
                   userId: $supabase.user.id,
                 }
               );
-              
               // Reset to default state but DO NOT sync to Supabase
               // This prevents overwriting potentially existing data
               resetStoreToDefault();
-              
               // Notify user of the issue
               const toast = useToast();
               toast.add({
@@ -1018,9 +1010,7 @@ export async function initializeTarkovSync() {
                 description:
                   'We detected an issue loading your account data. Please refresh the page or contact support if this persists.',
                 color: 'error',
-
               });
-              
               success = false;
             } else {
               // All safety checks passed - truly new user (or old account, first login)
@@ -1033,7 +1023,6 @@ export async function initializeTarkovSync() {
           resolve();
         });
       });
-
       if (!success) {
         return { ok: false, hadRemoteData: false };
       }
@@ -1122,7 +1111,9 @@ function setupRealtimeListener() {
   if (!$supabase.user.loggedIn || !$supabase.user.id) return;
   // Clean up existing channel if any
   if (realtimeChannel) {
-    $supabase.client.removeChannel(realtimeChannel as Parameters<typeof $supabase.client.removeChannel>[0]);
+    $supabase.client.removeChannel(
+      realtimeChannel as Parameters<typeof $supabase.client.removeChannel>[0]
+    );
     realtimeChannel = null;
   }
   logger.debug('[TarkovStore] Setting up realtime listener for multi-device sync');
@@ -1185,7 +1176,6 @@ function setupRealtimeListener() {
           title: 'Progress synced',
           description: 'Changes from another device were merged with your local progress.',
           color: 'info',
-
         });
       }
     )
@@ -1342,7 +1332,9 @@ function mergeProgressData(
 function cleanupRealtimeListener() {
   if (realtimeChannel) {
     const { $supabase } = useNuxtApp();
-    $supabase.client.removeChannel(realtimeChannel as Parameters<typeof $supabase.client.removeChannel>[0]);
+    $supabase.client.removeChannel(
+      realtimeChannel as Parameters<typeof $supabase.client.removeChannel>[0]
+    );
     realtimeChannel = null;
     logger.debug('[TarkovStore] Cleaned up realtime listener');
   }

@@ -942,26 +942,26 @@ textarea {
 
   /* Global Hover Effect Utility */
   /* Uses a pseudo-element to create a tinted overlay without affecting layout or existing backgrounds */
-  
+
   /* Apply interactive styles to all standard interactive elements AND .clickable utility */
   button:not(:disabled),
-  a:not([href=""]):not([href="#"]),
-  input[type="button"]:not(:disabled),
-  input[type="submit"]:not(:disabled),
-  input[type="reset"]:not(:disabled),
+  a:not([href='']):not([href='#']),
+  input[type='button']:not(:disabled),
+  input[type='submit']:not(:disabled),
+  input[type='reset']:not(:disabled),
   summary,
   .clickable {
     cursor: pointer;
     position: relative;
     isolation: isolate; /* Force new stacking context so ::after sits properly above background */
   }
-  
+
   /* Shared pseudo-element logic for all above selectors */
   button:not(:disabled)::after,
-  a:not([href=""]):not([href="#"])::after,
-  input[type="button"]:not(:disabled)::after,
-  input[type="submit"]:not(:disabled)::after,
-  input[type="reset"]:not(:disabled)::after,
+  a:not([href='']):not([href='#'])::after,
+  input[type='button']:not(:disabled)::after,
+  input[type='submit']:not(:disabled)::after,
+  input[type='reset']:not(:disabled)::after,
   summary::after,
   .clickable::after,
   .hover-effect::after {
@@ -978,10 +978,10 @@ textarea {
 
   /* Dark mode overrides */
   .dark button:not(:disabled)::after,
-  .dark a:not([href=""]):not([href="#"])::after,
-  .dark input[type="button"]:not(:disabled)::after,
-  .dark input[type="submit"]:not(:disabled)::after,
-  .dark input[type="reset"]:not(:disabled)::after,
+  .dark a:not([href='']):not([href='#'])::after,
+  .dark input[type='button']:not(:disabled)::after,
+  .dark input[type='submit']:not(:disabled)::after,
+  .dark input[type='reset']:not(:disabled)::after,
   .dark summary::after,
   .dark .clickable::after,
   .dark .hover-effect::after {
@@ -990,10 +990,10 @@ textarea {
 
   /* Hover state */
   button:not(:disabled):hover::after,
-  a:not([href=""]):not([href="#"]):hover::after,
-  input[type="button"]:not(:disabled):hover::after,
-  input[type="submit"]:not(:disabled):hover::after,
-  input[type="reset"]:not(:disabled):hover::after,
+  a:not([href='']):not([href='#']):hover::after,
+  input[type='button']:not(:disabled):hover::after,
+  input[type='submit']:not(:disabled):hover::after,
+  input[type='reset']:not(:disabled):hover::after,
   summary:hover::after,
   .clickable:hover::after,
   .hover-effect:hover::after {
@@ -1002,10 +1002,10 @@ textarea {
 
   /* Active/Pressed state */
   button:not(:disabled):active::after,
-  a:not([href=""]):not([href="#"]):active::after,
-  input[type="button"]:not(:disabled):active::after,
-  input[type="submit"]:not(:disabled):active::after,
-  input[type="reset"]:not(:disabled):active::after,
+  a:not([href='']):not([href='#']):active::after,
+  input[type='button']:not(:disabled):active::after,
+  input[type='submit']:not(:disabled):active::after,
+  input[type='reset']:not(:disabled):active::after,
   summary:active::after,
   .clickable:active::after,
   .hover-effect:active::after {
