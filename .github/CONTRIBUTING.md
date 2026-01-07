@@ -124,18 +124,18 @@ Issues are automatically labeled based on template selection. Maintainers will a
 3. Once approved, maintainers will merge
 4. Your contribution will be in the next release!
 
-## Label System
+## Issue Types & Label System
 
-We use a streamlined label system (17 labels total). See [LABELS.md](.github/LABELS.md) for the complete reference.
+We use GitHub's native **Issue Types** for categorization and a streamlined **label system** (12 labels total). See [LABELS.md](.github/LABELS.md) for the complete reference.
 
-### Type Labels (5)
-- `bug` - Something isn't working
-- `feature` - New feature or major addition
-- `enhancement` - Improvement to existing feature
-- `dependencies` - Dependency updates (often automated)
-- `docs` - Documentation changes
+### Issue Types (required - choose one)
+- 🐛 **bug** - An unexpected problem or behavior
+- ✨ **feature** - Adds or improves functionality in the codebase
+- ⚡ **enhancement** - Improvement or optimization to existing features
+- 📦 **dependencies** - Package updates and dependency management
+- 📝 **documentation** - Documentation, guides, or README updates
 
-### Area Labels (6 - technical boundaries)
+### Area Labels (optional - technical boundaries)
 All area labels use light green color for visual grouping:
 - `area:ui` - Vue components, pages, styling
 - `area:api` - Nitro server routes, workers, API endpoints
@@ -144,15 +144,15 @@ All area labels use light green color for visual grouping:
 - `area:realtime` - Team sync, Supabase broadcasts
 - `area:i18n` - Translations and localization
 
-### Priority Labels (3)
+### Priority Labels (optional)
 - `priority:high` - Critical bugs, security, important features
 - `priority:medium` - Normal priority (default)
 - `priority:low` - Nice to have
 
-### Special Labels (3)
+### Special Labels (optional)
 - `good-first-issue` - Good for newcomers
 - `help-wanted` - Community help needed
-- `upstream` - Issue belongs in data-overlay repo
+- `upstream` - Issue belongs in data-overlay repo (close with explanation)
 
 ### Workflow States
 Status labels (needs-info, blocked, in-progress) are **NOT** used. Instead, these are managed via GitHub Project board columns:

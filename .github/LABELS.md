@@ -4,18 +4,21 @@ This document describes the streamlined label system used in the TarkovTracker r
 
 ## Philosophy
 
-Labels describe **what** an issue is (type, technical area, priority), not **where** it is in the workflow. Workflow states (needs info, blocked, in progress) are managed through the GitHub Project board columns.
+**Issue Types** (not labels) categorize WHAT kind of work it is. **Labels** provide additional context about technical areas, priority, and special flags. **Project Board Status** tracks WHERE it is in the workflow.
+
+## Issue Types vs Labels
+
+GitHub's native **Issue Types** feature replaces type labels. Each issue must have exactly ONE issue type:
+
+- 🐛 **bug** - An unexpected problem or behavior (Red)
+- ✨ **feature** - Adds or improves functionality in the codebase (Green)
+- ⚡ **enhancement** - Improvement or optimization to existing features (Blue)
+- 📦 **dependencies** - Package updates and dependency management (Gray)
+- 📝 **documentation** - Documentation, guides, or README updates (Yellow)
+
+**Labels** supplement the issue type with additional metadata.
 
 ## Label Categories
-
-### Type Labels (What kind of issue/PR)
-| Label | Color | Description | When to Use |
-|-------|-------|-------------|-------------|
-| `bug` | ![#d73a4a](https://via.placeholder.com/15/d73a4a/000000?text=+) `#d73a4a` | Something isn't working | Broken functionality, errors, unexpected behavior |
-| `feature` | ![#0e8a16](https://via.placeholder.com/15/0e8a16/000000?text=+) `#0e8a16` | New feature or major addition | Completely new functionality |
-| `enhancement` | ![#a2eeef](https://via.placeholder.com/15/a2eeef/000000?text=+) `#a2eeef` | Improvement to existing feature | Making existing features better |
-| `dependencies` | ![#0366d6](https://via.placeholder.com/15/0366d6/000000?text=+) `#0366d6` | Dependency updates | npm package updates (often automated) |
-| `docs` | ![#0075ca](https://via.placeholder.com/15/0075ca/000000?text=+) `#0075ca` | Documentation changes | README, comments, guides, CONTRIBUTING.md |
 
 ### Area Labels (Technical boundaries - which systems are affected)
 All area labels use `#c2e0c6` (light green) for visual grouping.
@@ -49,47 +52,54 @@ All area labels use `#c2e0c6` (light green) for visual grouping.
 
 ### Combining Labels
 Issues and PRs should typically have:
-1. **One Type label** (required) - bug, feature, enhancement, dependencies, or docs
-2. **One or more Area labels** - Which technical systems are affected
-3. **One Priority label** (for issues) - How urgent is it
-4. **Zero or more Special labels** - Additional context
+1. **One Issue Type** (required) - bug, feature, enhancement, dependencies, or documentation
+2. **One or more Area labels** (optional) - Which technical systems are affected
+3. **One Priority label** (optional, for issues) - How urgent is it
+4. **Zero or more Special labels** (optional) - Additional flags
 
 ### Examples
 
 **Bug in task display:**
 ```
-bug, area:ui, priority:medium
+Issue Type: bug
+Labels: area:ui, priority:medium
 ```
 
 **API endpoint missing CORS headers:**
 ```
-bug, area:api, priority:high
+Issue Type: bug
+Labels: area:api, priority:high
 ```
 
 **Team page shows wrong level:**
 ```
-bug, area:ui, area:realtime, priority:medium
+Issue Type: bug
+Labels: area:ui, area:realtime, priority:medium
 ```
 
 **New feature spanning multiple areas:**
 ```
-feature, area:api, area:database, area:auth, priority:high
+Issue Type: feature
+Labels: area:api, area:database, area:auth, priority:high
 ```
 
 **Enhancement to UI:**
 ```
-enhancement, area:ui, priority:low, good-first-issue
+Issue Type: enhancement
+Labels: area:ui, priority:low, good-first-issue
 ```
 
 **Missing quest data (send to data-overlay):**
 ```
-upstream
+Issue Type: bug (or feature, depending on what's wrong)
+Labels: upstream
 ```
 Close the issue with a comment explaining it belongs in the data-overlay repo and link to where they should report it.
 
 **Dependency update PR:**
 ```
-dependencies
+Issue Type: dependencies
+Labels: (none needed, Dependabot handles these)
 ```
 
 ### Workflow States (Use Project Board, NOT Labels)
@@ -151,16 +161,18 @@ When someone reports incorrect quest requirements, missing items, wrong item pro
 
 ## Quick Reference
 
-**Total Labels: 17**
+**Total Labels: 12** (down from 31!)
 
 **By Category:**
-- Type: 5 labels (bug, feature, enhancement, dependencies, docs)
-- Area: 6 labels (ui, api, database, auth, realtime, i18n)
-- Priority: 3 labels (high, medium, low)
+- Area: 6 labels (area:ui, area:api, area:database, area:auth, area:realtime, area:i18n)
+- Priority: 3 labels (priority:high, priority:medium, priority:low)
 - Special: 3 labels (good-first-issue, help-wanted, upstream)
 
-**Most Common Combinations:**
-- `bug, area:ui, priority:medium`
-- `enhancement, area:ui, priority:low`
-- `feature, area:api, priority:high`
-- `upstream` (then close)
+**Issue Types (not labels): 5**
+- bug, feature, enhancement, dependencies, documentation
+
+**Most Common Patterns:**
+- Issue Type: `bug` + Labels: `area:ui, priority:medium`
+- Issue Type: `enhancement` + Labels: `area:ui, priority:low`
+- Issue Type: `feature` + Labels: `area:api, priority:high`
+- Issue Type: `bug` + Labels: `upstream` (then close)
