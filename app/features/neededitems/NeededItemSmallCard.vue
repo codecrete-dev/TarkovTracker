@@ -10,7 +10,7 @@
           :class="[
             imageContainerClasses,
             {
-              'cursor-pointer active:scale-[0.98]': hasItem && !selfCompletedNeed,
+              'cursor-pointer': hasItem && !selfCompletedNeed,
             },
           ]"
           @click="handleCardClick"
