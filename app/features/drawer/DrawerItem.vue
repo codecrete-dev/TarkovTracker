@@ -9,7 +9,7 @@
       :class="[
         isActive
           ? 'border-accent-500 bg-accent-100 text-accent-900 dark:bg-accent-500/20 dark:text-accent-100 border-l-2'
-          : 'hover-effect text-content-secondary border-l-2 border-transparent',
+          : 'text-content-secondary border-l-2 border-transparent',
         props.isCollapsed ? 'justify-center' : '',
       ]"
       @click="handleNavClick"
@@ -44,7 +44,7 @@
       :href="props.href"
       target="_blank"
       rel="noopener noreferrer"
-      class="hover-effect group flex cursor-pointer items-center rounded-md px-3 py-2.5 text-sm font-medium transition-colors duration-150"
+      class="group flex cursor-pointer items-center rounded-md px-3 py-2.5 text-sm font-medium transition-colors duration-150"
       :class="[
         'text-content-secondary border-l-2 border-transparent',
         props.isCollapsed ? 'justify-center' : '',
@@ -82,7 +82,7 @@
     <!-- Non-link item (fallback) -->
     <div
       v-else
-      class="hover-effect group text-content-tertiary flex cursor-pointer items-center rounded-md border-l-4 border-transparent px-3 py-2.5 text-base font-medium transition-colors duration-200"
+      class="clickable group text-content-tertiary flex items-center rounded-md border-l-4 border-transparent px-3 py-2.5 text-base font-medium transition-colors duration-200"
       :class="[props.isCollapsed ? 'justify-center' : '']"
     >
       <!-- Icon / Avatar -->

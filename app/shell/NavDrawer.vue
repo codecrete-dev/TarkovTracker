@@ -22,7 +22,7 @@
     >
       <NuxtLink
         to="/"
-        class="hover-effect group mt-1 flex flex-col items-center px-3 py-1.5 transition-opacity"
+        class="group mt-1 flex flex-col items-center px-3 py-1.5 transition-opacity"
       >
         <div
           :class="isCollapsed ? 'w-8' : 'w-32.5'"
@@ -53,7 +53,7 @@
           <!-- Game Mode Cycling Button -->
           <span v-tooltip="`Switch to ${nextGameModeLabel}`" class="flex-1">
             <button
-              class="hover-effect border-base dark:border-accent-800/50 flex h-full w-full items-center justify-center rounded border px-2 py-2.5 transition-colors"
+              class="border-base dark:border-accent-800/50 flex h-full w-full items-center justify-center rounded border px-2 py-2.5 transition-colors"
               :class="currentGameModeColorClass"
               :style="{ '--color-hover-tint': nextGameModeHoverTint }"
               @click="cycleGameMode"
@@ -73,7 +73,7 @@
           <!-- Faction Cycling Button -->
           <span v-tooltip="`Switch to ${nextFaction}`" class="flex">
             <button
-              class="hover-effect border-base dark:border-accent-800/50 flex aspect-square items-center justify-center rounded border p-2 text-center transition-colors"
+              class="border-base dark:border-accent-800/50 flex aspect-square items-center justify-center rounded border p-2 text-center transition-colors"
               @click="cycleFaction"
             >
               <NuxtImg
@@ -88,7 +88,7 @@
         </div>
         <button
           v-if="!isCollapsed"
-          class="hover-effect border-base text-content-secondary dark:border-accent-800/50 w-full rounded border px-2 py-2.5 text-center text-xs font-medium transition-colors dark:text-white/80"
+          class="border-base text-content-secondary dark:border-accent-800/50 w-full rounded border px-2 py-2.5 text-center text-xs font-medium transition-colors dark:text-white/80"
           @click="navigateToSettings"
         >
           {{ currentEditionName }}

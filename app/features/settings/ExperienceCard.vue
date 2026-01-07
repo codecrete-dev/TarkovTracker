@@ -98,7 +98,7 @@
             <span class="text-content-secondary text-sm font-medium">
               {{ $t('settings.experience.task_xp', 'Task XP') }}
             </span>
-            <div class="text-content-primary font-mono text-xl font-semibold pr-2 text-right sm:pr-4">
+            <div class="text-content-primary font-mono text-xl font-semibold pr-2 text-right">
               {{ formatNumber(xpCalculation.calculatedQuestXP.value) }}
             </div>
             <!-- Row 2: Manual Offset -->
@@ -112,7 +112,7 @@
                 variant="link"
                 color="gray"
                 size="xs"
-                class="h-4 p-0 opacity-50 hover:opacity-100"
+                class="h-4 p-0 clickable text-accent-400"
                 :title="$t('settings.experience.reset_offset', 'Reset XP Offset')"
                 @click="resetOffset"
               >
@@ -120,7 +120,7 @@
               </UButton>
             </div>
             <div
-              class="font-mono text-xl font-semibold pr-2 text-right sm:pr-4"
+              class="font-mono text-xl font-semibold pr-2 text-right"
               :class="
                 tarkovStore.getXpOffset() >= 0
                   ? 'text-green-600 dark:text-green-400'
@@ -157,12 +157,6 @@
               </p>
             </div>
             <div class="flex flex-col items-end gap-2">
-              <span
-                v-if="!isValidXPInput && manualXPInput !== null"
-                class="text-accent-500 text-[10px] font-bold uppercase tracking-tighter"
-              >
-                {{ $t('settings.experience.unsaved_changes', 'Unsaved Changes') }}
-              </span>
               <UButton
                 icon="i-mdi-check"
                 color="primary"

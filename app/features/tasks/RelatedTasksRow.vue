@@ -4,7 +4,7 @@
     class="flex min-w-0 flex-col overflow-hidden"
     :class="[
       expandable
-        ? 'hover-effect focus-ring cursor-pointer rounded-md border border-gray-300 p-2 transition-colors dark:border-white/20'
+        ? 'clickable focus-ring rounded-md border border-gray-300 p-2 transition-colors dark:border-white/20'
         : 'py-0.5',
       expanded ? 'bg-surface-50 dark:bg-surface-900 shadow-inner' : '',
       intent === 'error' ? 'bg-error-50 dark:bg-error-900/10' : '',
@@ -46,7 +46,7 @@
           :key="task.id"
           v-tooltip="task.name"
           :to="`/tasks?task=${task.id}&status=all`"
-          class="focus-ring hover-effect inline-flex shrink-0 items-center rounded px-2 py-0.5 text-xs no-underline transition-colors"
+          class="focus-ring inline-flex shrink-0 items-center rounded px-2 py-0.5 text-xs no-underline transition-colors"
           :class="getBadgeClass(task)"
           @click.stop
           @keydown.enter.stop

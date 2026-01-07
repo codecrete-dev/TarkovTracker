@@ -697,7 +697,6 @@
       task_xp: 'Task XP',
       manual_offset: 'Manual Offset',
       total_xp: 'Total XP',
-      unsaved_changes: 'Unsaved Changes',
       sync_description: 'Set your in-game Total XP to automatically update the offset.',
       manual_hint: 'Enter your actual total XP to adjust the offset automatically.',
       reset: 'Reset',

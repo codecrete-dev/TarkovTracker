@@ -304,10 +304,10 @@
   const toast = useToast();
   const stationAnchorId = computed(() => `station-${props.station.id}`);
   const upgradeButtonUi = {
-    base: 'badge-soft-success hover-effect font-semibold',
+    base: 'badge-soft-success font-semibold',
   };
   const downgradeButtonUi = {
-    base: 'bg-error-50 hover-effect dark:bg-error-900/40 text-error-600 dark:text-error-300 border border-error-200 dark:border-error-700/50',
+    base: 'bg-error-50 dark:bg-error-900/40 text-error-600 dark:text-error-300 border border-error-200 dark:border-error-700/50',
   };
   const getHighlightColor = (): 'secondary' | 'green' | 'red' => {
     const level = progressStore.hideoutLevels?.[props.station.id]?.self ?? 0;

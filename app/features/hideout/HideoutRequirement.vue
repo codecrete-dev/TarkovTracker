@@ -1,7 +1,7 @@
 <template>
   <!-- Compact Card Layout - Works for ALL items -->
   <div
-    class="group hover-effect relative flex h-full cursor-pointer flex-col items-center justify-center rounded-lg border p-2 transition-all select-none"
+    class="group clickable relative flex h-full flex-col items-center justify-center rounded-lg border p-2 transition-all select-none"
     :class="[
       isComplete
         ? 'border-success-400 bg-success-50 dark:border-success-500/30 dark:bg-success-900/10'

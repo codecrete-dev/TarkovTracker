@@ -4,7 +4,7 @@
       <button
         v-tooltip="t('page.dashboard.traders.viewTasks', { name: trader.name })"
         type="button"
-        class="hover-effect group flex w-full cursor-pointer items-center gap-3 pb-2 text-xl transition-opacity focus:opacity-80"
+        class="group clickable flex w-full items-center gap-3 pb-2 text-xl transition-opacity focus:opacity-80"
         @click="navigateToTraderTasks"
       >
         <span class="badge-premium-secondary group-hover:scale-105">

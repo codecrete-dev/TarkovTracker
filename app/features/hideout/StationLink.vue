@@ -2,7 +2,7 @@
   <router-link
     v-tooltip="props.station.name"
     :to="stationHref"
-    class="hover-effect inline-flex max-w-full min-w-0 items-center rounded pr-2 text-blue-400 no-underline"
+    class="inline-flex max-w-full min-w-0 items-center rounded pr-2 text-blue-400 no-underline"
     :aria-label="`Go to ${props.station.name} card`"
     :class="{
       'gap-2': !props.compact,

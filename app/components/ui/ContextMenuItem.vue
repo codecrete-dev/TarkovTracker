@@ -1,6 +1,6 @@
 <template>
   <div
-    class="hover-effect flex cursor-pointer items-center gap-2 px-4 py-2.5 text-sm text-gray-700 transition-colors duration-150 dark:text-gray-200"
+    class="clickable flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 transition-colors duration-150 dark:text-gray-200"
     @click="handleClick"
   >
     <img v-if="isImagePath" :src="icon" :alt="label" class="h-4 w-4 shrink-0" />

@@ -90,8 +90,8 @@
     padding: 'p-1',
     option: {
       base: 'px-3 py-2 text-sm cursor-pointer transition-colors rounded',
-      inactive: 'hover-effect text-content-secondary',
-      active: 'hover-effect bg-surface-elevated text-content-primary',
+      inactive: 'clickable text-content-secondary',
+      active: 'clickable bg-surface-elevated text-content-primary',
       selected: 'bg-primary-500/10 text-primary-500 ring-1 ring-primary-500',
     },
   };

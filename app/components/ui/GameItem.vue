@@ -3,7 +3,7 @@
     class="group relative"
     :class="[
       containerClasses,
-      { 'h-full w-full': size === 'fluid', 'hover-effect cursor-pointer': clickable },
+      { 'h-full w-full': size === 'fluid', 'clickable': clickable },
     ]"
     @click="handleClick"
     @contextmenu="handleContextMenu"

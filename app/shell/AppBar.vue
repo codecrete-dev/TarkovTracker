@@ -38,7 +38,7 @@
           trailing-icon=""
           :popper="{ placement: 'bottom-end', strategy: 'fixed' }"
           :ui="{
-            base: 'hover-effect bg-surface-elevated border border-base ring-1 ring-gray-200/50 rounded-md px-2 py-1.5 dark:bg-surface-900/90 dark:border-white/15 dark:ring-white/10',
+            base: 'bg-surface-elevated border border-base ring-1 ring-gray-200/50 rounded-md px-2 py-1.5 dark:bg-surface-900/90 dark:border-white/15 dark:ring-white/10',
           }"
           :ui-menu="{
             container: 'z-[9999]',
@@ -51,9 +51,9 @@
             option: {
               base: 'px-3 py-2 text-sm cursor-pointer transition-colors rounded',
               inactive:
-                'hover-effect text-content-secondary hover:text-content-primary dark:text-surface-200 dark:hover:text-white',
+                'clickable text-content-secondary hover:text-content-primary dark:text-surface-200 dark:hover:text-white',
               active:
-                'hover-effect bg-surface-200 text-content-primary dark:bg-surface-800 dark:text-white',
+                'clickable bg-surface-200 text-content-primary dark:bg-surface-800 dark:text-white',
               selected:
                 'bg-accent-50 text-accent-600 ring-1 ring-accent-500 dark:bg-accent-500/10 dark:text-accent-100',
             },
@@ -79,7 +79,7 @@
         <span v-tooltip="nextThemeLabel" class="inline-flex">
           <button
             type="button"
-            class="hover-effect focus-ring bg-surface-elevated border-base dark:bg-surface-900/90 flex items-center justify-center rounded-md border px-2 py-1.5 transition-colors dark:border-white/15"
+            class="focus-ring bg-surface-elevated border-base dark:bg-surface-900/90 flex items-center justify-center rounded-md border px-2 py-1.5 transition-colors dark:border-white/15"
             :aria-label="nextThemeLabel"
             @click="cycleTheme"
           >
@@ -98,13 +98,13 @@
               content:
                 'z-[9999] min-w-32 p-1 bg-surface-floating dark:bg-surface-900 ring-1 ring-gray-200 dark:ring-white/10 rounded-lg shadow-xl',
               item: {
-                base: 'hover-effect px-2.5 py-1.5 text-sm cursor-pointer rounded transition-colors text-content-secondary hover:text-content-primary',
+                base: 'clickable px-2.5 py-1.5 text-sm rounded transition-colors text-content-secondary hover:text-content-primary',
               },
             }"
           >
             <button
               type="button"
-              class="hover-effect focus-ring bg-surface-elevated border-base dark:bg-surface-900/90 flex items-center justify-center rounded-md border p-1 transition-colors dark:border-white/15"
+              class="focus-ring bg-surface-elevated border-base dark:bg-surface-900/90 flex items-center justify-center rounded-md border p-1 transition-colors dark:border-white/15"
             >
               <UAvatar :src="avatarSrc" size="xs" alt="User avatar" />
             </button>
@@ -113,7 +113,7 @@
         <template v-else>
           <NuxtLink
             to="/login"
-            class="hover-effect focus-ring bg-surface-elevated border-base dark:bg-surface-900/90 flex items-center justify-center rounded-md border px-2 py-1.5 transition-colors dark:border-white/15"
+            class="focus-ring bg-surface-elevated border-base dark:bg-surface-900/90 flex items-center justify-center rounded-md border px-2 py-1.5 transition-colors dark:border-white/15"
           >
             <UIcon name="i-mdi-fingerprint" class="text-content-tertiary h-4 w-4" />
           </NuxtLink>

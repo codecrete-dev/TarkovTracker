@@ -13,7 +13,8 @@
           type="button"
           :disabled="disabled || currentCount <= 0"
           :aria-label="t('page.tasks.questcard.decrease', 'Decrease')"
-          class="hover-effect focus-ring flex h-7 w-7 items-center justify-center rounded-l-md text-gray-500 transition-colors disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300"
+          class="focus-ring flex h-7 w-7 items-center justify-center rounded-l-md text-gray-500 transition-colors disabled:pointer-events-none dark:text-gray-300"
+          :class="disabled || currentCount <= 0 ? 'disabled' : 'clickable'"
           @click="$emit('decrease')"
         >
           <UIcon name="i-mdi-minus" aria-hidden="true" class="h-4 w-4" />
@@ -23,7 +24,7 @@
       <div
         v-if="!isEditing"
         class="flex h-7 min-w-14 items-center justify-center px-2 text-[11px] font-semibold text-gray-900 tabular-nums dark:text-gray-100"
-        :class="disabled ? 'cursor-not-allowed opacity-50' : 'hover-effect cursor-pointer'"
+        :class="disabled ? 'disabled' : 'clickable'"
         :title="t('page.tasks.questcard.clickToEdit', 'Click to edit')"
         @click.stop="startEditing"
       >
@@ -56,7 +57,8 @@
           type="button"
           :disabled="disabled || currentCount >= neededCount"
           :aria-label="t('page.tasks.questcard.increase', 'Increase')"
-          class="hover-effect focus-ring flex h-7 w-7 items-center justify-center rounded-r-md text-gray-500 transition-colors disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300"
+          class="focus-ring flex h-7 w-7 items-center justify-center rounded-r-md text-gray-500 transition-colors disabled:pointer-events-none dark:text-gray-300"
+          :class="disabled || currentCount >= neededCount ? 'disabled' : 'clickable'"
           @click="$emit('increase')"
         >
           <UIcon name="i-mdi-plus" aria-hidden="true" class="h-4 w-4" />

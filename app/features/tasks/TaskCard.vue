@@ -20,7 +20,7 @@
               :href="task.wikiLink"
               target="_blank"
               rel="noopener noreferrer"
-              class="hover-effect focus-ring hover:text-content-secondary inline-flex items-center justify-center rounded p-1 text-gray-500 transition-colors dark:text-gray-400"
+              class="focus-ring hover:text-content-secondary inline-flex items-center justify-center rounded p-1 text-gray-500 transition-colors dark:text-gray-400"
               :aria-label="t('page.tasks.questcard.viewOnWiki', 'View on Wiki')"
               @click.stop
             >
@@ -31,7 +31,7 @@
               :href="tarkovDevTaskUrl"
               target="_blank"
               rel="noopener noreferrer"
-              class="hover-effect focus-ring hover:text-content-secondary inline-flex items-center justify-center rounded p-1 text-gray-500 transition-colors dark:text-gray-400"
+              class="focus-ring hover:text-content-secondary inline-flex items-center justify-center rounded p-1 text-gray-500 transition-colors dark:text-gray-400"
               :aria-label="t('page.tasks.questcard.viewOnTarkovDev', 'View on tarkov.dev')"
               @click.stop
             >
@@ -175,7 +175,7 @@
               icon="i-mdi-clipboard-text"
               color="neutral"
               variant="soft"
-              class="badge-soft-task-available hover-effect shrink-0 font-semibold"
+              class="badge-soft-task-available shrink-0 font-semibold"
               @click.stop="markTaskAvailable()"
             >
               {{ t('page.tasks.questcard.availablebutton', 'Available').toUpperCase() }}
@@ -187,7 +187,7 @@
               icon="i-mdi-check-circle"
               color="neutral"
               variant="soft"
-              class="badge-soft-success hover-effect shrink-0 font-semibold"
+              class="badge-soft-success shrink-0 font-semibold"
               @click.stop="markTaskComplete()"
             >
               {{ t('page.tasks.questcard.completebutton', 'Complete').toUpperCase() }}
@@ -199,7 +199,7 @@
               icon="i-mdi-clipboard-text"
               color="neutral"
               variant="soft"
-              class="badge-soft-task-available hover-effect shrink-0 font-semibold"
+              class="badge-soft-task-available shrink-0 font-semibold"
               @click.stop="markTaskUncomplete()"
             >
               {{ t('page.tasks.questcard.availablebutton', 'Available').toUpperCase() }}
@@ -292,7 +292,7 @@
           class="relative z-10"
           :class="[
             isCompact ? 'space-y-3' : 'space-y-4',
-            !isInteractive ? 'cursor-not-allowed opacity-60' : '',
+            !isInteractive ? 'disabled' : '',
           ]"
         >
           <QuestKeys v-if="task?.neededKeys?.length" :needed-keys="task.neededKeys" />

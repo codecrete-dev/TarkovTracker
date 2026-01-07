@@ -8,7 +8,7 @@
       variant="ghost"
       color="neutral"
       size="sm"
-      class="hover-effect text-content-secondary hover:text-content-primary"
+      class="text-content-secondary hover:text-content-primary"
       @click="isOpen = true"
     >
       <UIcon name="i-mdi-tune" class="h-4 w-4 sm:mr-1.5" />

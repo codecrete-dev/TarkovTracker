@@ -942,12 +942,28 @@ textarea {
 
   /* Global Hover Effect Utility */
   /* Uses a pseudo-element to create a tinted overlay without affecting layout or existing backgrounds */
-  .hover-effect {
+  
+  /* Apply interactive styles to all standard interactive elements AND .clickable utility */
+  button:not(:disabled),
+  a:not([href=""]):not([href="#"]),
+  input[type="button"]:not(:disabled),
+  input[type="submit"]:not(:disabled),
+  input[type="reset"]:not(:disabled),
+  summary,
+  .clickable {
+    cursor: pointer;
     position: relative;
     isolation: isolate; /* Force new stacking context so ::after sits properly above background */
-    /* Force relative positioning so pseudo matches size */
   }
-
+  
+  /* Shared pseudo-element logic for all above selectors */
+  button:not(:disabled)::after,
+  a:not([href=""]):not([href="#"])::after,
+  input[type="button"]:not(:disabled)::after,
+  input[type="submit"]:not(:disabled)::after,
+  input[type="reset"]:not(:disabled)::after,
+  summary::after,
+  .clickable::after,
   .hover-effect::after {
     content: '';
     position: absolute;
@@ -961,19 +977,42 @@ textarea {
     mix-blend-mode: multiply; /* Stain background in light mode */
   }
 
+  /* Dark mode overrides */
+  .dark button:not(:disabled)::after,
+  .dark a:not([href=""]):not([href="#"])::after,
+  .dark input[type="button"]:not(:disabled)::after,
+  .dark input[type="submit"]:not(:disabled)::after,
+  .dark input[type="reset"]:not(:disabled)::after,
+  .dark summary::after,
+  .dark .clickable::after,
   .dark .hover-effect::after {
     mix-blend-mode: soft-light; /* Glint/glow background in dark mode */
   }
 
+  /* Hover state */
+  button:not(:disabled):hover::after,
+  a:not([href=""]):not([href="#"]):hover::after,
+  input[type="button"]:not(:disabled):hover::after,
+  input[type="submit"]:not(:disabled):hover::after,
+  input[type="reset"]:not(:disabled):hover::after,
+  summary:hover::after,
+  .clickable:hover::after,
   .hover-effect:hover::after {
     opacity: 1;
   }
 
-  /* Ensure active/pressed states might want to hide or darken (optional, keeping simple for now) */
+  /* Active/Pressed state */
+  button:not(:disabled):active::after,
+  a:not([href=""]):not([href="#"]):active::after,
+  input[type="button"]:not(:disabled):active::after,
+  input[type="submit"]:not(:disabled):active::after,
+  input[type="reset"]:not(:disabled):active::after,
+  summary:active::after,
+  .clickable:active::after,
   .hover-effect:active::after {
     background-color: var(--color-hover-tint);
     opacity: 1; /* Max intensity */
-    filter: brightness(0.85); /* Darken to create "pressed" effect (simulate double intensity) */
+    filter: brightness(0.85);
   }
 
   /* Standardized Focus Ring Utility */

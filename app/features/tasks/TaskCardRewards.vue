@@ -2,7 +2,7 @@
   <div
     v-if="hasRewardsSummary || hasExpandableDetails"
     class="rounded-md border border-gray-300 p-2 transition-colors dark:border-white/20"
-    :class="[hasExpandableDetails ? 'hover-effect focus-ring cursor-pointer' : '']"
+    :class="[hasExpandableDetails ? 'clickable focus-ring' : '']"
     :tabindex="hasExpandableDetails ? 0 : -1"
     @click.stop="onAreaClick"
     @keydown.enter.prevent="toggleDetails"
@@ -299,6 +299,8 @@
       ? `${names}${t('page.tasks.questcard.andMore', { count }, `, +${count} more`)}`
       : names;
   });
+  const rewardItemCardClass =
+    'group flex flex-col items-center gap-2 rounded-lg border border-transparent bg-surface-elevated p-2 text-center transition-all hover:border-gray-300 dark:hover:border-gray-600';
   const offerUnlockSummaryTooltip = computed(() => {
     const offers = props.offerUnlockRewards;
     if (offers.length === 0) return '';

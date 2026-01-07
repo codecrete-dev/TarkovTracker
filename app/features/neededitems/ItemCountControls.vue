@@ -9,7 +9,8 @@
         v-tooltip="t('page.neededitems.decrease_count')"
         type="button"
         :disabled="currentCount <= 0"
-        class="hover-effect flex h-7 w-7 cursor-pointer items-center justify-center rounded-l-md text-gray-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300"
+        class="focus-ring flex h-7 w-7 items-center justify-center rounded-l-md text-gray-500 transition-colors disabled:pointer-events-none dark:text-gray-300"
+        :class="disabled ? 'disabled' : 'clickable'"
         :aria-label="t('page.neededitems.decrease_count')"
         @click="$emit('decrease')"
       >
@@ -34,7 +35,8 @@
         <template v-else>
           <button
             v-tooltip="t('page.neededitems.click_to_enter_value')"
-            class="hover-effect h-full w-full cursor-pointer px-0.5 text-[11px] font-semibold text-gray-900 transition-colors dark:text-gray-100"
+            class="h-full w-full px-0.5 text-[11px] font-semibold text-gray-900 transition-colors dark:text-gray-100"
+            :class="disabled ? 'disabled' : 'clickable'"
             :aria-label="t('page.neededitems.click_to_enter_value')"
             @click="startEditing"
           >
@@ -47,7 +49,8 @@
         v-tooltip="t('page.neededitems.increase_count')"
         type="button"
         :disabled="currentCount >= neededCount"
-        class="hover-effect flex h-7 w-7 cursor-pointer items-center justify-center rounded-r-md text-gray-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300"
+        class="focus-ring flex h-7 w-7 items-center justify-center rounded-r-md text-gray-500 transition-colors disabled:pointer-events-none dark:text-gray-300"
+        :class="disabled ? 'disabled' : 'clickable'"
         :aria-label="t('page.neededitems.increase_count')"
         @click="$emit('increase')"
       >

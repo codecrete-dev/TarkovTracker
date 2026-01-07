@@ -3,7 +3,7 @@
     class="group flex w-full items-center gap-4 rounded-md px-2 py-2 transition-colors"
     :class="[
       isComplete ? 'bg-success-500/10' : '',
-      isParentTaskLocked ? 'cursor-not-allowed opacity-80' : 'hover-effect cursor-pointer',
+      isParentTaskLocked ? 'disabled' : 'clickable',
     ]"
     @click="handleRowClick($event)"
     @mouseenter="objectiveMouseEnter()"

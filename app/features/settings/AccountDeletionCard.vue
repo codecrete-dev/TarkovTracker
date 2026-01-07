@@ -87,7 +87,7 @@
                 size="lg"
                 icon="i-mdi-delete-forever"
                 disabled
-                class="cursor-not-allowed px-6 py-3 font-semibold opacity-50"
+                class="px-6 py-3 font-semibold"
               >
                 {{ $t('settings.account.begin_deletion', 'Begin Account Deletion') }}
               </UButton>

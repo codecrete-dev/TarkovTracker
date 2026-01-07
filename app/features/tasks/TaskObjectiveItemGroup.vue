@@ -19,7 +19,7 @@
           row.allComplete
             ? 'border-success-500/50 bg-success-100 text-success-900 dark:bg-success-500/10 dark:text-success-100'
             : 'border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-white/5',
-          isParentTaskLocked ? 'cursor-not-allowed opacity-70' : 'hover-effect cursor-pointer',
+          isParentTaskLocked ? 'disabled' : 'clickable',
         ]"
         @click.stop="toggleCountForRow(row)"
       >
@@ -53,7 +53,7 @@
             :href="`${getTaskForRow(row)?.wikiLink}#Guide`"
             target="_blank"
             rel="noopener noreferrer"
-            class="hover-effect inline-flex items-center justify-center rounded p-0.5 text-gray-400 transition-colors"
+            class="inline-flex items-center justify-center rounded p-0.5 text-gray-400 transition-colors"
           >
             <img src="/img/logos/wikilogo.webp" alt="Wiki" aria-hidden="true" class="h-4 w-4" />
           </a>
@@ -62,7 +62,7 @@
             :href="`https://tarkov.dev/task/${getTaskForRow(row)?.id}#objectives`"
             target="_blank"
             rel="noopener noreferrer"
-            class="hover-effect inline-flex items-center justify-center rounded p-0.5 text-gray-400 transition-colors"
+            class="inline-flex items-center justify-center rounded p-0.5 text-gray-400 transition-colors"
           >
             <img
               src="/img/logos/tarkovdevlogo.webp"

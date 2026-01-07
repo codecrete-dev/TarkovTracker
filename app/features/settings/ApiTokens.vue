@@ -196,7 +196,7 @@
                 :class="
                   selectedGameMode === mode.value
                     ? 'border-primary-500 bg-primary-500/10'
-                    : 'hover-effect border-base bg-surface-elevated'
+                    : 'clickable border-base bg-surface-elevated'
                 "
                 @click="selectedGameMode = mode.value"
               >

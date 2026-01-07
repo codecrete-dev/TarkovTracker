@@ -5,7 +5,7 @@
     :disabled="props.disabled"
     :aria-pressed="props.isActive"
     :aria-label="props.ariaLabel"
-    class="focus-ring flex items-center justify-center rounded-md border transition-colors disabled:pointer-events-none disabled:opacity-50"
+    class="focus-ring flex items-center justify-center rounded-md border transition-colors disabled:pointer-events-none"
     :class="[sizeClass, stateClass]"
     @click="emit('toggle')"
   >
@@ -82,11 +82,11 @@
     if (props.variant === 'complete') {
       return props.isActive
         ? 'badge-soft-task-complete'
-        : 'hover-effect border-gray-300 bg-white text-gray-500 dark:border-white/10 dark:bg-white/5 dark:text-gray-300';
+        : 'clickable border-gray-300 bg-white text-gray-500 dark:border-white/10 dark:bg-white/5 dark:text-gray-300';
     }
     // variant === 'collect'
     return props.isActive
       ? 'badge-soft-task-complete'
-      : 'hover-effect bg-surface-elevated text-content-secondary border-base hover:text-content-primary';
+      : 'clickable bg-surface-elevated text-content-secondary border-base hover:text-content-primary';
   });
 </script>

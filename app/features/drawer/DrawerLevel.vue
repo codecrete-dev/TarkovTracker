@@ -20,17 +20,9 @@
             <div class="group relative h-12 w-12 overflow-hidden">
               <template v-if="isDataReady && groupIcon">
                 <NuxtImg
-                  v-if="!factionImageLoadFailed"
-                  :src="pmcFactionIcon"
-                  class="absolute top-0 left-0 z-20 mt-1 max-w-12 px-1 opacity-0 invert transition-opacity duration-1000 ease-in-out group-hover:opacity-100 dark:invert-0"
-                  width="48"
-                  height="48"
-                  @error="handleFactionImageError"
-                />
-                <NuxtImg
                   v-if="!groupImageLoadFailed"
                   :src="groupIcon"
-                  class="absolute top-0 left-0 z-10 max-w-12 opacity-100 invert transition-opacity duration-1000 ease-in-out group-hover:opacity-0 dark:invert-0"
+                  class="absolute top-0 left-0 z-10 max-w-12 invert transition-opacity duration-1000 ease-in-out dark:invert-0"
                   width="48"
                   height="48"
                   @error="handleGroupImageError"
@@ -74,7 +66,7 @@
                 :class="
                   useAutomaticLevel
                     ? 'text-content-primary mx-auto w-11 text-[2rem] leading-[0.85]'
-                    : 'hover:text-primary text-content-primary mx-auto w-11 cursor-pointer text-[2rem] leading-[0.85] transition-colors'
+                    : 'clickable hover:text-primary text-content-primary mx-auto w-11 text-[2rem] leading-[0.85] transition-colors'
                 "
                 :tabindex="useAutomaticLevel ? '-1' : '0'"
                 :role="useAutomaticLevel ? undefined : 'button'"
@@ -122,7 +114,8 @@
                     )
                   : undefined
               "
-              class="hover-effect text-content-secondary hover:text-content-primary flex h-6 w-6 cursor-pointer items-center justify-center rounded p-0 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+              class="text-content-secondary hover:text-content-primary flex h-6 w-6 items-center justify-center rounded p-0 transition-colors disabled:opacity-40"
+              :class="{ 'disabled': useAutomaticLevel || displayedLevel >= maxPlayerLevel }"
               :disabled="useAutomaticLevel || displayedLevel >= maxPlayerLevel"
               @click="incrementLevel"
             >
@@ -137,7 +130,8 @@
                     )
                   : undefined
               "
-              class="hover-effect text-content-secondary hover:text-content-primary flex h-6 w-6 cursor-pointer items-center justify-center rounded p-0 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+              class="text-content-secondary hover:text-content-primary flex h-6 w-6 items-center justify-center rounded p-0 transition-colors disabled:opacity-40"
+              :class="{ 'disabled': useAutomaticLevel || displayedLevel <= minPlayerLevel }"
               :disabled="useAutomaticLevel || displayedLevel <= minPlayerLevel"
               @click="decrementLevel"
             >
@@ -149,7 +143,7 @@
         <!-- Separator -->
         <div class="my-2 h-px bg-gray-100 dark:bg-white/5"></div>
         <!-- XP Progress Display -->
-        <div class="group/xp cursor-pointer px-1" @click="navigateToSettings">
+        <div class="group/xp clickable px-1" @click="navigateToSettings">
           <div class="mb-1.5 flex items-center justify-between text-[0.65rem] leading-none">
             <span
               class="text-content-secondary group-hover/xp:text-accent-600 dark:group-hover/xp:text-accent-400 font-medium transition-colors"
@@ -205,19 +199,13 @@
   });
   // Check if data is ready to prevent broken images
   const isDataReady = computed(() => {
-    return (
-      !metadataStore.loading && metadataStore.playerLevels.length > 0 && tarkovStore.getPMCFaction()
-    );
-  });
-  const pmcFactionIcon = computed(() => {
-    return `/img/factions/${tarkovStore.getPMCFaction()}.webp`;
+    return !metadataStore.loading && metadataStore.playerLevels.length > 0;
   });
   const groupIcon = computed(() => {
     const level = displayedLevel.value;
     const entry = playerLevels.value.find((pl) => pl.level === level);
     return entry?.levelBadgeImageLink ?? '';
   });
-  const factionImageLoadFailed = ref(false);
   const groupImageLoadFailed = ref(false);
   // Manual level editing logic
   const editingLevel = ref(false);
@@ -258,9 +246,6 @@
     router.push('/settings');
   }
   // Reset failure flags if icons change (retry)
-  watch(pmcFactionIcon, () => {
-    factionImageLoadFailed.value = false;
-  });
   watch(groupIcon, () => {
     groupImageLoadFailed.value = false;
   });
@@ -268,10 +253,6 @@
    * Log image load failure and flip a flag to hide the specific failing image.
    * This is a fallback in case an image file is missing from the server or assets.
    */
-  function handleFactionImageError(event) {
-    console.warn('Failed to load faction image:', event.target?.src);
-    factionImageLoadFailed.value = true;
-  }
   function handleGroupImageError(event) {
     console.warn('Failed to load group image:', event.target?.src);
     groupImageLoadFailed.value = true;
