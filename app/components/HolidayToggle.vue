@@ -7,7 +7,7 @@
       :class="
         enabled
           ? 'bg-linear-to-br from-red-600 to-green-600 ring-2 ring-white/30'
-          : 'hover-effect bg-surface-800 ring-1 ring-white/10'
+          : 'bg-surface-800 ring-1 ring-white/10'
       "
       :aria-label="enabled ? $t('holiday.disable') : $t('holiday.enable')"
       @click="toggle"

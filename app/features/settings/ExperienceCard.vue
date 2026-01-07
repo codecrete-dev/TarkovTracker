@@ -112,7 +112,7 @@
                 variant="link"
                 color="gray"
                 size="xs"
-                class="h-4 p-0 clickable text-accent-400"
+                class="h-4 p-0 text-accent-400"
                 :title="$t('settings.experience.reset_offset', 'Reset XP Offset')"
                 @click="resetOffset"
               >

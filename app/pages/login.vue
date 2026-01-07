@@ -24,7 +24,7 @@
             block
             size="xl"
             variant="solid"
-            class="hover-effect flex h-12 w-full items-center justify-center border-none bg-(--color-entity-twitch) text-white transition-colors"
+            class="flex h-12 w-full items-center justify-center border-none bg-(--color-entity-twitch) text-white transition-colors"
             :loading="loading.twitch"
             :disabled="loading.twitch || loading.discord || loading.google || loading.github"
             @click="signInWithTwitch"
@@ -38,7 +38,7 @@
             block
             size="xl"
             variant="solid"
-            class="hover-effect flex h-12 w-full items-center justify-center border-none bg-(--color-entity-discord) text-white transition-colors"
+            class="flex h-12 w-full items-center justify-center border-none bg-(--color-entity-discord) text-white transition-colors"
             :loading="loading.discord"
             :disabled="loading.twitch || loading.discord || loading.google || loading.github"
             @click="signInWithDiscord"
@@ -52,7 +52,7 @@
             block
             size="xl"
             variant="solid"
-            class="hover-effect flex h-12 w-full items-center justify-center border-none bg-white text-gray-700 transition-colors"
+            class="flex h-12 w-full items-center justify-center border-none bg-white text-gray-700 transition-colors"
             :loading="loading.google"
             :disabled="loading.twitch || loading.discord || loading.google || loading.github"
             @click="signInWithGoogle"
@@ -66,7 +66,7 @@
             block
             size="xl"
             variant="solid"
-            class="hover-effect flex h-12 w-full items-center justify-center border-none bg-[#24292e] text-white transition-colors"
+            class="flex h-12 w-full items-center justify-center border-none bg-[#24292e] text-white transition-colors"
             :loading="loading.github"
             :disabled="loading.twitch || loading.discord || loading.google || loading.github"
             @click="signInWithGitHub"

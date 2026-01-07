@@ -953,7 +953,6 @@ textarea {
   .clickable {
     cursor: pointer;
     position: relative;
-    isolation: isolate; /* Force new stacking context so ::after sits properly above background */
   }
   
   /* Shared pseudo-element logic for all above selectors */
