@@ -146,21 +146,15 @@ export const useProgressStore = defineStore('progress', () => {
         level: number;
         faction: string;
         completions: Record<string, { complete?: boolean; failed?: boolean }>;
-        traderLevels: Record<string, number>;
       }
     >();
     for (const teamId of teamIds) {
       const store = visibleTeamStores.value[teamId];
       const currentData = getGameModeData(store);
-      const traderLevels: Record<string, number> = {};
-      for (const trader of metadataStore.traders) {
-        traderLevels[trader.id] = currentData?.level ?? 0;
-      }
       teamDataCache.set(teamId, {
         level: currentData?.level ?? 0,
         faction: currentData?.pmcFaction ?? 'USEC',
         completions: currentData?.taskCompletions ?? {},
-        traderLevels,
       });
     }
     const tasksById = new Map(tasks.map((task) => [task.id, task]));
@@ -242,16 +236,8 @@ export const useProgressStore = defineStore('progress', () => {
           visiting.delete(taskId);
           return false;
         }
-        // Trader levels check
-        if (task.traderLevelRequirements) {
-          for (const req of task.traderLevelRequirements) {
-            if ((teamData.traderLevels[req.trader.id] ?? 0) < req.level) {
-              memo.set(taskId, false);
-              visiting.delete(taskId);
-              return false;
-            }
-          }
-        }
+        // Trader gating intentionally disabled until real trader level/rep is wired.
+        // TODO: Use trader level/rep from currentData.traders[traderId], not player level.
         // Prerequisites check
         if (task.taskRequirements) {
           for (const req of task.taskRequirements) {
