@@ -420,9 +420,11 @@ export const useMetadataStore = defineStore('metadata', {
       logger.debug('[MetadataStore] updateLanguageAndGameMode - raw locale:', effectiveLocale);
       // Clear existing items to prevent stale data from being used during hydration
       // This forces the UI to wait for the new language items to load
-      if (this.items.length > 0) {
-        this.items = [];
-      }
+      // Clear existing items to prevent stale data from being used during hydration
+      // This forces the UI to wait for the new language items to load
+      // if (this.items.length > 0) {
+      //   this.items = [];
+      // }
       // Update language code
       const mappedCode = LOCALE_TO_API_MAPPING[effectiveLocale];
       if (mappedCode) {

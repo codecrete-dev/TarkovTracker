@@ -10,7 +10,7 @@
         type="button"
         :disabled="currentCount <= 0"
         class="focus-ring flex h-7 w-7 items-center justify-center rounded-l-md text-gray-500 transition-colors disabled:pointer-events-none dark:text-gray-300"
-        :class="disabled ? 'disabled' : 'clickable'"
+        :class="disabled || currentCount <= 0 ? 'disabled' : 'clickable'"
         :aria-label="t('page.neededitems.decrease_count')"
         @click="$emit('decrease')"
       >
@@ -50,7 +50,7 @@
         type="button"
         :disabled="currentCount >= neededCount"
         class="focus-ring flex h-7 w-7 items-center justify-center rounded-r-md text-gray-500 transition-colors disabled:pointer-events-none dark:text-gray-300"
-        :class="disabled ? 'disabled' : 'clickable'"
+        :class="disabled || currentCount >= neededCount ? 'disabled' : 'clickable'"
         :aria-label="t('page.neededitems.increase_count')"
         @click="$emit('increase')"
       >

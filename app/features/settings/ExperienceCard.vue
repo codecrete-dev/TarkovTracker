@@ -139,6 +139,7 @@
             <UInput
               v-model.number="manualXPInput"
               type="number"
+              inputmode="numeric"
               :min="0"
               class="xp-input w-full"
               input-class="font-mono font-bold text-accent-600 dark:text-accent-400"

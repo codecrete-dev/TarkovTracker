@@ -46,11 +46,11 @@
           {{ row.meta.itemName }}
         </span>
         <!-- External links to task guide -->
-        <div v-if="getTaskForRow(row)" class="flex shrink-0 items-center gap-0.5" @click.stop>
+        <div v-if="row.task" class="flex shrink-0 items-center gap-0.5" @click.stop>
           <a
-            v-if="getTaskForRow(row)?.wikiLink"
+            v-if="row.task?.wikiLink"
             v-tooltip="t('page.tasks.questcard.viewOnWiki', 'View on Wiki')"
-            :href="`${getTaskForRow(row)?.wikiLink}#Guide`"
+            :href="`${row.task?.wikiLink}#Guide`"
             target="_blank"
             rel="noopener noreferrer"
             class="inline-flex items-center justify-center rounded p-0.5 text-gray-400 transition-colors"
@@ -59,7 +59,7 @@
           </a>
           <a
             v-tooltip="t('page.tasks.questcard.viewOnTarkovDev', 'View on tarkov.dev')"
-            :href="`https://tarkov.dev/task/${getTaskForRow(row)?.id}#objectives`"
+            :href="`https://tarkov.dev/task/${row.task?.id}#objectives`"
             target="_blank"
             rel="noopener noreferrer"
             class="inline-flex items-center justify-center rounded p-0.5 text-gray-400 transition-colors"
@@ -149,6 +149,7 @@
     objectives: ObjectiveRow[];
     allComplete: boolean;
     currentCount: number;
+    task?: { id: string; wikiLink?: string };
   };
   const fullObjectives = computed(() => metadataStore.objectives);
   const objectiveMetaById = computed<Record<string, ObjectiveMeta>>(() => {
@@ -268,15 +269,18 @@
           allComplete = false;
         }
       });
-      return {
-        ...consolidated,
-        allComplete,
-        currentCount: totalCurrent,
         meta: {
           ...firstRow.meta,
           neededCount: totalNeeded,
           currentCount: totalCurrent,
         },
+        task: (() => {
+          const firstObjective = consolidated.objectives[0]?.objective;
+          if (!firstObjective) return undefined;
+          const taskId = getObjectiveTaskId(firstObjective);
+          if (!taskId) return undefined;
+          return metadataStore.tasks.find((t) => t.id === taskId);
+        })(),
       };
     });
   });
@@ -288,13 +292,7 @@
       objective.taskId ?? fullObjectives.value.find((entry) => entry.id === objective.id)?.taskId
     );
   };
-  const getTaskForRow = (row: ConsolidatedRow) => {
-    const firstObjective = row.objectives[0]?.objective;
-    if (!firstObjective) return undefined;
-    const taskId = getObjectiveTaskId(firstObjective);
-    if (!taskId) return undefined;
-    return metadataStore.tasks.find((t) => t.id === taskId);
-  };
+
   // Craftable item helpers
   const getItemIdForRow = (row: ConsolidatedRow): string | undefined => {
     return row.meta.item?.id;
@@ -381,14 +379,7 @@
     });
     return Array.from(ids);
   });
-  const _isParentTaskComplete = computed(() => {
-    return parentTaskIds.value.some(
-      (taskId) => tarkovStore.isTaskComplete(taskId) && !tarkovStore.isTaskFailed(taskId)
-    );
-  });
-  const _isParentTaskFailed = computed(() => {
-    return parentTaskIds.value.some((taskId) => tarkovStore.isTaskFailed(taskId));
-  });
+
   const isParentTaskLocked = computed(() => {
     if (parentTaskIds.value.length === 0) return false;
     // If ANY associated task is NOT available (locked, complete, failed, or blocked),

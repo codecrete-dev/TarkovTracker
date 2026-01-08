@@ -101,8 +101,7 @@
           }}
         </span>
       </span>
-      <!-- Chain info & Dropdown toggle -->
-      <div class="ml-auto flex items-center gap-4"></div>
+
     </div>
     <div
       v-if="showDetails && hasExpandableDetails"
@@ -253,8 +252,7 @@
     offerUnlockRewards: OfferUnlock[];
     parentTasks: Task[];
     childTasks: Task[];
-    unlocksNextCount: number;
-    impactCount: number;
+
   }>();
   defineEmits<{
     'item-context-menu': [event: MouseEvent, item: ItemReward['item']];

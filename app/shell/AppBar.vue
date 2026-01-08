@@ -145,8 +145,12 @@
   const selectMenuUiConfig = {
     base: 'bg-surface-elevated border border-base ring-1 ring-gray-200/50 rounded-md px-2 py-1.5 dark:bg-surface-900/90 dark:border-white/15 dark:ring-white/10',
   } as any;
-  function logout() {
-    $supabase.signOut();
+  async function logout() {
+    try {
+      await $supabase.signOut();
+    } catch (err) {
+      logger.error('Error signing out:', err);
+    }
   }
   const accountItems = computed(() => [
     {

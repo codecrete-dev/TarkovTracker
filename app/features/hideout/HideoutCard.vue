@@ -432,7 +432,7 @@
     const hasMaxStash = (editionData?.defaultStashLevel ?? 0) >= 5;
     // For editions with max stash, show static description with 10x72
     if (hasMaxStash) {
-      return 'Maximum size stash (10x72)';
+      return t('page.hideout.stationcard.max_stash_desc');
     }
     return description;
   };

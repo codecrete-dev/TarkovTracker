@@ -479,7 +479,7 @@
   const progressStore = useProgressStore();
   const preferencesStore = usePreferencesStore();
   const metadataStore = useMetadataStore();
-  const _formatNumber = useLocaleNumberFormatter();
+
   const tasks = computed(() => metadataStore.tasks);
   const taskContextMenu = ref<ContextMenuRef | null>(null);
   const itemContextMenu = ref<ContextMenuRef | null>(null);
@@ -563,9 +563,7 @@
   const lockedBehind = computed(() => {
     return props.task.successors?.filter((s) => !isTaskSuccessful(s)).length || 0;
   });
-  const _lockedBefore = computed(() => {
-    return props.task.predecessors?.filter((s) => !isTaskSuccessful(s)).length || 0;
-  });
+
   const parentTasks = computed(() => {
     if (!props.task.parents?.length) return [];
     return props.task.parents
@@ -612,20 +610,16 @@
   });
   const unlocksNextCount = computed(() => childTasks.value.length);
   const impactCount = computed(() => lockedBehind.value);
-  const _afterHasContent = computed(() => unlocksNextCount.value > 0 || impactCount.value > 0);
+
   const traderStandingRewards = computed(() => props.task.finishRewards?.traderStanding ?? []);
   const skillRewards = computed(() => props.task.finishRewards?.skillLevelReward ?? []);
   const traderUnlockReward = computed(() => props.task.finishRewards?.traderUnlock);
   const itemRewards = computed(() => props.task.finishRewards?.items ?? []);
   const offerUnlockRewards = computed(() => props.task.finishRewards?.offerUnlock ?? []);
-  const _completeButtonUi = {
-    base: 'bg-success-500 text-white border border-success-700',
-  };
+
   const actionButtonSize = computed(() => (xs.value ? 'md' : 'lg'));
   const isHotWheelsTask = computed(() => props.task.id === HOT_WHEELS_TASK_ID);
-  const _showHotWheelsFail = computed(
-    () => isHotWheelsTask.value && !isComplete.value && !isLocked.value
-  );
+
   const mapObjectiveTypes = [
     'mark',
     'zone',

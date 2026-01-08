@@ -243,10 +243,10 @@
    * Leaflet injects popups outside Vue's DOM tree, so we use inline styles.
    */
   const getPopupStyles = () => {
-    const isDark = document.documentElement.classList.contains('dark');
     // Tooltips are always dark (gray-900/surface-800) with light text, matching tooltip.client.ts
+    // We now use CSS variables defined in the style block so they update automatically
     return {
-      container: `background-color: ${isDark ? 'var(--color-surface-800)' : '#1a1a1e'}; color: ${isDark ? 'var(--color-gray-200)' : '#fff'}; border-radius: 0.375rem; padding: 0.25rem 0.5rem; font-size: 0.75rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3);`,
+      container: `background-color: var(--leaflet-popup-bg); color: var(--leaflet-popup-text); border-radius: 0.375rem; padding: 0.25rem 0.5rem; font-size: 0.75rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3);`,
       secondary: `color: var(--color-gray-400); font-size: 0.75rem;`,
     };
   };
@@ -541,6 +541,14 @@
   /* Leaflet Map Library Overrides
      !important required throughout this section: Leaflet applies its own inline
      styles and high-specificity CSS. Without !important, our styling is overridden. */
+  :root {
+    --leaflet-popup-bg: #1a1a1e;
+    --leaflet-popup-text: #fff;
+  }
+  :root.dark {
+    --leaflet-popup-bg: var(--color-surface-800);
+    --leaflet-popup-text: var(--color-gray-200);
+  }
   /* Container styling */
   :root.dark .leaflet-container {
     background-color: var(--color-surface-900);
@@ -553,25 +561,25 @@
   /* Popup wrapper - dark in both themes for consistency with app tooltips.
      Using .leaflet-container prefix for higher specificity to override Leaflet defaults. */
   .leaflet-container .leaflet-popup-content-wrapper {
-    background: #1a1a1e !important;
-    color: #fff !important;
+    background: var(--leaflet-popup-bg) !important;
+    color: var(--leaflet-popup-text) !important;
     border-radius: 0.5rem !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
     border: none !important;
     padding: 0 !important;
   }
   :root.dark .leaflet-container .leaflet-popup-content-wrapper {
-    background: var(--color-surface-800) !important;
-    color: var(--color-gray-200) !important;
+    background: var(--leaflet-popup-bg) !important;
+    color: var(--leaflet-popup-text) !important;
   }
   /* Popup tip (arrow) - match wrapper background */
   .leaflet-container .leaflet-popup-tip {
-    background: #1a1a1e !important;
+    background: var(--leaflet-popup-bg) !important;
     border: none !important;
     box-shadow: none !important;
   }
   :root.dark .leaflet-container .leaflet-popup-tip {
-    background: var(--color-surface-800) !important;
+    background: var(--leaflet-popup-bg) !important;
   }
   .leaflet-popup-content {
     margin: 0 !important;

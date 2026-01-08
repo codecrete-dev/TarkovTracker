@@ -321,6 +321,7 @@
         maxlevel: 'Max station level reached',
         upgradeunavailable: 'Upgrade unavailable',
         prerequisites: 'Prerequisites',
+        max_stash_desc: 'Maximum size stash (10x72)',
         requirements: {
           station: 'Requires {stationname} level {level}',
           skill: 'Requires {skillname} level {level}',
@@ -342,6 +343,7 @@
       loading: 'Loading task and hideout data',
       searchplaceholder: 'Search items, tasks, or hideout stations...',
       items: 'items',
+      unique_total: '{unique} unique ({total} total)',
       filters: {
         label: 'Filters',
         sections: {

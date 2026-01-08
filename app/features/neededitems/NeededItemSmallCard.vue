@@ -164,7 +164,7 @@
       required: true,
     },
   });
-  const _formatNumber = useLocaleNumberFormatter();
+
   const tarkovStore = useTarkovStore();
   const playerLevel = computed(() => tarkovStore.playerLevel());
   const {

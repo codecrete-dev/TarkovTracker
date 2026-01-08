@@ -171,7 +171,7 @@
       >
         <GameBadge color="neutral" variant="soft" size="md" badge-class="px-3 py-1 text-sm">
           <template v-if="groupByItem && ungroupedCount !== totalCount">
-            {{ totalCount }} unique ({{ ungroupedCount }} total)
+            {{ $t('page.neededitems.unique_total', { unique: totalCount, total: ungroupedCount }) }}
           </template>
           <template v-else>{{ totalCount }} {{ $t('page.neededitems.items', 'items') }}</template>
         </GameBadge>
