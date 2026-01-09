@@ -4,19 +4,17 @@
     :title="t('page.tasks.settings.title', 'Task Settings')"
     :description="t('page.tasks.settings.description', 'Configure task filters and appearance')"
   >
-    <UButton
-      variant="ghost"
-      color="neutral"
-      size="sm"
-      class="text-content-secondary hover:text-content-primary"
-      @click="isOpen = true"
-    >
+    <UButton variant="ghost" color="neutral" size="sm" class="text-gray-400" @click="isOpen = true">
       <UIcon name="i-mdi-tune" class="h-4 w-4 sm:mr-1.5" />
       <span class="hidden text-xs sm:inline">SETTINGS</span>
     </UButton>
     <template #content>
       <UCard
-        :ui="modalUiConfig"
+        class="bg-contentbackground"
+        :ui="{
+          root: 'max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-4rem)] flex flex-col',
+          body: 'min-h-0 overflow-y-auto',
+        }"
       >
         <template #header>
           <div class="flex items-center justify-between">
@@ -31,7 +29,6 @@
               icon="i-mdi-close"
               size="sm"
               :aria-label="t('page.tasks.filters.close', 'Close')"
-              class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               @click="isOpen = false"
             />
           </div>
@@ -40,9 +37,7 @@
           <!-- TASK FILTERS Section -->
           <section class="space-y-2">
             <div>
-              <p
-                class="text-primary-600 dark:text-primary-400 text-xs font-semibold tracking-wide uppercase"
-              >
+              <p class="text-primary-400 text-xs font-semibold tracking-wide uppercase">
                 {{ t('page.tasks.settings.tabs.filters', 'TASK FILTERS') }}
               </p>
               <p class="mt-1 text-xs text-gray-500">
@@ -74,9 +69,7 @@
           <!-- APPEARANCE Section -->
           <section class="space-y-2">
             <div>
-              <p
-                class="text-primary-600 dark:text-primary-400 text-xs font-semibold tracking-wide uppercase"
-              >
+              <p class="text-primary-400 text-xs font-semibold tracking-wide uppercase">
                 {{ t('page.tasks.settings.tabs.appearance', 'APPEARANCE') }}
               </p>
               <p class="mt-1 text-xs text-gray-500">
@@ -117,9 +110,7 @@
           <!-- ADVANCED Section -->
           <section class="space-y-2">
             <div>
-              <p
-                class="text-primary-600 dark:text-primary-400 text-xs font-semibold tracking-wide uppercase"
-              >
+              <p class="text-primary-400 text-xs font-semibold tracking-wide uppercase">
                 {{ t('page.tasks.settings.tabs.advanced', 'ADVANCED') }}
               </p>
               <p class="mt-1 text-xs text-gray-500">
@@ -189,11 +180,6 @@
   const tarkovStore = useTarkovStore();
   const isOpen = ref(false);
   // Labels and tooltips (defined in script to avoid template quoting issues)
-  const modalUiConfig = {
-    body: {
-      base: 'overflow-y-auto max-h-[75vh] block',
-    },
-  } as any;
   const labelShowNonSpecialTasks = computed(() =>
     t(
       'page.tasks.settings.filters.showNonSpecialTasks',
@@ -276,7 +262,7 @@
     )
   );
   const labelShowNextQuests = computed(() =>
-    t('page.tasks.settings.appearance.showNextQuests', 'Show next tasks')
+    t('page.tasks.settings.appearance.showNextQuests', 'Show next quests')
   );
   const tooltipShowNextQuests = computed(() =>
     t(
@@ -285,7 +271,7 @@
     )
   );
   const labelShowPreviousQuests = computed(() =>
-    t('page.tasks.settings.appearance.showPreviousQuests', 'Show previous tasks')
+    t('page.tasks.settings.appearance.showPreviousQuests', 'Show previous quests')
   );
   const tooltipShowPreviousQuests = computed(() =>
     t(
