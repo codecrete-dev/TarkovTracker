@@ -6,7 +6,7 @@ import type { UserProgressData } from '~/stores/progressState';
 export interface SupabaseSyncConfig {
   store: Store;
   table: string;
-  transform?: (state: Record<string, unknown>) => Record<string, unknown>;
+  transform?: (state: Record<string, unknown>) => Record<string, unknown> | null;
   debounceMs?: number;
 }
 // Type for the transformed data that gets sent to Supabase
@@ -146,14 +146,16 @@ export function useSupabaseSync({
           description:
             "Your progress couldn't be saved to the cloud. Please check your connection and try again.",
           color: 'error',
-          timeout: 10000,
+          duration: 10000,
         });
         // Store failed sync for potential recovery (table-specific key to avoid conflicts)
         if (typeof window !== 'undefined') {
           try {
             const pendingSyncKey = `pending_sync_${table}`;
             localStorage.setItem(pendingSyncKey, JSON.stringify(dataToSave));
-            logger.debug(`[Sync] Saved pending sync to localStorage for recovery (${pendingSyncKey})`);
+            logger.debug(
+              `[Sync] Saved pending sync to localStorage for recovery (${pendingSyncKey})`
+            );
           } catch (e) {
             logger.error('[Sync] Could not save pending sync:', e);
           }
@@ -197,7 +199,7 @@ export function useSupabaseSync({
         title: 'Sync error',
         description: 'An unexpected error occurred while saving your progress.',
         color: 'error',
-        timeout: 10000,
+        duration: 10000,
       });
     } finally {
       isSyncing.value = false;
@@ -222,7 +224,9 @@ export function useSupabaseSync({
       }
     }
   };
-  const debouncedSync = debounce(syncToSupabase, debounceMs);
+  const debouncedSync = debounce((state: unknown) => {
+    void syncToSupabase(state);
+  }, debounceMs);
   const unwatch = watch(
     () => store.$state,
     (newState) => {
@@ -237,7 +241,9 @@ export function useSupabaseSync({
     unwatch();
     // Clear any pending retry timeouts
     if (pendingRetryTimeouts.length > 0) {
-      logger.debug(`[Sync] Cleanup: clearing ${pendingRetryTimeouts.length} pending retry timeouts`);
+      logger.debug(
+        `[Sync] Cleanup: clearing ${pendingRetryTimeouts.length} pending retry timeouts`
+      );
       pendingRetryTimeouts.forEach(clearTimeout);
       pendingRetryTimeouts = [];
     }
