@@ -1,11 +1,7 @@
 import { computed, type ComputedRef, type InjectionKey } from 'vue';
 import type { HideoutStation, Task, TarkovItem } from '@/types/tarkov';
 export type NeededItemTeamNeed = { user: string; count: number };
-export type NeededItemImageItem = {
-  backgroundColor?: string;
-  iconLink?: string;
-  image512pxLink?: string;
-} | null;
+export type NeededItemImageItem = TarkovItem | null;
 export type NeededItemContext = {
   craftableIconClass: ComputedRef<string>;
   craftableTitle: ComputedRef<string>;
@@ -13,6 +9,7 @@ export type NeededItemContext = {
   goToCraftStation: () => Promise<void>;
   imageItem: ComputedRef<NeededItemImageItem>;
   isCraftable: ComputedRef<boolean>;
+  isCraftableAvailable: ComputedRef<boolean>;
   isKappaRequired: ComputedRef<boolean>;
   isParentCompleted: ComputedRef<boolean>;
   item: ComputedRef<TarkovItem | null>;
@@ -34,6 +31,7 @@ export const createDefaultNeededItemContext = (): NeededItemContext => {
     goToCraftStation: async () => {},
     imageItem: asComputed(null),
     isCraftable: asComputed(false),
+    isCraftableAvailable: asComputed(false),
     isKappaRequired: asComputed(false),
     isParentCompleted: asComputed(false),
     item: asComputed(null),

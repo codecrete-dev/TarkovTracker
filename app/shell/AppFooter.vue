@@ -1,18 +1,18 @@
 <template>
-  <footer
-    class="relative w-full border-t border-white/10 bg-linear-to-t from-black/60 via-black/30 to-black/20 px-6 py-5"
-  >
+  <footer class="border-base bg-surface-elevated relative w-full border-t px-6 py-5">
     <div class="mx-auto w-full max-w-6xl">
       <!-- Top Row: Community & Support -->
       <div class="grid grid-cols-1 items-center gap-5 lg:grid-cols-[1fr_auto_1fr] lg:gap-8">
         <!-- Community Links -->
         <div class="flex flex-col gap-2 text-center lg:items-start lg:text-left">
-          <div class="text-[0.6875rem] font-semibold tracking-[0.08em] text-white/55 uppercase">
+          <div
+            class="text-content-tertiary text-[0.6875rem] font-semibold tracking-[0.08em] uppercase"
+          >
             {{ t('footer.community_label') }}
           </div>
           <div class="flex flex-col items-center gap-2.5 lg:items-start">
-            <AppTooltip
-              :text="
+            <span
+              v-tooltip="
                 t('footer.call_to_action.discord_phrase', {
                   discord: t('footer.call_to_action.discord'),
                 })
@@ -22,10 +22,10 @@
                 href="https://discord.gg/M8nBgA2sT6"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="group flex items-center gap-2.5 transition-all duration-150 hover:-translate-y-0.5"
+                class="group flex rounded-lg pr-1 items-center gap-2.5 transition-all duration-150 hover:-translate-y-0.5"
               >
                 <span
-                  class="flex h-9 w-9 items-center justify-center rounded-lg bg-[#5865f2]/15 text-[#5865f2] transition-all duration-150 group-hover:bg-[#4752c4] group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(88,101,242,0.4)]"
+                  class="flex h-9 w-9 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--color-entity-discord),transparent_85%)] text-[var(--color-entity-discord)] transition-all duration-150 group-hover:bg-[color-mix(in_srgb,var(--color-entity-discord),white_90%)] group-hover:text-[var(--color-entity-discord)] group-hover:shadow-[0_4px_12px_color-mix(in_srgb,var(--color-entity-discord),transparent_60%)] dark:group-hover:bg-[color-mix(in_srgb,var(--color-entity-discord),white_20%)]"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -40,14 +40,14 @@
                   </svg>
                 </span>
                 <span
-                  class="text-primary-400 decoration-primary-400/40 group-hover:text-primary-300 group-hover:decoration-primary-300 text-sm font-semibold underline underline-offset-2 transition-colors duration-150"
+                  class="text-accent-400 decoration-accent-400/40 group-hover:text-accent-300 group-hover:decoration-accent-300 text-sm font-semibold underline underline-offset-2 transition-colors duration-150"
                 >
                   {{ t('footer.call_to_action.discord') }}
                 </span>
               </a>
-            </AppTooltip>
-            <AppTooltip
-              :text="
+            </span>
+            <span
+              v-tooltip="
                 t('footer.call_to_action.github_phrase', {
                   github: t('footer.call_to_action.github'),
                 })
@@ -57,20 +57,20 @@
                 href="https://github.com/tarkovtracker-org/TarkovTrackerNuxt"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="group flex items-center gap-2.5 transition-all duration-150 hover:-translate-y-0.5"
+                class="group flex items-center rounded-lg pr-1 gap-2.5 transition-all duration-150 hover:-translate-y-0.5"
               >
                 <span
-                  class="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-[#f0f6fc] transition-all duration-150 group-hover:bg-[#c9d1d9] group-hover:text-[#0d1117] group-hover:shadow-[0_4px_12px_rgba(255,255,255,0.2)]"
+                  class="flex h-9 w-9 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--color-entity-github),transparent_85%)] text-[var(--color-entity-github)] transition-all duration-150 group-hover:bg-[color-mix(in_srgb,var(--color-entity-github),white_90%)] group-hover:text-[var(--color-entity-github)] group-hover:shadow-[0_4px_12px_color-mix(in_srgb,var(--color-entity-github),transparent_60%)] dark:bg-white/10 dark:text-white dark:group-hover:bg-white/20 dark:group-hover:text-white dark:group-hover:shadow-[0_4px_12px_rgba(255,255,255,0.2)]"
                 >
                   <UIcon name="i-mdi-github" class="h-5 w-5" />
                 </span>
                 <span
-                  class="text-primary-400 decoration-primary-400/40 group-hover:text-primary-300 group-hover:decoration-primary-300 text-sm font-semibold underline underline-offset-2 transition-colors duration-150"
+                  class="text-accent-400 decoration-accent-400/40 group-hover:text-accent-300 group-hover:decoration-accent-300 text-sm font-semibold underline underline-offset-2 transition-colors duration-150"
                 >
                   {{ t('footer.call_to_action.github') }}
                 </span>
               </a>
-            </AppTooltip>
+            </span>
           </div>
         </div>
         <!-- Support Button (Center Focus) -->
@@ -95,23 +95,27 @@
             </svg>
             <span>{{ t('footer.support_button') }}</span>
           </a>
-          <p class="mt-1 text-xs text-white/65 italic">{{ t('footer.support_tagline') }}</p>
+          <p class="text-content-tertiary mt-1 text-xs italic">
+            {{ t('footer.support_tagline') }}
+          </p>
         </div>
         <!-- Legal Links -->
         <div class="flex flex-col gap-2 text-center lg:items-end lg:text-right">
-          <div class="text-[0.6875rem] font-semibold tracking-[0.08em] text-white/55 uppercase">
+          <div
+            class="text-content-tertiary text-[0.6875rem] font-semibold tracking-[0.08em] uppercase"
+          >
             {{ t('footer.legal_label') }}
           </div>
           <div class="flex flex-col items-center gap-2 lg:items-end">
             <router-link
               to="/terms-of-service"
-              class="text-primary-400 decoration-primary-400/40 hover:text-primary-300 hover:decoration-primary-300 text-sm font-semibold underline underline-offset-2 transition-colors duration-150"
+              class="text-accent-400 decoration-accent-400/40 hover:text-accent-300 hover:decoration-accent-300 text-sm font-semibold underline underline-offset-2 transition-colors duration-150"
             >
               {{ t('footer.terms_of_service') }}
             </router-link>
             <router-link
               to="/privacy"
-              class="text-primary-400 decoration-primary-400/40 hover:text-primary-300 hover:decoration-primary-300 text-sm font-semibold underline underline-offset-2 transition-colors duration-150"
+              class="text-accent-400 decoration-accent-400/40 hover:text-accent-300 hover:decoration-accent-300 text-sm font-semibold underline underline-offset-2 transition-colors duration-150"
             >
               {{ t('footer.privacy_policy') }}
             </router-link>
@@ -119,20 +123,22 @@
         </div>
       </div>
       <!-- Divider -->
-      <div class="my-4 h-px bg-linear-to-r from-transparent via-white/10 to-transparent" />
+      <div class="bg-divider my-4 h-px" />
       <!-- Bottom Row: Copyright & Attribution -->
       <div class="flex flex-col items-center gap-1.5 text-center">
-        <div class="flex items-center justify-center gap-2 text-sm font-semibold text-[#bfbfbf]">
+        <div
+          class="text-content-secondary flex items-center justify-center gap-2 text-sm font-semibold"
+        >
           <span>TarkovTracker &copy; 2020–{{ new Date().getFullYear() }}</span>
-          <span class="text-sm text-white/40">·</span>
+          <span class="text-content-tertiary text-sm">·</span>
           <router-link
             to="/credits"
-            class="text-primary-400 decoration-primary-400/40 hover:text-primary-300 hover:decoration-primary-300 underline underline-offset-2 transition-colors duration-150"
+            class="text-accent-400 decoration-accent-400/40 hover:text-accent-300 hover:decoration-accent-300 underline underline-offset-2 transition-colors duration-150"
           >
             {{ t('footer.credits') }}
           </router-link>
         </div>
-        <p class="m-0 text-xs leading-snug text-white/45">
+        <p class="text-content-tertiary m-0 text-xs leading-snug">
           {{ t('footer.game_attribution') }}
         </p>
       </div>

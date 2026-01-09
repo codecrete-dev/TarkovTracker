@@ -7,13 +7,16 @@
             <task-link :task="task" />
           </div>
         </div>
-        <AppTooltip v-if="task.minPlayerLevel != 0" text="Minimum level required to access task">
-          <InfoRow icon="mdi-menu-right" class="text-sm text-gray-400">
-            <i18n-t keypath="page.tasks.questcard.level" scope="global">
-              <template #count>{{ task.minPlayerLevel }}</template>
-            </i18n-t>
-          </InfoRow>
-        </AppTooltip>
+        <InfoRow
+          v-if="task.minPlayerLevel != 0"
+          :tooltip="t('page.tasks.questcard.min_level_required')"
+          icon="mdi-menu-right"
+          class="text-sm text-gray-400"
+        >
+          <i18n-t keypath="page.tasks.questcard.level" scope="global">
+            <template #count>{{ task.minPlayerLevel }}</template>
+          </i18n-t>
+        </InfoRow>
         <!-- Previous quests (locked before) -->
         <InfoRow
           v-if="preferencesStore.getShowPreviousQuests && task?.predecessors?.length"
@@ -36,8 +39,8 @@
                 <router-link
                   v-for="parent in parentTasks"
                   :key="parent.id"
-                  :to="`/tasks?task=${parent.id}`"
-                  class="text-primary-400 hover:text-primary-300"
+                  :to="`/tasks?task=${parent.id}&status=all`"
+                  class="text-accent-400 hover:text-accent-300"
                   @contextmenu="(e: MouseEvent) => handleTaskContextMenu(e, parent)"
                 >
                   {{ parent.name }}
@@ -68,8 +71,8 @@
                 <router-link
                   v-for="child in childTasks"
                   :key="child.id"
-                  :to="`/tasks?task=${child.id}`"
-                  class="text-primary-400 hover:text-primary-300"
+                  :to="`/tasks?task=${child.id}&status=all`"
+                  class="text-accent-400 hover:text-accent-300"
                   @contextmenu="(e: MouseEvent) => handleTaskContextMenu(e, child)"
                 >
                   {{ child.name }}
@@ -80,25 +83,37 @@
         </div>
         <InfoRow v-if="task?.factionName != 'Any'" class="mb-1 text-sm text-gray-400">
           <template #icon>
-            <img :src="factionImage" class="mx-1 h-6 w-6 invert" />
+            <img :src="factionImage" class="mx-1 h-6 w-6 invert dark:invert-0" />
           </template>
           {{ task.factionName }}
         </InfoRow>
         <!-- Required labels (Kappa, Lightkeeper) -->
         <div v-if="preferencesStore.getShowRequiredLabels" class="mb-1 flex flex-wrap gap-1">
-          <UBadge v-if="task.kappaRequired" size="xs" color="primary" variant="solid">
-            {{ t('page.tasks.questcard.kapparequired', 'KAPPA REQUIRED') }}
-          </UBadge>
-          <UBadge v-if="task.lightkeeperRequired" size="xs" color="info" variant="solid">
-            {{ t('page.tasks.questcard.lightkeeperrequired', 'LIGHTKEEPER REQUIRED') }}
-          </UBadge>
+          <GameBadge
+            v-if="task.kappaRequired"
+            variant="solid"
+            color="gray"
+            icon="i-mdi-trophy"
+            badge-class="badge-soft-kappa"
+            :label="t('page.tasks.questcard.kapparequired', 'KAPPA REQUIRED')"
+          />
+          <GameBadge
+            v-if="task.lightkeeperRequired"
+            variant="solid"
+            color="gray"
+            icon="i-mdi-lighthouse"
+            badge-class="badge-soft-lightkeeper"
+            :label="t('page.tasks.questcard.lightkeeperrequired', 'LIGHTKEEPER REQUIRED')"
+          />
         </div>
         <!-- Not Required label (Non-Kappa) -->
         <div v-if="preferencesStore.getShowNotRequiredLabels && nonKappa" class="mb-1 flex">
           <div class="mr-1">
-            <UBadge size="xs" color="error" variant="outline">
-              {{ t('page.tasks.questcard.nonkappa') }}
-            </UBadge>
+            <GameBadge
+              variant="outline"
+              color="error"
+              :label="t('page.tasks.questcard.nonkappa')"
+            />
           </div>
         </div>
         <InfoRow
@@ -111,7 +126,7 @@
           </i18n-t>
         </InfoRow>
         <!-- Task ID -->
-        <div v-if="preferencesStore.getShowTaskIds" class="mt-2 text-xs text-gray-600">
+        <div v-if="preferencesStore.getShowTaskIds" class="text-content-secondary mt-2 text-xs">
           ID: {{ task.id }}
         </div>
       </div>
@@ -149,6 +164,7 @@
   import { useRouter } from 'vue-router';
   import ContextMenu from '@/components/ui/ContextMenu.vue';
   import ContextMenuItem from '@/components/ui/ContextMenuItem.vue';
+  import GameBadge from '@/components/ui/GameBadge.vue';
   import { useMetadataStore } from '@/stores/useMetadata';
   import { usePreferencesStore } from '@/stores/usePreferences';
   import type { Task } from '@/types/tarkov';
@@ -191,7 +207,7 @@
   };
   const navigateToTask = () => {
     if (selectedTask.value) {
-      router.push(`/tasks?task=${selectedTask.value.id}`);
+      router.push(`/tasks?task=${selectedTask.value.id}&status=all`);
     }
   };
   const openTaskWiki = () => {

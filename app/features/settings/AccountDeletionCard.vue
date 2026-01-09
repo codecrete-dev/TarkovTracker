@@ -2,10 +2,9 @@
   <div class="account-deletion-card" :class="$attrs.class">
     <GenericCard
       icon="mdi-account-cog"
-      icon-color="error-400"
-      highlight-color="red"
+      highlight-color="error"
       :title="$t('settings.account.title', 'Account Management')"
-      title-classes="text-lg font-semibold"
+      title-classes="text-lg font-bold sm:text-xl"
     >
       <template #title-right>
         <UAlert
@@ -26,34 +25,34 @@
         <div class="p-4">
           <!-- Logged out state -->
           <template v-if="!isLoggedIn">
-            <div class="mb-6 rounded-lg border border-gray-700 bg-gray-800/30 p-4 opacity-60">
-              <div class="mb-3 text-base font-bold text-gray-500">Account Information</div>
+            <div class="border-base bg-surface-elevated mb-6 rounded-lg border p-4 opacity-60">
+              <div class="text-content-secondary mb-3 text-base font-bold">Account Information</div>
               <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <div class="mb-2 flex items-center">
-                    <UIcon name="i-mdi-account" class="mr-2 h-4.5 w-4.5 text-gray-500" />
-                    <span class="text-sm text-gray-500">Username: —</span>
+                    <UIcon name="i-mdi-account" class="text-content-tertiary mr-2 h-4.5 w-4.5" />
+                    <span class="text-content-tertiary text-sm">Username: —</span>
                   </div>
                   <div class="mb-2 flex items-center">
-                    <UIcon name="i-mdi-email" class="mr-2 h-4.5 w-4.5 text-gray-500" />
-                    <span class="text-sm text-gray-500">Email: —</span>
+                    <UIcon name="i-mdi-email" class="text-content-tertiary mr-2 h-4.5 w-4.5" />
+                    <span class="text-content-tertiary text-sm">Email: —</span>
                   </div>
                 </div>
                 <div>
                   <div class="mb-2 flex items-center">
-                    <UIcon name="i-mdi-login" class="mr-2 h-4.5 w-4.5 text-gray-500" />
-                    <span class="text-sm text-gray-500">Auth Method: —</span>
+                    <UIcon name="i-mdi-login" class="text-content-tertiary mr-2 h-4.5 w-4.5" />
+                    <span class="text-content-tertiary text-sm">Auth Method: —</span>
                   </div>
                   <div class="flex items-center">
-                    <UIcon name="i-mdi-calendar" class="mr-2 h-4.5 w-4.5 text-gray-500" />
-                    <span class="text-sm text-gray-500">Member since: —</span>
+                    <UIcon name="i-mdi-calendar" class="text-content-tertiary mr-2 h-4.5 w-4.5" />
+                    <span class="text-content-tertiary text-sm">Member since: —</span>
                   </div>
                 </div>
               </div>
-              <div class="my-3 border-t border-gray-700"></div>
+              <div class="border-base my-3 border-t"></div>
               <div class="flex items-center">
-                <UIcon name="i-mdi-identifier" class="mr-2 h-4.5 w-4.5 text-gray-500" />
-                <span class="text-sm text-gray-500">Account ID: —</span>
+                <UIcon name="i-mdi-identifier" class="text-content-tertiary mr-2 h-4.5 w-4.5" />
+                <span class="text-content-tertiary text-sm">Account ID: —</span>
               </div>
             </div>
             <!-- Deletion Warning (disabled state) -->
@@ -88,7 +87,7 @@
                 size="lg"
                 icon="i-mdi-delete-forever"
                 disabled
-                class="cursor-not-allowed px-6 py-3 font-semibold opacity-50"
+                class="px-6 py-3 font-semibold"
               >
                 {{ $t('settings.account.begin_deletion', 'Begin Account Deletion') }}
               </UButton>
@@ -97,17 +96,17 @@
           <!-- Logged in state -->
           <template v-else>
             <!-- Account Information (Moved to Top) -->
-            <div class="mb-6 rounded-lg border border-gray-700 bg-gray-800/50 p-4">
+            <div class="border-base bg-surface-elevated mb-6 rounded-lg border p-4">
               <div class="mb-3 text-base font-bold">Account Information</div>
               <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <div class="mb-2 flex items-center">
-                    <UIcon name="i-mdi-account" class="mr-2 h-4.5 w-4.5 text-gray-400" />
+                    <UIcon name="i-mdi-account" class="text-content-tertiary mr-2 h-4.5 w-4.5" />
                     <span class="text-sm">
-                      <span class="text-gray-400">Username:</span>
+                      <span class="text-content-secondary">Username:</span>
                       <span class="ml-1 font-mono font-medium">{{ maskedUsername }}</span>
                     </span>
-                    <AppTooltip :text="showUsername ? 'Hide' : 'Show'">
+                    <span v-tooltip="showUsername ? $t('common.hide') : $t('common.show')">
                       <UButton
                         size="xs"
                         variant="ghost"
@@ -116,15 +115,15 @@
                         class="ml-1"
                         @click="showUsername = !showUsername"
                       />
-                    </AppTooltip>
+                    </span>
                   </div>
                   <div class="mb-2 flex items-center">
-                    <UIcon name="i-mdi-email" class="mr-2 h-4.5 w-4.5 text-gray-400" />
+                    <UIcon name="i-mdi-email" class="text-content-tertiary mr-2 h-4.5 w-4.5" />
                     <span class="text-sm">
-                      <span class="text-gray-400">Email:</span>
+                      <span class="text-content-secondary">Email:</span>
                       <span class="ml-1 font-mono font-medium">{{ maskedEmail }}</span>
                     </span>
-                    <AppTooltip :text="showEmail ? 'Hide' : 'Show'">
+                    <span v-tooltip="showEmail ? $t('common.hide') : $t('common.show')">
                       <UButton
                         size="xs"
                         variant="ghost"
@@ -133,34 +132,37 @@
                         class="ml-1"
                         @click="showEmail = !showEmail"
                       />
-                    </AppTooltip>
+                    </span>
                   </div>
                 </div>
                 <div>
                   <div class="mb-2 flex items-center">
-                    <UIcon name="i-mdi-login" class="mr-2 h-4.5 w-4.5 text-gray-400" />
+                    <UIcon name="i-mdi-login" class="text-content-tertiary mr-2 h-4.5 w-4.5" />
                     <span class="flex flex-wrap items-center gap-1 text-sm">
-                      <span class="mr-1 text-gray-400">Auth Method:</span>
+                      <span class="text-content-secondary mr-1">Auth Method:</span>
                       <template v-if="providers.length > 0">
-                        <UBadge
+                        <GameBadge
                           v-for="p in providers"
                           :key="p"
                           size="xs"
                           :color="getProviderColor(p)"
                           variant="solid"
-                          :class="['text-white', p === 'github' && 'bg-[#24292e]! text-white!']"
+                          :badge-class="[
+                            'text-white',
+                            p === 'github' && 'bg-[#24292e]! text-white!',
+                          ]"
                         >
                           <UIcon :name="getProviderIcon(p)" class="mr-1 h-4 w-4" />
                           {{ getProviderLabel(p) }}
-                        </UBadge>
+                        </GameBadge>
                       </template>
-                      <span v-else class="text-gray-500">Unknown</span>
+                      <span v-else class="text-content-tertiary">Unknown</span>
                     </span>
                   </div>
                   <div class="flex items-center">
-                    <UIcon name="i-mdi-calendar" class="mr-2 h-4.5 w-4.5 text-gray-400" />
+                    <UIcon name="i-mdi-calendar" class="text-content-tertiary mr-2 h-4.5 w-4.5" />
                     <span class="text-sm">
-                      <span class="text-gray-400">Member since:</span>
+                      <span class="text-content-secondary">Member since:</span>
                       <span class="ml-1 font-medium">
                         {{ formatDate($supabase.user.createdAt) }}
                       </span>
@@ -168,12 +170,14 @@
                   </div>
                 </div>
               </div>
-              <div class="my-3 border-t border-gray-700"></div>
+              <div class="border-base my-3 border-t"></div>
               <div class="flex items-center">
-                <UIcon name="i-mdi-identifier" class="mr-2 h-4.5 w-4.5 text-gray-400" />
-                <span class="mr-2 text-sm text-gray-400">Account ID:</span>
-                <code class="rounded bg-gray-700 px-2 py-1 text-xs">{{ maskedAccountId }}</code>
-                <AppTooltip :text="showAccountId ? 'Hide' : 'Show'">
+                <UIcon name="i-mdi-identifier" class="text-content-tertiary mr-2 h-4.5 w-4.5" />
+                <span class="text-content-secondary mr-2 text-sm">Account ID:</span>
+                <code class="bg-surface-200 dark:bg-surface-700 rounded px-2 py-1 text-xs">
+                  {{ maskedAccountId }}
+                </code>
+                <span v-tooltip="showAccountId ? $t('common.hide') : $t('common.show')">
                   <UButton
                     size="xs"
                     variant="ghost"
@@ -182,8 +186,12 @@
                     class="ml-1"
                     @click="showAccountId = !showAccountId"
                   />
-                </AppTooltip>
-                <AppTooltip :text="accountIdCopied ? 'Copied!' : 'Copy Account ID'">
+                </span>
+                <span
+                  v-tooltip="
+                    accountIdCopied ? $t('common.copied') : $t('settings.account.copy_account_id')
+                  "
+                >
                   <UButton
                     size="xs"
                     variant="ghost"
@@ -192,7 +200,7 @@
                     class="ml-1"
                     @click="copyAccountId"
                   />
-                </AppTooltip>
+                </span>
               </div>
             </div>
             <!-- Deletion Warning -->
@@ -255,9 +263,9 @@
     </GenericCard>
   </div>
   <UModal v-model:open="showConfirmationDialog" prevent-close>
-    <template #title>
-      <div class="flex items-center text-xl font-medium text-red-500">
-        <UIcon name="i-mdi-alert-circle" class="mr-2 h-6 w-6 text-red-500" />
+    <template #header>
+      <div class="text-error-500 flex items-center text-xl font-medium">
+        <UIcon name="i-mdi-alert-circle" class="text-error-500 mr-2 h-6 w-6" />
         Confirm Account Deletion
       </div>
     </template>
@@ -289,7 +297,7 @@
             :color="confirmationError ? 'error' : 'neutral'"
             @input="confirmationError = false"
           />
-          <div v-if="confirmationError" class="mt-1 text-xs text-red-500">
+          <div v-if="confirmationError" class="text-error-500 mt-1 text-xs">
             Please type exactly: DELETE MY ACCOUNT
           </div>
         </div>
@@ -315,9 +323,9 @@
     </template>
   </UModal>
   <UModal v-model:open="showSuccessDialog" prevent-close>
-    <template #title>
-      <div class="flex items-center text-xl font-medium text-green-500">
-        <UIcon name="i-mdi-check-circle" class="mr-2 h-6 w-6 text-green-500" />
+    <template #header>
+      <div class="text-success-500 flex items-center text-xl font-medium">
+        <UIcon name="i-mdi-check-circle" class="text-success-500 mr-2 h-6 w-6" />
         Account Deleted Successfully
       </div>
     </template>
@@ -349,6 +357,8 @@
 </template>
 <script setup lang="ts">
   import { computed, ref } from 'vue';
+  import { useRouter } from 'vue-router';
+  import GameBadge from '@/components/ui/GameBadge.vue';
   import GenericCard from '@/components/ui/GenericCard.vue';
   import { usePreferencesStore } from '@/stores/usePreferences';
   import { useSystemStore } from '@/stores/useSystemStore';

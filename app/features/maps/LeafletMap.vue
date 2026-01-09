@@ -3,11 +3,11 @@
     <!-- Unavailable map placeholder -->
     <div
       v-if="isMapUnavailable"
-      class="bg-surface-900 flex h-100 w-full flex-col items-center justify-center rounded sm:h-125 lg:h-150"
+      class="dark:bg-surface-900 flex h-[400px] w-full flex-col items-center justify-center rounded bg-gray-100 sm:h-[500px] lg:h-[600px]"
     >
-      <UIcon name="i-mdi-map-marker-off" class="mb-4 h-16 w-16 text-gray-500" />
-      <h3 class="mb-2 text-lg font-semibold text-gray-300">Map Not Available</h3>
-      <p class="max-w-md text-center text-sm text-gray-500">
+      <UIcon name="i-mdi-map-marker-off" class="mb-4 h-16 w-16 text-gray-400 dark:text-gray-500" />
+      <h3 class="mb-2 text-lg font-semibold text-gray-900 dark:text-gray-300">Map Not Available</h3>
+      <p class="max-w-md text-center text-sm text-gray-600 dark:text-gray-500">
         The interactive map for {{ props.map?.name || 'this location' }} is not yet available. We
         are waiting for a compatible map to be created.
       </p>
@@ -17,7 +17,7 @@
       <!-- Floor selector (positioned below Leaflet zoom controls) -->
       <div
         v-if="hasMultipleFloors"
-        class="bg-surface-800/90 absolute top-20 left-2 z-1000 flex flex-col gap-1 rounded p-1.5"
+        class="dark:bg-surface-800/90 absolute top-20 left-2 z-[1000] flex flex-col gap-1 rounded bg-white/90 p-1.5"
       >
         <span class="px-1 text-[10px] font-medium tracking-wide text-gray-400 uppercase">
           Floors
@@ -40,12 +40,14 @@
       <!-- Loading indicator -->
       <div
         v-if="isLoading"
-        class="bg-surface-900/50 absolute inset-0 z-1001 flex items-center justify-center"
+        class="dark:bg-surface-900/50 absolute inset-0 z-[1001] flex items-center justify-center bg-gray-100/50"
       >
-        <UIcon name="i-mdi-loading" class="text-primary-500 h-8 w-8 animate-spin" />
+        <UIcon name="i-mdi-loading" class="text-accent-500 h-8 w-8 animate-spin" />
       </div>
       <!-- Map controls (top right) -->
-      <div class="bg-surface-800/90 absolute top-2 right-2 z-1000 flex gap-2 rounded p-1.5">
+      <div
+        class="dark:bg-surface-800/90 absolute top-2 right-2 z-[1000] flex gap-2 rounded bg-white/90 p-1.5"
+      >
         <!-- Reset view button -->
         <UButton
           color="primary"
@@ -80,28 +82,31 @@
         </UButton>
       </div>
       <!-- Map container -->
-      <div ref="mapContainer" class="bg-surface-900 h-100 w-full rounded sm:h-125 lg:h-150" />
+      <div
+        ref="mapContainer"
+        class="dark:bg-surface-900 h-[400px] w-full rounded bg-gray-100 sm:h-[500px] lg:h-[600px]"
+      />
       <!-- Legends Footer -->
-      <div class="mt-2 flex flex-wrap items-start justify-between gap-x-4 gap-y-4">
+      <div class="mt-2 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <!-- Main Objective Legend -->
         <div
           v-if="props.showLegend"
-          class="flex flex-wrap items-center gap-4 text-xs text-gray-300"
+          class="flex flex-wrap items-center gap-4 text-xs text-gray-600 dark:text-gray-300"
         >
           <div class="flex items-center gap-1">
-            <div class="h-3 w-3 rounded-full bg-red-500" />
+            <div class="h-3 w-3 rounded-full bg-[var(--color-map-marker-self)]" />
             <span>Your Objectives</span>
           </div>
           <div class="flex items-center gap-1">
-            <div class="h-3 w-3 rounded-full bg-orange-500" />
+            <div class="h-3 w-3 rounded-full bg-[var(--color-map-marker-team)]" />
             <span>Team Objectives</span>
           </div>
           <div v-if="showPmcExtracts" class="flex items-center gap-1">
-            <UIcon name="i-mdi-exit-run" class="h-3 w-3 text-green-500" />
+            <UIcon name="i-mdi-exit-run" class="h-3 w-3 text-[var(--color-map-extract-pmc)]" />
             <span>PMC Extract</span>
           </div>
           <div v-if="showScavExtracts" class="flex items-center gap-1">
-            <UIcon name="i-mdi-exit-run" class="h-3 w-3 text-amber-400" />
+            <UIcon name="i-mdi-exit-run" class="h-3 w-3 text-[var(--color-map-extract-scav)]" />
             <span>Scav Extract</span>
           </div>
           <div
@@ -115,20 +120,28 @@
             v-if="(showPmcExtracts || showScavExtracts) && hasCoopExtracts"
             class="flex items-center gap-1"
           >
-            <UIcon name="i-mdi-exit-run" class="h-3 w-3 text-sky-600" />
+            <UIcon name="i-mdi-exit-run" class="h-3 w-3 text-[var(--color-map-extract-coop)]" />
             <span>Co-op Extract (PMC + Scav)</span>
           </div>
         </div>
         <!-- Controls Legend -->
         <div
-          class="ml-auto flex flex-wrap-reverse items-center justify-end gap-x-4 gap-y-1 text-[10px] font-medium text-gray-400"
+          class="ml-auto flex flex-wrap-reverse items-center justify-end gap-x-4 gap-y-1 text-[10px] font-medium text-gray-500 dark:text-gray-400"
         >
           <div v-if="hasMultipleFloors" class="flex items-center gap-1">
-            <kbd class="bg-surface-700 rounded px-1 py-0.5 font-mono text-gray-300">Ctrl</kbd>
+            <kbd
+              class="dark:bg-surface-700 rounded bg-gray-200 px-1 py-0.5 font-mono text-gray-700 dark:text-gray-300"
+            >
+              Ctrl
+            </kbd>
             <span>+ Scroll to Cycle Floors</span>
           </div>
           <div class="flex items-center gap-1">
-            <kbd class="bg-surface-700 rounded px-1 py-0.5 font-mono text-gray-300">Shift</kbd>
+            <kbd
+              class="dark:bg-surface-700 rounded bg-gray-200 px-1 py-0.5 font-mono text-gray-700 dark:text-gray-300"
+            >
+              Shift
+            </kbd>
             <span>+ Scroll to Zoom</span>
           </div>
         </div>
@@ -224,6 +237,19 @@
     closeOnClick: false,
     closeButton: true,
   };
+  /**
+   * Generates inline styles for Leaflet popups.
+   * Uses dark background with light text in both themes to match app-wide tooltip pattern.
+   * Leaflet injects popups outside Vue's DOM tree, so we use inline styles.
+   */
+  const getPopupStyles = () => {
+    // Tooltips are always dark (gray-900/surface-800) with light text, matching tooltip.client.ts
+    // We now use CSS variables defined in the style block so they update automatically
+    return {
+      container: `background-color: var(--leaflet-popup-bg); color: var(--leaflet-popup-text); border-radius: 0.375rem; padding: 0.25rem 0.5rem; font-size: 0.75rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3);`,
+      secondary: `color: var(--color-gray-400); font-size: 0.75rem;`,
+    };
+  };
   const attachTogglePopup = (
     layer: L.Layer,
     html: string,
@@ -281,13 +307,16 @@
     props.marks.forEach((mark) => {
       const objective = metadataStore.objectives.find((obj) => obj.id === mark.id);
       const task = objective ? metadataStore.tasks.find((t) => t.id === objective.taskId) : null;
+      const styles = getPopupStyles();
       const popupContent =
         task || objective
           ? `
-          <div class="text-sm">
-            ${task ? `<div class="font-semibold">${task.name}</div>` : ''}
-            ${objective ? `<div class="text-gray-400">${objective.description}</div>` : ''}
-          </div>
+          <div style="${styles.container}">
+             <div>
+               ${task ? `<div style="font-weight: 600; font-size: 0.875rem;">${task.name}</div>` : ''}
+               ${objective ? `<div style="${styles.secondary}">${objective.description}</div>` : ''}
+             </div>
+           </div>
         `
           : undefined;
       // Handle point markers (possibleLocations)
@@ -299,7 +328,13 @@
         if (!pos) return;
         const latLng = gameToLatLng(pos.x, pos.z);
         const isSelf = mark.users?.includes('self') ?? false;
-        const markerColor = isSelf ? '#ef4444' : '#f97316'; // red-500 : orange-500
+        const markerColor = isSelf
+          ? getComputedStyle(document.documentElement)
+              .getPropertyValue('--color-map-marker-self')
+              .trim() || '#ef4444'
+          : getComputedStyle(document.documentElement)
+              .getPropertyValue('--color-map-marker-team')
+              .trim() || '#f97316';
         const marker = L.circleMarker([latLng.lat, latLng.lng], {
           radius: 8,
           fillColor: markerColor,
@@ -316,7 +351,13 @@
         const latLngs = outlineToLatLngArray(zone.outline);
         if (latLngs.length < 3) return;
         const isSelf = mark.users?.includes('self') ?? false;
-        const zoneColor = isSelf ? '#ef4444' : '#f97316';
+        const zoneColor = isSelf
+          ? getComputedStyle(document.documentElement)
+              .getPropertyValue('--color-map-marker-self')
+              .trim() || '#ef4444'
+          : getComputedStyle(document.documentElement)
+              .getPropertyValue('--color-map-marker-team')
+              .trim() || '#f97316';
         const polygon = L.polygon(
           latLngs.map((ll) => [ll.lat, ll.lng]),
           {
@@ -341,9 +382,10 @@
         if (popupContent) {
           attachTogglePopup(polygon, popupContent, () => polygon.getBounds().getCenter());
           polygon.bindTooltip(popupContent, {
-            className: 'map-zone-tooltip',
-            opacity: 0.95,
-            sticky: true,
+            className: 'leaflet-tooltip-reset',
+            opacity: 1,
+            sticky: false,
+            direction: 'top',
           });
         }
         polygon.on('mouseover', () => polygon.setStyle({ fillOpacity: 0.35, weight: 3 }));
@@ -355,8 +397,8 @@
       if (popupContent) {
         attachTogglePopup(marker, popupContent, () => marker.getLatLng());
         marker.bindTooltip(popupContent, {
-          className: 'map-zone-tooltip',
-          opacity: 0.95,
+          className: 'leaflet-tooltip-reset',
+          opacity: 1,
           direction: 'top',
         });
       }
@@ -389,16 +431,26 @@
       let markerColor: string;
       switch (extract.faction) {
         case 'pmc':
-          markerColor = '#22c55e'; // green-500
+          markerColor =
+            getComputedStyle(document.documentElement)
+              .getPropertyValue('--color-map-extract-pmc')
+              .trim() || '#22c55e';
           break;
         case 'scav':
-          markerColor = '#f59e0b'; // amber-500
+          markerColor =
+            getComputedStyle(document.documentElement)
+              .getPropertyValue('--color-map-extract-scav')
+              .trim() || '#f59e0b';
           break;
         case 'shared':
-          markerColor = isCoop ? '#0284c7' : '#38bdf8'; // sky-600 : sky-400
+          markerColor = isCoop
+            ? getComputedStyle(document.documentElement)
+                .getPropertyValue('--color-map-extract-coop')
+                .trim() || '#0284c7'
+            : '#38bdf8'; // Keep simpler blue for generic shared
           break;
         default:
-          markerColor = '#3b82f6'; // blue-500
+          markerColor = '#3b82f6';
           break;
       }
       const iconHtml = `<span style="
@@ -434,10 +486,13 @@
         : extract.faction
           ? extract.faction.charAt(0).toUpperCase() + extract.faction.slice(1)
           : 'Unknown';
+      const extractStyles = getPopupStyles();
       const popupContent = `
-      <div class="text-sm">
-        <div class="font-semibold">${extract.name}</div>
-        <div class="text-gray-400">Faction: ${factionText}</div>
+      <div style="${extractStyles.container}">
+        <div>
+          <div style="font-weight: 600; font-size: 0.875rem;">${extract.name}</div>
+          <div style="${extractStyles.secondary}">Faction: ${factionText}</div>
+        </div>
       </div>
     `;
       attachTogglePopup(marker, popupContent, () => marker.getLatLng());
@@ -483,43 +538,76 @@
   });
 </script>
 <style>
-  /* Override Leaflet default styles for dark theme */
-  .leaflet-container {
-    background-color: rgb(var(--color-surface-900));
+  /* Leaflet Map Library Overrides
+     !important required throughout this section: Leaflet applies its own inline
+     styles and high-specificity CSS. Without !important, our styling is overridden. */
+  :root {
+    --leaflet-popup-bg: #ffffff;
+    --leaflet-popup-text: #1a1a1e;
+  }
+  :root.dark {
+    --leaflet-popup-bg: var(--color-surface-800);
+    --leaflet-popup-text: var(--color-gray-200);
+  }
+  /* Container styling */
+  :root.dark .leaflet-container {
+    background-color: var(--color-surface-900);
     font-family: inherit;
   }
-  .leaflet-popup-content-wrapper {
-    background-color: #1a1a1e !important;
-    color: #e5e5e5 !important;
-    border-radius: 0.5rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  .leaflet-container {
+    background-color: var(--color-gray-100);
+    font-family: inherit;
   }
-  .leaflet-popup-tip {
-    background-color: #1a1a1e !important;
+  /* Popup wrapper - dark in both themes for consistency with app tooltips.
+     Using .leaflet-container prefix for higher specificity to override Leaflet defaults. */
+  .leaflet-container .leaflet-popup-content-wrapper {
+    background: var(--leaflet-popup-bg) !important;
+    color: var(--leaflet-popup-text) !important;
+    border-radius: 0.5rem !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+  :root.dark .leaflet-container .leaflet-popup-content-wrapper {
+    background: var(--leaflet-popup-bg) !important;
+    color: var(--leaflet-popup-text) !important;
+  }
+  /* Popup tip (arrow) - match wrapper background */
+  .leaflet-container .leaflet-popup-tip {
+    background: var(--leaflet-popup-bg) !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  :root.dark .leaflet-container .leaflet-popup-tip {
+    background: var(--leaflet-popup-bg) !important;
   }
   .leaflet-popup-content {
-    margin: 0.75rem;
+    margin: 0 !important;
   }
-  .leaflet-control-zoom a {
-    background-color: rgb(var(--color-surface-800)) !important;
-    color: rgb(var(--color-gray-200)) !important;
-    border-color: rgb(var(--color-surface-700)) !important;
+  /* Zoom controls */
+  :root.dark .leaflet-control-zoom a {
+    background-color: var(--color-surface-800) !important;
+    color: var(--color-gray-200) !important;
+    border-color: var(--color-surface-700) !important;
   }
-  .leaflet-control-zoom a:hover {
-    background-color: rgb(var(--color-surface-700)) !important;
+  :root.dark .leaflet-control-zoom a:hover {
+    background-color: var(--color-surface-700) !important;
   }
-  /* Zone hover tooltip styling */
-  .map-zone-tooltip {
-    background-color: #1a1a1e !important;
-    color: #e5e5e5 !important;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 0.5rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    padding: 6px 8px;
-  }
-  /* Extract marker styling */
   .extract-marker {
     background: transparent;
     border: none;
+  }
+  /* Leaflet Tooltip Reset
+     !important required: Leaflet tooltip has high-specificity default styles.
+     We reset them completely to allow our popup content to style itself. */
+  .leaflet-tooltip-reset {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .leaflet-tooltip-reset::before {
+    display: none !important;
   }
 </style>

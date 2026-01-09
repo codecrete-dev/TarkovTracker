@@ -2,7 +2,7 @@
   <div class="space-y-4">
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <p class="text-surface-400 max-w-3xl text-sm">
+        <p class="text-content-secondary max-w-3xl text-sm">
           {{
             t('page.settings.card.apitokens.description', {
               openAPI_documentation: t('page.settings.card.apitokens.openAPI_documentation'),
@@ -36,10 +36,10 @@
         "
       />
       <div v-if="loading" class="space-y-2">
-        <div class="h-12 animate-pulse rounded-lg bg-white/5"></div>
-        <div class="h-12 animate-pulse rounded-lg bg-white/5"></div>
+        <div class="bg-surface-elevated h-12 animate-pulse rounded-lg"></div>
+        <div class="bg-surface-elevated h-12 animate-pulse rounded-lg"></div>
       </div>
-      <div v-else-if="!tokens.length" class="bg-surface-900 rounded-lg border border-white/5 p-4">
+      <div v-else-if="!tokens.length" class="border-base bg-surface-elevated rounded-lg border p-4">
         <UAlert
           color="primary"
           variant="soft"
@@ -50,19 +50,19 @@
         <UCard
           v-for="token in tokens"
           :key="token.id"
-          class="bg-surface-900 border border-white/10"
+          class="border-base bg-surface-elevated border"
           :ui="{ body: 'space-y-3' }"
         >
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="w-full space-y-2">
               <div class="flex items-center gap-2">
                 <UIcon name="i-mdi-key-variant" class="text-primary-400 h-5 w-5" />
-                <span class="text-surface-50 font-medium">
+                <span class="text-content-primary font-medium">
                   {{ token.note || t('page.settings.card.apitokens.default_note') }}
                 </span>
               </div>
               <div class="flex flex-wrap gap-2 text-xs">
-                <UBadge
+                <GameBadge
                   :color="token.gameMode === 'pve' ? 'info' : 'warning'"
                   variant="solid"
                   size="xs"
@@ -72,22 +72,21 @@
                     class="mr-1 h-3 w-3"
                   />
                   {{ formatGameMode(token.gameMode) }}
-                </UBadge>
-                <UBadge
+                </GameBadge>
+                <GameBadge
                   v-for="perm in token.permissions"
                   :key="perm"
                   color="info"
                   variant="soft"
                   size="xs"
-                >
-                  {{ permissionLabel(perm) }}
-                </UBadge>
+                  :label="permissionLabel(perm)"
+                />
               </div>
               <div
-                class="bg-surface-950/50 flex items-center gap-2 rounded border border-white/5 p-2"
+                class="border-base bg-surface-floating flex items-center gap-2 rounded border p-2"
                 :class="{ 'opacity-70': !token.tokenValue }"
               >
-                <code class="text-surface-300 flex-1 font-mono text-xs">
+                <code class="text-content-secondary flex-1 font-mono text-xs">
                   <template v-if="token.tokenValue">
                     {{
                       visibleTokens.has(token.id) ? token.tokenValue : maskToken(token.tokenValue)
@@ -128,7 +127,7 @@
                   />
                 </div>
               </div>
-              <div class="text-surface-400 flex flex-wrap gap-3 text-xs">
+              <div class="text-content-tertiary flex flex-wrap gap-3 text-xs">
                 <span>
                   {{ t('page.settings.card.apitokens.list.created') }}:
                   {{ formatDate(token.createdAt) }}
@@ -151,9 +150,13 @@
               </div>
             </div>
             <div class="flex items-center gap-2">
-              <UBadge v-if="!token.isActive" color="warning" variant="subtle" size="xs">
-                {{ t('page.settings.card.apitokens.list.revoked') }}
-              </UBadge>
+              <GameBadge
+                v-if="!token.isActive"
+                color="warning"
+                variant="subtle"
+                size="xs"
+                :label="t('page.settings.card.apitokens.list.revoked')"
+              />
               <UButton
                 color="error"
                 variant="ghost"
@@ -181,7 +184,7 @@
       <template #body>
         <div class="space-y-4">
           <div class="space-y-3">
-            <p class="text-surface-200 text-sm font-semibold">
+            <p class="text-content-secondary text-sm font-semibold">
               {{ t('page.settings.card.apitokens.form.gamemode_title') }}
               <span class="text-red-400">*</span>
             </p>
@@ -193,7 +196,7 @@
                 :class="
                   selectedGameMode === mode.value
                     ? 'border-primary-500 bg-primary-500/10'
-                    : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
+                    : 'clickable border-base bg-surface-elevated'
                 "
                 @click="selectedGameMode = mode.value"
               >
@@ -203,7 +206,7 @@
                     :class="
                       selectedGameMode === mode.value
                         ? 'border-primary-500 bg-primary-500'
-                        : 'border-gray-600'
+                        : 'border-content-tertiary'
                     "
                   >
                     <div
@@ -212,15 +215,15 @@
                     />
                   </div>
                   <div class="flex-1">
-                    <div class="font-medium text-white">{{ mode.label }}</div>
-                    <div class="text-xs text-gray-400">{{ mode.description }}</div>
+                    <div class="text-content-primary font-medium">{{ mode.label }}</div>
+                    <div class="text-content-tertiary text-xs">{{ mode.description }}</div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
           <div class="space-y-2">
-            <p class="text-surface-200 text-sm font-semibold">
+            <p class="text-content-secondary text-sm font-semibold">
               {{ t('page.settings.card.apitokens.form.permissions_title') }}
             </p>
             <UCheckbox
@@ -234,12 +237,12 @@
               "
             >
               <template #description>
-                <span class="text-surface-400 text-xs">{{ permission.description }}</span>
+                <span class="text-content-tertiary text-xs">{{ permission.description }}</span>
               </template>
             </UCheckbox>
           </div>
           <div class="space-y-2">
-            <p class="text-surface-200 text-sm font-semibold">
+            <p class="text-content-secondary text-sm font-semibold">
               {{ t('page.settings.card.apitokens.form.note_label') }}
             </p>
             <UInput
@@ -283,7 +286,7 @@
       </template>
       <template #body>
         <div class="space-y-3">
-          <p class="text-surface-300 text-sm">
+          <p class="text-content-secondary text-sm">
             {{ t('page.settings.card.apitokens.token_created_description') }}
           </p>
           <UInput v-model="generatedToken" readonly>
@@ -312,6 +315,7 @@
 <script setup lang="ts">
   import { computed, onMounted, ref, watch } from 'vue';
   import { useI18n } from 'vue-i18n';
+  import GameBadge from '@/components/ui/GameBadge.vue';
   import { useEdgeFunctions } from '@/composables/api/useEdgeFunctions';
   import type { RawTokenRow, TokenPermission, TokenRow } from '@/types/api';
   import { API_PERMISSIONS, GAME_MODE_OPTIONS, GAME_MODES, type GameMode } from '@/utils/constants';

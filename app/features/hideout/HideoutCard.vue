@@ -5,98 +5,123 @@
     :highlight-color="getHighlightColor()"
     :avatar-height="50"
     :fill-height="false"
-    class="relative overflow-visible rounded-lg"
+    class="relative overflow-visible"
     header-classes="pb-2"
   >
     <template #header>
-      <div class="flex items-center justify-between pb-2 text-xl">
-        <!-- Left side content (icon and title with level badge) -->
+      <div class="flex items-center justify-between gap-4 pr-4 pb-2">
         <div class="flex items-center gap-3">
           <!-- Station Avatar -->
-          <span :class="highlightClasses" class="inline-block rounded-br-lg px-3 py-1 shadow-lg">
-            <img :src="stationAvatar" :height="50" :style="{ height: '50px' }" class="block pt-0" />
+          <span :class="highlightClasses" class="group-hover:scale-105">
+            <img
+              :src="stationAvatar"
+              :height="50"
+              :style="{ height: '50px' }"
+              class="block pt-0 drop-shadow-md"
+            />
           </span>
-          <!-- Title and Level Badge -->
-          <div class="flex items-center gap-2">
-            <span class="inline-block text-left leading-6">
-              {{ station.name }}
-            </span>
-            <div
-              v-if="!upgradeDisabled"
-              class="rounded-md px-2.5 py-0.5"
-              :class="
-                prerequisitesMet
-                  ? 'bg-success-500/20 border-success-500/50 border'
-                  : 'border border-red-500/50 bg-red-500/20'
-              "
-            >
-              <span
-                class="text-xs font-semibold"
-                :class="prerequisitesMet ? 'text-success-400' : 'text-red-400'"
+          <!-- Title -->
+          <span
+            class="text-content-primary inline-block text-left text-lg leading-6 font-bold sm:text-xl"
+          >
+            {{ station.name }}
+          </span>
+        </div>
+        <div
+          v-if="!upgradeDisabled"
+          class="flex shrink-0 items-center rounded-md border px-2 py-1 shadow-sm"
+          :class="
+            prerequisitesMet
+              ? 'bg-success-500/10 border-success-500/30'
+              : 'border-error-500/30 bg-error-500/10'
+          "
+        >
+          <span
+            :class="
+              prerequisitesMet
+                ? 'text-success-600 dark:text-success-400'
+                : 'text-error-600 dark:text-error-400'
+            "
+          >
+            <template v-if="prerequisitesMet">
+              <i18n-t
+                keypath="page.hideout.stationcard.level"
+                scope="global"
+                :plural="progressStore.hideoutLevels?.[props.station.id]?.self || 0"
               >
-                <template v-if="prerequisitesMet">
-                  <i18n-t
-                    keypath="page.hideout.stationcard.level"
-                    scope="global"
-                    :plural="progressStore.hideoutLevels?.[props.station.id]?.self || 0"
-                  >
-                    <template #level>
-                      {{ progressStore.hideoutLevels?.[props.station.id]?.self || 0 }}
-                    </template>
-                  </i18n-t>
+                <template #level>
+                  {{ progressStore.hideoutLevels?.[props.station.id]?.self || 0 }}
                 </template>
-                <template v-else>
-                  {{ $t('page.hideout.stationcard.levelnotready') }}
-                </template>
-              </span>
-            </div>
-          </div>
+              </i18n-t>
+            </template>
+            <template v-else>
+              {{ $t('page.hideout.stationcard.levelnotready') }}
+            </template>
+          </span>
         </div>
       </div>
       <!-- Divider -->
-      <div class="border-surface-700 mx-4 border-b"></div>
+      <div class="border-base mx-4 border-b"></div>
     </template>
     <template #content>
       <!-- Station description -->
-      <div v-if="currentLevel" class="mx-2 mb-3 text-left text-sm leading-relaxed text-gray-300">
+      <div
+        v-if="currentLevel"
+        class="text-content-secondary mx-2 mb-3 text-left text-sm leading-relaxed"
+      >
         {{ getStashAdjustedDescription(currentLevel.description) }}
       </div>
-      <div v-else-if="nextLevel" class="mx-2 mb-3 text-left text-sm leading-relaxed text-gray-300">
+      <div
+        v-else-if="nextLevel"
+        class="text-content-secondary mx-2 mb-3 text-left text-sm leading-relaxed"
+      >
         {{ getStashAdjustedDescription(nextLevel.description) }}
       </div>
       <!-- Stash station special content -->
       <div
         v-if="props.station.normalizedName === SPECIAL_STATIONS.STASH"
-        class="mb-3 rounded-lg bg-gray-700 p-3 text-center"
+        class="bg-surface-elevated border-base text-content-secondary mb-3 rounded-lg border p-3 text-center"
       >
         <div class="mb-2 text-sm">
           {{ $t('page.hideout.stationcard.gameeditiondescription') }}
         </div>
-        <UButton variant="soft" to="/settings" color="neutral">
+        <UButton variant="soft" to="/settings" color="neutral" size="lg" block>
           {{ $t('page.hideout.stationcard.settingsbutton') }}
         </UButton>
       </div>
       <!-- Next level requirements -->
       <div v-if="nextLevel" class="space-y-3">
         <!-- Item Requirements Section -->
-        <div v-if="hasItemRequirements" class="rounded-lg bg-gray-800 p-3">
-          <div class="mb-3 flex items-center text-base font-medium">
-            <UIcon name="i-mdi-package-variant-closed-check" class="mr-2 h-5 w-5 text-green-500" />
+        <div
+          v-if="hasItemRequirements"
+          class="border-base bg-surface-elevated border-t border-b p-3"
+        >
+          <div class="text-content-primary mb-3 flex items-center text-base font-medium">
+            <UIcon
+              name="i-mdi-package-variant-closed-check"
+              class="text-success-600 dark:text-success-500 mr-2 h-5 w-5"
+            />
             {{ $t('page.hideout.stationcard.nextlevel') }}
           </div>
           <!-- Item Requirements Grid -->
-          <div class="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+          <div
+            class="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5"
+          >
             <HideoutRequirement
               v-for="requirement in nextLevel.itemRequirements"
               :key="requirement.id"
               :requirement="requirement"
               :station-id="props.station.id"
               :level="nextLevel.level"
+              class="items-center"
             />
           </div>
           <!-- Prerequisites Section -->
-          <div v-if="hasPrerequisites" class="space-y-2 border-t border-gray-700 pt-3">
-            <div class="mb-2 text-xs font-medium tracking-wider text-gray-400 uppercase">
+          <div v-if="hasPrerequisites" class="border-base space-y-2 border-t pt-3">
+            <div
+              class="text-content-tertiary mb-2 flex items-center gap-2 text-xs font-medium tracking-wider uppercase"
+            >
+              <UIcon name="i-mdi-clipboard-list" class="h-4 w-4" />
               {{ $t('page.hideout.stationcard.prerequisites') || 'Prerequisites' }}
             </div>
             <!-- Station Level Requirements -->
@@ -104,12 +129,16 @@
               v-for="(requirement, rIndex) in nextLevel.stationLevelRequirements"
               :key="`station-${rIndex}`"
               class="flex items-center gap-2 text-sm"
-              :class="isStationReqMet(requirement) ? 'text-gray-300' : 'font-semibold text-red-400'"
+              :class="
+                isStationReqMet(requirement)
+                  ? 'text-content-secondary'
+                  : 'text-error-500 dark:text-error-400 font-semibold'
+              "
             >
               <UIcon
                 name="i-mdi-home"
                 class="h-4 w-4"
-                :class="isStationReqMet(requirement) ? 'text-blue-500' : 'text-red-500'"
+                :class="isStationReqMet(requirement) ? 'text-blue-500' : 'text-error-500'"
               />
               <i18n-t keypath="page.hideout.stationcard.requirements.station" scope="global">
                 <template #level>
@@ -125,12 +154,16 @@
               v-for="(requirement, rIndex) in nextLevel.skillRequirements"
               :key="`skill-${rIndex}`"
               class="flex items-center gap-2 text-sm"
-              :class="isSkillReqMet(requirement) ? 'text-gray-300' : 'font-semibold text-red-400'"
+              :class="
+                isSkillReqMet(requirement)
+                  ? 'text-content-secondary'
+                  : 'text-error-500 dark:text-error-400 font-semibold'
+              "
             >
               <UIcon
                 name="i-mdi-star"
                 class="h-4 w-4"
-                :class="isSkillReqMet(requirement) ? 'text-yellow-500' : 'text-red-500'"
+                :class="isSkillReqMet(requirement) ? 'text-warning-500' : 'text-error-500'"
               />
               <i18n-t keypath="page.hideout.stationcard.requirements.skill" scope="global">
                 <template #level>
@@ -146,12 +179,16 @@
               v-for="(requirement, rIndex) in nextLevel.traderRequirements"
               :key="`trader-${rIndex}`"
               class="flex items-center gap-2 text-sm"
-              :class="isTraderReqMet(requirement) ? 'text-gray-300' : 'font-semibold text-red-400'"
+              :class="
+                isTraderReqMet(requirement)
+                  ? 'text-content-secondary'
+                  : 'text-error-500 dark:text-error-400 font-semibold'
+              "
             >
               <UIcon
                 name="i-mdi-account-tie"
                 class="h-4 w-4"
-                :class="isTraderReqMet(requirement) ? 'text-purple-500' : 'text-red-500'"
+                :class="isTraderReqMet(requirement) ? 'text-purple-500' : 'text-error-500'"
               />
               <i18n-t keypath="page.hideout.stationcard.requirements.trader" scope="global">
                 <template #loyaltylevel>
@@ -166,9 +203,9 @@
         </div>
       </div>
       <!-- Max level indicator -->
-      <div v-if="!nextLevel" class="rounded bg-gray-800 p-3">
+      <div v-if="!nextLevel" class="border-base border-t border-b bg-gray-100 p-3 dark:bg-gray-800">
         <div
-          class="flex items-center justify-center text-center text-base font-medium text-yellow-500"
+          class="text-warning-600 dark:text-warning-500 flex items-center justify-center text-center text-base font-medium"
         >
           <UIcon name="i-mdi-star-check" class="mr-2 h-6 w-6" />
           {{ $t('page.hideout.stationcard.maxlevel') }}
@@ -199,7 +236,7 @@
           </UButton>
           <UButton
             v-if="currentLevel && !downgradeDisabled"
-            size="sm"
+            size="lg"
             block
             :ui="downgradeButtonUi"
             @click="downgradeStation()"
@@ -218,7 +255,7 @@
         <div v-if="upgradeDisabled" class="flex flex-wrap items-center justify-center gap-2">
           <UButton
             v-if="currentLevel && !downgradeDisabled"
-            size="sm"
+            size="lg"
             :ui="downgradeButtonUi"
             @click="downgradeStation()"
           >
@@ -244,8 +281,9 @@
   </GenericCard>
 </template>
 <script setup lang="ts">
-  import { computed, defineAsyncComponent } from 'vue';
+  import { computed } from 'vue';
   import { useI18n } from 'vue-i18n';
+  import GenericCard from '@/components/ui/GenericCard.vue';
   import { useProgressStore } from '@/stores/useProgress';
   import { useTarkovStore } from '@/stores/useTarkov';
   import type {
@@ -257,9 +295,8 @@
     TraderRequirement,
   } from '@/types/tarkov';
   import { SPECIAL_STATIONS } from '@/utils/constants';
+  import HideoutRequirement from './HideoutRequirement.vue';
   import { useToast } from '#imports';
-  const GenericCard = defineAsyncComponent(() => import('@/components/ui/GenericCard.vue'));
-  const HideoutRequirement = defineAsyncComponent(() => import('./HideoutRequirement.vue'));
   const props = defineProps<{ station: HideoutStation }>();
   const progressStore = useProgressStore();
   const tarkovStore = useTarkovStore();
@@ -267,10 +304,10 @@
   const toast = useToast();
   const stationAnchorId = computed(() => `station-${props.station.id}`);
   const upgradeButtonUi = {
-    base: 'bg-success-500 hover:bg-success-600 active:bg-success-700 text-white border border-success-700',
+    base: 'badge-soft-success font-semibold',
   };
   const downgradeButtonUi = {
-    base: 'bg-red-900/40 hover:bg-red-900/60 active:bg-red-900/80 text-red-300 border border-red-700/50',
+    base: 'bg-error-50 dark:bg-error-900/40 text-error-600 dark:text-error-300 border border-error-200 dark:border-error-700/50',
   };
   const getHighlightColor = (): 'secondary' | 'green' | 'red' => {
     const level = progressStore.hideoutLevels?.[props.station.id]?.self ?? 0;
@@ -284,20 +321,16 @@
     const classes: Record<string, boolean> = {};
     switch (color) {
       case 'green':
-        classes[
-          'bg-gradient-to-r from-[rgba(1,36,0,0.15)] via-[rgba(15,121,9,0.15)] to-[rgba(0,83,0,0.15)]'
-        ] = true;
+        classes['badge-premium-green'] = true;
         break;
       case 'red':
-        classes[
-          'bg-gradient-to-r from-[rgba(36,0,0,0.15)] via-[rgba(121,0,0,0.15)] to-[rgba(83,0,0,0.15)]'
-        ] = true;
+        classes['badge-premium-red'] = true;
         break;
       case 'secondary':
-        classes['bg-gradient-to-br from-brand-700 via-brand-300 to-brand-500'] = true;
+        classes['badge-premium-secondary'] = true;
         break;
       default:
-        classes['bg-gradient-to-br from-accent-800 via-accent-700 to-accent-600'] = true;
+        classes['badge-premium-accent'] = true;
         break;
     }
     return classes;
@@ -399,7 +432,7 @@
     const hasMaxStash = (editionData?.defaultStashLevel ?? 0) >= 5;
     // For editions with max stash, show static description with 10x72
     if (hasMaxStash) {
-      return 'Maximum size stash (10x72)';
+      return t('page.hideout.stationcard.max_stash_desc');
     }
     return description;
   };

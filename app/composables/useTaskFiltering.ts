@@ -406,14 +406,20 @@ export function useTaskFiltering() {
     }).length;
   };
   /**
-   * Sort tasks by impact (number of incomplete successor tasks) in descending order
-   * Tasks with higher impact (more tasks blocked) appear first
+   * Sort tasks by:
+   * 1. Impact (Descending)
+   * 2. ID (Ascending - for stability)
    */
   const sortTasksByImpact = (taskList: Task[], userView: string): Task[] => {
     return [...taskList].sort((a, b) => {
+      // 1. Impact Sorting (within same status group)
       const impactA = calculateTaskImpact(a, userView);
       const impactB = calculateTaskImpact(b, userView);
-      return impactB - impactA; // Descending order (highest impact first)
+      if (impactA !== impactB) {
+        return impactB - impactA; // Descending impact
+      }
+      // 2. ID fallback for stability
+      return a.id.localeCompare(b.id);
     });
   };
   /**
@@ -433,26 +439,40 @@ export function useTaskFiltering() {
       return;
     }
     reloadingTasks.value = true;
-    try {
-      let visibleTaskList = JSON.parse(JSON.stringify(metadataStore.tasks));
-      // Apply task type filters (Kappa, Lightkeeper, Non-special)
-      visibleTaskList = filterTasksByTypeSettings(visibleTaskList);
-      // Apply primary view filter
-      visibleTaskList = filterTasksByView(
-        visibleTaskList,
-        activePrimaryView,
-        activeMapView,
-        activeTraderView,
-        mergedMaps
-      );
-      // Apply status and user filters
-      visibleTaskList = filterTasksByStatus(visibleTaskList, activeSecondaryView, activeUserView);
-      // Sort by impact (number of incomplete successor tasks) - highest impact first
-      visibleTaskList = sortTasksByImpact(visibleTaskList, activeUserView);
-      visibleTasks.value = visibleTaskList;
-    } finally {
-      reloadingTasks.value = false;
-    }
+    // Yield to browser before heavy computation to keep UI responsive
+    return new Promise<void>((resolve, reject) => {
+      requestAnimationFrame(() => {
+        try {
+          // Shallow copy - filter operations create new arrays, don't mutate originals
+          let visibleTaskList = [...metadataStore.tasks];
+          // Apply task type filters (Kappa, Lightkeeper, Non-special)
+          visibleTaskList = filterTasksByTypeSettings(visibleTaskList);
+          // Apply primary view filter
+          visibleTaskList = filterTasksByView(
+            visibleTaskList,
+            activePrimaryView,
+            activeMapView,
+            activeTraderView,
+            mergedMaps
+          );
+          // Apply status and user filters
+          visibleTaskList = filterTasksByStatus(
+            visibleTaskList,
+            activeSecondaryView,
+            activeUserView
+          );
+          // Sort by impact (number of incomplete successor tasks) - highest impact first
+          visibleTaskList = sortTasksByImpact(visibleTaskList, activeUserView);
+          visibleTasks.value = visibleTaskList;
+          resolve();
+        } catch (error) {
+          logger.error('[TaskFiltering] Failed to update visible tasks:', error);
+          reject(error);
+        } finally {
+          reloadingTasks.value = false;
+        }
+      });
+    });
   };
   /**
    * Calculate task counts by status (all, available, locked, completed)

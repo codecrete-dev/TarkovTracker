@@ -3,6 +3,7 @@
     "@vueuse/core": "Previously pinned to 13.9.0 due to Nuxt/@nuxt/ui/reka-ui compatibility; updated to ^14.1.0 after upgrading Nuxt/@nuxt/ui."
   },
   "dependencies": {
+    "@floating-ui/dom": "^1.7.4",
     "@iconify-json/mdi": "^1.2.3",
     "@intlify/unplugin-vue-i18n": "^11.0.3",
     "@mdi/font": "^7.4.47",

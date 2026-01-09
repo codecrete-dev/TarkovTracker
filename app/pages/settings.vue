@@ -3,11 +3,10 @@
     <!-- Section 1: Game Settings (merged Privacy Mode + Game Edition) -->
     <GenericCard
       icon="mdi-gamepad-variant"
-      icon-color="accent-400"
       highlight-color="accent"
       :fill-height="false"
       :title="$t('settings.game_settings.title', 'Game Settings')"
-      title-classes="text-lg font-semibold"
+      title-classes="text-lg font-bold sm:text-xl"
     >
       <template #title-right>
         <UAlert
@@ -28,7 +27,7 @@
         <div class="grid gap-6 px-4 py-4 md:grid-cols-2 lg:grid-cols-3">
           <!-- Privacy Mode -->
           <div class="space-y-2">
-            <p class="text-surface-200 text-sm font-semibold">
+            <p class="dark:text-surface-200 text-sm font-semibold text-gray-900">
               {{ $t('settings.general.privacy_mode', 'Privacy Mode') }}
             </p>
             <div class="flex items-center gap-3">
@@ -37,7 +36,7 @@
                 :disabled="!user.loggedIn || streamerModeCooldown"
                 label=""
               />
-              <span class="text-surface-400 text-xs">
+              <span class="dark:text-surface-400 text-xs text-gray-500">
                 {{
                   $t(
                     'settings.general.privacy_mode_hint',
@@ -49,7 +48,7 @@
           </div>
           <!-- Game Edition -->
           <div class="space-y-2">
-            <p class="text-surface-200 text-sm font-semibold">
+            <p class="dark:text-surface-200 text-sm font-semibold text-gray-900">
               {{ $t('settings.game_profile.game_edition', 'Game Edition') }}
             </p>
             <USelectMenu
@@ -61,13 +60,13 @@
               :ui-menu="selectMenuUi"
             >
               <template #leading>
-                <UIcon name="i-mdi-gift-open" class="text-surface-300 h-4 w-4" />
+                <UIcon name="i-mdi-gift-open" class="dark:text-surface-300 h-4 w-4 text-gray-400" />
               </template>
             </USelectMenu>
           </div>
           <!-- Prestige Level -->
           <div class="space-y-2">
-            <p class="text-surface-200 text-sm font-semibold">
+            <p class="dark:text-surface-200 text-sm font-semibold text-gray-900">
               {{ $t('settings.prestige.current_level', 'Current Prestige Level') }}
             </p>
             <USelectMenu
@@ -82,7 +81,7 @@
                 <UIcon name="i-mdi-trophy" class="text-gold-400 h-4 w-4" />
               </template>
             </USelectMenu>
-            <p class="text-surface-400 text-xs">
+            <p class="dark:text-surface-400 text-xs text-gray-500">
               {{
                 $t(
                   'settings.prestige.hint',
@@ -104,11 +103,10 @@
     <!-- Section 3: Data Management -->
     <GenericCard
       icon="mdi-database"
-      icon-color="warning"
       highlight-color="tan"
       :fill-height="false"
       :title="$t('settings.data_management.title', 'Data Management')"
-      title-classes="text-lg font-semibold"
+      title-classes="text-lg font-bold sm:text-xl"
     >
       <template #title-right>
         <UAlert
@@ -138,7 +136,7 @@
               icon="i-mdi-shield-sword"
               block
               :ui="{
-                base: 'bg-pvp-900 hover:bg-pvp-800 active:bg-pvp-700 text-pvp-200 focus-visible:ring focus-visible:ring-pvp-500',
+                base: 'hover-effect bg-pvp-200 dark:bg-pvp-900/80 text-pvp-900 dark:text-pvp-100',
               }"
               @click="showResetPvPDialog = true"
             >
@@ -149,7 +147,7 @@
               icon="i-mdi-account-group"
               block
               :ui="{
-                base: 'bg-pve-900 hover:bg-pve-800 active:bg-pve-700 text-pve-200 focus-visible:ring focus-visible:ring-pve-500',
+                base: 'hover-effect bg-pve-200 dark:bg-pve-900/80 text-pve-900 dark:text-pve-100',
               }"
               @click="showResetPvEDialog = true"
             >
@@ -166,7 +164,7 @@
               {{ $t('settings.data_management.reset_all_data', 'Reset All Data') }}
             </UButton>
           </div>
-          <p class="text-surface-400 text-center text-xs">
+          <p class="dark:text-surface-400 text-center text-xs text-gray-500">
             {{
               $t(
                 'settings.data_management.reset_hint',
@@ -200,7 +198,7 @@
               )
             "
           />
-          <p class="text-surface-200 text-sm">
+          <p class="dark:text-surface-200 text-sm text-gray-600">
             {{
               $t(
                 'settings.data_management.reset_pvp_warning',
@@ -255,7 +253,7 @@
               )
             "
           />
-          <p class="text-surface-200 text-sm">
+          <p class="dark:text-surface-200 text-sm text-gray-600">
             {{
               $t(
                 'settings.data_management.reset_pve_warning',
@@ -288,10 +286,7 @@
       </template>
     </UModal>
     <!-- Reset All Modal -->
-    <UModal
-      v-model:open="showResetAllDialog"
-      @close="resetAllConfirmText = ''"
-    >
+    <UModal v-model:open="showResetAllDialog" @close="resetAllConfirmText = ''">
       <template #header>
         <div class="flex items-center gap-2">
           <UIcon name="i-mdi-alert-octagon" class="text-error-400 h-5 w-5" />
@@ -313,7 +308,7 @@
               )
             "
           />
-          <p class="text-surface-200 text-sm">
+          <p class="dark:text-surface-200 text-sm text-gray-600">
             {{
               $t(
                 'settings.data_management.reset_all_warning',
@@ -323,13 +318,11 @@
           </p>
           <div class="space-y-2">
             <p class="text-surface-100 text-sm font-medium">
-              Type <strong class="text-error-400">DELETE</strong> to confirm:
+              Type
+              <strong class="text-error-400">DELETE</strong>
+              to confirm:
             </p>
-            <UInput
-              v-model="resetAllConfirmText"
-              placeholder="DELETE"
-              class="font-mono"
-            />
+            <UInput v-model="resetAllConfirmText" placeholder="DELETE" class="font-mono" />
           </div>
         </div>
       </template>
@@ -359,11 +352,10 @@
     <!-- Section 4: API Management -->
     <GenericCard
       icon="mdi-key-chain"
-      icon-color="purple-400"
       highlight-color="purple"
       :fill-height="false"
       :title="$t('page.settings.card.apitokens.title', 'API Tokens')"
-      title-classes="text-lg font-semibold"
+      title-classes="text-lg font-bold sm:text-xl"
     >
       <template #title-right>
         <UAlert
@@ -445,16 +437,17 @@
   const selectUi = {};
   const selectMenuUi = {
     container: 'z-[9999]',
-    background: 'bg-surface-900',
+    background: 'bg-white dark:bg-surface-900',
     shadow: 'shadow-xl',
     rounded: 'rounded-lg',
-    ring: 'ring-1 ring-white/10',
+    ring: 'ring-1 ring-gray-200 dark:ring-white/10',
     padding: 'p-1',
     option: {
       base: 'px-3 py-2 text-sm cursor-pointer transition-colors rounded',
-      inactive: 'text-surface-200 hover:bg-surface-800 hover:text-white',
-      active: 'bg-surface-800 text-white',
-      selected: 'bg-primary-500/10 text-primary-100 ring-1 ring-primary-500',
+      inactive: 'hover-effect text-gray-700 dark:text-surface-200',
+      active: 'hover-effect bg-gray-100 text-gray-900 dark:bg-surface-800 dark:text-white',
+      selected:
+        'bg-primary-50 text-primary-600 ring-1 ring-primary-500 dark:bg-primary-500/10 dark:text-primary-100',
     },
   };
   // Reactive state

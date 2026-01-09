@@ -1,0 +1,65 @@
+<template>
+  <!-- 
+    The root element is a div/span that receives the v-tooltip directive. 
+    This provides a stable, single-element root for the directive, 
+    preventing "Runtime directive used on component with non-element root node" warnings.
+  -->
+  <div v-if="tooltip" v-tooltip="tooltip" class="inline-flex" v-bind="wrapperAttrs">
+    <UBadge
+      v-bind="$attrs"
+      :size="size as any"
+      :color="color as any"
+      :variant="variant as any"
+      :class="badgeClass"
+    >
+      <slot>
+        <UIcon v-if="icon" :name="icon" class="h-3 w-3" aria-hidden="true" />
+        <span v-if="label">{{ label }}</span>
+      </slot>
+    </UBadge>
+  </div>
+  <UBadge
+    v-else
+    v-bind="$attrs"
+    :size="size as any"
+    :color="color as any"
+    :variant="variant as any"
+    :class="badgeClass"
+  >
+    <slot>
+      <UIcon v-if="icon" :name="icon" class="h-3 w-3" aria-hidden="true" />
+      <span v-if="label">{{ label }}</span>
+    </slot>
+  </UBadge>
+</template>
+<script setup lang="ts">
+  /**
+   * GameBadge.vue
+   * A wrapper around UBadge that provides a stable root element for tooltips.
+   */
+  withDefaults(
+    defineProps<{
+      label?: string;
+      icon?: string;
+      tooltip?: string | object;
+      size?: string;
+      color?: string;
+      variant?: string;
+      badgeClass?: string | string[] | object;
+      wrapperAttrs?: object;
+    }>(),
+    {
+      label: undefined,
+      icon: undefined,
+      tooltip: undefined,
+      size: 'xs',
+      color: 'gray',
+      variant: 'solid',
+      badgeClass: undefined,
+      wrapperAttrs: undefined,
+    }
+  );
+  defineOptions({
+    inheritAttrs: false,
+  });
+</script>

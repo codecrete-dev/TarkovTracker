@@ -2,40 +2,27 @@
   <div class="mb-6 space-y-3">
     <!-- Primary Filter: ALL / TASKS / HIDEOUT (Centered) -->
     <div
-      class="flex flex-wrap items-center justify-center gap-1 overflow-x-auto rounded-lg bg-[hsl(240,5%,5%)] px-2 py-2 sm:gap-2 sm:px-4 sm:py-3"
+      class="bg-surface-elevated flex flex-wrap items-center justify-center gap-1 overflow-x-auto rounded-lg px-2 py-2 shadow-sm sm:gap-2 sm:px-4 sm:py-3"
     >
-      <UButton
+      <FilterPill
         v-for="tab in filterTabs"
         :key="tab.value"
-        :variant="'ghost'"
-        :color="'neutral'"
-        size="sm"
-        class="shrink-0 px-2 sm:px-3"
-        :class="{
-          'border-primary-500 rounded-none border-b-2': modelValue === tab.value,
-        }"
+        :active="modelValue === tab.value"
+        :icon="tab.icon"
+        :label="tab.label.toUpperCase()"
+        :count="tab.count"
+        :count-color="tab.badgeColor || 'badge-soft-accent'"
+        class="shrink-0"
+        label-class="hidden sm:inline text-[clamp(0.625rem,2vw,0.875rem)]"
         @click="$emit('update:modelValue', tab.value)"
-      >
-        <UIcon :name="tab.icon" class="h-4 w-4 sm:mr-1 sm:h-5 sm:w-5" />
-        <span class="hidden text-[clamp(0.625rem,2vw,0.875rem)] sm:inline">
-          {{ tab.label.toUpperCase() }}
-        </span>
-        <span
-          :class="[
-            'ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-bold text-white sm:ml-2 sm:h-7 sm:min-w-7 sm:px-1.5 sm:text-sm',
-            modelValue === tab.value ? 'bg-primary-500' : 'bg-gray-600',
-          ]"
-        >
-          {{ tab.count }}
-        </span>
-      </UButton>
+      />
     </div>
-    <!-- Unified Filter Bar: Search + Filters + Views -->
-    <div
-      class="flex flex-col gap-3 rounded-lg bg-[hsl(240,5%,5%)] p-3 sm:flex-row sm:items-center sm:p-4"
-    >
-      <!-- Search (grows to fill space) -->
-      <div class="flex-1">
+    <!-- Secondary filters container -->
+    <div class="flex w-full flex-wrap gap-3">
+      <!-- Section 1: Search bar -->
+      <div
+        class="bg-surface-elevated flex min-w-0 flex-1 items-center rounded-lg px-4 py-3 shadow-sm"
+      >
         <UInput
           :model-value="search"
           :placeholder="
@@ -59,18 +46,8 @@
           </template>
         </UInput>
       </div>
-      <!-- Right side controls -->
-      <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-        <!-- Item count badge -->
-        <UBadge color="neutral" variant="soft" size="md" class="shrink-0 px-3 py-1.5 text-sm">
-          <template v-if="groupByItem && ungroupedCount !== totalCount">
-            {{ totalCount }} unique ({{ ungroupedCount }} total)
-          </template>
-          <template v-else>{{ totalCount }} {{ $t('page.neededitems.items', 'items') }}</template>
-        </UBadge>
-        <!-- Divider (hidden on mobile) -->
-        <div class="hidden h-6 w-px bg-white/10 sm:block" />
-        <!-- Filters Popover -->
+      <!-- Section 2: Filters (Popover) -->
+      <div class="bg-surface-elevated flex shrink-0 items-center rounded-lg px-4 py-3 shadow-sm">
         <UPopover>
           <UButton
             icon="i-mdi-filter-variant"
@@ -82,19 +59,18 @@
             <span class="hidden sm:inline">
               {{ $t('page.neededitems.filters.label', 'Filters') }}
             </span>
-            <UBadge
+            <GameBadge
               v-if="activeFiltersCount > 0"
               color="primary"
               variant="soft"
               size="sm"
-              class="ml-1 px-1.5 py-0.5 sm:ml-2"
-            >
-              {{ activeFiltersCount }}
-            </UBadge>
+              badge-class="ml-2 px-2 py-0.5"
+              :label="activeFiltersCount.toString()"
+            />
           </UButton>
           <template #content>
             <div class="w-80 space-y-3 p-3">
-              <div class="text-surface-400 text-xs font-medium">
+              <div class="text-content-tertiary text-xs font-medium">
                 {{ $t('page.neededitems.filters.sections.items', 'ITEMS') }}
               </div>
               <div class="flex flex-wrap gap-2">
@@ -116,13 +92,14 @@
                   <UIcon name="i-mdi-checkbox-blank-circle-outline" class="mr-1 h-4 w-4" />
                   {{ $t('page.neededitems.filters.non_fir', 'NON-FIR') }}
                 </UButton>
-                <AppTooltip
-                  :text="
+                <span
+                  v-tooltip="
                     $t(
                       'page.neededitems.filters.hide_non_fir_special_equipment_title',
                       'Hide non-FIR special equipment (e.g., MS2000 Markers, Wi-Fi Cameras)'
                     )
                   "
+                  class="inline-flex"
                 >
                   <UButton
                     :variant="hideNonFirSpecialEquipment ? 'soft' : 'ghost'"
@@ -137,9 +114,9 @@
                         : $t('page.neededitems.filters.special', 'SPECIAL')
                     }}
                   </UButton>
-                </AppTooltip>
-                <AppTooltip
-                  :text="
+                </span>
+                <span
+                  v-tooltip="
                     isKappaDisabled
                       ? $t(
                           'page.neededitems.filters.kappa_only_disabled_tooltip',
@@ -147,24 +124,26 @@
                         )
                       : $t(
                           'page.neededitems.filters.kappa_only_tooltip',
-                          'Show only items required for Kappa quests'
+                          'Show only items required for Kappa tasks'
                         )
                   "
+                  class="inline-flex"
                 >
                   <UButton
                     :variant="kappaOnly ? 'soft' : 'ghost'"
-                    :color="kappaOnly ? 'warning' : 'neutral'"
+                    color="neutral"
                     size="sm"
+                    :class="{ 'badge-soft-kappa': kappaOnly }"
                     :disabled="isKappaDisabled"
                     @click="$emit('update:kappaOnly', !kappaOnly)"
                   >
                     <UIcon name="i-mdi-trophy" class="mr-1 h-4 w-4" />
                     {{ $t('page.neededitems.filters.kappa_only', 'KAPPA') }}
                   </UButton>
-                </AppTooltip>
+                </span>
               </div>
-              <div class="border-t border-white/10 pt-3">
-                <div class="text-surface-400 mb-2 text-xs font-medium">
+              <div class="border-base border-t pt-3">
+                <div class="text-content-tertiary mb-2 text-xs font-medium">
                   {{ $t('page.neededitems.filters.sections.team', 'TEAM') }}
                 </div>
                 <UButton
@@ -185,10 +164,18 @@
             </div>
           </template>
         </UPopover>
-        <!-- Divider (hidden on mobile) -->
-        <div class="hidden h-6 w-px bg-white/10 sm:block" />
-        <!-- View Mode Buttons -->
-        <div class="flex gap-1">
+      </div>
+      <!-- Section 3: View Mode & Item Count -->
+      <div
+        class="bg-surface-elevated flex w-full shrink-0 items-center justify-between gap-3 rounded-lg px-4 py-3 shadow-sm sm:justify-start md:w-auto"
+      >
+        <GameBadge color="neutral" variant="soft" size="md" badge-class="px-3 py-1 text-sm">
+          <template v-if="groupByItem && ungroupedCount !== totalCount">
+            {{ $t('page.neededitems.unique_total', { unique: totalCount, total: ungroupedCount }) }}
+          </template>
+          <template v-else>{{ totalCount }} {{ $t('page.neededitems.items', 'items') }}</template>
+        </GameBadge>
+        <div class="border-base flex gap-1 border-l pl-3">
           <UButton
             icon="i-mdi-view-list"
             :color="!groupByItem && viewMode === 'list' ? 'primary' : 'neutral'"
@@ -216,15 +203,10 @@
   </div>
 </template>
 <script setup lang="ts">
-  type FilterType = 'all' | 'tasks' | 'hideout' | 'completed';
-  type ViewMode = 'list' | 'grid';
-  type FirFilter = 'all' | 'fir' | 'non-fir';
-  interface FilterTab {
-    label: string;
-    value: FilterType;
-    icon: string;
-    count: number;
-  }
+  import { computed } from 'vue';
+  import FilterPill from '@/components/FilterPill.vue';
+  import GameBadge from '@/components/ui/GameBadge.vue';
+  import type { FilterType, ViewMode, FirFilter, FilterTab } from '@/types/neededItems';
   const props = defineProps<{
     modelValue: FilterType;
     search: string;

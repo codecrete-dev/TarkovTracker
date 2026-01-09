@@ -13,6 +13,8 @@ export interface UseCraftableItemReturn {
   craftSourceStatuses: ComputedRef<CraftSourceStatus[]>;
   isCraftableAvailable: ComputedRef<boolean>;
   craftStationTargetId: ComputedRef<string>;
+  /** Pre-computed URL for linking to the craft station in hideout */
+  craftStationHref: ComputedRef<string>;
   craftableIconClass: ComputedRef<string>;
   craftableTitle: ComputedRef<string>;
   goToCraftStation: () => Promise<void>;
@@ -76,23 +78,46 @@ export function useCraftableItem(
     if (!isCraftable.value) {
       return '';
     }
-    return isCraftableAvailable.value ? 'text-success-400' : 'text-red-500';
+    return isCraftableAvailable.value
+      ? 'text-success-600 dark:text-success-400'
+      : 'text-surface-400';
+  });
+  /**
+   * Pre-computed URL for the craft station in hideout.
+   * Includes the view param based on station availability so the station is visible.
+   */
+  const craftStationHref = computed(() => {
+    if (!craftStationTargetId.value) {
+      return '';
+    }
+    // Set view based on whether the target station is available or locked
+    const view = isCraftableAvailable.value ? 'available' : 'locked';
+    return `/hideout?station=${craftStationTargetId.value}&view=${view}`;
   });
   const craftableTitle = computed(() => {
     if (!isCraftable.value) {
       return '';
     }
-    const prefix = isCraftableAvailable.value
-      ? 'Craftable now'
-      : 'Craftable (station level too low)';
-    const preview = craftSourceStatuses.value
-      .slice(0, 3)
-      .map(
-        (source) => `${source.stationName} ${source.stationLevel} (you: ${source.currentLevel})`
-      );
-    const remainingCount = craftSourceStatuses.value.length - preview.length;
-    const remainingText = remainingCount > 0 ? ` +${remainingCount} more` : '';
-    return `${prefix}: ${preview.join(', ')}${remainingText}`;
+    // Sort to show available options first
+    const sorted = [...craftSourceStatuses.value].sort((a, b) => {
+      if (a.isAvailable !== b.isAvailable) return a.isAvailable ? -1 : 1;
+      return a.stationLevel - b.stationLevel;
+    });
+    const lines = sorted.slice(0, 3).map((source) => {
+      if (source.isAvailable) {
+        return `${source.stationName} level ${source.stationLevel}`;
+      }
+      return `${source.stationName} level ${source.stationLevel} (current: ${source.currentLevel})`;
+    });
+    const remainingCount = sorted.length - lines.length;
+    if (remainingCount > 0) {
+      lines.push(`+${remainingCount} more`);
+    }
+    const list = lines.join(', ');
+    if (isCraftableAvailable.value) {
+      return `Craftable at ${list}`;
+    }
+    return `Requires ${list}`;
   });
   const goToCraftStation = async () => {
     if (!craftStationTargetId.value) {
@@ -116,6 +141,7 @@ export function useCraftableItem(
     craftSourceStatuses,
     isCraftableAvailable,
     craftStationTargetId,
+    craftStationHref,
     craftableIconClass,
     craftableTitle,
     goToCraftStation,

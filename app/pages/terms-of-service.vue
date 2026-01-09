@@ -157,7 +157,7 @@
                 APIs, mobile applications, subdomains, and related software accessible through
                 tarkovtracker.org or any associated domain, including but not limited to the
                 Nuxt-based web application, server-side APIs, and data synchronization services. The
-                Service provides tools for tracking quests, hideout upgrades, player progression,
+                Service provides tools for tracking tasks, hideout upgrades, player progression,
                 team collaboration, and related game mechanics across multiple game modes (PvP and
                 PvE).
               </p>
@@ -173,7 +173,7 @@
                 The Service aggregates data from third-party sources including but not limited to
                 the Escape from Tarkov Wiki, tarkov.dev API, and community-maintained databases. We
                 do not guarantee the accuracy, completeness, or timeliness of this data. Game data,
-                quest information, item statistics, and other content may be outdated, incorrect, or
+                task information, item statistics, and other content may be outdated, incorrect, or
                 subject to change without notice.
               </p>
             </section>
@@ -371,7 +371,7 @@
                   profile information)
                 </li>
                 <li class="leading-relaxed">
-                  User progress data (quest completions, hideout progress, level tracking)
+                  User progress data (task completions, hideout progress, level tracking)
                 </li>
                 <li class="leading-relaxed">
                   Team collaboration data (team memberships, shared progress)
@@ -466,7 +466,7 @@
                   information provided through the Service
                 </li>
                 <li class="leading-relaxed">
-                  The correctness of game data, quest information, item statistics, or any other
+                  The correctness of game data, task information, item statistics, or any other
                   Escape from Tarkov-related content
                 </li>
                 <li class="leading-relaxed">

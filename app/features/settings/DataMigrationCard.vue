@@ -1,5 +1,5 @@
 <template>
-  <GenericCard icon="mdi-database-import-outline" icon-color="white">
+  <GenericCard icon="mdi-database-import-outline" title-classes="text-lg font-bold sm:text-xl">
     <template #title>Data Migration</template>
     <template #content>
       <p class="mb-4">Migrate your progress data from the old TarkovTracker site.</p>
@@ -99,7 +99,7 @@
           <div class="space-y-3">
             <p>
               These tasks are marked as "failed" in your data. This typically happens when you chose
-              a different quest branch or when a task became unavailable.
+              a different task branch or when a task became unavailable.
             </p>
             <div class="mt-2 space-y-2">
               <div
@@ -109,7 +109,13 @@
               >
                 <div class="flex items-center">
                   <span>Task ID: {{ task.id }}</span>
-                  <UBadge size="xs" color="red" class="ml-2">Failed</UBadge>
+                  <GameBadge
+                    variant="solid"
+                    color="error"
+                    size="xs"
+                    label="Failed"
+                    badge-class="ml-2"
+                  />
                 </div>
                 <div class="text-sm text-gray-400">
                   This task will remain marked as failed after migration.
@@ -133,6 +139,7 @@
   </GenericCard>
 </template>
 <script setup>
+  import GameBadge from '@/components/ui/GameBadge.vue';
   import GenericCard from '@/components/ui/GenericCard.vue';
   import { useDataMigration } from '@/composables/useDataMigration';
   import ImportConfirmDialog from './ImportConfirmDialog.vue';

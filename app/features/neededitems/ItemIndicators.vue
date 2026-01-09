@@ -1,56 +1,108 @@
 <template>
-  <AppTooltip v-if="foundInRaid" :text="foundInRaidTitle">
-    <UIcon name="i-mdi-checkbox-marked-circle-outline" :class="firIconClass" />
-  </AppTooltip>
-  <AppTooltip v-if="kappaRequired" :text="kappaTitleText">
-    <UIcon name="i-mdi-trophy" :class="kappaIconClass" />
-  </AppTooltip>
-  <AppTooltip v-if="isCraftable" :text="craftableTitleText">
-    <button
-      type="button"
-      class="inline-flex"
-      :aria-label="craftableTitleText"
-      @click.stop="emit('craft')"
-    >
-      <UIcon name="i-mdi-hammer-wrench" :class="[craftableIconBaseClass, craftableIconClass]" />
-    </button>
-  </AppTooltip>
+  <span class="inline-flex items-center gap-1">
+    <template v-if="showCount">
+      <span :class="countTextClasses">{{ currentCount }}/{{ neededCount }}</span>
+    </template>
+    <template v-if="showIcons">
+      <span v-if="foundInRaid" v-tooltip="computedFoundInRaidTitle" class="inline-flex">
+        <UIcon
+          name="i-mdi-checkbox-marked-circle-outline"
+          :class="[iconSizeClasses, firIconClass]"
+        />
+      </span>
+      <button
+        v-if="isCraftable"
+        v-tooltip="craftableTitleText"
+        type="button"
+        class="inline-flex items-center justify-center rounded"
+        :aria-label="craftableTitleText"
+        @click.stop="emit('craft')"
+      >
+        <UIcon
+          name="i-mdi-hammer-wrench"
+          :class="[iconSizeClasses, craftableColorClass, craftableIconClass]"
+        />
+      </button>
+      <span v-if="kappaRequired" v-tooltip="kappaTitleText" class="inline-flex">
+        <UIcon
+          name="i-mdi-trophy"
+          :class="[iconSizeClasses, 'text-entity-kappa', kappaIconClass]"
+        />
+      </span>
+    </template>
+  </span>
 </template>
 <script setup lang="ts">
+  import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
+  const { t } = useI18n({ useScope: 'global' });
   const props = withDefaults(
     defineProps<{
-      craftableIconBaseClass?: string;
-      craftableIconClass?: string;
-      craftableTitle?: string;
-      firIconClass?: string;
+      size?: 'sm' | 'md' | 'lg';
+      currentCount?: number;
+      neededCount?: number;
+      showCount?: boolean;
+      isComplete?: boolean;
+      showIcons?: boolean;
       foundInRaid: boolean;
       foundInRaidTitle?: string;
+      firIconClass?: string;
       isCraftable: boolean;
-      kappaIconClass?: string;
+      isCraftableAvailable?: boolean;
+      craftableTitle?: string;
+      craftableIconClass?: string;
       kappaRequired?: boolean;
       kappaTitle?: string;
+      kappaIconClass?: string;
     }>(),
     {
-      craftableIconBaseClass: 'ml-1 h-5 w-5',
+      size: 'md',
+      currentCount: 0,
+      neededCount: 1,
+      showCount: false,
+      isComplete: false,
+      showIcons: true,
+      foundInRaidTitle: '',
+      firIconClass: '',
+      isCraftableAvailable: false,
+      craftableTitle: '',
       craftableIconClass: '',
-      craftableTitle: 'Craftable',
-      firIconClass: 'ml-1 h-5 w-5',
-      foundInRaidTitle: 'Found in Raid required',
-      kappaIconClass: 'ml-1 h-5 w-5 text-warning-400',
       kappaRequired: false,
-      kappaTitle: 'Required for Kappa quest',
+      kappaTitle: '',
+      kappaIconClass: '',
     }
   );
   const emit = defineEmits<{
     craft: [];
   }>();
-  // Parents may pass an empty/whitespace string; trim so tooltip/aria-label are never blank.
+  const iconSizeClasses = computed(() => {
+    switch (props.size) {
+      case 'sm':
+        return 'h-3 w-3';
+      case 'lg':
+        return 'h-5 w-5';
+      case 'md':
+      default:
+        return 'h-4 w-4';
+    }
+  });
+  const craftableColorClass = computed(() => {
+    return props.isCraftableAvailable
+      ? 'text-success-600 dark:text-success-400'
+      : 'text-surface-400';
+  });
+  const countTextClasses = computed(() => ({
+    'text-content-primary': !props.isComplete,
+    'text-success-600 dark:text-success-400 font-bold': props.isComplete,
+  }));
+  // Tooltip text with fallbacks to translations
   const craftableTitleText = computed(() => {
-    const title = props.craftableTitle?.trim();
-    return title && title.length > 0 ? title : 'Craftable';
+    return props.craftableTitle || t('page.neededitems.craftable', 'Craftable');
+  });
+  const computedFoundInRaidTitle = computed(() => {
+    return props.foundInRaidTitle || t('page.neededitems.fir_required', 'Found in Raid required');
   });
   const kappaTitleText = computed(() => {
-    const title = props.kappaTitle?.trim();
-    return title && title.length > 0 ? title : 'Required for Kappa quest';
+    return props.kappaTitle || t('task.kappa_req', 'Required for Kappa task');
   });
 </script>

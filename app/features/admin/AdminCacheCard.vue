@@ -247,11 +247,10 @@
 <template>
   <GenericCard
     icon="i-mdi-cached"
-    icon-color="warning-400"
     highlight-color="tan"
     :fill-height="false"
     title="Cache Management"
-    title-classes="text-lg font-semibold"
+    title-classes="text-lg font-bold sm:text-xl"
   >
     <template #content>
       <div class="space-y-4 px-4 py-4">

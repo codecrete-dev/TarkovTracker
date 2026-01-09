@@ -1,24 +1,43 @@
 <template>
   <router-link
+    v-tooltip="props.station.name"
     :to="stationHref"
-    class="text-blue-400 no-underline hover:text-blue-300"
+    class="inline-flex max-w-full min-w-0 items-center rounded pr-2 text-blue-400 no-underline"
     :aria-label="`Go to ${props.station.name} card`"
+    :class="{
+      'gap-2': !props.compact,
+      'gap-1.5': props.compact,
+    }"
   >
-    <div class="flex max-w-full min-w-0 items-center overflow-hidden">
-      <img
-        :src="stationIcon"
-        :alt="`${props.station.name} icon`"
-        class="shrink-0 align-middle"
-        :class="compact ? 'h-4 w-4 sm:h-5 sm:w-5 lg:h-8 lg:w-8' : 'h-8 w-8'"
-        loading="lazy"
-      />
-      <span
-        class="ml-1 truncate font-bold"
-        :class="compact ? 'hidden text-xs lg:inline lg:text-sm' : 'text-sm'"
-      >
-        {{ props.station.name }}
-      </span>
-    </div>
+    <img
+      :src="stationIcon"
+      :alt="`${props.station.name} icon`"
+      class="shrink-0 align-middle"
+      :class="{
+        'h-9 w-9': !props.compact,
+        'h-5 w-5': props.compact,
+      }"
+      loading="lazy"
+    />
+    <span
+      class="truncate font-semibold"
+      :class="{
+        'text-sm': !props.compact,
+        'text-xs': props.compact,
+      }"
+    >
+      {{ props.station.name }}
+    </span>
+    <span
+      v-if="level"
+      class="shrink-0 font-bold"
+      :class="{
+        'text-sm': !props.compact,
+        'text-xs': props.compact,
+      }"
+    >
+      {{ level }}
+    </span>
   </router-link>
 </template>
 <script setup lang="ts">
@@ -27,6 +46,7 @@
   const props = defineProps<{
     station: Pick<HideoutStation, 'id' | 'name' | 'imageLink'>;
     compact?: boolean;
+    level?: number;
   }>();
   const stationIcon = computed(() => props.station.imageLink);
   const stationHref = computed(() => `/hideout?station=${props.station.id}`);

@@ -1,5 +1,5 @@
 <template>
-  <div class="px-4 py-6">
+  <div class="p-4">
     <!-- Filter Bar -->
     <NeededItemsFilterBar
       v-model="activeFilter"
@@ -15,8 +15,41 @@
       :ungrouped-count="filteredItems.length"
     />
     <!-- Items Container -->
-    <UCard class="bg-contentbackground border border-white/5">
-      <div v-if="displayItems.length === 0" class="text-surface-400 p-8 text-center">
+    <UCard class="border-base bg-surface-base border">
+      <!-- Loading State -->
+      <div v-if="metadataStore.loading || !metadataStore.isDataLoaded" class="p-2">
+        <div v-if="viewMode === 'list'" class="divide-base">
+          <div v-for="n in 10" :key="n" class="flex animate-pulse items-center gap-3 py-2">
+            <div class="bg-surface-elevated h-12 w-12 shrink-0 rounded"></div>
+            <div class="flex-1 space-y-2">
+              <div class="bg-surface-elevated h-4 w-1/4 rounded"></div>
+              <div class="bg-surface-elevated h-3 w-1/3 rounded"></div>
+            </div>
+            <div class="bg-surface-elevated h-8 w-24 shrink-0 rounded"></div>
+          </div>
+        </div>
+        <div
+          v-else
+          class="grid grid-cols-2 items-stretch gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7"
+        >
+          <div
+            v-for="n in 12"
+            :key="n"
+            class="border-base bg-surface-elevated relative flex h-64 animate-pulse flex-col overflow-hidden rounded-lg border"
+          >
+            <div class="bg-surface-active/50 aspect-[4/3] w-full"></div>
+            <div class="flex-1 space-y-3 p-2">
+              <div class="bg-surface-active/50 mx-auto mt-2 h-4 w-3/4 rounded"></div>
+              <div class="bg-surface-active/50 mx-auto h-3 w-1/2 rounded"></div>
+              <div class="mt-4 flex justify-center gap-2">
+                <div class="bg-surface-active/50 h-3 w-8 rounded"></div>
+                <div class="bg-surface-active/50 h-3 w-8 rounded"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div v-else-if="displayItems.length === 0" class="text-content-tertiary p-8 text-center">
         {{ $t('page.neededitems.empty', 'No items match your search.') }}
       </div>
       <!-- Grouped View -->
@@ -35,7 +68,7 @@
         <div v-if="visibleCount < displayItems.length" ref="gridSentinel" class="h-1 w-full"></div>
       </div>
       <!-- List View -->
-      <div v-else-if="viewMode === 'list'" class="divide-y divide-white/5">
+      <div v-else-if="viewMode === 'list'">
         <NeededItem
           v-for="(item, index) in visibleIndividualItems"
           :key="`${item.needType}-${item.id}`"
@@ -46,10 +79,8 @@
         <div v-if="visibleCount < displayItems.length" ref="listSentinel" class="h-1"></div>
       </div>
       <!-- Grid View -->
-      <div v-else class="p-2">
-        <div
-          class="grid grid-cols-2 items-stretch gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
-        >
+      <div v-else>
+        <div class="grid items-stretch gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
           <NeededItem
             v-for="(item, index) in visibleIndividualItems"
             :key="`${item.needType}-${item.id}`"
@@ -68,6 +99,8 @@
   import { computed, ref, watch } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { useInfiniteScroll } from '@/composables/useInfiniteScroll';
+  import { usePageFilters } from '@/composables/usePageFilters';
+  import { useNeededItemsFilterConfig } from '@/features/neededitems/composables/useNeededItemsFilterConfig';
   import NeededItem from '@/features/neededitems/NeededItem.vue';
   import { isNonFirSpecialEquipment } from '@/features/neededitems/neededItemFilters';
   import NeededItemGroupedCard from '@/features/neededitems/NeededItemGroupedCard.vue';
@@ -76,6 +109,7 @@
   import { usePreferencesStore } from '@/stores/usePreferences';
   import { useProgressStore } from '@/stores/useProgress';
   import { useTarkovStore } from '@/stores/useTarkov';
+  import type { FilterType, FirFilter, ViewMode } from '@/types/neededItems';
   import type { NeededItemHideoutModule, NeededItemTaskObjective } from '@/types/tarkov';
   import { isTaskAvailableForEdition } from '@/utils/editionHelpers';
   import { logger } from '@/utils/logger';
@@ -83,7 +117,7 @@
   useSeoMeta({
     title: 'Needed Items',
     description:
-      'View all items needed for your active quests and hideout upgrades. Filter by quest, craft, and find-in-raid requirements.',
+      'View all items needed for your active tasks and hideout upgrades. Filter by task, craft, and find-in-raid requirements.',
   });
   const { t } = useI18n({ useScope: 'global' });
   const metadataStore = useMetadataStore();
@@ -91,18 +125,36 @@
   const preferencesStore = usePreferencesStore();
   const tarkovStore = useTarkovStore();
   const { neededItemTaskObjectives, neededItemHideoutModules } = storeToRefs(metadataStore);
-  // View mode state: 'list' or 'grid'
-  const viewMode = ref<'list' | 'grid'>('grid');
-  // Filter state
-  type FilterType = 'all' | 'tasks' | 'hideout' | 'completed';
-  type FirFilter = 'all' | 'fir' | 'non-fir';
-  const activeFilter = ref<FilterType>('all');
-  const search = ref('');
-  const firFilter = ref<FirFilter>('all');
-  const groupByItem = ref(false);
-  const hideNonFirSpecialEquipment = ref(false);
-  const kappaOnly = ref(false);
-  // Team filter preferences (two-way binding with preferences store)
+  // URL-based filter state
+  // Filter config is extracted to useNeededItemsFilterConfig for sharing with navigation
+  const { filters, setFilter, debouncedInputs } = usePageFilters(useNeededItemsFilterConfig());
+  // Computed aliases for template bindings
+  const activeFilter = computed({
+    get: () => filters.filter!.value as FilterType,
+    set: (v: FilterType) => setFilter('filter', v),
+  });
+  const viewMode = computed({
+    get: () => filters.viewMode!.value as ViewMode,
+    set: (v: ViewMode) => setFilter('viewMode', v),
+  });
+  const firFilter = computed({
+    get: () => (filters.fir?.value ?? 'all') as FirFilter,
+    set: (v: FirFilter) => setFilter('fir', v),
+  });
+  const groupByItem = computed({
+    get: () => filters.grouped!.value,
+    set: (v: boolean) => setFilter('grouped', v),
+  });
+  const kappaOnly = computed({
+    get: () => filters.kappa!.value,
+    set: (v: boolean) => setFilter('kappa', v),
+  });
+  const hideNonFirSpecialEquipment = computed({
+    get: () => filters.hideSpecial!.value,
+    set: (v: boolean) => setFilter('hideSpecial', v),
+  });
+  const search = debouncedInputs.search!;
+  // Team filter preferences (two-way binding with preferences store - not in URL)
   const hideTeamItems = computed({
     get: () => preferencesStore.itemsTeamAllHidden,
     set: (value) => preferencesStore.setItemsTeamHideAll(value),
@@ -117,6 +169,7 @@
       image512pxLink?: string;
       wikiLink?: string;
       link?: string;
+      backgroundColor?: string;
     };
     taskFir: number;
     taskFirCurrent: number;
@@ -213,24 +266,28 @@
         value: 'all' as FilterType,
         icon: 'i-mdi-clipboard-list',
         count: allIncomplete.length,
+        badgeColor: 'badge-soft-accent',
       },
       {
         label: t('page.neededitems.filters.tasks', 'Tasks'),
         value: 'tasks' as FilterType,
         icon: 'i-mdi-checkbox-marked-circle-outline',
         count: taskItems.length,
+        badgeColor: 'plain',
       },
       {
         label: t('page.neededitems.filters.hideout', 'Hideout'),
         value: 'hideout' as FilterType,
         icon: 'i-mdi-home',
         count: hideoutItems.length,
+        badgeColor: 'plain',
       },
       {
-        label: t('page.neededitems.filters.completed', 'Completed'),
+        label: t('page.neededitems.neededviews.collected', 'Collected'),
         value: 'completed' as FilterType,
         icon: 'i-mdi-check-all',
         count: completedItems.length,
+        badgeColor: 'badge-soft-success',
       },
     ];
   });
@@ -330,15 +387,18 @@
       if (!itemData || !itemData.name) continue;
       const existingGroup = groups.get(itemId);
       if (!existingGroup) {
+        // Use defaultPreset for image display when available (e.g., weapons with attachments)
+        const imageData = itemData.properties?.defaultPreset || itemData;
         groups.set(itemId, {
           itemId,
           item: {
             id: itemData.id,
             name: itemData.name,
-            iconLink: itemData.iconLink,
-            image512pxLink: itemData.image512pxLink,
+            iconLink: imageData.iconLink || itemData.iconLink,
+            image512pxLink: imageData.image512pxLink || itemData.image512pxLink,
             wikiLink: itemData.wikiLink,
             link: itemData.link,
+            backgroundColor: imageData.backgroundColor || itemData.backgroundColor,
           },
           taskFir: 0,
           taskFirCurrent: 0,
