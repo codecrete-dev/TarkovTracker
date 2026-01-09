@@ -1,6 +1,7 @@
 <template>
-  <!-- Compact Card Layout - Works for ALL items -->
-  <div
+  <div>
+    <!-- Compact Card Layout - Works for ALL items -->
+    <div
     class="group clickable relative flex h-full flex-col items-center justify-center rounded-lg border p-2 transition-all select-none"
     :class="[
       isComplete
@@ -133,7 +134,8 @@
         "
       />
     </template>
-  </ContextMenu>
+    </ContextMenu>
+  </div>
 </template>
 <script setup lang="ts">
   import { computed, ref, watch } from 'vue';

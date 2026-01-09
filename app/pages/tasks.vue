@@ -162,10 +162,7 @@
   const getTaskTraderView = filters.trader!;
   const singleTaskId = computed(() => {
     const taskId = filters.task.value;
-    if (!taskId) return null;
-    // Validate that the task exists in metadata
-    const taskExists = tasks.value.some((t) => t.id === taskId);
-    return taskExists ? taskId : null;
+    return taskId || null; // Return URL value directly, let watcher handle missing task
   });
   const searchQuery = debouncedInputs.search!;
   // Handle primary view changes with scoped URL params + localStorage persistence
@@ -410,14 +407,19 @@
   // When entering single-task mode, scroll to top and auto-set map view if task has map objectives
   // IMPORTANT: Use router.replace (not setFilters) to avoid creating duplicate history entries.
   // The user navigated to /tasks?task=xxx - any auto-adjustments should replace, not push.
-  watch(singleTaskId, (taskId, oldTaskId) => {
-    if (!taskId) return;
-    // Scroll to top when entering single-task mode
-    if (!oldTaskId) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-    // Find the task and determine best map to show
-    const task = tasks.value.find((t) => t.id === taskId);
+  // Watch both singleTaskId and tasksLoading to handle page refresh correctly
+  watch(
+    [singleTaskId, tasksLoading],
+    ([taskId, loading], [oldTaskId]) => {
+      if (!taskId) return;
+      // Wait for metadata to load before determining view
+      if (loading || !metadataStore.hasInitialized) return;
+      // Scroll to top when entering single-task mode (only on initial entry)
+      if (!oldTaskId) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      // Find the task and determine best map to show
+      const task = tasks.value.find((t) => t.id === taskId);
     // Build the replacement query - start with current query params
     const newQuery: Record<string, string> = {};
     for (const [key, value] of Object.entries(router.currentRoute.value.query)) {
