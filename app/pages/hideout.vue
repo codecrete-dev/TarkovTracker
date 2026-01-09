@@ -184,14 +184,11 @@
     if (!stationId || isStoreLoading.value) return;
     // Determine station status and set appropriate filter
     const status = getStationStatus(stationId);
-    if (activePrimaryView.value !== status) {
-      activePrimaryView.value = status;
-    }
     // Scroll to the station after filters are applied
     scrollToStation(stationId);
-    // Clear the station param after handling - use replace to avoid extra history entry
+    // Set view and clear station param in a single replace to avoid double history entry
     const { station: _, ...restQuery } = router.currentRoute.value.query;
-    router.replace({ query: restQuery });
+    router.replace({ query: { ...restQuery, view: status } });
   };
   // Watch for station filter and handle it when data is loaded
   watch(

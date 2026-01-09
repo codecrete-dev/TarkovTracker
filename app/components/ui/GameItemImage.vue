@@ -9,7 +9,7 @@
   >
     <div :class="['overlay-stash-bg absolute inset-0', resolvedBackgroundClass]"></div>
     <img
-      v-if="isVisible && formattedSrc && !hasError"
+      v-if="isVisible && props.src && !hasError"
       :src="props.src"
       :alt="alt || itemName || 'Item'"
       :class="[

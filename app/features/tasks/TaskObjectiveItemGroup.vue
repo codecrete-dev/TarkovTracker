@@ -269,6 +269,10 @@
           allComplete = false;
         }
       });
+      return {
+        ...consolidated,
+        allComplete,
+        currentCount: totalCurrent,
         meta: {
           ...firstRow.meta,
           neededCount: totalNeeded,

@@ -542,8 +542,8 @@
      !important required throughout this section: Leaflet applies its own inline
      styles and high-specificity CSS. Without !important, our styling is overridden. */
   :root {
-    --leaflet-popup-bg: #1a1a1e;
-    --leaflet-popup-text: #fff;
+    --leaflet-popup-bg: #ffffff;
+    --leaflet-popup-text: #1a1a1e;
   }
   :root.dark {
     --leaflet-popup-bg: var(--color-surface-800);
