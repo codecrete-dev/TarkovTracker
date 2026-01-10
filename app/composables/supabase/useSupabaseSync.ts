@@ -1,5 +1,5 @@
 import { getCurrentInstance, onUnmounted, ref, toRaw } from 'vue';
-import { debounce } from '@/utils/debounce';
+import { debounce, isDebounceRejection } from '@/utils/debounce';
 import { logger } from '@/utils/logger';
 import type { Store } from 'pinia';
 import type { UserProgressData } from '~/stores/progressState';
@@ -236,7 +236,11 @@ export function useSupabaseSync({
     (_mutation, state) => {
       logger.debug(`[Sync] Store mutation for ${table}, triggering debounced sync`);
       const clonedState = snapshotState(state);
-      debouncedSync(clonedState);
+      void debouncedSync(clonedState).catch((error) => {
+        if (!isDebounceRejection(error)) {
+          logger.error('[Sync] Debounced sync failed:', error);
+        }
+      });
     },
     { detached: true } // Keep subscription active even if component unmounts (we manage cleanup manually)
   );

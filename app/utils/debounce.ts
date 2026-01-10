@@ -88,3 +88,10 @@ export function debounce<Args extends unknown[], R>(
   };
   return debounced;
 }
+export function isDebounceRejection(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message === 'Debounced: superseded' ||
+      error.message === 'Debounced function was cancelled')
+  );
+}

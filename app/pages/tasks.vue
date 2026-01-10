@@ -115,7 +115,7 @@
   import { useProgressStore } from '@/stores/useProgress';
   import { useTarkovStore } from '@/stores/useTarkov';
   import type { Task, TaskObjective } from '@/types/tarkov';
-  import { debounce } from '@/utils/debounce';
+  import { debounce, isDebounceRejection } from '@/utils/debounce';
   import { logger } from '@/utils/logger';
   // Route meta for layout behavior
   definePageMeta({
@@ -352,7 +352,10 @@
       debouncedSearch.value = '';
       return;
     }
-    updateDebouncedSearch(value);
+    void updateDebouncedSearch(value).catch((error) => {
+      if (isDebounceRejection(error)) return;
+      logger.error('[Tasks] Debounced search update failed:', error);
+    });
   });
   const normalizedSearch = computed(() => debouncedSearch.value.toLowerCase().trim());
   // Cache lowercase task names to avoid repeated toLowerCase() calls in filter
