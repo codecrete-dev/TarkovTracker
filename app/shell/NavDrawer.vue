@@ -43,70 +43,46 @@
         </div>
       </NuxtLink>
       <div class="bg-primary-800/40 mx-3 my-0.5 h-px" />
-      <ul class="flex flex-col gap-1 px-1">
-        <template v-if="isLoggedIn">
-          <UDropdownMenu :items="accountItems" :content="{ side: 'right', align: 'start' }">
-            <UButton
-              color="neutral"
-              variant="ghost"
-              :padded="!isCollapsed"
-              class="w-full justify-between rounded-md px-2 py-2"
-              :class="[isCollapsed ? 'justify-center px-0' : '']"
-            >
-              <div class="flex min-w-0 items-center gap-3">
-                <UAvatar :src="avatarSrc" size="md" alt="User avatar" class="shrink-0" />
-                <span v-if="!isCollapsed" class="truncate">{{ userDisplayName }}</span>
-              </div>
-              <template #trailing>
-                <UIcon
-                  v-if="!isCollapsed"
-                  name="i-heroicons-chevron-down-20-solid"
-                  class="h-5 w-5 transition-transform duration-200"
-                />
-              </template>
-            </UButton>
-          </UDropdownMenu>
-        </template>
-        <template v-else>
-          <UButton
-            to="/login"
-            icon="i-mdi-fingerprint"
-            color="neutral"
-            variant="ghost"
-            block
-            :padded="!isCollapsed"
-            class="h-12 justify-center rounded-md px-3 py-3"
-          >
-            <span v-if="!isCollapsed" class="truncate text-base font-medium">
-              {{ t('navigation_drawer.login') }}
-            </span>
-          </UButton>
-        </template>
-      </ul>
-      <div class="bg-primary-800/40 mx-3 my-0.5 h-px" />
       <DrawerLevel :is-collapsed="isCollapsed" />
       <div v-if="!isCollapsed" class="my-2 flex flex-col items-center gap-1.5 px-4">
+        <!-- Game Mode and Faction Cycling Buttons Row -->
+        <div class="flex w-full gap-1.5">
+          <!-- Game Mode Cycling Button -->
+          <AppTooltip :text="`Switch to ${nextGameModeLabel}`" class="flex-1">
+            <button
+              class="border-primary-800/50 hover:border-primary-600 flex h-full w-full items-center justify-center rounded border px-2 py-2.5 transition-colors"
+              @click="cycleGameMode"
+            >
+              <div
+                class="text-md flex items-center justify-center gap-1.5 font-semibold tracking-wide uppercase"
+              >
+                <UIcon :name="currentGameModeIcon" class="text-primary-400 h-8 w-8" />
+                <span class="text-white/80">{{ currentGameModeLabel }}</span>
+              </div>
+            </button>
+          </AppTooltip>
+          <!-- Faction Cycling Button -->
+          <AppTooltip :text="`Switch to ${nextFaction}`">
+            <button
+              class="border-primary-800/50 hover:border-primary-600 flex aspect-square items-center justify-center rounded border p-2 text-center transition-colors"
+              @click="cycleFaction"
+            >
+              <NuxtImg
+                :src="`/img/factions/${currentFaction}.webp`"
+                :alt="currentFaction"
+                class="opacity-60 invert"
+                width="33"
+                height="40"
+              />
+            </button>
+          </AppTooltip>
+        </div>
         <button
           class="border-primary-800/50 hover:border-primary-600 w-full rounded border px-2 py-1 text-center text-xs font-medium text-white/80 transition-colors hover:text-white"
           @click="navigateToSettings"
         >
           {{ currentEditionName }}
         </button>
-        <div class="border-primary-800/50 flex w-full overflow-hidden rounded-md border">
-          <button
-            v-for="faction in factions"
-            :key="faction"
-            class="flex-1 px-2 py-1 text-xs font-semibold uppercase transition-colors"
-            :class="
-              faction === currentFaction
-                ? 'bg-primary-700 text-white'
-                : 'bg-transparent text-white/65 hover:bg-white/5 hover:text-white'
-            "
-            @click="setFaction(faction)"
-          >
-            {{ faction }}
-          </button>
-        </div>
       </div>
       <div class="bg-primary-800/40 mx-3 my-0.5 h-px" />
       <DrawerLinks :is-collapsed="isCollapsed" />
@@ -158,7 +134,7 @@
   import { useMetadataStore } from '@/stores/useMetadata';
   import { usePreferencesStore } from '@/stores/usePreferences';
   import { useTarkovStore } from '@/stores/useTarkov';
-  import { PMC_FACTIONS, type PMCFaction } from '@/utils/constants';
+  import { PMC_FACTIONS, type PMCFaction, GAME_MODES, type GameMode } from '@/utils/constants';
   // Use shared breakpoints to avoid duplicate listeners
   const { belowMd } = useSharedBreakpoints();
   const appStore = useAppStore();
@@ -198,45 +174,43 @@
   const preferencesStore = usePreferencesStore();
   const tarkovStore = useTarkovStore();
   const router = useRouter();
-  const factions = PMC_FACTIONS;
   const { t } = useI18n({ useScope: 'global' });
-  const { $supabase } = useNuxtApp();
-  const isLoggedIn = computed(() => $supabase.user?.loggedIn ?? false);
-  const avatarSrc = computed(() => {
-    return preferencesStore.getStreamerMode || !$supabase.user.photoURL
-      ? '/img/default-avatar.svg'
-      : $supabase.user.photoURL;
+
+  // Faction cycling logic
+  const factionArray = PMC_FACTIONS as unknown as PMCFaction[];
+  const currentFaction = computed<PMCFaction>(() => tarkovStore.getPMCFaction() ?? 'USEC');
+  const nextFaction = computed<PMCFaction>(() => {
+    const currentIndex = factionArray.indexOf(currentFaction.value);
+    const nextIndex = (currentIndex + 1) % factionArray.length;
+    return factionArray[nextIndex]!;
   });
-  const currentFaction = computed<PMCFaction>(() => tarkovStore.getPMCFaction());
-  const currentEditionName = computed(() => metadataStore.getEditionName(tarkovStore.gameEdition));
-  function setFaction(faction: PMCFaction) {
-    if (faction !== currentFaction.value) {
-      tarkovStore.setPMCFaction(faction);
-    }
+  function cycleFaction() {
+    tarkovStore.setPMCFaction(nextFaction.value);
   }
+
+  // Game mode cycling logic
+  const gameModeArray = [GAME_MODES.PVP, GAME_MODES.PVE] as GameMode[];
+  const gameModeConfig = {
+    [GAME_MODES.PVP]: { label: 'PvP', icon: 'i-mdi-sword-cross' },
+    [GAME_MODES.PVE]: { label: 'PvE', icon: 'i-mdi-account-group' },
+  };
+  const currentGameMode = computed<GameMode>(() => tarkovStore.getCurrentGameMode() ?? 'pvp');
+  const currentGameModeLabel = computed(() => gameModeConfig[currentGameMode.value].label);
+  const currentGameModeIcon = computed(() => gameModeConfig[currentGameMode.value].icon);
+  const nextGameMode = computed<GameMode>(() => {
+    const currentIndex = gameModeArray.indexOf(currentGameMode.value);
+    const nextIndex = (currentIndex + 1) % gameModeArray.length;
+    return gameModeArray[nextIndex]!;
+  });
+  const nextGameModeLabel = computed(() => gameModeConfig[nextGameMode.value].label);
+  function cycleGameMode() {
+    tarkovStore.switchGameMode(nextGameMode.value);
+  }
+
+  const currentEditionName = computed(() => metadataStore.getEditionName(tarkovStore.gameEdition));
   function navigateToSettings() {
     router.push('/settings');
   }
-  const userDisplayName = computed(() => {
-    if (preferencesStore.getStreamerMode) return 'User';
-    // Prefer Display Name from tarkov store (current game mode)
-    const displayName = tarkovStore.getDisplayName();
-    if (displayName && displayName.trim() !== '') {
-      return displayName;
-    }
-    // Fallback to auth username or'User'
-    return $supabase.user.displayName || 'User';
-  });
-  function logout() {
-    $supabase.signOut();
-  }
-  const accountItems = computed(() => [
-    {
-      label: t('navigation_drawer.logout'),
-      icon: 'i-mdi-lock',
-      onSelect: logout,
-    },
-  ]);
 </script>
 <style scoped>
   /* Hide scrollbar but keep scroll functionality */

@@ -30,34 +30,7 @@
             <UIcon name="i-heroicons-arrow-path" class="text-primary-500 h-6 w-6 animate-spin" />
           </span>
         </AppTooltip>
-        <!-- Game mode quick toggle -->
-        <div
-          class="bg-surface-900/90 flex items-center overflow-hidden rounded-md border border-white/15 ring-1 ring-white/10"
-          role="group"
-          aria-label="Toggle game mode"
-        >
-          <button
-            type="button"
-            class="focus:ring-pvp-400 inline-flex items-center gap-0.5 px-1.5 py-1 text-[10px] font-semibold tracking-wide uppercase transition-colors focus:z-10 focus:ring-2 focus:outline-none sm:gap-2 sm:px-3 sm:py-1.5 sm:text-xs md:px-3.5 md:text-sm lg:px-4 lg:text-[15px]"
-            :class="pvpClasses"
-            :disabled="dataLoading"
-            @click="switchMode(GAME_MODES.PVP)"
-          >
-            <UIcon name="i-mdi-sword-cross" class="hidden h-4 w-4 sm:block md:h-5 md:w-5" />
-            PvP
-          </button>
-          <div class="h-6 w-px bg-white/15 sm:h-8" aria-hidden="true" />
-          <button
-            type="button"
-            class="focus:ring-pve-400 inline-flex items-center gap-0.5 px-1.5 py-1 text-[10px] font-semibold tracking-wide uppercase transition-colors focus:z-10 focus:ring-2 focus:outline-none sm:gap-2 sm:px-3 sm:py-1.5 sm:text-xs md:px-3.5 md:text-sm lg:px-4 lg:text-[15px]"
-            :class="pveClasses"
-            :disabled="dataLoading"
-            @click="switchMode(GAME_MODES.PVE)"
-          >
-            <UIcon name="i-mdi-account-group" class="hidden h-4 w-4 sm:block md:h-5 md:w-5" />
-            PvE
-          </button>
-        </div>
+
         <!-- Language selector -->
         <USelectMenu
           v-model="selectedLocale"
@@ -94,6 +67,38 @@
             <UIcon name="i-mdi-chevron-down" class="text-surface-400 h-3 w-3" />
           </template>
         </USelectMenu>
+        <!-- User/Login control -->
+        <template v-if="isLoggedIn">
+          <UDropdownMenu
+            :items="accountItems"
+            :content="{ side: 'bottom', align: 'end' }"
+            :ui="{
+              content:
+                'z-[9999] min-w-32 p-1 bg-surface-900 ring-1 ring-white/10 rounded-lg shadow-xl',
+              item: {
+                base: 'px-2.5 py-1.5 text-sm rounded transition-colors text-surface-200 hover:bg-surface-800 hover:text-white cursor-pointer',
+              },
+            }"
+          >
+            <button
+              type="button"
+              class="bg-surface-900/90 flex items-center justify-center rounded-md border border-white/15 p-1 transition-colors"
+            >
+              <UAvatar :src="avatarSrc" size="xs" alt="User avatar" />
+            </button>
+          </UDropdownMenu>
+        </template>
+        <template v-else>
+          <NuxtLink
+            to="/login"
+            class="bg-surface-900/90 flex items-center gap-1.5 rounded-md border border-white/15 px-2 py-1.5 transition-colors"
+          >
+            <UIcon name="i-mdi-fingerprint" class="text-surface-300 h-4 w-4" />
+            <span class="text-sm font-medium text-white/80">
+              {{ t('navigation_drawer.login') }}
+            </span>
+          </NuxtLink>
+        </template>
       </div>
     </div>
   </header>
@@ -107,14 +112,12 @@
   import { useAppStore } from '@/stores/useApp';
   import { useMetadataStore } from '@/stores/useMetadata';
   import { usePreferencesStore } from '@/stores/usePreferences';
-  import { useTarkovStore } from '@/stores/useTarkov';
-  import { GAME_MODES, type GameMode } from '@/utils/constants';
   import { logger } from '@/utils/logger';
   const { t } = useI18n({ useScope: 'global' });
   const appStore = useAppStore();
-  const tarkovStore = useTarkovStore();
   const metadataStore = useMetadataStore();
   const preferencesStore = usePreferencesStore();
+  const { $supabase } = useNuxtApp();
   const route = useRoute();
   const { width } = useWindowSize();
   const mdAndDown = computed(() => width.value < 960); // md breakpoint at 960px
@@ -124,35 +127,27 @@
     }
     return appStore.drawerRail ? 'i-mdi-menu' : 'i-mdi-menu-open';
   });
-  const currentGameMode = computed(() => {
-    return tarkovStore.getCurrentGameMode();
+  // User/Login state
+  const isLoggedIn = computed(() => $supabase.user?.loggedIn ?? false);
+  const avatarSrc = computed(() => {
+    return preferencesStore.getStreamerMode || !$supabase.user?.photoURL
+      ? '/img/default-avatar.svg'
+      : $supabase.user.photoURL;
   });
-  const pveClasses = computed(() =>
-    currentGameMode.value === GAME_MODES.PVE
-      ? 'bg-pve-500 hover:bg-pve-600 text-white shadow-[0_0_0_4px_rgba(0,0,0,0.45)] ring-2 ring-white/60 ring-inset outline outline-2 outline-white/40'
-      : 'bg-pve-950/80 text-pve-400 hover:bg-pve-900/90'
-  );
-  const pvpClasses = computed(() =>
-    currentGameMode.value === GAME_MODES.PVP
-      ? 'bg-pvp-800 hover:bg-pvp-700 text-pvp-100 shadow-[0_0_0_4px_rgba(0,0,0,0.45)] ring-2 ring-white/60 ring-inset outline outline-2 outline-white/40'
-      : 'bg-pvp-950/80 text-pvp-400 hover:bg-pvp-900/90'
-  );
-  async function switchMode(mode: GameMode) {
-    if (mode !== currentGameMode.value && !dataLoading.value) {
-      dataLoading.value = true;
-      try {
-        await tarkovStore.switchGameMode(mode);
-        metadataStore.updateLanguageAndGameMode();
-        await metadataStore.fetchAllData();
-        dataError.value = false;
-      } catch (err) {
-        logger.error('[AppBar] Error switching mode:', err);
-        dataError.value = true;
-      } finally {
-        dataLoading.value = false;
-      }
+  async function logout() {
+    try {
+      await $supabase.signOut();
+    } catch (err) {
+      logger.error('Error signing out:', err);
     }
   }
+  const accountItems = computed(() => [
+    {
+      label: t('navigation_drawer.logout'),
+      icon: 'i-mdi-lock',
+      onSelect: logout,
+    },
+  ]);
   const { loading: dataLoading, hideoutLoading } = storeToRefs(metadataStore);
   const dataError = ref(false);
   const pageTitle = computed(() =>
