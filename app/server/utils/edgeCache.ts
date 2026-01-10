@@ -6,6 +6,7 @@
  */
 import { $fetch } from 'ofetch';
 import { createLogger } from './logger';
+import { getQuery } from 'h3';
 import type { H3Event } from 'h3';
 import { useRuntimeConfig } from '#imports';
 const logger = createLogger('EdgeCache');
@@ -24,6 +25,21 @@ function getOverlayHeadersMeta(payload: unknown): OverlayHeadersMeta | null {
   const meta = (payload as { dataOverlay?: OverlayHeadersMeta }).dataOverlay;
   if (!meta || typeof meta !== 'object') return null;
   return meta;
+}
+function isTruthyFlag(value: unknown): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value !== 'string') return false;
+  return ['1', 'true', 'yes', 'y', 'on'].includes(value.toLowerCase());
+}
+function shouldBypassCache(event: H3Event): boolean {
+  const headerValue =
+    event.node?.req?.headers?.['x-bypass-cache'] ??
+    event.node?.req?.headers?.['x-cache-bypass'];
+  if (isTruthyFlag(headerValue)) return true;
+  const query = getQuery(event);
+  if (isTruthyFlag(query?.nocache)) return true;
+  if (isTruthyFlag(query?.cacheBust)) return true;
+  return false;
 }
 /**
  * Helper function that handles Cloudflare Cache API logic
@@ -52,6 +68,20 @@ export async function edgeCache<T>(
   try {
     // Only use Cloudflare Cache API in production (Cloudflare Pages/Workers)
     if (isCacheAvailable) {
+      if (shouldBypassCache(event)) {
+        const response = await fetcher();
+        const overlayMeta = getOverlayHeadersMeta(response);
+        setResponseHeaders(event, {
+          'X-Cache-Status': 'BYPASS',
+          'X-Cache-Key': fullCacheKey,
+          'Cache-Control': 'no-cache',
+          ...(overlayMeta?.status ? { 'X-Overlay-Status': overlayMeta.status } : {}),
+          ...(overlayMeta?.version ? { 'X-Overlay-Version': overlayMeta.version } : {}),
+          ...(overlayMeta?.generated ? { 'X-Overlay-Generated': overlayMeta.generated } : {}),
+          ...(overlayMeta?.sha256 ? { 'X-Overlay-Sha256': overlayMeta.sha256 } : {}),
+        });
+        return response;
+      }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const cache = (globalThis.caches as any).default as Cache;
       // Create a normalized cache key URL using the current host (avoids hardcoding a cache subdomain)
