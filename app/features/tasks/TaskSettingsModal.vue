@@ -10,7 +10,7 @@
     </UButton>
     <template #content>
       <UCard
-        class="bg-contentbackground"
+        class="bg-surface-elevated"
         :ui="{
           root: 'max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-4rem)] flex flex-col',
           body: 'min-h-0 overflow-y-auto',
@@ -19,7 +19,7 @@
         <template #header>
           <div class="flex items-center justify-between">
             <div>
-              <h3 class="text-lg font-semibold">
+              <h3 class="text-content-primary text-lg font-semibold">
                 {{ t('page.tasks.settings.title', 'Task Settings') }}
               </h3>
             </div>
@@ -40,7 +40,7 @@
               <p class="text-primary-400 text-xs font-semibold tracking-wide uppercase">
                 {{ t('page.tasks.settings.tabs.filters', 'TASK FILTERS') }}
               </p>
-              <p class="mt-1 text-xs text-gray-500">
+              <p class="text-content-tertiary mt-1 text-xs">
                 {{ t('page.tasks.settings.filters.hint', 'Control which tasks appear.') }}
               </p>
             </div>
@@ -72,7 +72,7 @@
               <p class="text-primary-400 text-xs font-semibold tracking-wide uppercase">
                 {{ t('page.tasks.settings.tabs.appearance', 'APPEARANCE') }}
               </p>
-              <p class="mt-1 text-xs text-gray-500">
+              <p class="text-content-tertiary mt-1 text-xs">
                 {{ t('page.tasks.settings.appearance.hint', 'Tune how task cards look.') }}
               </p>
             </div>
@@ -113,7 +113,7 @@
               <p class="text-primary-400 text-xs font-semibold tracking-wide uppercase">
                 {{ t('page.tasks.settings.tabs.advanced', 'ADVANCED') }}
               </p>
-              <p class="mt-1 text-xs text-gray-500">
+              <p class="text-content-tertiary mt-1 text-xs">
                 {{
                   t(
                     'page.tasks.settings.advanced.hint',
@@ -128,10 +128,10 @@
               :tooltip="tooltipEnableManualTaskFail"
             />
             <div
-              class="flex flex-col gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+              class="flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between dark:border-white/10 dark:bg-white/5"
             >
               <div>
-                <p class="text-xs text-gray-300">
+                <p class="text-xs text-gray-600 dark:text-gray-300">
                   {{
                     t(
                       'page.tasks.settings.advanced.repairFailedHint',
@@ -139,7 +139,7 @@
                     )
                   }}
                 </p>
-                <p class="text-[11px] text-gray-500">
+                <p class="text-[11px] text-gray-400 dark:text-gray-500">
                   {{
                     t(
                       'page.tasks.settings.advanced.repairFailedCount',
