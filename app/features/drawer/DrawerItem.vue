@@ -1,8 +1,10 @@
 <template>
   <li>
+    <!-- Internal navigation link - URL includes stored preferences to avoid flash -->
     <NuxtLink
       v-if="props.to && !props.href"
-      :to="props.to"
+      :to="computedNavUrl"
+      @click="handleNavClick"
       class="group flex items-center rounded-md px-3 py-2.5 text-base font-medium transition-colors duration-150"
       :class="[
         isActive
@@ -115,6 +117,7 @@
   import { computed } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { useRoute } from 'vue-router';
+  import { getPreferredNavUrl } from '@/composables/usePageFilterRegistry';
   const { t } = useI18n({ useScope: 'global' });
   const route = useRoute();
   const props = defineProps({
@@ -174,6 +177,30 @@
     if (props.iconColor) return [`text-${props.iconColor}`, 'group-hover:text-white'].join(' ');
     return 'text-white/70 group-hover:text-white';
   });
+  /**
+   * Compute the navigation URL based on current location:
+   * - If already on this page: return base path (reset to defaults)
+   * - If navigating from elsewhere: include stored preferences in URL
+   * This eliminates the "one-two" flash and allows re-clicking to reset.
+   */
+  const computedNavUrl = computed(() => {
+    if (!props.to) return null;
+    // If already on this page, clicking again should reset to defaults
+    if (route.path === props.to) {
+      return props.to;
+    }
+    // Navigating from another page: include stored filter preferences
+    return getPreferredNavUrl(props.to);
+  });
+  /**
+   * Handle click on navigation link:
+   * If already on the page, scroll to top when resetting.
+   */
+  const handleNavClick = () => {
+    if (route.path === props.to) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
   const visitHref = () => {
     if (props.href !== null) {
       window.open(props.href, '_blank');
