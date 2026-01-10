@@ -1,26 +1,23 @@
 <template>
   <GenericCard highlight-color="secondary" class="h-full">
     <template #header>
-      <AppTooltip :text="t('page.dashboard.traders.viewTasks', { name: trader.name })">
-        <button
-          type="button"
-          class="focus-visible:ring-brand-500 flex w-full items-center gap-3 pb-2 text-xl transition-opacity hover:opacity-80 focus:opacity-80 focus:outline-none focus-visible:ring-2"
-          @click="navigateToTraderTasks"
-        >
-          <span
-            class="from-brand-700 via-brand-300 to-brand-500 inline-block rounded-br-lg bg-linear-to-br px-3 py-1 shadow-lg"
-          >
-            <img
-              :src="trader.imageLink"
-              :alt="trader.name"
-              class="block h-14 w-auto object-contain"
-            />
-          </span>
-          <span class="inline-block px-2 text-left leading-6">
-            {{ trader.name }}
-          </span>
-        </button>
-      </AppTooltip>
+      <button
+        v-tooltip="t('page.dashboard.traders.viewTasks', { name: trader.name })"
+        type="button"
+        class="group clickable flex w-full items-center gap-3 pb-2 text-xl transition-opacity focus:opacity-80"
+        @click="navigateToTraderTasks"
+      >
+        <span class="badge-premium-secondary group-hover:scale-105">
+          <img
+            :src="trader.imageLink"
+            :alt="trader.name"
+            class="block h-14 w-auto object-contain drop-shadow-md"
+          />
+        </span>
+        <span class="inline-block px-2 text-left leading-6">
+          {{ trader.name }}
+        </span>
+      </button>
     </template>
     <template #content>
       <div class="space-y-6 p-4">

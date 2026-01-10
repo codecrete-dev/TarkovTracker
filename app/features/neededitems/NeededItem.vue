@@ -1,7 +1,7 @@
 <template>
   <template v-if="props.itemStyle == 'card'">
     <div class="h-full">
-      <LazyNeededItemSmallCard
+      <NeededItemSmallCard
         :need="props.need"
         @decrease-count="decreaseCount()"
         @toggle-count="toggleCount()"
@@ -11,8 +11,8 @@
     </div>
   </template>
   <template v-else-if="props.itemStyle == 'row'">
-    <div class="w-full pt-1">
-      <LazyNeededItemRow
+    <div class="mb-2 w-full">
+      <NeededItemRow
         :need="props.need"
         :initially-visible="props.initiallyVisible"
         @decrease-count="decreaseCount()"
@@ -25,6 +25,7 @@
 </template>
 <script setup lang="ts">
   import { computed, provide } from 'vue';
+  import { useCraftableItem } from '@/composables/useCraftableItem';
   import { neededItemKey, type NeededItemTeamNeed } from '@/features/neededitems/neededitem-keys';
   import { useMetadataStore } from '@/stores/useMetadata';
   import { usePreferencesStore } from '@/stores/usePreferences';
@@ -37,7 +38,7 @@
     },
     itemStyle: {
       type: String,
-      default: 'mediumCard',
+      default: 'card',
     },
     initiallyVisible: {
       type: Boolean,
@@ -104,7 +105,7 @@
         tarkovStore.setObjectiveCount(props.need.id, neededCount.value);
         tarkovStore.setTaskObjectiveComplete(props.need.id);
       } else if (currentCount.value === neededCount.value) {
-        tarkovStore.setObjectiveCount(props.need.id, Math.max(0, neededCount.value - 1));
+        tarkovStore.setObjectiveCount(props.need.id, 0);
         tarkovStore.setTaskObjectiveUncomplete(props.need.id);
       } else {
         tarkovStore.setObjectiveCount(props.need.id, neededCount.value);
@@ -115,7 +116,7 @@
         tarkovStore.setHideoutPartCount(props.need.id, neededCount.value);
         tarkovStore.setHideoutPartComplete(props.need.id);
       } else if (currentCount.value === neededCount.value) {
-        tarkovStore.setHideoutPartCount(props.need.id, Math.max(0, neededCount.value - 1));
+        tarkovStore.setHideoutPartCount(props.need.id, 0);
         tarkovStore.setHideoutPartUncomplete(props.need.id);
       } else {
         tarkovStore.setHideoutPartCount(props.need.id, neededCount.value);
@@ -150,82 +151,15 @@
       }
     }
   };
-  const imageItem = computed(() => {
-    if (!item.value) {
-      return null;
-    }
-    if (item.value.properties?.defaultPreset) {
-      return item.value.properties.defaultPreset;
-    }
-    return item.value;
-  });
-  const craftSources = computed(() => {
-    const currentItemId = item.value?.id;
-    if (!currentItemId) {
-      return [];
-    }
-    return metadataStore.craftSourcesByItemId.get(currentItemId) ?? [];
-  });
+  const {
+    isCraftable: baseIsCraftable,
+    isCraftableAvailable,
+    craftableTitle,
+    craftableIconClass,
+    goToCraftStation,
+  } = useCraftableItem(() => item.value?.id);
   const isCraftable = computed(() => {
-    return craftSources.value.length > 0;
-  });
-  const craftSourceStatuses = computed(() => {
-    return craftSources.value.map((source) => {
-      const currentLevel = progressStore.hideoutLevels?.[source.stationId]?.self ?? 0;
-      return {
-        ...source,
-        currentLevel,
-        isAvailable: currentLevel >= source.stationLevel,
-        missingLevels: Math.max(0, source.stationLevel - currentLevel),
-      };
-    });
-  });
-  const isCraftableAvailable = computed(() => {
-    return craftSourceStatuses.value.some((source) => source.isAvailable);
-  });
-  const craftStationTargetId = computed(() => {
-    if (!isCraftable.value) {
-      return '';
-    }
-    const available = craftSourceStatuses.value
-      .filter((source) => source.isAvailable)
-      .sort((a, b) => a.stationLevel - b.stationLevel);
-    if (available.length > 0) {
-      return available[0]!.stationId;
-    }
-    const closest = [...craftSourceStatuses.value].sort((a, b) => {
-      if (a.missingLevels !== b.missingLevels) {
-        return a.missingLevels - b.missingLevels;
-      }
-      return a.stationLevel - b.stationLevel;
-    });
-    return closest[0]?.stationId ?? craftSources.value[0]?.stationId ?? '';
-  });
-  const craftableIconClass = computed(() => {
-    return isCraftableAvailable.value ? 'text-success-400' : 'text-red-500';
-  });
-  const goToCraftStation = async () => {
-    if (!craftStationTargetId.value) {
-      return;
-    }
-    await navigateTo({
-      path: '/hideout',
-      query: { station: craftStationTargetId.value },
-    });
-  };
-  const craftableTitle = computed(() => {
-    if (!isCraftable.value) {
-      return '';
-    }
-    const prefix = isCraftableAvailable.value
-      ? 'Craftable now'
-      : 'Craftable (station level too low)';
-    const preview = craftSourceStatuses.value
-      .slice(0, 3)
-      .map((source) => `${source.stationName} ${source.stationLevel} (you ${source.currentLevel})`);
-    const remainingCount = craftSourceStatuses.value.length - preview.length;
-    const remainingText = remainingCount > 0 ? ` +${remainingCount} more` : '';
-    return `${prefix}: ${preview.join(', ')}${remainingText}`;
+    return baseIsCraftable.value;
   });
   // Helper functions and data to calculate the item's progress
   // These are passed to the child components via provide/inject
@@ -398,6 +332,15 @@
     }
     return false;
   });
+  const imageItem = computed(() => {
+    if (!item.value) {
+      return null;
+    }
+    if (item.value.properties?.defaultPreset) {
+      return item.value.properties.defaultPreset;
+    }
+    return item.value;
+  });
   provide(neededItemKey, {
     item,
     relatedTask,
@@ -411,8 +354,9 @@
     levelRequired,
     teamNeeds,
     imageItem,
-    craftableIconClass,
+    isCraftableAvailable,
     craftableTitle,
+    craftableIconClass,
     isCraftable,
     goToCraftStation,
   });

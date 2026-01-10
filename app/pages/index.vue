@@ -2,10 +2,10 @@
   <div class="container mx-auto min-h-[calc(100vh-250px)] max-w-7xl p-4">
     <!-- Hero Section with Main Progress -->
     <div
-      class="from-primary-900/40 via-surface-900/90 to-surface-900 border-primary-700/30 relative mb-6 overflow-hidden rounded-2xl border bg-linear-to-br shadow-2xl"
+      class="border-accent-800/60 dark:from-accent-900/40 dark:via-surface-900/90 dark:to-surface-900 dark:border-accent-700/30 relative mb-6 overflow-hidden rounded-2xl border bg-white shadow-2xl dark:bg-transparent dark:bg-linear-to-br"
     >
       <div
-        class="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(var(--color-primary-500),0.1),transparent_50%)]"
+        class="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(var(--color-accent-500),0.1),transparent_50%)]"
       ></div>
       <div class="relative p-4 sm:p-6 lg:p-8">
         <div class="grid grid-cols-1 items-center gap-6 lg:grid-cols-3 lg:gap-8">
@@ -28,7 +28,7 @@
                   stroke="currentColor"
                   stroke-width="8"
                   fill="none"
-                  class="text-surface-800"
+                  class="text-surface-200 dark:text-surface-800"
                 />
                 <circle
                   cx="96"
@@ -39,15 +39,17 @@
                   fill="none"
                   :stroke-dasharray="circumference"
                   :stroke-dashoffset="progressOffset"
-                  class="text-primary-500 transition-all duration-1000 ease-out"
+                  class="text-accent-500 transition-all duration-1000 ease-out"
                   stroke-linecap="round"
                 />
               </svg>
               <div class="absolute inset-0 flex flex-col items-center justify-center">
-                <div class="text-3xl font-bold text-white md:text-5xl">
+                <div class="text-3xl font-bold text-gray-900 md:text-5xl dark:text-white">
                   {{ totalTasksPercentage }}%
                 </div>
-                <div class="text-surface-400 text-xs tracking-wider uppercase md:text-sm">
+                <div
+                  class="dark:text-surface-400 text-xs tracking-wider text-gray-600 uppercase md:text-sm"
+                >
                   {{ $t('page.dashboard.hero.overall') }}
                 </div>
               </div>
@@ -56,44 +58,60 @@
           <!-- Stats Overview -->
           <div class="space-y-4 lg:col-span-2 lg:space-y-6">
             <div>
-              <h1 class="mb-2 text-2xl font-bold text-white md:text-4xl">
+              <h1 class="mb-2 text-2xl font-bold text-gray-900 md:text-4xl dark:text-white">
                 {{ $t('page.dashboard.hero.welcome') }}
               </h1>
-              <p class="text-surface-400 text-sm md:text-lg">
+              <p class="dark:text-surface-400 text-sm text-gray-600 md:text-lg">
                 {{ $t('page.dashboard.hero.subtitle') }}
               </p>
             </div>
             <!-- Quick Stats Grid -->
             <div class="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-              <div class="bg-surface-800/50 border-surface-700/50 rounded-xl border p-3 md:p-4">
-                <div class="text-primary-400 text-xl font-bold md:text-3xl">
+              <div
+                class="dark:border-surface-700/50 dark:bg-surface-800/50 rounded-xl border border-gray-200 bg-gray-100 p-3 md:p-4"
+              >
+                <div class="text-success-600 dark:text-success-400 text-xl font-bold md:text-3xl">
                   {{ dashboardStats.completedTasks.value }}
                 </div>
-                <div class="text-surface-400 mt-1 text-[10px] tracking-wide uppercase md:text-xs">
+                <div
+                  class="dark:text-surface-300 mt-1 text-[10px] tracking-wide text-gray-600 uppercase md:text-xs"
+                >
                   {{ $t('page.dashboard.hero.tasksComplete') }}
                 </div>
               </div>
-              <div class="bg-surface-800/50 border-surface-700/50 rounded-xl border p-3 md:p-4">
-                <div class="text-success-400 text-xl font-bold md:text-3xl">
+              <div
+                class="dark:border-surface-700/50 dark:bg-surface-800/50 rounded-xl border border-gray-200 bg-gray-100 p-3 md:p-4"
+              >
+                <div class="text-accent-600 dark:text-accent-400 text-xl font-bold md:text-3xl">
                   {{ dashboardStats.availableTasksCount.value }}
                 </div>
-                <div class="text-surface-400 mt-1 text-[10px] tracking-wide uppercase md:text-xs">
+                <div
+                  class="dark:text-surface-300 mt-1 text-[10px] tracking-wide text-gray-600 uppercase md:text-xs"
+                >
                   {{ $t('page.dashboard.hero.available') }}
                 </div>
               </div>
-              <div class="bg-surface-800/50 border-surface-700/50 rounded-xl border p-3 md:p-4">
-                <div class="text-error-400 text-xl font-bold md:text-3xl">
+              <div
+                class="dark:border-surface-700/50 dark:bg-surface-800/50 rounded-xl border border-gray-200 bg-gray-100 p-3 md:p-4"
+              >
+                <div class="text-error-600 dark:text-error-400 text-xl font-bold md:text-3xl">
                   {{ dashboardStats.failedTasksCount.value }}
                 </div>
-                <div class="text-surface-400 mt-1 text-[10px] tracking-wide uppercase md:text-xs">
+                <div
+                  class="dark:text-surface-300 mt-1 text-[10px] tracking-wide text-gray-600 uppercase md:text-xs"
+                >
                   {{ $t('page.dashboard.hero.failed') }}
                 </div>
               </div>
-              <div class="bg-surface-800/50 border-surface-700/50 rounded-xl border p-3 md:p-4">
-                <div class="text-warning-400 text-xl font-bold md:text-3xl">
+              <div
+                class="dark:border-surface-700/50 dark:bg-surface-800/50 rounded-xl border border-gray-200 bg-gray-100 p-3 md:p-4"
+              >
+                <div class="text-xl font-bold text-gray-900 md:text-3xl dark:text-white">
                   {{ currentLevel }}
                 </div>
-                <div class="text-surface-400 mt-1 text-[10px] tracking-wide uppercase md:text-xs">
+                <div
+                  class="dark:text-surface-300 mt-1 text-[10px] tracking-wide text-gray-600 uppercase md:text-xs"
+                >
                   {{ $t('page.dashboard.hero.level') }}
                 </div>
               </div>
@@ -104,8 +122,8 @@
     </div>
     <!-- Progress Breakdown Section -->
     <div class="mb-6">
-      <h2 class="mb-4 flex items-center text-2xl font-bold text-white">
-        <UIcon name="i-mdi-chart-line" class="text-primary-500 mr-2 h-6 w-6" />
+      <h2 class="mb-4 flex items-center text-2xl font-bold text-gray-900 dark:text-white">
+        <UIcon name="i-mdi-chart-line" class="text-accent-600 dark:text-accent-500 mr-2 h-6 w-6" />
         {{ $t('page.dashboard.progress.title') }}
       </h2>
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -115,7 +133,7 @@
           :completed="dashboardStats.completedTasks.value"
           :total="dashboardStats.totalTasks.value"
           :percentage="totalTasksPercentageNum"
-          color="primary"
+          color="accent"
           @click="router.push('/tasks')"
         />
         <DashboardProgressCard
@@ -124,7 +142,7 @@
           :completed="dashboardStats.completedObjectives.value"
           :total="dashboardStats.totalObjectives.value"
           :percentage="totalObjectivesPercentageNum"
-          color="info"
+          color="success"
           @click="router.push('/tasks')"
         />
         <DashboardProgressCard
@@ -133,7 +151,7 @@
           :completed="dashboardStats.completedTaskItems.value"
           :total="dashboardStats.totalTaskItems.value"
           :percentage="totalTaskItemsPercentageNum"
-          color="success"
+          color="item"
           @click="router.push('/neededitems')"
         />
         <DashboardProgressCard
@@ -142,7 +160,7 @@
           :completed="dashboardStats.completedKappaTasks.value"
           :total="dashboardStats.totalKappaTasks.value"
           :percentage="totalKappaTasksPercentageNum"
-          color="warning"
+          color="kappa"
           @click="router.push('/tasks')"
         />
         <DashboardProgressCard
@@ -151,70 +169,70 @@
           :completed="dashboardStats.completedLightkeeperTasks.value"
           :total="dashboardStats.totalLightkeeperTasks.value"
           :percentage="totalLightkeeperTasksPercentageNum"
-          color="purple"
+          color="lightkeeper"
           @click="router.push('/tasks')"
         />
       </div>
     </div>
     <!-- Trader Progress Section -->
     <div class="mb-6">
-      <h2 class="mb-4 flex items-center text-2xl font-bold text-white">
-        <UIcon name="i-mdi-account-group" class="text-primary-500 mr-2 h-6 w-6" />
+      <h2 class="mb-4 flex items-center text-2xl font-bold text-gray-900 dark:text-white">
+        <UIcon
+          name="i-mdi-account-group"
+          class="text-accent-600 dark:text-accent-500 mr-2 h-6 w-6"
+        />
         {{ $t('page.dashboard.traders.title') }}
       </h2>
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-        <AppTooltip
+        <div
           v-for="trader in traderStats"
           :key="trader.id"
-          :text="$t('page.dashboard.traders.viewTasks', { name: trader.name })"
+          v-tooltip="$t('page.dashboard.traders.viewTasks', { name: trader.name })"
+          role="button"
+          tabindex="0"
+          class="hover-effect dark:border-accent-700/30 dark:bg-surface-800 cursor-pointer rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-all"
+          :aria-label="$t('page.dashboard.traders.viewTasks', { name: trader.name })"
+          @click="navigateToTraderTasks(trader.id)"
+          @keydown.enter="navigateToTraderTasks(trader.id)"
+          @keydown.space.prevent="navigateToTraderTasks(trader.id)"
         >
-          <div
-            role="button"
-            tabindex="0"
-            class="bg-surface-900 border-surface-700/30 hover:border-primary-700/30 focus-visible:border-primary-500 focus-visible:ring-primary-500/50 rounded-lg border p-3 shadow-sm transition-all outline-none hover:shadow-md focus-visible:ring-2"
-            :aria-label="$t('page.dashboard.traders.viewTasks', { name: trader.name })"
-            @click="navigateToTraderTasks(trader.id)"
-            @keydown.enter="navigateToTraderTasks(trader.id)"
-            @keydown.space.prevent="navigateToTraderTasks(trader.id)"
-          >
-            <div class="mb-2 flex items-center gap-3">
-              <img
-                v-if="trader.imageLink"
-                :src="trader.imageLink"
-                :alt="trader.name"
-                class="bg-surface-800 border-surface-700 h-10 w-10 rounded-full border"
-              />
-              <div class="min-w-0 flex-1">
-                <div class="truncate text-xs font-semibold text-white">
-                  {{ trader.name }}
-                </div>
-                <div class="text-surface-400 text-xs">
-                  {{ trader.completedTasks }}/{{ trader.totalTasks }}
-                </div>
+          <div class="mb-2 flex items-center gap-3">
+            <img
+              v-if="trader.imageLink"
+              :src="trader.imageLink"
+              :alt="trader.name"
+              class="dark:border-surface-700 dark:bg-surface-800 h-10 w-10 rounded-full border border-gray-200 bg-gray-100"
+            />
+            <div class="min-w-0 flex-1">
+              <div class="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                {{ trader.name }}
+              </div>
+              <div class="dark:text-surface-300 text-sm text-gray-500">
+                {{ trader.completedTasks }}/{{ trader.totalTasks }}
               </div>
             </div>
-            <div class="bg-surface-800 relative h-1.5 overflow-hidden rounded-full">
-              <div
-                class="absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out"
-                :class="
-                  holidayEffectsEnabled
-                    ? 'candy-cane'
-                    : 'from-primary-600 to-primary-400 bg-linear-to-r'
-                "
-                :style="{ width: `${trader.percentage}%` }"
-              ></div>
-            </div>
-            <div class="text-primary-400 mt-1 text-right text-xs font-medium">
-              {{ trader.percentage }}%
-            </div>
           </div>
-        </AppTooltip>
+          <div class="dark:bg-surface-700 relative h-1.5 overflow-hidden rounded-full bg-gray-200">
+            <div
+              class="absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out"
+              :class="
+                holidayEffectsEnabled
+                  ? 'candy-cane'
+                  : 'from-accent-600 to-accent-400 bg-linear-to-r'
+              "
+              :style="{ width: `${trader.percentage}%` }"
+            ></div>
+          </div>
+          <div class="text-accent-600 dark:text-accent-400 mt-1 text-right text-sm font-medium">
+            {{ trader.percentage }}%
+          </div>
+        </div>
       </div>
     </div>
     <!-- Milestones Section -->
     <div>
-      <h2 class="mb-4 flex items-center text-2xl font-bold text-white">
-        <UIcon name="i-mdi-star-circle" class="text-primary-500 mr-2 h-6 w-6" />
+      <h2 class="mb-4 flex items-center text-2xl font-bold text-gray-900 dark:text-white">
+        <UIcon name="i-mdi-star-circle" class="text-accent-600 dark:text-accent-500 mr-2 h-6 w-6" />
         {{ $t('page.dashboard.milestones.title') }}
       </h2>
       <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
@@ -224,7 +242,7 @@
           :is-achieved="totalTasksPercentageNum >= 25"
           achieved-icon="i-mdi-check-circle"
           unachieved-icon="i-mdi-circle-outline"
-          color="primary"
+          color="accent"
         />
         <DashboardMilestoneCard
           title="50%"
@@ -248,7 +266,7 @@
           :is-achieved="totalKappaTasksPercentageNum >= 100"
           achieved-icon="i-mdi-trophy"
           unachieved-icon="i-mdi-trophy-outline"
-          color="warning"
+          color="kappa"
         />
         <DashboardMilestoneCard
           :title="$t('page.dashboard.milestones.lightkeeper.title')"
@@ -256,7 +274,7 @@
           :is-achieved="totalLightkeeperTasksPercentageNum >= 100"
           achieved-icon="i-mdi-lighthouse"
           unachieved-icon="i-mdi-lighthouse-on"
-          color="purple"
+          color="lightkeeper"
         />
       </div>
     </div>
@@ -267,7 +285,6 @@
   import { usePreferencesStore } from '@/stores/usePreferences';
   import { useTarkovStore } from '@/stores/useTarkov';
   import { calculatePercentage, calculatePercentageNum } from '@/utils/formatters';
-  import { logger } from '@/utils/logger';
   // Page metadata
   useSeoMeta({
     title: 'Dashboard',
@@ -284,44 +301,26 @@
   const holidayEffectsEnabled = computed(() => preferencesStore.getEnableHolidayEffects);
   // Navigate to tasks page filtered by trader
   const navigateToTraderTasks = (traderId: string) => {
+    // Reset "sticky" filters in the store to ensure a clean view from the dashboard
+    preferencesStore.setTaskSearch('');
+    preferencesStore.setTaskId(null);
+    // Set the specific view and trader
     preferencesStore.setTaskPrimaryView('traders');
     preferencesStore.setTaskTraderView(traderId);
-    router.push('/tasks');
+    // Navigate directly to the desired state.
+    // usePageFilters will use defaults for omitted parameters.
+    router.push({
+      path: '/tasks',
+      query: {
+        view: 'traders',
+        trader: traderId,
+      },
+    });
   };
   // Get current level - respect automatic calculation setting
   const useAutomaticLevel = computed(() => preferencesStore.getUseAutomaticLevelCalculation);
   const currentLevel = computed(() => {
-    const manualLevel = tarkovStore.playerLevel();
-    const fallbackLevel = Number.isFinite(manualLevel) ? manualLevel : 0;
-    // Observability: warn when manualLevel is not finite
-    if (!Number.isFinite(manualLevel)) {
-      logger.warn('[Dashboard] manualLevel is not finite, using fallback', { manualLevel });
-    }
-    if (Number.isFinite(manualLevel) && manualLevel < 0) {
-      logger.warn('[Dashboard] manualLevel is negative, using fallbackLevel', {
-        manualLevel,
-        fallbackLevel,
-      });
-    }
-    if (!useAutomaticLevel.value) {
-      return Math.max(0, fallbackLevel);
-    }
-    const derivedLevel = xpCalculation?.derivedLevel?.value;
-    // Observability: warn when derivedLevel is not finite in automatic mode
-    if (!Number.isFinite(derivedLevel)) {
-      logger.warn('[Dashboard] derivedLevel is not finite, using fallbackLevel', {
-        derivedLevel,
-        fallbackLevel,
-      });
-    }
-    if (Number.isFinite(derivedLevel) && derivedLevel < 0) {
-      logger.warn('[Dashboard] derivedLevel is negative, using fallbackLevel', {
-        derivedLevel,
-        fallbackLevel,
-      });
-    }
-    const result = Number.isFinite(derivedLevel) ? derivedLevel : fallbackLevel;
-    return Math.max(0, result);
+    return useAutomaticLevel.value ? xpCalculation.derivedLevel.value : tarkovStore.playerLevel();
   });
   // Unwrap trader stats for template usage
   const traderStats = computed(() => dashboardStats.traderStats.value || []);

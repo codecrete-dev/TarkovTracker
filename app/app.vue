@@ -11,10 +11,19 @@
   </UApp>
 </template>
 <script setup lang="ts">
-  import { computed } from 'vue';
+  import { computed, watchEffect, onMounted } from 'vue';
   import { useAppInitialization } from '@/composables/useAppInitialization';
+  import { useTarkovStore } from '@/stores/useTarkov';
   // Initialize app (auth, locale, migrations)
   useAppInitialization();
+  // Game mode class toggler for accent color switching
+  const tarkovStore = useTarkovStore();
+  const gameMode = computed(() => tarkovStore.getCurrentGameMode());
+  onMounted(() => {
+    watchEffect(() => {
+      document.documentElement.classList.toggle('pve-mode', gameMode.value === 'pve');
+    });
+  });
   const config = useRuntimeConfig();
   const route = useRoute();
   // Dynamically set canonical and social URLs based on current route

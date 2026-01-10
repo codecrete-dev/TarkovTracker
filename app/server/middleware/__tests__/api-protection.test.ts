@@ -65,7 +65,7 @@ describe('API Protection Middleware', () => {
       node: createNodeContext('127.0.0.1'),
       method: 'GET',
       context: {},
-    };
+    } as any;
   });
   describe('Route filtering', () => {
     it('should skip non-API routes', async () => {

@@ -1,16 +1,15 @@
 <template>
   <GenericCard
     icon="mdi-account-edit"
-    icon-color="blue-400"
     highlight-color="blue"
     :fill-height="false"
     :title="$t('settings.display_name.title', 'Display Name')"
-    title-classes="text-lg font-semibold"
+    title-classes="text-lg font-bold sm:text-xl"
   >
     <template #content>
       <div class="space-y-4 px-4 py-4">
         <!-- Explanation Alert -->
-        <UAlert icon="i-mdi-information" color="info" variant="soft" class="text-sm">
+        <UAlert icon="i-mdi-information" color="primary" variant="soft" class="text-sm">
           <template #description>
             {{
               $t(
@@ -21,9 +20,11 @@
           </template>
         </UAlert>
         <!-- Current Game Mode Indicator -->
-        <div class="border-surface-700 bg-surface-800/30 rounded-lg border p-3">
+        <div
+          class="border-base bg-surface-elevated dark:border-accent-700/30 rounded-lg border p-3"
+        >
           <div class="mb-2 flex items-center justify-between">
-            <span class="text-surface-200 text-sm font-semibold">
+            <span class="text-content-secondary text-sm font-semibold">
               {{ $t('settings.display_name.current_mode', 'Current Game Mode') }}
             </span>
             <span
@@ -33,22 +34,24 @@
               {{ currentMode }}
             </span>
           </div>
-          <p class="text-surface-400 text-xs">
+          <p class="text-content-tertiary text-xs">
             {{ $t('settings.display_name.mode_hint', { mode: currentMode.toUpperCase() }) }}
           </p>
         </div>
         <!-- Display Name Input -->
         <div class="space-y-2">
-          <label class="text-surface-200 text-sm font-semibold">
+          <label class="text-content-secondary text-sm font-semibold">
             {{ $t('settings.display_name.label', 'Display Name') }}
-            <span class="text-surface-400 ml-2 text-xs">({{ currentMode.toUpperCase() }})</span>
+            <span class="text-content-tertiary ml-2 text-xs">
+              ({{ currentMode.toUpperCase() }})
+            </span>
           </label>
           <div class="flex max-w-sm items-center gap-2">
             <UInput
               v-model="localDisplayName"
               :maxlength="displayNameMaxLength"
               :placeholder="$t('settings.display_name.placeholder', 'Enter your display name...')"
-              class="flex-1"
+              class="flex-1 placeholder:text-gray-500 dark:placeholder:text-gray-400"
               @keyup.enter="saveDisplayName"
             />
             <UButton
@@ -64,7 +67,7 @@
             </UButton>
           </div>
           <div class="flex items-center justify-between">
-            <p class="text-surface-400 text-xs">
+            <p class="text-content-tertiary text-xs">
               {{ localDisplayName?.length || 0 }} / {{ displayNameMaxLength }} characters
             </p>
             <UButton
@@ -80,8 +83,10 @@
           </div>
         </div>
         <!-- Preview Section -->
-        <div class="border-surface-700 bg-surface-800/30 rounded-lg border p-3">
-          <div class="text-surface-200 mb-2 text-sm font-semibold">
+        <div
+          class="border-base bg-surface-elevated dark:border-accent-700/30 rounded-lg border p-3"
+        >
+          <div class="text-content-secondary mb-2 text-sm font-semibold">
             {{ $t('settings.display_name.preview', 'Preview') }}
           </div>
           <div class="flex items-center gap-3">
@@ -94,11 +99,11 @@
               size="sm"
               alt="Preview avatar"
             />
-            <span class="text-surface-300 text-sm">
+            <span class="text-content-secondary text-sm">
               {{ previewName }}
             </span>
           </div>
-          <p class="text-surface-500 mt-2 text-xs italic">
+          <p class="text-content-tertiary mt-2 text-xs">
             {{
               $t(
                 'settings.display_name.preview_hint',

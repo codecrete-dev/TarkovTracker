@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-background text-surface-200 flex min-h-screen flex-col">
+  <div class="bg-surface-base text-content-primary flex min-h-screen flex-col">
     <!-- Holiday Effects -->
     <template v-if="holidayEffectsEnabled">
       <HolidayLights />
@@ -31,7 +31,7 @@
         marginLeft: mainMarginLeft,
       }"
     >
-      <div :class="contentWrapperClass">
+      <div class="min-h-0 flex-1 overflow-y-auto">
         <slot />
       </div>
     </main>
@@ -46,14 +46,61 @@
   </div>
 </template>
 <script setup lang="ts">
-  import { computed, defineAsyncComponent } from 'vue';
-  import { useRoute } from 'vue-router';
+  import { computed, defineAsyncComponent, ref, onUnmounted, watch } from 'vue';
   import { useSharedBreakpoints } from '@/composables/useSharedBreakpoints';
   import { useAppStore } from '@/stores/useApp';
   import { usePreferencesStore } from '@/stores/usePreferences';
   const appStore = useAppStore();
-  const route = useRoute();
   const preferencesStore = usePreferencesStore();
+  const colorMode = useColorMode();
+  // System theme listener for detecting OS theme changes
+  const systemThemeListener = ref<MediaQueryList | null>(null);
+  // Handler for system theme changes
+  function handleSystemThemeChange(e?: MediaQueryListEvent) {
+    if (preferencesStore.getTheme === 'system') {
+      // Check current system preference
+      const mediaQuery =
+        (e?.target as MediaQueryList) ?? window.matchMedia('(prefers-color-scheme: dark)');
+      const isDark = mediaQuery.matches;
+      // Force Nuxt Color Mode to apply the system theme immediately
+      // We must set the value directly to force the .dark class to be added/removed
+      colorMode.value = isDark ? 'dark' : 'light';
+    }
+  }
+  // Sync theme preference to color mode and set up system listeners
+  watch(
+    () => preferencesStore.getTheme,
+    (newTheme) => {
+      // Clean up old listener first
+      if (systemThemeListener.value) {
+        systemThemeListener.value.removeEventListener('change', handleSystemThemeChange);
+        systemThemeListener.value = null;
+      }
+      if (newTheme === 'system') {
+        // Set preference to 'system' to let Nuxt know we want system detection
+        colorMode.preference = 'system';
+        // Set up listener for OS theme changes (only on client-side)
+        if (typeof window !== 'undefined') {
+          systemThemeListener.value = window.matchMedia('(prefers-color-scheme: dark)');
+          systemThemeListener.value.addEventListener('change', handleSystemThemeChange);
+          // Force initial detection to ensure correct theme on mount
+          handleSystemThemeChange();
+        }
+      } else {
+        // User selected a specific theme (light or dark)
+        colorMode.preference = newTheme;
+        // Also force the value to ensure immediate application
+        colorMode.value = newTheme;
+      }
+    },
+    { immediate: true }
+  );
+  // Cleanup on unmount
+  onUnmounted(() => {
+    if (systemThemeListener.value) {
+      systemThemeListener.value.removeEventListener('change', handleSystemThemeChange);
+    }
+  });
   // Holiday effects
   const holidayEffectsEnabled = computed(() => preferencesStore.getEnableHolidayEffects);
   // Use shared breakpoints to avoid duplicate listeners
@@ -63,20 +110,6 @@
     if (belowMd.value) return '56px'; // Rail width on mobile
     return appStore.drawerRail ? '56px' : '224px';
   });
-  const usesWindowScroll = computed(() => {
-    return Boolean(route.meta?.usesWindowScroll);
-  });
-  useHead(
-    computed(() => ({
-      htmlAttrs: {
-        class: usesWindowScroll.value ? 'no-smooth-scroll' : undefined,
-      },
-    }))
-  );
-  const contentWrapperClass = computed(() => [
-    'min-h-0 flex-1 p-2 pt-0',
-    usesWindowScroll.value ? 'overflow-visible' : 'overflow-y-auto',
-  ]);
   // Lazy-load shell components
   const NavDrawer = defineAsyncComponent(() => import('@/shell/NavDrawer.vue'));
   const AppFooter = defineAsyncComponent(() => import('@/shell/AppFooter.vue'));

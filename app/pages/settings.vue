@@ -3,11 +3,10 @@
     <!-- Section 1: Game Settings (merged Privacy Mode + Game Edition) -->
     <GenericCard
       icon="mdi-gamepad-variant"
-      icon-color="accent-400"
       highlight-color="accent"
       :fill-height="false"
       :title="$t('settings.game_settings.title', 'Game Settings')"
-      title-classes="text-lg font-semibold"
+      title-classes="text-lg font-bold sm:text-xl"
     >
       <template #title-right>
         <UAlert
@@ -28,7 +27,7 @@
         <div class="grid gap-6 px-4 py-4 md:grid-cols-2 lg:grid-cols-3">
           <!-- Privacy Mode -->
           <div class="space-y-2">
-            <p class="text-surface-200 text-sm font-semibold">
+            <p class="dark:text-surface-200 text-sm font-semibold text-gray-900">
               {{ $t('settings.general.privacy_mode', 'Privacy Mode') }}
             </p>
             <div class="flex items-center gap-3">
@@ -37,7 +36,7 @@
                 :disabled="!user.loggedIn || streamerModeCooldown"
                 label=""
               />
-              <span class="text-surface-400 text-xs">
+              <span class="dark:text-surface-400 text-xs text-gray-500">
                 {{
                   $t(
                     'settings.general.privacy_mode_hint',
@@ -49,7 +48,7 @@
           </div>
           <!-- Game Edition -->
           <div class="space-y-2">
-            <p class="text-surface-200 text-sm font-semibold">
+            <p class="dark:text-surface-200 text-sm font-semibold text-gray-900">
               {{ $t('settings.game_profile.game_edition', 'Game Edition') }}
             </p>
             <USelectMenu
@@ -61,44 +60,34 @@
               :ui-menu="selectMenuUi"
             >
               <template #leading>
-                <UIcon name="i-mdi-gift-open" class="text-surface-300 h-4 w-4" />
+                <UIcon name="i-mdi-gift-open" class="dark:text-surface-300 h-4 w-4 text-gray-400" />
               </template>
             </USelectMenu>
           </div>
           <!-- Prestige Level -->
           <div class="space-y-2">
-            <p class="text-surface-200 text-sm font-semibold">
+            <p class="dark:text-surface-200 text-sm font-semibold text-gray-900">
               {{ $t('settings.prestige.current_level', 'Current Prestige Level') }}
             </p>
             <USelectMenu
               v-model="currentPrestige"
               :items="prestigeOptions"
               value-key="value"
-              :disabled="isPveMode"
               :popper="{ placement: 'bottom-start', strategy: 'fixed' }"
               :ui="selectUi"
               :ui-menu="selectMenuUi"
             >
               <template #leading>
-                <UIcon
-                  name="i-mdi-trophy"
-                  class="text-gold-400 h-4 w-4"
-                  :class="{ 'opacity-50': isPveMode }"
-                />
+                <UIcon name="i-mdi-trophy" class="text-gold-400 h-4 w-4" />
               </template>
             </USelectMenu>
-            <p class="text-surface-400 text-xs">
-              <template v-if="isPveMode">
-                {{ $t('settings.prestige.pve_hint', 'Prestige is not available in PVE mode.') }}
-              </template>
-              <template v-else>
-                {{
-                  $t(
-                    'settings.prestige.hint',
-                    'Select your current prestige level. This is display-only and does not affect game progression.'
-                  )
-                }}
-              </template>
+            <p class="dark:text-surface-400 text-xs text-gray-500">
+              {{
+                $t(
+                  'settings.prestige.hint',
+                  'Select your current prestige level. This is display-only and does not affect game progression.'
+                )
+              }}
             </p>
           </div>
         </div>
@@ -114,11 +103,10 @@
     <!-- Section 3: Data Management -->
     <GenericCard
       icon="mdi-database"
-      icon-color="warning"
       highlight-color="tan"
       :fill-height="false"
       :title="$t('settings.data_management.title', 'Data Management')"
-      title-classes="text-lg font-semibold"
+      title-classes="text-lg font-bold sm:text-xl"
     >
       <template #title-right>
         <UAlert
@@ -148,7 +136,7 @@
               icon="i-mdi-shield-sword"
               block
               :ui="{
-                base: 'bg-pvp-900 hover:bg-pvp-800 active:bg-pvp-700 text-pvp-200 focus-visible:ring focus-visible:ring-pvp-500',
+                base: 'hover-effect bg-pvp-200 dark:bg-pvp-900/80 text-pvp-900 dark:text-pvp-100',
               }"
               @click="showResetPvPDialog = true"
             >
@@ -159,7 +147,7 @@
               icon="i-mdi-account-group"
               block
               :ui="{
-                base: 'bg-pve-900 hover:bg-pve-800 active:bg-pve-700 text-pve-200 focus-visible:ring focus-visible:ring-pve-500',
+                base: 'hover-effect bg-pve-200 dark:bg-pve-900/80 text-pve-900 dark:text-pve-100',
               }"
               @click="showResetPvEDialog = true"
             >
@@ -176,7 +164,7 @@
               {{ $t('settings.data_management.reset_all_data', 'Reset All Data') }}
             </UButton>
           </div>
-          <p class="text-surface-400 text-center text-xs">
+          <p class="dark:text-surface-400 text-center text-xs text-gray-500">
             {{
               $t(
                 'settings.data_management.reset_hint',
@@ -210,7 +198,7 @@
               )
             "
           />
-          <p class="text-surface-200 text-sm">
+          <p class="dark:text-surface-200 text-sm text-gray-600">
             {{
               $t(
                 'settings.data_management.reset_pvp_warning',
@@ -265,7 +253,7 @@
               )
             "
           />
-          <p class="text-surface-200 text-sm">
+          <p class="dark:text-surface-200 text-sm text-gray-600">
             {{
               $t(
                 'settings.data_management.reset_pve_warning',
@@ -320,7 +308,7 @@
               )
             "
           />
-          <p class="text-surface-200 text-sm">
+          <p class="dark:text-surface-200 text-sm text-gray-600">
             {{
               $t(
                 'settings.data_management.reset_all_warning',
@@ -330,19 +318,11 @@
           </p>
           <div class="space-y-2">
             <p class="text-surface-100 text-sm font-medium">
-              <i18n-t keypath="settings.danger_zone.confirm_delete_instruction" tag="span">
-                <template #word>
-                  <strong class="text-error-400">
-                    {{ $t('settings.danger_zone.confirm_word', 'DELETE') }}
-                  </strong>
-                </template>
-              </i18n-t>
+              Type
+              <strong class="text-error-400">DELETE</strong>
+              to confirm:
             </p>
-            <UInput
-              v-model="resetAllConfirmText"
-              :placeholder="$t('settings.danger_zone.confirm_word', 'DELETE')"
-              class="font-mono"
-            />
+            <UInput v-model="resetAllConfirmText" placeholder="DELETE" class="font-mono" />
           </div>
         </div>
       </template>
@@ -361,7 +341,7 @@
             variant="solid"
             class="ml-auto min-w-30 justify-center text-center"
             :loading="resetting"
-            :disabled="resetAllConfirmText !== $t('settings.danger_zone.confirm_word', 'DELETE')"
+            :disabled="resetAllConfirmText !== 'DELETE'"
             @click="resetAllData"
           >
             {{ $t('settings.data_management.reset_confirm', 'Reset All Data') }}
@@ -372,11 +352,10 @@
     <!-- Section 4: API Management -->
     <GenericCard
       icon="mdi-key-chain"
-      icon-color="purple-400"
       highlight-color="purple"
       :fill-height="false"
       :title="$t('page.settings.card.apitokens.title', 'API Tokens')"
-      title-classes="text-lg font-semibold"
+      title-classes="text-lg font-bold sm:text-xl"
     >
       <template #title-right>
         <UAlert
@@ -428,7 +407,7 @@
   </div>
 </template>
 <script setup lang="ts">
-  import { computed, ref, type Ref } from 'vue';
+  import { computed, ref } from 'vue';
   import GenericCard from '@/components/ui/GenericCard.vue';
   import AccountDeletionCard from '@/features/settings/AccountDeletionCard.vue';
   import ApiTokens from '@/features/settings/ApiTokens.vue';
@@ -439,7 +418,6 @@
   import { usePreferencesStore } from '@/stores/usePreferences';
   import { useSystemStore, useSystemStoreWithSupabase } from '@/stores/useSystemStore';
   import { useTarkovStore } from '@/stores/useTarkov';
-  import { GAME_MODES } from '@/utils/constants';
   import { logger } from '@/utils/logger';
   // Page metadata
   useSeoMeta({
@@ -456,21 +434,20 @@
   const { hasInitiallyLoaded } = useSystemStoreWithSupabase();
   const systemStore = useSystemStore(); // Direct Pinia store
   const tarkovStore = useTarkovStore();
-  // Check if user is in PVE mode (prestige not available in PVE)
-  const isPveMode = computed(() => tarkovStore.getCurrentGameMode() === GAME_MODES.PVE);
   const selectUi = {};
   const selectMenuUi = {
     container: 'z-[9999]',
-    background: 'bg-surface-900',
+    background: 'bg-white dark:bg-surface-900',
     shadow: 'shadow-xl',
     rounded: 'rounded-lg',
-    ring: 'ring-1 ring-white/10',
+    ring: 'ring-1 ring-gray-200 dark:ring-white/10',
     padding: 'p-1',
     option: {
-      base: 'px-3 py-2 text-sm transition-colors rounded',
-      inactive: 'text-surface-200 hover:bg-surface-800 hover:text-white',
-      active: 'bg-surface-800 text-white',
-      selected: 'bg-primary-500/10 text-primary-100 ring-1 ring-primary-500',
+      base: 'px-3 py-2 text-sm cursor-pointer transition-colors rounded',
+      inactive: 'hover-effect text-gray-700 dark:text-surface-200',
+      active: 'hover-effect bg-gray-100 text-gray-900 dark:bg-surface-800 dark:text-white',
+      selected:
+        'bg-primary-50 text-primary-600 ring-1 ring-primary-500 dark:bg-primary-500/10 dark:text-primary-100',
     },
   };
   // Reactive state
@@ -528,77 +505,74 @@
   });
   const currentPrestige = computed({
     get(): number {
-      // In PVE mode, always return 0 (No Prestige) since prestige is not available
-      if (isPveMode.value) {
-        return 0;
-      }
       return tarkovStore.getPrestigeLevel();
     },
     set(newValue: number) {
-      // Don't allow setting prestige in PVE mode
-      if (isPveMode.value) {
-        return;
-      }
       tarkovStore.setPrestigeLevel(newValue);
     },
   });
-  // Reset handler factory to eliminate duplication
-  interface ResetConfig {
-    resetFn: () => Promise<void>;
-    successTitle: string;
-    successDescription: string;
-    errorLogContext: string;
-    errorDescription: string;
-    dialogRef: Ref<boolean>;
-    onSuccess?: () => void;
-  }
-  const createResetHandler = (config: ResetConfig) => async () => {
+  // Methods
+  const resetPvPData = async () => {
     resetting.value = true;
     try {
-      await config.resetFn();
+      await tarkovStore.resetPvPData();
       toast.add({
-        title: config.successTitle,
-        description: config.successDescription,
+        title: 'PvP Data Reset',
+        description: 'Your PvP progress has been reset successfully.',
         color: 'success',
       });
-      config.dialogRef.value = false;
-      if (config.onSuccess) {
-        config.onSuccess();
-      }
+      showResetPvPDialog.value = false;
     } catch (error) {
-      logger.error(`[Settings] Error resetting ${config.errorLogContext}:`, error);
+      logger.error('[Settings] Error resetting PvP data:', error);
       toast.add({
         title: 'Reset Failed',
-        description: config.errorDescription,
+        description: 'Failed to reset PvP data. Please try again.',
         color: 'error',
       });
     } finally {
       resetting.value = false;
     }
   };
-  const resetPvPData = createResetHandler({
-    resetFn: () => tarkovStore.resetPvPData(),
-    successTitle: 'PvP Data Reset',
-    successDescription: 'Your PvP progress has been reset successfully.',
-    errorLogContext: 'PvP data',
-    errorDescription: 'Failed to reset PvP data. Please try again.',
-    dialogRef: showResetPvPDialog,
-  });
-  const resetPvEData = createResetHandler({
-    resetFn: () => tarkovStore.resetPvEData(),
-    successTitle: 'PvE Data Reset',
-    successDescription: 'Your PvE progress has been reset successfully.',
-    errorLogContext: 'PvE data',
-    errorDescription: 'Failed to reset PvE data. Please try again.',
-    dialogRef: showResetPvEDialog,
-  });
-  const resetAllData = createResetHandler({
-    resetFn: () => tarkovStore.resetAllData(),
-    successTitle: 'All Data Reset',
-    successDescription: 'All your progress has been reset successfully.',
-    errorLogContext: 'all data',
-    errorDescription: 'Failed to reset data. Please try again.',
-    dialogRef: showResetAllDialog,
-    // Note: resetAllConfirmText is cleared in the @close handler of the modal
-  });
+  const resetPvEData = async () => {
+    resetting.value = true;
+    try {
+      await tarkovStore.resetPvEData();
+      toast.add({
+        title: 'PvE Data Reset',
+        description: 'Your PvE progress has been reset successfully.',
+        color: 'success',
+      });
+      showResetPvEDialog.value = false;
+    } catch (error) {
+      logger.error('[Settings] Error resetting PvE data:', error);
+      toast.add({
+        title: 'Reset Failed',
+        description: 'Failed to reset PvE data. Please try again.',
+        color: 'error',
+      });
+    } finally {
+      resetting.value = false;
+    }
+  };
+  const resetAllData = async () => {
+    resetting.value = true;
+    try {
+      await tarkovStore.resetAllData();
+      toast.add({
+        title: 'All Data Reset',
+        description: 'All your progress has been reset successfully.',
+        color: 'success',
+      });
+      showResetAllDialog.value = false;
+    } catch (error) {
+      logger.error('[Settings] Error resetting all data:', error);
+      toast.add({
+        title: 'Reset Failed',
+        description: 'Failed to reset data. Please try again.',
+        color: 'error',
+      });
+    } finally {
+      resetting.value = false;
+    }
+  };
 </script>

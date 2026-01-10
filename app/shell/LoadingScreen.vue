@@ -5,7 +5,7 @@
     role="dialog"
     aria-modal="true"
     aria-labelledby="loading-screen-title"
-    class="fixed inset-x-0 top-16 bottom-0 z-50 flex items-center justify-center bg-gray-950"
+    class="fixed inset-x-0 top-16 bottom-0 z-50 flex items-center justify-center bg-white dark:bg-gray-950"
   >
     <div class="flex flex-col items-center gap-6 px-4">
       <!-- Loading Spinner or Error Icon -->
@@ -13,7 +13,7 @@
         <UIcon
           v-if="!hasErrors"
           name="i-heroicons-arrow-path"
-          class="text-primary-500 h-16 w-16 animate-spin"
+          class="text-accent-500 h-16 w-16 animate-spin"
         />
         <UIcon v-else name="i-heroicons-exclamation-triangle" class="text-warning-500 h-16 w-16" />
       </div>
@@ -21,57 +21,62 @@
       <div class="flex flex-col items-center gap-2 text-center">
         <h2
           id="loading-screen-title"
-          class="focus-visible:ring-primary-500 rounded-sm text-xl font-semibold text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+          class="rounded-sm text-xl font-semibold text-gray-900 focus:outline-none dark:text-gray-100"
         >
-          {{ hasErrors ? 'Loading Issue' : 'Loading Tarkov Tracker' }}
+          {{ hasErrors ? $t('loading.title_error') : $t('loading.title') }}
         </h2>
-        <p class="text-sm text-gray-400">
-          {{ hasErrors ? 'Some data failed to load' : 'Downloading required game data...' }}
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          {{ hasErrors ? $t('loading.subtitle_error') : $t('loading.subtitle') }}
         </p>
       </div>
       <!-- Loading Progress Details -->
-      <div class="flex flex-col gap-2 text-xs text-gray-500">
+      <div class="flex flex-col gap-2 text-xs text-gray-500 dark:text-gray-400">
         <div class="flex items-center gap-2">
           <UIcon
             :name="getStatusIcon(metadataStore.loading, metadataStore.error)"
             :class="getStatusClass(metadataStore.loading, metadataStore.error)"
           />
-          <span>Tasks, Maps & Traders</span>
+          <span>{{ $t('loading.tasks_maps_traders') }}</span>
         </div>
         <div class="flex items-center gap-2">
           <UIcon
             :name="getStatusIcon(metadataStore.hideoutLoading, metadataStore.hideoutError)"
             :class="getStatusClass(metadataStore.hideoutLoading, metadataStore.hideoutError)"
           />
-          <span>Hideout Stations</span>
+          <span>{{ $t('loading.hideout_stations') }}</span>
         </div>
         <div class="flex items-center gap-2">
           <UIcon
             :name="getStatusIcon(metadataStore.prestigeLoading, metadataStore.prestigeError)"
             :class="getStatusClass(metadataStore.prestigeLoading, metadataStore.prestigeError)"
           />
-          <span>Prestige Data</span>
+          <span>{{ $t('loading.prestige_data') }}</span>
         </div>
         <div class="flex items-center gap-2">
           <UIcon
             :name="getStatusIcon(metadataStore.editionsLoading, metadataStore.editionsError)"
             :class="getStatusClass(metadataStore.editionsLoading, metadataStore.editionsError)"
           />
-          <span>Game Editions</span>
+          <span>{{ $t('loading.game_editions') }}</span>
         </div>
       </div>
       <!-- User Reassurance or Error Actions -->
-      <div v-if="!hasErrors" class="mt-4 max-w-md text-center text-xs text-gray-600">
-        This may take a moment on first load. Data will be cached for future visits.
+      <div
+        v-if="!hasErrors"
+        class="mt-4 max-w-md text-center text-xs text-gray-600 dark:text-gray-400"
+      >
+        {{ $t('loading.first_load_note') }}
       </div>
       <div v-else class="mt-4 flex flex-col items-center gap-3">
         <p class="max-w-md text-center text-xs text-gray-500">
-          The app can still work with partial data. You can retry or continue anyway.
+          {{ $t('loading.partial_data_note') }}
         </p>
         <div class="flex gap-3">
-          <UButton color="primary" variant="solid" @click="handleRetry">Retry</UButton>
+          <UButton color="primary" variant="solid" @click="handleRetry">
+            {{ $t('loading.retry') }}
+          </UButton>
           <UButton color="neutral" variant="outline" @click="handleContinue">
-            Continue Anyway
+            {{ $t('loading.continue') }}
           </UButton>
         </div>
       </div>
@@ -189,7 +194,7 @@
   function getStatusClass(loading: boolean, error: Error | null): string {
     const baseClass = 'h-4 w-4';
     if (error) return `${baseClass} text-error-500`;
-    if (loading) return `${baseClass} animate-spin text-primary-500`;
+    if (loading) return `${baseClass} animate-spin text-accent-500`;
     return `${baseClass} text-green-500`;
   }
   function handleRetry() {

@@ -184,7 +184,7 @@ export function useLootGame() {
         const rarityInfo = getRarityFromColor(randomReal.backgroundColor);
         item = {
           name: randomReal.name || randomReal.shortName || 'Unknown Item',
-          icon: randomReal.iconLink || randomReal.image512pxLink || '',
+          icon: randomReal.image512pxLink || randomReal.iconLink || '',
           rarity: rarityInfo.label,
           colorClass: rarityInfo.color,
           textClass: rarityInfo.text,
@@ -260,7 +260,7 @@ export function useLootGame() {
     // Override with real item data if available
     if (redKeycard && (redKeycard.iconLink || redKeycard.image512pxLink)) {
       baseItem.name = redKeycard.name || baseItem.name;
-      baseItem.icon = redKeycard.iconLink || redKeycard.image512pxLink || baseItem.icon;
+      baseItem.icon = redKeycard.image512pxLink || redKeycard.iconLink || baseItem.icon;
       baseItem.link = redKeycard.link || redKeycard.wikiLink || baseItem.link;
       baseItem.wikiLink = redKeycard.wikiLink || redKeycard.link || baseItem.wikiLink;
     }

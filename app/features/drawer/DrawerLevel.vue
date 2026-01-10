@@ -1,8 +1,8 @@
 <template>
-  <div class="flex items-center justify-center px-3 py-2">
+  <div class="flex w-full items-center justify-center">
     <template v-if="isCollapsed">
       <div class="text-center">
-        <div class="mb-1 text-[0.7em] text-gray-400">
+        <div class="text-content-tertiary mb-1 text-[0.7em]">
           {{ t('navigation_drawer.level') }}
         </div>
         <h1 class="text-center text-2xl leading-tight font-bold">
@@ -13,89 +13,83 @@
     <template v-else>
       <!-- Card container for expanded state -->
       <div
-        class="w-full overflow-hidden rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 backdrop-blur-sm"
+        class="border-base bg-surface-base dark:bg-surface-950 w-full overflow-hidden rounded-lg border px-2 py-1.5 backdrop-blur-sm"
       >
         <div class="flex min-w-0 items-center gap-1">
-          <span class="mr-1 shrink-0 leading-none">
+          <span class="shrink-0 leading-none">
             <div class="group relative h-12 w-12 overflow-hidden">
               <template v-if="isDataReady && groupIcon">
                 <NuxtImg
-                  v-if="!factionImageLoadFailed"
-                  :src="pmcFactionIcon"
-                  class="absolute top-0 left-0 z-20 mt-1 max-w-12 px-1 opacity-0 invert transition-opacity duration-1000 ease-in-out group-hover:opacity-100"
-                  width="48"
-                  height="48"
-                  @error="handleFactionImageError"
-                />
-                <NuxtImg
                   v-if="!groupImageLoadFailed"
                   :src="groupIcon"
-                  class="absolute top-0 left-0 z-10 max-w-12 opacity-100 transition-opacity duration-1000 ease-in-out group-hover:opacity-0"
+                  class="absolute top-0 left-0 z-10 max-w-12 invert transition-opacity duration-1000 ease-in-out dark:invert-0"
                   width="48"
                   height="48"
                   @error="handleGroupImageError"
                 />
-                <!-- Final fallback if both fail -->
+                <!-- Final fallback -->
                 <div
-                  v-if="factionImageLoadFailed && groupImageLoadFailed"
-                  class="flex h-12 w-12 items-center justify-center rounded bg-white/5"
+                  v-if="groupImageLoadFailed"
+                  class="bg-surface-200 dark:bg-surface-700 flex h-12 w-12 items-center justify-center rounded"
                 >
-                  <UIcon name="i-heroicons-photo" class="h-6 w-6 text-gray-600" />
+                  <UIcon name="i-heroicons-photo" class="text-content-tertiary h-6 w-6" />
                 </div>
               </template>
               <template v-else>
                 <!-- Loading placeholder -->
-                <div class="flex h-12 w-12 items-center justify-center rounded bg-white/5">
-                  <UIcon name="i-heroicons-arrow-path" class="h-6 w-6 animate-spin text-gray-500" />
+                <div
+                  class="bg-surface-200 dark:bg-surface-700 flex h-12 w-12 items-center justify-center rounded"
+                >
+                  <UIcon
+                    name="i-heroicons-arrow-path"
+                    class="text-content-tertiary h-6 w-6 animate-spin"
+                  />
                 </div>
               </template>
             </div>
           </span>
           <span class="mx-0.5 min-w-0 flex-1">
-            <div class="mb-0.5 text-center text-[0.65rem] text-gray-300">
+            <div class="text-content-tertiary mb-0.5 text-center text-[0.65rem]">
               {{ t('navigation_drawer.level') }}
             </div>
             <div class="text-center">
-              <AppTooltip
+              <h1
                 v-if="!editingLevel || useAutomaticLevel"
-                :text="
+                v-tooltip="
                   useAutomaticLevel
                     ? t(
                         'navigation_drawer.auto_level_enabled',
                         'Automatic level calculation is enabled'
                       )
-                    : ''
+                    : undefined
                 "
+                :class="
+                  useAutomaticLevel
+                    ? 'text-content-primary mx-auto w-11 text-[2rem] leading-[0.85]'
+                    : 'clickable hover:text-primary text-content-primary mx-auto w-11 text-[2rem] leading-[0.85] transition-colors'
+                "
+                :tabindex="useAutomaticLevel ? '-1' : '0'"
+                :role="useAutomaticLevel ? undefined : 'button'"
+                :aria-disabled="useAutomaticLevel ? 'true' : undefined"
+                :aria-label="
+                  useAutomaticLevel
+                    ? t(
+                        'navigation_drawer.level_display_auto',
+                        'Level {level} (automatic calculation enabled)',
+                        { level: displayedLevel }
+                      )
+                    : t(
+                        'navigation_drawer.level_display_editable',
+                        'Level {level}, click or press Enter to edit',
+                        { level: displayedLevel }
+                      )
+                "
+                @click="!useAutomaticLevel && startEditingLevel()"
+                @keydown.enter="!useAutomaticLevel && startEditingLevel()"
+                @keydown.space.prevent="!useAutomaticLevel && startEditingLevel()"
               >
-                <h1
-                  :class="
-                    useAutomaticLevel
-                      ? 'mx-auto w-11 text-[2rem] leading-[0.85]'
-                      : 'hover:text-primary mx-auto w-11 text-[2rem] leading-[0.85] transition-colors'
-                  "
-                  :tabindex="useAutomaticLevel ? '-1' : '0'"
-                  :role="useAutomaticLevel ? undefined : 'button'"
-                  :aria-disabled="useAutomaticLevel ? 'true' : undefined"
-                  :aria-label="
-                    useAutomaticLevel
-                      ? t(
-                          'navigation_drawer.level_display_auto',
-                          'Level {level} (automatic calculation enabled)',
-                          { level: displayedLevel }
-                        )
-                      : t(
-                          'navigation_drawer.level_display_editable',
-                          'Level {level}, click or press Enter to edit',
-                          { level: displayedLevel }
-                        )
-                  "
-                  @click="!useAutomaticLevel && startEditingLevel()"
-                  @keydown.enter="!useAutomaticLevel && startEditingLevel()"
-                  @keydown.space.prevent="!useAutomaticLevel && startEditingLevel()"
-                >
-                  {{ displayedLevel }}
-                </h1>
-              </AppTooltip>
+                {{ displayedLevel }}
+              </h1>
               <input
                 v-else
                 ref="levelInput"
@@ -103,66 +97,66 @@
                 type="number"
                 :min="minPlayerLevel"
                 :max="maxPlayerLevel"
-                class="mx-auto w-11 appearance-none border-0 bg-transparent p-0 text-center text-[2rem] leading-[0.85] outline-none focus:ring-0 focus:outline-none"
+                class="text-content-primary mx-auto w-11 appearance-none border-0 bg-transparent p-0 text-center text-[2rem] leading-[0.85] outline-none focus:ring-0 focus:outline-none"
                 @input="enforceMaxLevel"
                 @blur="saveLevel"
                 @keyup.enter="saveLevel"
               />
             </div>
           </span>
-          <span class="ml-0.5 flex shrink-0 flex-col items-center gap-0.5">
-            <AppTooltip
-              :text="
+          <span class="flex w-12 shrink-0 flex-col items-center gap-0.5">
+            <button
+              v-tooltip="
                 useAutomaticLevel
                   ? t(
                       'navigation_drawer.manual_disabled',
                       'Manual level editing is disabled when automatic calculation is enabled'
                     )
-                  : ''
+                  : undefined
               "
+              class="text-content-secondary hover:text-content-primary flex h-6 w-6 items-center justify-center rounded p-0 transition-colors disabled:opacity-40"
+              :class="{ disabled: useAutomaticLevel || displayedLevel >= maxPlayerLevel }"
+              :disabled="useAutomaticLevel || displayedLevel >= maxPlayerLevel"
+              @click="incrementLevel"
             >
-              <button
-                class="flex h-6 w-6 items-center justify-center p-0 text-white/70 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-                :disabled="useAutomaticLevel || displayedLevel >= maxPlayerLevel"
-                @click="incrementLevel"
-              >
-                <UIcon name="i-mdi-chevron-up" class="h-5 w-5" />
-              </button>
-            </AppTooltip>
-            <AppTooltip
-              :text="
+              <UIcon name="i-mdi-chevron-up" class="h-5 w-5" />
+            </button>
+            <button
+              v-tooltip="
                 useAutomaticLevel
                   ? t(
                       'navigation_drawer.manual_disabled',
                       'Manual level editing is disabled when automatic calculation is enabled'
                     )
-                  : ''
+                  : undefined
               "
+              class="text-content-secondary hover:text-content-primary flex h-6 w-6 items-center justify-center rounded p-0 transition-colors disabled:opacity-40"
+              :class="{ disabled: useAutomaticLevel || displayedLevel <= minPlayerLevel }"
+              :disabled="useAutomaticLevel || displayedLevel <= minPlayerLevel"
+              @click="decrementLevel"
             >
-              <button
-                class="flex h-6 w-6 items-center justify-center p-0 text-white/70 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-                :disabled="useAutomaticLevel || displayedLevel <= minPlayerLevel"
-                @click="decrementLevel"
-              >
-                <UIcon name="i-mdi-chevron-down" class="h-5 w-5" />
-              </button>
-            </AppTooltip>
+              <UIcon name="i-mdi-chevron-down" class="h-5 w-5" />
+            </button>
           </span>
         </div>
         <!-- XP Progress Display -->
-        <div
-          class="hover:border-primary/30 mt-1.5 rounded border border-white/5 bg-white/2 px-2 py-1 transition-all hover:bg-white/4"
-          @click="navigateToSettings"
-        >
-          <div class="mb-0.5 flex items-center justify-between text-[0.6rem]">
-            <span class="text-gray-400">{{ formatNumber(xpCalculation.totalXP.value) }} XP</span>
-            <span class="text-gray-500">
+        <!-- Separator -->
+        <div class="my-2 h-px bg-gray-100 dark:bg-white/5"></div>
+        <!-- XP Progress Display -->
+        <div class="group/xp clickable px-1" @click="navigateToSettings">
+          <div class="mb-1.5 flex items-center justify-between text-[0.65rem] leading-none">
+            <span
+              class="text-content-secondary group-hover/xp:text-accent-600 dark:group-hover/xp:text-accent-400 font-medium transition-colors"
+            >
+              {{ formatNumber(xpCalculation.totalXP.value) }} XP
+            </span>
+            <span class="text-content-tertiary">
               {{ formatNumber(xpCalculation.xpToNextLevel.value) }} needed
             </span>
           </div>
-          <div class="h-1 overflow-hidden rounded-full bg-gray-800">
+          <div class="bg-surface-200 dark:bg-surface-800 h-1.5 overflow-hidden rounded-full">
             <div
-              class="bg-primary-500 h-full transition-all duration-300"
+              class="from-accent-600 to-accent-500 h-full rounded-full bg-gradient-to-r transition-all duration-500 ease-out"
               :style="{ width: `${xpCalculation.xpProgress.value}%` }"
             ></div>
           </div>
@@ -205,19 +199,13 @@
   });
   // Check if data is ready to prevent broken images
   const isDataReady = computed(() => {
-    return (
-      !metadataStore.loading && metadataStore.playerLevels.length > 0 && tarkovStore.getPMCFaction()
-    );
-  });
-  const pmcFactionIcon = computed(() => {
-    return `/img/factions/${tarkovStore.getPMCFaction()}.webp`;
+    return !metadataStore.loading && metadataStore.playerLevels.length > 0;
   });
   const groupIcon = computed(() => {
     const level = displayedLevel.value;
     const entry = playerLevels.value.find((pl) => pl.level === level);
     return entry?.levelBadgeImageLink ?? '';
   });
-  const factionImageLoadFailed = ref(false);
   const groupImageLoadFailed = ref(false);
   // Manual level editing logic
   const editingLevel = ref(false);
@@ -258,9 +246,6 @@
     router.push('/settings');
   }
   // Reset failure flags if icons change (retry)
-  watch(pmcFactionIcon, () => {
-    factionImageLoadFailed.value = false;
-  });
   watch(groupIcon, () => {
     groupImageLoadFailed.value = false;
   });
@@ -268,17 +253,16 @@
    * Log image load failure and flip a flag to hide the specific failing image.
    * This is a fallback in case an image file is missing from the server or assets.
    */
-  function handleFactionImageError(event) {
-    console.warn('Failed to load faction image:', event.target?.src);
-    factionImageLoadFailed.value = true;
-  }
   function handleGroupImageError(event) {
     console.warn('Failed to load group image:', event.target?.src);
     groupImageLoadFailed.value = true;
   }
 </script>
 <style>
-  /* Hide spin buttons for number input */
+  /* Number Input Spinner Removal
+     !important required: Browsers apply spinner buttons via user-agent stylesheets
+     with high specificity. These declarations hide the native spin buttons across
+     WebKit (Chrome, Safari, Edge) and Firefox to provide a clean level display. */
   input[type='number']::-webkit-inner-spin-button,
   input[type='number']::-webkit-outer-spin-button {
     -webkit-appearance: none !important;

@@ -2,116 +2,150 @@ import 'pinia-plugin-persistedstate';
 import { defineStore } from 'pinia';
 import { watch } from 'vue';
 import { useSupabaseSync } from '@/composables/supabase/useSupabaseSync';
-import type {
-  NeededItemsFirFilter,
-  NeededItemsFilterType,
-} from '@/features/neededitems/neededitems-constants';
 import { pinia as pluginPinia } from '@/plugins/01.pinia.client';
-import type { TaskSortDirection, TaskSortMode } from '@/types/taskSort';
 import { logger } from '@/utils/logger';
+import { flattenPreferences, unflattenPreferences } from '@/utils/preferenceMapper';
 import { STORAGE_KEYS } from '@/utils/storageKeys';
 import { useNuxtApp } from '#imports';
 // Define the state structure
 export interface PreferencesState {
-  streamerMode: boolean;
-  teamHide: Record<string, boolean>;
-  taskTeamHideAll: boolean;
-  itemsTeamHideAll: boolean;
-  itemsTeamHideNonFIR: boolean;
-  itemsTeamHideHideout: boolean;
-  mapTeamHideAll: boolean;
-  taskPrimaryView: string | null;
-  taskMapView: string | null;
-  taskTraderView: string | null;
-  taskSecondaryView: string | null;
-  taskUserView: string | null;
-  taskSortMode: TaskSortMode | null;
-  taskSortDirection: TaskSortDirection | null;
-  taskSharedByAllOnly: boolean;
-  neededTypeView: NeededItemsFilterType | null;
-  neededItemsViewMode: 'list' | 'grid' | null;
-  neededItemsFirFilter: NeededItemsFirFilter | null;
-  neededItemsGroupByItem: boolean;
-  neededItemsHideNonFirSpecialEquipment: boolean;
-  neededItemsKappaOnly: boolean;
-  itemsHideNonFIR: boolean;
-  hideGlobalTasks: boolean;
-  hideNonKappaTasks: boolean;
-  neededitemsStyle: string | null;
-  hideoutPrimaryView?: string | null;
-  localeOverride: string | null;
-  // Task filter settings
-  showNonSpecialTasks: boolean;
-  showLightkeeperTasks: boolean;
-  // Task appearance settings
-  showRequiredLabels: boolean;
-  showNotRequiredLabels: boolean;
-  showExperienceRewards: boolean;
-  showTaskIds: boolean;
-  showNextQuests: boolean;
-  showPreviousQuests: boolean;
-  taskCardDensity: 'comfortable' | 'compact';
-  enableManualTaskFail: boolean;
-  // XP and Level settings
-  useAutomaticLevelCalculation: boolean;
-  // Holiday effects
-  enableHolidayEffects: boolean;
-  // Map display settings
-  showMapExtracts: boolean;
-  saving?: {
+  global: {
+    theme: 'system' | 'light' | 'dark';
+    localeOverride: string | null;
     streamerMode: boolean;
-    hideGlobalTasks: boolean;
-    hideNonKappaTasks: boolean;
-    itemsNeededHideNonFIR: boolean;
+    enableHolidayEffects: boolean;
+    useAutomaticLevelCalculation: boolean;
   };
+  team: {
+    individualHide: Record<string, boolean>;
+    taskHideAll: boolean;
+    itemsHideAll: boolean;
+    itemsHideNonFIR: boolean;
+    itemsHideHideout: boolean;
+    mapHideAll: boolean;
+  };
+  tasks: {
+    views: {
+      primary: string | null;
+      secondary: string | null;
+      map: string | null;
+      trader: string | null;
+      user: string | null;
+      taskId: string | null;
+    };
+    filters: {
+      hideGlobal: boolean;
+      hideNonKappa: boolean;
+      search: string | null;
+      showNonSpecial: boolean;
+      showEod: boolean;
+      showLightkeeper: boolean;
+    };
+    appearance: {
+      showRequiredLabels: boolean;
+      showNotRequiredLabels: boolean;
+      showExperienceRewards: boolean;
+      showTaskIds: boolean;
+      showNextQuests: boolean;
+      showPreviousQuests: boolean;
+      cardDensity: 'comfortable' | 'compact';
+    };
+    advanced: {
+      enableManualFail: boolean;
+    };
+  };
+  neededItems: {
+    views: {
+      type: string | null;
+      style: string | null;
+    };
+    filters: {
+      hideNonFIR: boolean;
+      search: string | null;
+    };
+  };
+  hideout: {
+    views: {
+      primary: string | null;
+    };
+    filters: {
+      search: string | null;
+    };
+  };
+  maps: {
+    showExtracts: boolean;
+  };
+  // Transient state
+  saving?: Record<string, boolean>;
 }
 // Export the default state with type annotation
 export const preferencesDefaultState: PreferencesState = {
-  streamerMode: false,
-  teamHide: {},
-  taskTeamHideAll: false,
-  itemsTeamHideAll: false,
-  itemsTeamHideNonFIR: false,
-  itemsTeamHideHideout: false,
-  mapTeamHideAll: false,
-  taskPrimaryView: null,
-  taskMapView: null,
-  taskTraderView: null,
-  taskSecondaryView: null,
-  taskUserView: null,
-  taskSortMode: null,
-  taskSortDirection: null,
-  taskSharedByAllOnly: false,
-  neededTypeView: null,
-  neededItemsViewMode: null,
-  neededItemsFirFilter: null,
-  neededItemsGroupByItem: false,
-  neededItemsHideNonFirSpecialEquipment: false,
-  neededItemsKappaOnly: false,
-  itemsHideNonFIR: false,
-  hideGlobalTasks: false,
-  hideNonKappaTasks: false,
-  neededitemsStyle: null,
-  hideoutPrimaryView: null,
-  localeOverride: null,
-  // Task filter settings (all shown by default)
-  showNonSpecialTasks: true,
-  showLightkeeperTasks: true,
-  // Task appearance settings
-  showRequiredLabels: true,
-  showNotRequiredLabels: true,
-  showExperienceRewards: true,
-  showTaskIds: true,
-  showNextQuests: true,
-  showPreviousQuests: true,
-  taskCardDensity: 'compact',
-  enableManualTaskFail: false,
-  // XP and Level settings
-  useAutomaticLevelCalculation: false,
-  // Holiday effects (enabled by default during holiday season)
-  enableHolidayEffects: true,
-  // Map display settings
-  showMapExtracts: true,
+  global: {
+    theme: 'system',
+    localeOverride: null,
+    streamerMode: false,
+    enableHolidayEffects: true,
+    useAutomaticLevelCalculation: false,
+  },
+  team: {
+    individualHide: {},
+    taskHideAll: false,
+    itemsHideAll: false,
+    itemsHideNonFIR: false,
+    itemsHideHideout: false,
+    mapHideAll: false,
+  },
+  tasks: {
+    views: {
+      primary: null,
+      secondary: null,
+      map: null,
+      trader: null,
+      user: null,
+      taskId: null,
+    },
+    filters: {
+      hideGlobal: false,
+      hideNonKappa: false,
+      search: null,
+      showNonSpecial: true,
+      showEod: true,
+      showLightkeeper: true,
+    },
+    appearance: {
+      showRequiredLabels: true,
+      showNotRequiredLabels: true,
+      showExperienceRewards: true,
+      showTaskIds: true,
+      showNextQuests: true,
+      showPreviousQuests: true,
+      cardDensity: 'compact',
+    },
+    advanced: {
+      enableManualFail: false,
+    },
+  },
+  neededItems: {
+    views: {
+      type: null,
+      style: null,
+    },
+    filters: {
+      hideNonFIR: false,
+      search: null,
+    },
+  },
+  hideout: {
+    views: {
+      primary: null,
+    },
+    filters: {
+      search: null,
+    },
+  },
+  maps: {
+    showExtracts: true,
+  },
   saving: {
     streamerMode: false,
     hideGlobalTasks: false,
@@ -128,348 +162,248 @@ const initialSavingState = {
 };
 export const usePreferencesStore = defineStore('preferences', {
   state: (): PreferencesState => {
-    const state = JSON.parse(JSON.stringify(preferencesDefaultState));
+    const state = structuredClone(preferencesDefaultState);
     // Always reset saving state on store creation
     state.saving = { ...initialSavingState };
     return state;
   },
   getters: {
     getStreamerMode(state) {
-      return state.streamerMode ?? false;
+      return state.global.streamerMode ?? false;
+    },
+    getTheme(state) {
+      return state.global.theme ?? 'system';
+    },
+    getLocaleOverride(state) {
+      return state.global.localeOverride ?? null;
+    },
+    getEnableHolidayEffects(state) {
+      return state.global.enableHolidayEffects ?? true;
+    },
+    getUseAutomaticLevelCalculation(state) {
+      return state.global.useAutomaticLevelCalculation ?? false;
     },
     teamIsHidden: (state) => {
       return (teamId: string): boolean => {
-        // Always show self unless explicitly hidden (though self shouldn't be hidden usually)
-        // But definitely don't let "Hide All" hide self
         if (teamId === 'self') {
-          return state.teamHide?.[teamId] || false;
+          return state.team.individualHide?.[teamId] || false;
         }
-        const isHidden = state.taskTeamHideAll || state.teamHide?.[teamId] || false;
-        if (isHidden) {
-          logger.debug('[PreferencesStore] Teammate is hidden:', {
-            teamId,
-            taskTeamHideAll: state.taskTeamHideAll,
-            individuallyHidden: state.teamHide?.[teamId],
-          });
-        }
+        const isHidden = state.team.taskHideAll || state.team.individualHide?.[teamId] || false;
         return isHidden;
       };
     },
     taskTeamAllHidden: (state) => {
-      return state.taskTeamHideAll ?? false;
+      return state.team.taskHideAll ?? false;
     },
     itemsTeamAllHidden: (state) => {
-      return state.itemsTeamHideAll ?? false;
+      return state.team.itemsHideAll ?? false;
     },
     itemsTeamNonFIRHidden: (state) => {
-      return state.itemsTeamHideAll || state.itemsTeamHideNonFIR || false;
+      return state.team.itemsHideAll || state.team.itemsHideNonFIR || false;
     },
     itemsTeamHideoutHidden: (state) => {
-      return state.itemsTeamHideAll || state.itemsTeamHideHideout || false;
+      return state.team.itemsHideAll || state.team.itemsHideHideout || false;
     },
     mapTeamAllHidden: (state) => {
-      return state.mapTeamHideAll ?? false;
+      return state.team.mapHideAll ?? false;
     },
-    // Add default values for views using nullish coalescing
+    // Views
     getTaskPrimaryView: (state) => {
-      return state.taskPrimaryView ?? 'all';
+      const valid = ['all', 'traders', 'maps'];
+      const val = state.tasks.views.primary;
+      return val && valid.includes(val) ? val : 'all';
     },
     getTaskMapView: (state) => {
-      return state.taskMapView ?? 'all';
+      return state.tasks.views.map ?? 'all';
     },
     getTaskTraderView: (state) => {
-      return state.taskTraderView ?? 'all';
+      return state.tasks.views.trader ?? 'all';
     },
     getTaskSecondaryView: (state) => {
-      return state.taskSecondaryView ?? 'available';
+      const valid = ['all', 'available', 'locked', 'completed', 'failed'];
+      const val = state.tasks.views.secondary;
+      return val && valid.includes(val) ? val : 'available';
     },
     getTaskUserView: (state) => {
-      return state.taskUserView ?? 'self';
+      return state.tasks.views.user ?? 'self';
     },
-    getTaskSortMode: (state) => {
-      return state.taskSortMode ?? 'impact';
-    },
-    getTaskSortDirection: (state) => {
-      const sortMode = state.taskSortMode ?? 'impact';
-      return state.taskSortDirection ?? (sortMode === 'impact' ? 'desc' : 'asc');
-    },
-    getTaskSharedByAllOnly: (state) => {
-      return state.taskSharedByAllOnly ?? false;
+    getTaskId: (state) => {
+      return state.tasks.views.taskId ?? null;
     },
     getNeededTypeView: (state) => {
-      return state.neededTypeView ?? 'all';
-    },
-    getNeededItemsViewMode: (state) => {
-      return state.neededItemsViewMode ?? 'grid';
-    },
-    getNeededItemsFirFilter: (state) => {
-      return state.neededItemsFirFilter ?? 'all';
-    },
-    getNeededItemsGroupByItem: (state) => {
-      return state.neededItemsGroupByItem ?? false;
-    },
-    getNeededItemsHideNonFirSpecialEquipment: (state) => {
-      return state.neededItemsHideNonFirSpecialEquipment ?? false;
-    },
-    getNeededItemsKappaOnly: (state) => {
-      return state.neededItemsKappaOnly ?? false;
+      const valid = ['all', 'tasks', 'hideout', 'completed'];
+      const val = state.neededItems.views.type;
+      return val && valid.includes(val) ? val : 'all';
     },
     itemsNeededHideNonFIR: (state) => {
-      return state.itemsHideNonFIR ?? false;
+      return state.neededItems.filters.hideNonFIR ?? false;
     },
     getHideGlobalTasks: (state) => {
-      return state.hideGlobalTasks ?? false;
+      return state.tasks.filters.hideGlobal ?? false;
     },
     getHideNonKappaTasks: (state) => {
-      return state.hideNonKappaTasks ?? false;
+      return state.tasks.filters.hideNonKappa ?? false;
     },
     getNeededItemsStyle: (state) => {
-      return state.neededitemsStyle ?? 'mediumCard';
+      return state.neededItems.views.style ?? 'mediumCard';
     },
     getHideoutPrimaryView: (state) => {
-      return state.hideoutPrimaryView ?? 'available';
+      const valid = ['all', 'available', 'maxed', 'locked'];
+      const val = state.hideout.views.primary;
+      return val && valid.includes(val) ? val : 'available';
     },
-    getLocaleOverride: (state) => {
-      return state.localeOverride ?? null;
-    },
-    // Task filter getters
-    getShowNonSpecialTasks: (state) => {
-      return state.showNonSpecialTasks ?? true;
-    },
-    getShowLightkeeperTasks: (state) => {
-      return state.showLightkeeperTasks ?? true;
-    },
-    // Task appearance getters
-    getShowRequiredLabels: (state) => {
-      return state.showRequiredLabels ?? true;
-    },
-    getShowNotRequiredLabels: (state) => {
-      return state.showNotRequiredLabels ?? true;
-    },
-    getShowExperienceRewards: (state) => {
-      return state.showExperienceRewards ?? true;
-    },
-    getShowTaskIds: (state) => {
-      return state.showTaskIds ?? true;
-    },
-    getShowNextQuests: (state) => {
-      return state.showNextQuests ?? true;
-    },
-    getShowPreviousQuests: (state) => {
-      return state.showPreviousQuests ?? true;
-    },
-    getTaskCardDensity: (state) => {
-      return state.taskCardDensity ?? 'compact';
-    },
-    getEnableManualTaskFail: (state) => {
-      return state.enableManualTaskFail ?? false;
-    },
-    getUseAutomaticLevelCalculation: (state) => {
-      return state.useAutomaticLevelCalculation ?? false;
-    },
-    getEnableHolidayEffects: (state) => {
-      return state.enableHolidayEffects ?? true;
-    },
-    // Map display getters
-    getShowMapExtracts: (state) => {
-      return state.showMapExtracts ?? true;
-    },
+    // Filter visibility
+    getShowNonSpecialTasks: (state) => state.tasks.filters.showNonSpecial,
+    getShowEodTasks: (state) => state.tasks.filters.showEod,
+    getShowLightkeeperTasks: (state) => state.tasks.filters.showLightkeeper,
+    // Appearance
+    getShowRequiredLabels: (state) => state.tasks.appearance.showRequiredLabels,
+    getShowNotRequiredLabels: (state) => state.tasks.appearance.showNotRequiredLabels,
+    getShowExperienceRewards: (state) => state.tasks.appearance.showExperienceRewards,
+    getShowTaskIds: (state) => state.tasks.appearance.showTaskIds,
+    getShowNextQuests: (state) => state.tasks.appearance.showNextQuests,
+    getShowPreviousQuests: (state) => state.tasks.appearance.showPreviousQuests,
+    getTaskCardDensity: (state) => state.tasks.appearance.cardDensity,
+    // Advanced
+    getEnableManualTaskFail: (state) => state.tasks.advanced.enableManualFail,
+    // Map
+    getShowMapExtracts: (state) => state.maps.showExtracts,
+    // Search
+    getTaskSearch: (state) => state.tasks.filters.search,
+    getNeededItemsSearch: (state) => state.neededItems.filters.search,
+    getHideoutSearch: (state) => state.hideout.filters.search,
   },
   actions: {
-    setStreamerMode(mode: boolean) {
-      this.streamerMode = mode;
+    setStreamerMode(enabled: boolean) {
+      this.global.streamerMode = enabled;
+      this.setSaving('streamerMode', true);
+    },
+    setSaving(key: string, value: boolean) {
+      if (!this.saving) this.saving = {};
+      this.saving[key] = value;
     },
     toggleHidden(teamId: string) {
-      if (!this.teamHide) {
-        this.teamHide = {};
-      }
-      this.teamHide[teamId] = !this.teamHide[teamId];
+      this.team.individualHide[teamId] = !this.team.individualHide[teamId];
     },
     setQuestTeamHideAll(hide: boolean) {
-      this.taskTeamHideAll = hide;
+      this.team.taskHideAll = hide;
     },
     setItemsTeamHideAll(hide: boolean) {
-      this.itemsTeamHideAll = hide;
+      this.team.itemsHideAll = hide;
     },
     setItemsTeamHideNonFIR(hide: boolean) {
-      this.itemsTeamHideNonFIR = hide;
+      this.team.itemsHideNonFIR = hide;
     },
     setItemsTeamHideHideout(hide: boolean) {
-      this.itemsTeamHideHideout = hide;
+      this.team.itemsHideHideout = hide;
     },
     setMapTeamHideAll(hide: boolean) {
-      this.mapTeamHideAll = hide;
+      this.team.mapHideAll = hide;
     },
-    setTaskPrimaryView(view: string) {
-      this.taskPrimaryView = view;
+    setTaskPrimaryView(view: string | null) {
+      this.tasks.views.primary = view;
     },
-    setTaskMapView(view: string) {
-      this.taskMapView = view;
+    setTaskMapView(view: string | null) {
+      this.tasks.views.map = view;
     },
-    setTaskTraderView(view: string) {
-      this.taskTraderView = view;
+    setTaskTraderView(view: string | null) {
+      this.tasks.views.trader = view;
     },
-    setTaskSecondaryView(view: string) {
-      this.taskSecondaryView = view;
+    setTaskSecondaryView(view: string | null) {
+      this.tasks.views.secondary = view;
     },
-    setTaskUserView(view: string) {
-      this.taskUserView = view;
+    setTaskUserView(view: string | null) {
+      this.tasks.views.user = view;
     },
-    setTaskSortMode(mode: TaskSortMode) {
-      this.taskSortMode = mode;
+    setTaskId(id: string | null) {
+      this.tasks.views.taskId = id;
     },
-    setTaskSortDirection(direction: TaskSortDirection) {
-      this.taskSortDirection = direction;
-    },
-    setTaskSharedByAllOnly(enabled: boolean) {
-      this.taskSharedByAllOnly = enabled;
-    },
-    setNeededTypeView(view: NeededItemsFilterType) {
-      this.neededTypeView = view;
-    },
-    setNeededItemsViewMode(mode: 'list' | 'grid') {
-      this.neededItemsViewMode = mode;
-    },
-    setNeededItemsFirFilter(filter: NeededItemsFirFilter) {
-      this.neededItemsFirFilter = filter;
-    },
-    setNeededItemsGroupByItem(groupBy: boolean) {
-      this.neededItemsGroupByItem = groupBy;
-    },
-    setNeededItemsHideNonFirSpecialEquipment(hide: boolean) {
-      this.neededItemsHideNonFirSpecialEquipment = hide;
-    },
-    setNeededItemsKappaOnly(kappaOnly: boolean) {
-      this.neededItemsKappaOnly = kappaOnly;
+    setNeededTypeView(view: string | null) {
+      this.neededItems.views.type = view;
     },
     setItemsNeededHideNonFIR(hide: boolean) {
-      this.itemsHideNonFIR = hide;
-      // Persistence handled automatically by plugin
-      this.saving = this.saving ?? { ...initialSavingState };
-      this.saving.itemsNeededHideNonFIR = true;
+      this.neededItems.filters.hideNonFIR = hide;
+      this.setSaving('itemsNeededHideNonFIR', true);
     },
     setHideGlobalTasks(hide: boolean) {
-      this.hideGlobalTasks = hide;
-      // Persistence handled automatically by plugin
-      this.saving = this.saving ?? { ...initialSavingState };
-      this.saving.hideGlobalTasks = true;
+      this.tasks.filters.hideGlobal = hide;
+      this.setSaving('hideGlobalTasks', true);
     },
     setHideNonKappaTasks(hide: boolean) {
-      this.hideNonKappaTasks = hide;
-      // Persistence handled automatically by plugin
-      this.saving = this.saving ?? { ...initialSavingState };
-      this.saving.hideNonKappaTasks = true;
+      this.tasks.filters.hideNonKappa = hide;
+      this.setSaving('hideNonKappaTasks', true);
     },
-    setNeededItemsStyle(style: string) {
-      this.neededitemsStyle = style;
+    setNeededItemsStyle(style: string | null) {
+      this.neededItems.views.style = style;
     },
-    setHideoutPrimaryView(view: string) {
-      this.hideoutPrimaryView = view;
+    setHideoutPrimaryView(view: string | null) {
+      this.hideout.views.primary = view;
     },
     setLocaleOverride(locale: string | null) {
-      this.localeOverride = locale;
+      this.global.localeOverride = locale;
     },
-    // Task filter actions
+    setTheme(theme: 'system' | 'light' | 'dark') {
+      this.global.theme = theme;
+    },
     setShowNonSpecialTasks(show: boolean) {
-      this.showNonSpecialTasks = show;
+      this.tasks.filters.showNonSpecial = show;
+    },
+    setShowEodTasks(show: boolean) {
+      this.tasks.filters.showEod = show;
     },
     setShowLightkeeperTasks(show: boolean) {
-      this.showLightkeeperTasks = show;
+      this.tasks.filters.showLightkeeper = show;
     },
-    // Task appearance actions
     setShowRequiredLabels(show: boolean) {
-      this.showRequiredLabels = show;
+      this.tasks.appearance.showRequiredLabels = show;
     },
     setShowNotRequiredLabels(show: boolean) {
-      this.showNotRequiredLabels = show;
+      this.tasks.appearance.showNotRequiredLabels = show;
     },
     setShowExperienceRewards(show: boolean) {
-      this.showExperienceRewards = show;
+      this.tasks.appearance.showExperienceRewards = show;
     },
     setShowTaskIds(show: boolean) {
-      this.showTaskIds = show;
+      this.tasks.appearance.showTaskIds = show;
     },
     setShowNextQuests(show: boolean) {
-      this.showNextQuests = show;
+      this.tasks.appearance.showNextQuests = show;
     },
     setShowPreviousQuests(show: boolean) {
-      this.showPreviousQuests = show;
+      this.tasks.appearance.showPreviousQuests = show;
     },
     setTaskCardDensity(density: 'comfortable' | 'compact') {
-      this.taskCardDensity = density;
+      this.tasks.appearance.cardDensity = density;
     },
     setEnableManualTaskFail(enable: boolean) {
-      this.enableManualTaskFail = enable;
+      this.tasks.advanced.enableManualFail = enable;
     },
     setUseAutomaticLevelCalculation(use: boolean) {
-      this.useAutomaticLevelCalculation = use;
+      this.global.useAutomaticLevelCalculation = use;
     },
     setEnableHolidayEffects(enable: boolean) {
-      this.enableHolidayEffects = enable;
+      this.global.enableHolidayEffects = enable;
     },
-    // Map display actions
     setShowMapExtracts(show: boolean) {
-      this.showMapExtracts = show;
+      this.maps.showExtracts = show;
+    },
+    setTaskSearch(search: string | null) {
+      this.tasks.filters.search = search;
+    },
+    setNeededItemsSearch(search: string | null) {
+      this.neededItems.filters.search = search;
+    },
+    setHideoutSearch(search: string | null) {
+      this.hideout.filters.search = search;
     },
   },
   // Enable automatic localStorage persistence
   persist: {
-    key: STORAGE_KEYS.preferences, // LocalStorage key for user preference data
-    storage: typeof window !== 'undefined' ? localStorage : undefined,
-    // Use serializer instead of paths for selective persistence
-    serializer: {
-      serialize: JSON.stringify,
-      deserialize: JSON.parse,
-    },
-    // Pick specific properties to persist (excluding transient state)
-    pick: [
-      'streamerMode',
-      'teamHide',
-      'taskTeamHideAll',
-      'itemsTeamHideAll',
-      'itemsTeamHideNonFIR',
-      'itemsTeamHideHideout',
-      'mapTeamHideAll',
-      'taskPrimaryView',
-      'taskMapView',
-      'taskTraderView',
-      'taskSecondaryView',
-      'taskUserView',
-      'taskSortMode',
-      'taskSortDirection',
-      'taskSharedByAllOnly',
-      'neededTypeView',
-      'neededItemsViewMode',
-      'neededItemsFirFilter',
-      'neededItemsGroupByItem',
-      'neededItemsHideNonFirSpecialEquipment',
-      'neededItemsKappaOnly',
-      'itemsHideNonFIR',
-      'hideGlobalTasks',
-      'hideNonKappaTasks',
-      'neededitemsStyle',
-      'hideoutPrimaryView',
-      'localeOverride',
-      // Task filter settings
-      'showNonSpecialTasks',
-      'showLightkeeperTasks',
-      // Task appearance settings
-      'showRequiredLabels',
-      'showNotRequiredLabels',
-      'showExperienceRewards',
-      'showTaskIds',
-      'showNextQuests',
-      'showPreviousQuests',
-      'taskCardDensity',
-      'enableManualTaskFail',
-      'useAutomaticLevelCalculation',
-      'enableHolidayEffects',
-      'showMapExtracts',
-    ],
+    key: STORAGE_KEYS.preferences,
+    pick: ['global', 'team', 'tasks', 'neededItems', 'hideout', 'maps'],
   },
 });
 export type PreferencesStore = ReturnType<typeof usePreferencesStore>;
-export type { TaskSortDirection, TaskSortMode } from '@/types/taskSort';
 // Watch for Supabase user state changing
 let stopUserWatch: (() => void) | null = null;
 const shouldInitPreferencesWatchers = import.meta.client && import.meta.env.MODE !== 'test';
@@ -508,19 +442,12 @@ if (shouldInitPreferencesWatchers) {
                 }
                 if (data) {
                   logger.debug('[PreferencesStore] Loading preferences from Supabase:', data);
-                  // Update store with server data
-                  Object.keys(data).forEach((key) => {
-                    if (key !== 'user_id' && key !== 'created_at' && key !== 'updated_at') {
-                      const camelKey = key.replace(/_([a-z])/g, (_, letter) =>
-                        letter.toUpperCase()
-                      );
-                      if (camelKey in preferencesStore.$state) {
-                        // Fix type issue by casting through unknown first
-                        (preferencesStore.$state as unknown as Record<string, unknown>)[camelKey] =
-                          data[key];
-                      }
-                    }
-                  });
+                  // Update store with server data using mapper
+                  const nestedData = unflattenPreferences(
+                    data as Record<string, unknown>,
+                    preferencesDefaultState as unknown as Record<string, unknown>
+                  );
+                  preferencesStore.$patch(nestedData);
                 }
                 // Set up sync to Supabase
                 useSupabaseSync({
@@ -532,51 +459,13 @@ if (shouldInitPreferencesWatchers) {
                     logger.debug(
                       '[PreferencesStore] Transform called - preparing preferences for sync'
                     );
-                    // Convert camelCase to snake_case for Supabase
+                    // Convert nested state to flat snake_case for Supabase
+                    const flat = flattenPreferences(
+                      preferencesState as unknown as Record<string, unknown>
+                    );
                     return {
                       user_id: $supabase.user.id,
-                      streamer_mode: preferencesState.streamerMode,
-                      team_hide: preferencesState.teamHide,
-                      task_team_hide_all: preferencesState.taskTeamHideAll,
-                      items_team_hide_all: preferencesState.itemsTeamHideAll,
-                      items_team_hide_non_fir: preferencesState.itemsTeamHideNonFIR,
-                      items_team_hide_hideout: preferencesState.itemsTeamHideHideout,
-                      map_team_hide_all: preferencesState.mapTeamHideAll,
-                      task_primary_view: preferencesState.taskPrimaryView,
-                      task_map_view: preferencesState.taskMapView,
-                      task_trader_view: preferencesState.taskTraderView,
-                      task_secondary_view: preferencesState.taskSecondaryView,
-                      task_user_view: preferencesState.taskUserView,
-                      task_sort_mode: preferencesState.taskSortMode,
-                      task_sort_direction: preferencesState.taskSortDirection,
-                      task_shared_by_all_only: preferencesState.taskSharedByAllOnly,
-                      needed_type_view: preferencesState.neededTypeView,
-                      needed_items_view_mode: preferencesState.neededItemsViewMode,
-                      needed_items_fir_filter: preferencesState.neededItemsFirFilter,
-                      needed_items_group_by_item: preferencesState.neededItemsGroupByItem,
-                      needed_items_hide_non_fir_special_equipment:
-                        preferencesState.neededItemsHideNonFirSpecialEquipment,
-                      needed_items_kappa_only: preferencesState.neededItemsKappaOnly,
-                      items_hide_non_fir: preferencesState.itemsHideNonFIR,
-                      hide_global_tasks: preferencesState.hideGlobalTasks,
-                      hide_non_kappa_tasks: preferencesState.hideNonKappaTasks,
-                      show_non_special_tasks: preferencesState.showNonSpecialTasks,
-                      show_lightkeeper_tasks: preferencesState.showLightkeeperTasks,
-                      show_required_labels: preferencesState.showRequiredLabels,
-                      show_not_required_labels: preferencesState.showNotRequiredLabels,
-                      show_experience_rewards: preferencesState.showExperienceRewards,
-                      show_task_ids: preferencesState.showTaskIds,
-                      show_next_quests: preferencesState.showNextQuests,
-                      show_previous_quests: preferencesState.showPreviousQuests,
-                      task_card_density: preferencesState.taskCardDensity,
-                      enable_holiday_effects: preferencesState.enableHolidayEffects,
-                      show_map_extracts: preferencesState.showMapExtracts,
-                      neededitems_style: preferencesState.neededitemsStyle,
-                      hideout_primary_view: preferencesState.hideoutPrimaryView,
-                      locale_override: preferencesState.localeOverride,
-                      enable_manual_task_fail: preferencesState.enableManualTaskFail,
-                      use_automatic_level_calculation:
-                        preferencesState.useAutomaticLevelCalculation,
+                      ...flat,
                     };
                   },
                 });

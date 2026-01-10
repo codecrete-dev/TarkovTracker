@@ -1,31 +1,27 @@
 <template>
-  <div class="fixed right-4 bottom-4 z-200">
-    <AppTooltip
-      :text="enabled ? 'Disable holiday effects' : 'Enable holiday effects'"
-      :content="{ side: 'left', sideOffset: 10, collisionPadding: 8 }"
+  <div class="fixed right-4 bottom-4 z-[200]">
+    <button
+      v-tooltip.left="enabled ? $t('holiday.disable') : $t('holiday.enable')"
+      type="button"
+      class="group flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all duration-300 hover:scale-110"
+      :class="
+        enabled
+          ? 'bg-linear-to-br from-red-600 to-green-600 ring-2 ring-white/30'
+          : 'bg-surface-800 ring-1 ring-white/10'
+      "
+      :aria-label="enabled ? $t('holiday.disable') : $t('holiday.enable')"
+      @click="toggle"
     >
-      <button
-        type="button"
-        class="group flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all duration-300 hover:scale-110"
+      <UIcon
+        :name="enabled ? 'i-mdi-snowflake' : 'i-mdi-snowflake-off'"
+        class="h-6 w-6 transition-all duration-300"
         :class="
           enabled
-            ? 'bg-linear-to-br from-red-600 to-green-600 ring-2 ring-white/30'
-            : 'bg-surface-800 hover:bg-surface-700 ring-1 ring-white/10'
+            ? 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] group-hover:rotate-45'
+            : 'text-surface-400 group-hover:text-surface-200'
         "
-        :aria-label="enabled ? 'Disable holiday effects' : 'Enable holiday effects'"
-        @click="toggle"
-      >
-        <UIcon
-          :name="enabled ? 'i-mdi-snowflake' : 'i-mdi-snowflake-off'"
-          class="h-6 w-6 transition-all duration-300"
-          :class="
-            enabled
-              ? 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] group-hover:rotate-45'
-              : 'text-surface-400 group-hover:text-surface-200'
-          "
-        />
-      </button>
-    </AppTooltip>
+      />
+    </button>
   </div>
 </template>
 <script setup lang="ts">

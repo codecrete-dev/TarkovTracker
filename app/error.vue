@@ -95,64 +95,63 @@
             >
               Item Found!
             </div>
-            <AppTooltip :text="`View ${foundItem.name} on tarkov.dev`">
-              <a
-                :href="foundItem.link"
-                :aria-label="`View ${foundItem.name} on tarkov.dev`"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="bg-surface-950 hover:ring-primary-500/50 hover:bg-surface-900 group flex w-full items-center gap-3 rounded-lg px-3 py-3 ring-1 ring-white/10 transition-all sm:gap-4 sm:px-5 sm:py-4 lg:gap-5 lg:px-6 lg:py-5"
+            <a
+              v-tooltip="`View ${foundItem.name} on tarkov.dev`"
+              :href="foundItem.link"
+              :aria-label="`View ${foundItem.name} on tarkov.dev`"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="bg-surface-950 hover:ring-primary-500/50 hover:bg-surface-900 group flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-3 ring-1 ring-white/10 transition-all sm:gap-4 sm:px-5 sm:py-4 lg:gap-5 lg:px-6 lg:py-5"
+            >
+              <!-- Item Image -->
+              <div
+                v-if="foundItem.isRealItem"
+                class="relative h-14 w-14 shrink-0 transition-transform group-hover:scale-105 sm:h-20 sm:w-20 lg:h-24 lg:w-24"
               >
-                <!-- Item Image -->
+                <img
+                  :src="foundItem.icon"
+                  class="h-full w-full object-contain drop-shadow-lg"
+                  :alt="foundItem.name"
+                  loading="eager"
+                  @error="handleImageError"
+                />
                 <div
-                  v-if="foundItem.isRealItem"
-                  class="relative h-14 w-14 shrink-0 transition-transform group-hover:scale-105 sm:h-20 sm:w-20 lg:h-24 lg:w-24"
-                >
-                  <img
-                    :src="foundItem.icon"
-                    class="h-full w-full object-contain drop-shadow-lg"
-                    :alt="foundItem.name"
-                    loading="eager"
-                    @error="handleImageError"
-                  />
-                  <div
-                    class="pointer-events-none absolute inset-0 rounded bg-linear-to-t from-black/20 to-transparent"
-                  ></div>
-                </div>
-                <!-- Fallback Icon -->
+                  class="pointer-events-none absolute inset-0 rounded bg-linear-to-t from-black/20 to-transparent"
+                ></div>
+              </div>
+              <!-- Fallback Icon -->
+              <div
+                v-else
+                class="bg-surface-800 flex h-14 w-14 shrink-0 items-center justify-center rounded-lg transition-transform group-hover:scale-105 sm:h-20 sm:w-20 lg:h-24 lg:w-24"
+              >
+                <UIcon
+                  :name="foundItem.icon"
+                  class="h-8 w-8 sm:h-12 sm:w-12 lg:h-14 lg:w-14"
+                  :class="foundItem.colorClass"
+                />
+              </div>
+              <!-- Item Details -->
+              <div class="min-w-0 flex-1 text-left">
                 <div
-                  v-else
-                  class="bg-surface-800 flex h-14 w-14 shrink-0 items-center justify-center rounded-lg transition-transform group-hover:scale-105 sm:h-20 sm:w-20 lg:h-24 lg:w-24"
+                  class="text-surface-50 group-hover:text-primary-400 truncate text-sm font-bold transition-colors sm:text-base lg:text-lg"
+                  :class="foundItem.textClass"
                 >
-                  <UIcon
-                    :name="foundItem.icon"
-                    class="h-8 w-8 sm:h-12 sm:w-12 lg:h-14 lg:w-14"
-                    :class="foundItem.colorClass"
-                  />
+                  {{ foundItem.name }}
                 </div>
-                <!-- Item Details -->
-                <div class="min-w-0 flex-1 text-left">
-                  <div
-                    class="text-surface-50 group-hover:text-primary-400 truncate text-sm font-bold transition-colors sm:text-base lg:text-lg"
-                    :class="foundItem.textClass"
-                  >
-                    {{ foundItem.name }}
-                  </div>
-                  <div
-                    class="mt-0.5 text-[10px] tracking-wider uppercase sm:mt-1 sm:text-xs lg:text-sm"
-                    :class="getRarityBadgeClass(foundItem.rarity)"
-                  >
-                    {{ foundItem.rarity }}
-                  </div>
-                  <div
-                    class="text-surface-500 mt-1 flex items-center gap-1 text-[9px] opacity-0 transition-opacity group-hover:opacity-100 sm:text-[10px]"
-                  >
-                    <UIcon name="i-mdi-open-in-new" class="h-3 w-3" />
-                    <span>View on tarkov.dev</span>
-                  </div>
+                <div
+                  class="mt-0.5 text-[10px] tracking-wider uppercase sm:mt-1 sm:text-xs lg:text-sm"
+                  :class="getRarityBadgeClass(foundItem.rarity)"
+                >
+                  {{ foundItem.rarity }}
                 </div>
-              </a>
-            </AppTooltip>
+                <div
+                  class="text-surface-500 mt-1 flex items-center gap-1 text-[9px] opacity-0 transition-opacity group-hover:opacity-100 sm:text-[10px]"
+                >
+                  <UIcon name="i-mdi-open-in-new" class="h-3 w-3" />
+                  <span>View on tarkov.dev</span>
+                </div>
+              </div>
+            </a>
             <UButton
               size="xs"
               color="neutral"

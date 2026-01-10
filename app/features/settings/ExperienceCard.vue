@@ -1,33 +1,34 @@
 <template>
   <GenericCard
     icon="mdi-star-circle"
-    icon-color="primary-400"
     highlight-color="accent"
     :fill-height="false"
     :title="$t('settings.experience.title', 'Experience & Level')"
-    title-classes="text-lg font-semibold"
+    title-classes="text-lg font-bold sm:text-xl"
   >
     <template #content>
       <div class="space-y-4 px-4 py-4">
         <!-- Explanation -->
-        <UAlert icon="i-mdi-information" color="info" variant="soft" class="text-sm">
+        <UAlert icon="i-mdi-information" color="primary" variant="soft" class="text-sm">
           <template #description>
             {{
               $t(
                 'settings.experience.explanation',
-                'Quest XP is auto-calculated. Use the offset to add XP from daily quests, kills, and other gameplay.'
+                'Task XP is auto-calculated. Use the offset to add XP from daily tasks, kills, and other gameplay.'
               )
             }}
           </template>
         </UAlert>
         <!-- Automatic Level Calculation Toggle -->
-        <div class="border-surface-700 bg-surface-800/30 rounded-lg border p-4">
+        <div
+          class="border-base bg-surface-elevated dark:border-accent-700/30 rounded-lg border p-4"
+        >
           <div class="flex items-start justify-between gap-3">
             <div class="flex-1">
-              <div class="text-surface-200 mb-1 text-sm font-semibold">
+              <div class="text-content-primary mb-1 text-sm font-semibold">
                 {{ $t('settings.experience.auto_level_title', 'Automatic Level Calculation') }}
               </div>
-              <p class="text-surface-400 text-xs">
+              <p class="text-content-tertiary text-xs">
                 {{
                   $t(
                     'settings.experience.auto_level_description',
@@ -59,107 +60,118 @@
           </UAlert>
         </div>
         <!-- Current Level Display -->
-        <div class="border-surface-700 bg-surface-800/30 rounded-lg border p-4">
+        <div
+          class="border-base bg-surface-elevated dark:border-accent-700/30 rounded-lg border p-4"
+        >
           <div class="mb-3 flex items-center justify-between">
-            <span class="text-surface-200 text-sm font-semibold">
+            <span class="text-content-primary text-sm font-semibold">
               {{ $t('settings.experience.current_level', 'Current Level') }}
             </span>
-            <span class="text-primary-400 text-2xl font-bold">
+            <span class="text-accent-600 dark:text-accent-400 text-2xl font-bold">
               {{ xpCalculation.derivedLevel.value }}
             </span>
           </div>
           <!-- XP Progress Bar -->
           <div class="space-y-1">
-            <div class="text-surface-400 flex justify-between text-xs">
+            <div class="text-content-tertiary flex justify-between text-xs">
               <span>{{ formatNumber(xpCalculation.totalXP.value) }} XP</span>
               <span>{{ formatNumber(xpCalculation.xpToNextLevel.value) }} to next</span>
             </div>
-            <div class="bg-surface-700 h-2 overflow-hidden rounded-full">
+            <div class="bg-surface-400 dark:bg-surface-700 h-2 overflow-hidden rounded-full">
               <div
-                class="bg-primary-500 h-full transition-all duration-300"
+                class="bg-accent-500 h-full transition-all duration-300"
                 :style="{ width: `${xpCalculation.xpProgress.value}%` }"
               ></div>
             </div>
-            <div class="text-surface-500 flex justify-between text-xs">
+            <div class="text-content-tertiary flex justify-between text-xs">
               <span>{{ formatNumber(xpCalculation.xpForCurrentLevel.value) }}</span>
               <span>{{ formatNumber(xpCalculation.xpForNextLevel.value) }}</span>
             </div>
           </div>
         </div>
-        <!-- XP Breakdown -->
-        <div class="border-surface-700 bg-surface-800/30 rounded-lg border p-3">
-          <div class="text-surface-200 mb-2 text-sm font-semibold">
-            {{ $t('settings.experience.breakdown', 'XP Breakdown') }}
-          </div>
-          <div class="grid grid-cols-2 gap-3 text-sm">
-            <div class="text-surface-400">
-              Quest XP:
-              <span class="text-surface-200 ml-1">
-                {{ formatNumber(xpCalculation.calculatedQuestXP.value) }}
-              </span>
+        <!-- Unified XP Management (Math Style) -->
+        <div
+          class="border-base bg-surface-elevated dark:border-accent-700/30 rounded-lg border p-4"
+        >
+          <div class="grid grid-cols-[70%_30%] items-center gap-y-4">
+            <!-- Row 1: Task XP -->
+            <span class="text-content-secondary text-sm font-medium">
+              {{ $t('settings.experience.task_xp', 'Task XP') }}
+            </span>
+            <div class="text-content-primary pr-2 text-right font-mono text-xl font-semibold">
+              {{ formatNumber(xpCalculation.calculatedQuestXP.value) }}
             </div>
-            <div class="text-surface-400">
-              Manual Offset:
-              <span
-                class="ml-1"
-                :class="tarkovStore.getXpOffset() >= 0 ? 'text-green-400' : 'text-red-400'"
+            <!-- Row 2: Manual Offset -->
+            <div class="flex items-center gap-2">
+              <span class="text-content-secondary text-sm font-medium">
+                {{ $t('settings.experience.manual_offset', 'Manual Offset') }}
+              </span>
+              <UButton
+                v-if="tarkovStore.getXpOffset() !== 0"
+                icon="i-mdi-undo"
+                variant="link"
+                color="neutral"
+                size="xs"
+                class="text-accent-400 h-4 p-0"
+                :title="$t('settings.experience.reset_offset', 'Reset XP Offset')"
+                @click="resetOffset"
               >
-                {{ tarkovStore.getXpOffset() >= 0 ? '+' : ''
-                }}{{ formatNumber(tarkovStore.getXpOffset()) }}
-              </span>
+                {{ $t('settings.experience.reset', 'Reset') }}
+              </UButton>
             </div>
-            <div class="border-surface-700 text-surface-400 col-span-2 border-t pt-2">
-              Total XP:
-              <span class="text-primary-400 ml-1 font-bold">
-                {{ formatNumber(xpCalculation.totalXP.value) }}
-              </span>
+            <div
+              class="pr-2 text-right font-mono text-xl font-semibold"
+              :class="
+                tarkovStore.getXpOffset() >= 0
+                  ? 'text-green-600 dark:text-green-400'
+                  : 'text-red-500 dark:text-red-400'
+              "
+            >
+              <span class="mr-1 opacity-50">{{ tarkovStore.getXpOffset() >= 0 ? '+' : '' }}</span>
+              {{ formatNumber(tarkovStore.getXpOffset()) }}
             </div>
-          </div>
-        </div>
-        <!-- Manual XP Offset Input -->
-        <div class="space-y-2">
-          <label class="text-surface-200 text-sm font-semibold">
-            {{ $t('settings.experience.set_total_xp', 'Set Total XP') }}
-          </label>
-          <div class="flex max-w-xs items-center gap-2">
+            <!-- Math Divider -->
+            <div class="border-base col-span-2 my-2 border-b-2"></div>
+            <!-- Row 3: Total XP Input -->
+            <label class="text-content-primary text-sm font-bold tracking-wider uppercase">
+              {{ $t('settings.experience.total_xp', 'Total XP') }}
+            </label>
             <UInput
               v-model.number="manualXPInput"
               type="number"
+              inputmode="numeric"
               :min="0"
+              class="xp-input w-full"
+              input-class="font-mono font-bold text-accent-600 dark:text-accent-400"
               :placeholder="xpCalculation.totalXP.value.toString()"
-              size="sm"
-              class="flex-1"
+              @keyup.enter="applyManualXP"
             />
-            <UButton
-              icon="i-mdi-check"
-              size="sm"
-              color="primary"
-              :disabled="!isValidXPInput"
-              @click="applyManualXP"
-            >
-              Apply
-            </UButton>
+            <!-- Row 4: Info & Apply -->
+            <div class="pr-4">
+              <p class="text-content-tertiary text-xs leading-tight">
+                {{
+                  $t(
+                    'settings.experience.sync_description',
+                    'Set your in-game Total XP to automatically update the offset.'
+                  )
+                }}
+              </p>
+            </div>
+            <div class="flex flex-col items-end gap-2">
+              <UButton
+                icon="i-mdi-check"
+                color="primary"
+                variant="solid"
+                size="md"
+                class="w-full justify-center shadow-sm"
+                :disabled="!isValidXPInput"
+                @click="applyManualXP"
+              >
+                {{ $t('page.tasks.filters.apply') }}
+              </UButton>
+            </div>
           </div>
-          <p class="text-surface-400 text-xs">
-            {{
-              $t(
-                'settings.experience.manual_hint',
-                'Enter your actual total XP to adjust the offset automatically.'
-              )
-            }}
-          </p>
         </div>
-        <!-- Reset Button -->
-        <UButton
-          icon="i-mdi-refresh"
-          block
-          variant="soft"
-          color="neutral"
-          :disabled="tarkovStore.getXpOffset() === 0"
-          @click="resetOffset"
-        >
-          {{ $t('settings.experience.reset_offset', 'Reset XP Offset') }}
-        </UButton>
       </div>
     </template>
   </GenericCard>
@@ -207,3 +219,17 @@
     }
   };
 </script>
+<style scoped>
+  /* Hide number input spinners */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+  .xp-input :deep(input) {
+    text-align: right !important;
+  }
+</style>

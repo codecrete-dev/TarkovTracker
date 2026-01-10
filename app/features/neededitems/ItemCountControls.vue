@@ -1,19 +1,23 @@
 <template>
-  <div class="flex items-center gap-0.5">
+  <div class="flex items-center gap-1">
     <!-- Counter controls group with background -->
-    <div class="bg-surface-700 flex items-center rounded-lg border border-white/20 shadow-sm">
+    <div
+      class="flex items-center rounded-md border border-gray-300 bg-white dark:border-white/10 dark:bg-white/5"
+    >
       <!-- Decrease button -->
-      <AppTooltip text="Decrease count">
-        <button
-          class="text-surface-200 hover:bg-surface-600 active:bg-surface-500 flex h-5 w-5 items-center justify-center rounded-l-lg transition-colors hover:text-white sm:h-6 sm:w-6 lg:h-8 lg:w-8"
-          aria-label="Decrease count"
-          @click="$emit('decrease')"
-        >
-          <UIcon name="i-mdi-minus" class="h-3 w-3 sm:h-3.5 sm:w-3.5 lg:h-5 lg:w-5" />
-        </button>
-      </AppTooltip>
+      <button
+        v-tooltip="t('page.neededitems.decrease_count')"
+        type="button"
+        :disabled="currentCount <= 0"
+        class="focus-ring flex h-7 w-7 items-center justify-center rounded-l-md text-gray-500 transition-colors dark:text-gray-300"
+        :class="disabled || currentCount <= 0 ? 'disabled' : 'clickable'"
+        :aria-label="t('page.neededitems.decrease_count')"
+        @click="$emit('decrease')"
+      >
+        <UIcon name="i-mdi-minus" aria-hidden="true" class="h-4 w-4" />
+      </button>
       <div
-        class="bg-surface-800 flex h-5 min-w-8 items-center justify-center border-x border-white/20 sm:h-6 sm:min-w-10 lg:h-8 lg:min-w-16"
+        class="flex h-7 min-w-14 items-center justify-center px-2 text-[11px] font-semibold text-gray-900 tabular-nums dark:text-gray-100"
       >
         <template v-if="isEditing">
           <input
@@ -22,62 +26,71 @@
             type="number"
             :min="0"
             :max="neededCount"
-            class="bg-surface-900 focus:ring-primary-500 h-full w-full px-0.5 text-center text-[10px] font-semibold text-white focus:ring-2 focus:outline-none focus:ring-inset sm:text-xs lg:px-2 lg:text-sm"
+            class="h-full w-full bg-transparent px-0.5 text-center text-[11px] font-semibold text-gray-900 focus:outline-none dark:text-gray-100"
             @blur="submitEdit"
             @keydown.enter="submitEdit"
             @keydown.escape="cancelEdit"
           />
         </template>
         <template v-else>
-          <AppTooltip text="Click to enter value">
-            <button
-              class="hover:bg-surface-600 h-full w-full px-0.5 text-[10px] font-semibold text-white transition-colors sm:text-xs lg:px-2 lg:text-sm"
-              aria-label="Click to enter value"
-              @click="startEditing"
-            >
-              {{ formatNumber(currentCount) }}/{{ formatNumber(neededCount) }}
-            </button>
-          </AppTooltip>
+          <button
+            v-tooltip="t('page.neededitems.click_to_enter_value')"
+            class="h-full w-full px-0.5 text-[11px] font-semibold text-gray-900 transition-colors dark:text-gray-100"
+            :class="disabled ? 'disabled' : 'clickable'"
+            :aria-label="t('page.neededitems.click_to_enter_value')"
+            @click="startEditing"
+          >
+            {{ formatNumber(currentCount) }}/{{ formatNumber(neededCount) }}
+          </button>
         </template>
       </div>
       <!-- Increase button -->
-      <AppTooltip text="Increase count">
-        <button
-          class="text-surface-200 hover:bg-surface-600 active:bg-surface-500 flex h-5 w-5 items-center justify-center rounded-r-lg transition-colors hover:text-white sm:h-6 sm:w-6 lg:h-8 lg:w-8"
-          aria-label="Increase count"
-          @click="$emit('increase')"
-        >
-          <UIcon name="i-mdi-plus" class="h-3 w-3 sm:h-3.5 sm:w-3.5 lg:h-5 lg:w-5" />
-        </button>
-      </AppTooltip>
-    </div>
-    <!-- Mark as 100% complete button - separated with more spacing -->
-    <AppTooltip
-      :text="currentCount >= neededCount ? 'Mark as incomplete' : 'Mark as 100% complete'"
-    >
       <button
-        class="flex h-5 w-5 items-center justify-center rounded-lg border transition-colors sm:h-6 sm:w-6 lg:h-8 lg:w-8"
-        :aria-label="currentCount >= neededCount ? 'Mark as incomplete' : 'Mark as 100% complete'"
-        :class="
-          currentCount >= neededCount
-            ? 'bg-success-600 border-success-500 hover:bg-success-500 text-white'
-            : 'bg-surface-700 text-surface-200 hover:bg-surface-600 border-white/20 hover:text-white'
-        "
-        @click="$emit('toggle')"
+        v-tooltip="t('page.neededitems.increase_count')"
+        type="button"
+        :disabled="currentCount >= neededCount"
+        class="focus-ring flex h-7 w-7 items-center justify-center rounded-r-md text-gray-500 transition-colors dark:text-gray-300"
+        :class="disabled || currentCount >= neededCount ? 'disabled' : 'clickable'"
+        :aria-label="t('page.neededitems.increase_count')"
+        @click="$emit('increase')"
       >
-        <UIcon name="i-mdi-check-circle" class="h-3 w-3 sm:h-3.5 sm:w-3.5 lg:h-5 lg:w-5" />
+        <UIcon name="i-mdi-plus" aria-hidden="true" class="h-4 w-4" />
       </button>
-    </AppTooltip>
+    </div>
+    <!-- Mark as 100% complete button -->
+    <ToggleButton
+      :is-active="currentCount >= neededCount"
+      variant="complete"
+      :tooltip="
+        currentCount >= neededCount
+          ? t('page.neededitems.mark_as_incomplete')
+          : t('page.neededitems.mark_as_complete_100')
+      "
+      :aria-label="
+        currentCount >= neededCount
+          ? t('page.neededitems.mark_as_incomplete')
+          : t('page.neededitems.mark_as_complete_100')
+      "
+      @toggle="$emit('toggle')"
+    />
   </div>
 </template>
 <script setup lang="ts">
   import { ref, nextTick, watch } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import { useLocaleNumberFormatter } from '@/utils/formatters';
+  const { t } = useI18n();
   const formatNumber = useLocaleNumberFormatter();
-  const props = defineProps<{
-    currentCount: number;
-    neededCount: number;
-  }>();
+  const props = withDefaults(
+    defineProps<{
+      currentCount: number;
+      neededCount: number;
+      disabled?: boolean;
+    }>(),
+    {
+      disabled: false,
+    }
+  );
   const emit = defineEmits<{
     decrease: [];
     increase: [];

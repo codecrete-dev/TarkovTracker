@@ -1,36 +1,36 @@
 <template>
   <div
-    class="group focus-within:ring-primary-500 focus-within:ring-offset-surface-900 flex w-full items-start gap-4 rounded-md px-2 py-2 transition-colors focus-within:ring-2 focus-within:ring-offset-2"
-    :class="[
-      isComplete ? 'bg-success-500/10' : 'hover:bg-white/5',
-      isParentTaskLocked ? 'cursor-not-allowed opacity-80' : 'cursor-pointer',
-    ]"
-    @click="handleRowClick"
+    class="group flex w-full items-center gap-4 rounded-md px-2 py-2 transition-colors"
+    :class="[isComplete ? 'bg-success-500/10' : '', isParentTaskLocked ? 'disabled' : 'clickable']"
+    @click="handleRowClick($event)"
     @mouseenter="objectiveMouseEnter()"
     @mouseleave="objectiveMouseLeave()"
   >
     <UIcon
       :name="objectiveIcon.startsWith('mdi-') ? `i-${objectiveIcon}` : objectiveIcon"
       aria-hidden="true"
-      class="mt-0.5 h-4 w-4 shrink-0"
-      :class="isComplete ? 'text-success-300' : 'text-gray-400 group-hover:text-gray-300'"
+      class="h-5 w-5 shrink-0"
+      :class="
+        isComplete
+          ? 'text-success-500 dark:text-success-300'
+          : 'dark:text-content-tertiary dark:group-hover:text-content-secondary text-gray-500 group-hover:text-gray-700'
+      "
     />
-    <div class="flex flex-1 flex-wrap items-center gap-2">
+    <div class="flex flex-1 flex-nowrap items-center gap-2">
       <div class="min-w-0">
-        <div class="text-sm leading-5 text-gray-100">
+        <div class="text-content-primary text-sm leading-5">
           {{ props.objective?.description }}
         </div>
-        <AppTooltip
+        <div
           v-if="userHasTeam && activeUserView === 'all' && userNeeds.length > 0"
-          :text="userNeedsTitle"
+          v-tooltip="userNeedsTitle"
+          class="text-content-tertiary mt-1 inline-flex items-center gap-1 text-[11px]"
         >
-          <div class="mt-1 inline-flex items-center gap-1 text-[11px] text-gray-500">
-            <UIcon name="i-mdi-account-multiple-outline" aria-hidden="true" class="h-3.5 w-3.5" />
-            <span>{{ userNeeds.length }}</span>
-          </div>
-        </AppTooltip>
+          <UIcon name="i-mdi-account-multiple-outline" aria-hidden="true" class="h-3.5 w-3.5" />
+          <span>{{ userNeeds.length }}</span>
+        </div>
       </div>
-      <div class="flex items-center gap-2" @click.stop>
+      <div class="flex shrink-0 items-center gap-2" @click.stop>
         <ObjectiveCountControls
           v-if="neededCount > 1"
           :current-count="currentObjectiveCount"
@@ -41,34 +41,21 @@
           @toggle="toggleCount"
           @set-count="setCount"
         />
-        <AppTooltip
+        <ToggleButton
           v-else
-          :text="
+          :is-active="isComplete"
+          :disabled="isParentTaskLocked"
+          variant="complete"
+          :active-icon="'i-mdi-check'"
+          :inactive-icon="'i-mdi-circle-outline'"
+          :tooltip="
             isComplete
               ? t('page.tasks.questcard.uncomplete', 'Uncomplete')
               : t('page.tasks.questcard.complete', 'Complete')
           "
-        >
-          <button
-            type="button"
-            class="focus-visible:ring-primary-500 focus-visible:ring-offset-surface-900 flex h-7 w-7 items-center justify-center rounded-md border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed"
-            :aria-label="toggleObjectiveLabel"
-            :aria-pressed="isComplete"
-            :disabled="isParentTaskLocked"
-            :class="
-              isComplete
-                ? 'bg-success-600 border-success-500 hover:bg-success-500 text-white disabled:opacity-60'
-                : 'border-white/10 bg-white/5 text-gray-300 hover:bg-white/10 disabled:opacity-60'
-            "
-            @click="toggleObjectiveCompletion()"
-          >
-            <UIcon
-              :name="isComplete ? 'i-mdi-check' : 'i-mdi-circle-outline'"
-              aria-hidden="true"
-              class="h-4 w-4"
-            />
-          </button>
-        </AppTooltip>
+          :aria-label="toggleObjectiveLabel"
+          @toggle="toggleObjectiveCompletion()"
+        />
       </div>
     </div>
   </div>
@@ -118,18 +105,15 @@
   const parentTaskId = computed(() => {
     return fullObjective.value?.taskId ?? props.objective.taskId;
   });
-  const isParentTaskComplete = computed(() => {
-    const taskId = parentTaskId.value;
-    if (!taskId) return false;
-    return tarkovStore.isTaskComplete(taskId) && !tarkovStore.isTaskFailed(taskId);
-  });
-  const isParentTaskFailed = computed(() => {
-    const taskId = parentTaskId.value;
-    if (!taskId) return false;
-    return tarkovStore.isTaskFailed(taskId);
-  });
   const isParentTaskLocked = computed(() => {
-    return isParentTaskComplete.value || isParentTaskFailed.value;
+    const taskId = parentTaskId.value;
+    if (!taskId) return false;
+    const isUnlocked = progressStore.unlockedTasks[taskId]?.self === true;
+    const isComplete = tarkovStore.isTaskComplete(taskId);
+    const isFailed = tarkovStore.isTaskFailed(taskId);
+    const isInvalid = progressStore.invalidTasks[taskId]?.self === true;
+    // Task is locked if it's NOT unlocked, OR if it's already complete, failed, or blocked
+    return !isUnlocked || isComplete || isFailed || isInvalid;
   });
   const userNeeds = computed(() => {
     const needingUsers: string[] = [];
@@ -175,8 +159,12 @@
     return 'mdi-help-circle';
   });
   const neededCount = computed(() => fullObjective.value?.count ?? props.objective.count ?? 1);
-  const handleRowClick = () => {
-    if (isParentTaskLocked.value) return;
+  const handleRowClick = (e: MouseEvent) => {
+    if (isParentTaskLocked.value) {
+      e.stopPropagation();
+      e.preventDefault();
+      return;
+    }
     if (neededCount.value > 1) {
       toggleCount();
       return;
@@ -189,7 +177,7 @@
       const currentCount = currentObjectiveCount.value;
       const requiredCount = neededCount.value;
       if (currentCount >= requiredCount) {
-        tarkovStore.setObjectiveCount(props.objective.id, Math.max(0, requiredCount - 1));
+        tarkovStore.setObjectiveCount(props.objective.id, 0);
       }
     }
     tarkovStore.toggleTaskObjectiveComplete(props.objective.id);
@@ -236,7 +224,7 @@
     const currentCount = currentObjectiveCount.value;
     const requiredCount = neededCount.value;
     if (currentCount >= requiredCount) {
-      tarkovStore.setObjectiveCount(props.objective.id, Math.max(0, requiredCount - 1));
+      tarkovStore.setObjectiveCount(props.objective.id, 0);
       if (isComplete.value) {
         tarkovStore.setTaskObjectiveUncomplete(props.objective.id);
       }

@@ -2,7 +2,6 @@
  * Composable for managing Leaflet map instances for Tarkov maps.
  * Handles map initialization, SVG overlay loading, floor switching, and layer management.
  */
-import { useDebounceFn } from '@vueuse/core';
 import {
   ref,
   shallowRef,
@@ -177,10 +176,31 @@ export function useLeafletMap(options: UseLeafletMapOptions): UseLeafletMapRetur
       }
     }
   };
+  // Track if mouse down started on map
+  const hadMapMouseDown = ref(false);
+  // Restrict dragging to left mouse button only (button 0)
+  const onMouseDown = (e: MouseEvent) => {
+    if (!mapInstance.value) return;
+    hadMapMouseDown.value = true;
+    // Only allow left-click (button 0) to initiate dragging
+    if (e.button !== 0) {
+      mapInstance.value.dragging.disable();
+    }
+  };
+  const onMouseUp = () => {
+    if (!mapInstance.value) return;
+    // Only handle if the interaction started on the map
+    if (hadMapMouseDown.value) {
+      hadMapMouseDown.value = false;
+      // Re-enable dragging after mouse release, but only if we weren't in idle mode
+      // (where dragging is disabled to allow smooth scroll-zoom)
+      if (!isIdle.value) {
+        mapInstance.value.dragging.enable();
+      }
+    }
+  };
   // Idle detection timer
   let idleTimer: ReturnType<typeof setTimeout> | null = null;
-  // Resize observer
-  let resizeObserver: ResizeObserver | null = null;
   // Computed
   const floors = computed<string[]>(() => {
     const svgConfig = map.value?.svg;
@@ -251,7 +271,7 @@ export function useLeafletMap(options: UseLeafletMapOptions): UseLeafletMapRetur
     }
     // Create new SVG overlay using svgBounds if available
     const bounds = getSvgOverlayBounds(svgConfig);
-    svgLayer.value = L.svgOverlay(svgElement, bounds, { pane: 'mapBackground' });
+    svgLayer.value = L.svgOverlay(svgElement, bounds);
     if (mapInstance.value) {
       svgLayer.value.addTo(mapInstance.value);
       // Apply floor visibility if there are multiple floors in a single SVG
@@ -374,9 +394,6 @@ export function useLeafletMap(options: UseLeafletMapOptions): UseLeafletMapRetur
       // Create map instance with custom CRS
       const mapOptions = getLeafletMapOptions(leaflet.value, validSvgConfig);
       mapInstance.value = leaflet.value.map(containerRef.value, mapOptions);
-      // Create a custom pane for the map background to ensure it stays behind markers
-      const backgroundPane = mapInstance.value.createPane('mapBackground');
-      backgroundPane.style.zIndex = '200'; // Below overlayPane (400) and markerPane (600)
       // Set initial view using map bounds
       const bounds = getLeafletBounds(validSvgConfig);
       mapInstance.value.fitBounds(bounds);
@@ -390,7 +407,7 @@ export function useLeafletMap(options: UseLeafletMapOptions): UseLeafletMapRetur
       }
       // Load SVG overlay FIRST so it's below markers
       await loadMapSvg();
-      // Create layer groups for markers
+      // Create layer groups for markers AFTER SVG so they appear on top
       objectiveLayer.value = leaflet.value.layerGroup().addTo(mapInstance.value);
       extractLayer.value = leaflet.value.layerGroup().addTo(mapInstance.value);
       // Setup idle detection
@@ -403,27 +420,14 @@ export function useLeafletMap(options: UseLeafletMapOptions): UseLeafletMapRetur
       // Attach custom wheel handler
       if (containerRef.value) {
         containerRef.value.addEventListener('wheel', onWheel, { passive: false });
+        // Attach mouse handlers to restrict dragging to left-click only
+        containerRef.value.addEventListener('mousedown', onMouseDown);
+        document.addEventListener('mouseup', onMouseUp);
       }
     } catch (error) {
       logger.error('Failed to initialize Leaflet map:', error);
     } finally {
       isLoading.value = false;
-    }
-    // Setup resize observer
-    if (containerRef.value) {
-      const handleResize = useDebounceFn(() => {
-        if (mapInstance.value) {
-          mapInstance.value.invalidateSize({ animate: false });
-          // Optional: re-fit bounds if needed, or just invalidate size
-          // refreshView(); // calling refreshView would re-fit bounds
-        }
-      }, 100);
-      try {
-        resizeObserver = new ResizeObserver(handleResize);
-        resizeObserver.observe(containerRef.value);
-      } catch (error) {
-        logger.error('Failed to initialize ResizeObserver:', error);
-      }
     }
   }
   /**
@@ -467,18 +471,16 @@ export function useLeafletMap(options: UseLeafletMapOptions): UseLeafletMapRetur
     if (idleTimer) {
       clearTimeout(idleTimer);
     }
-    if (resizeObserver) {
-      resizeObserver.disconnect();
-      resizeObserver = null;
-    }
     if (mapInstance.value) {
       mapInstance.value.remove();
       mapInstance.value = null;
     }
-    // Remove custom wheel handler
+    // Remove custom event handlers
     if (containerRef.value) {
       containerRef.value.removeEventListener('wheel', onWheel);
+      containerRef.value.removeEventListener('mousedown', onMouseDown);
     }
+    document.removeEventListener('mouseup', onMouseUp);
     svgLayer.value = null;
     objectiveLayer.value = null;
     extractLayer.value = null;

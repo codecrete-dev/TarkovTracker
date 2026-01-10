@@ -4,9 +4,9 @@
  * This utility provides a centralized way to handle Cloudflare Cache API logic
  * with fallback for development environments where caches might not be available.
  */
+import { getQuery } from 'h3';
 import { $fetch } from 'ofetch';
 import { createLogger } from './logger';
-import { getQuery } from 'h3';
 import type { H3Event } from 'h3';
 import { useRuntimeConfig } from '#imports';
 const logger = createLogger('EdgeCache');

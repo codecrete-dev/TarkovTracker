@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import GameBadge from '@/components/ui/GameBadge.vue';
   import { useSystemStoreWithSupabase } from '@/stores/useSystemStore';
   const { $supabase } = useNuxtApp();
   const { systemStore, hasInitiallyLoaded } = useSystemStoreWithSupabase();
@@ -118,11 +119,10 @@
 <template>
   <GenericCard
     icon="i-mdi-history"
-    icon-color="info-400"
     highlight-color="secondary"
     :fill-height="false"
     title="Admin Audit Log"
-    title-classes="text-lg font-semibold"
+    title-classes="text-lg font-bold sm:text-xl"
   >
     <template #title-right>
       <UButton
@@ -165,14 +165,18 @@
           >
             <div class="flex items-start justify-between gap-2">
               <div class="flex flex-wrap items-center gap-2">
-                <UBadge :color="getActionColor(log.action)" variant="soft" size="sm">
+                <GameBadge :color="getActionColor(log.action)" variant="soft" size="sm">
                   <UIcon :name="getActionIcon(log.action)" class="mr-1 size-3" />
                   {{ log.action }}
-                </UBadge>
+                </GameBadge>
                 <span class="text-xs text-neutral-400">by</span>
-                <UBadge color="neutral" variant="outline" size="xs" class="font-mono">
-                  {{ getAdminDisplay(log) }}
-                </UBadge>
+                <GameBadge
+                  color="neutral"
+                  variant="outline"
+                  size="xs"
+                  badge-class="font-mono"
+                  :label="getAdminDisplay(log)"
+                />
               </div>
               <span class="text-xs text-neutral-500">
                 {{ formatDate(log.created_at) }}

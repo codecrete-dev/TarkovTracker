@@ -1,58 +1,52 @@
 <template>
-  <!-- Compact Card Layout - Works for ALL items -->
-  <div
-    class="group relative flex flex-col items-center rounded-lg border p-2 transition-all select-none hover:scale-105"
+  <div>
+    <!-- Compact Card Layout - Works for ALL items -->
+    <div
+    class="group clickable relative flex h-full flex-col items-center justify-center rounded-lg border p-2 transition-all select-none"
     :class="[
       isComplete
-        ? 'border-success-500/50 bg-success-900/20'
-        : 'border-gray-700 bg-gray-800/80 hover:border-gray-600 hover:bg-gray-800',
+        ? 'border-success-400 bg-success-50 dark:border-success-500/30 dark:bg-success-900/10'
+        : 'border-base bg-surface-floating',
     ]"
     @click="toggleComplete"
     @contextmenu.prevent="openContextMenu"
   >
-    <!-- Item Image -->
-    <div class="relative mb-2 h-16 w-16 shrink-0">
-      <GameItem
-        :item-id="requirement.item.id"
-        :item-name="requirement.item.name"
-        :dev-link="requirement.item.link"
-        :wiki-link="requirement.item.wikiLink"
-        size="small"
-        :show-actions="false"
-        simple-mode
-      />
-      <!-- Complete Checkmark Overlay -->
-      <div
-        v-if="isComplete"
-        class="bg-success-500/40 absolute inset-0 flex items-center justify-center rounded"
-      >
-        <UIcon name="i-mdi-check-circle" class="text-success-300 h-8 w-8" />
-      </div>
-      <!-- FiR Badge -->
-      <AppTooltip v-if="isFoundInRaid" text="Found in Raid required">
-        <div class="absolute -top-1 -right-1 rounded bg-yellow-500/90 p-0.5">
-          <UIcon name="i-mdi-checkbox-marked-circle-outline" class="h-3 w-3 text-yellow-900" />
-        </div>
-      </AppTooltip>
-      <!-- Count Badge for multi-count items -->
-      <div v-if="requiredCount > 1" class="absolute right-0 -bottom-1 left-0 flex justify-center">
+    <!-- Content Cluster -->
+    <div class="flex h-full w-full flex-col items-center gap-1 pt-1">
+      <!-- Image Area - relative container for overlays -->
+      <div class="relative">
+        <GameItem :item="adaptedItem" size="small" :show-actions="false" simple-mode />
+        <!-- Complete Checkmark Overlay -->
         <div
-          class="rounded border border-gray-700 bg-gray-900/90 px-1.5 py-0.5 text-[10px] font-bold"
-          :class="isComplete ? 'text-success-400' : 'text-gray-300'"
+          v-if="isComplete"
+          class="bg-success-500/10 absolute inset-0 z-20 flex items-center justify-center rounded"
         >
-          {{ formatNumber(currentCount) }}/{{ formatNumber(requiredCount) }}
+          <UIcon name="i-mdi-check-circle" class="text-success-500/50 h-10 w-10 sm:h-12 sm:w-12" />
         </div>
+        <!-- Status Badge Overlay -->
+        <ItemStatusBadge
+          :current-count="currentCount"
+          :needed-count="requiredCount"
+          :is-complete="isComplete"
+          :found-in-raid="isFoundInRaid"
+          :is-craftable="isItemCraftable"
+          :is-craftable-available="isItemCraftableAvailable"
+          :show-count="requiredCount > 1"
+          size="sm"
+        />
       </div>
-    </div>
-    <!-- Item Name -->
-    <div class="line-clamp-2 w-full text-center text-xs leading-tight font-medium text-gray-200">
-      {{ requirement.item.name }}
+      <!-- Item Name -->
+      <div
+        class="text-content-primary line-clamp-2 w-full px-1 text-center text-[10px] leading-tight font-medium sm:text-xs"
+      >
+        {{ requirement.item.name }}
+      </div>
     </div>
   </div>
   <!-- Context Menu for Manual Count Adjustment -->
   <ContextMenu ref="contextMenu">
     <template #default="{ close }">
-      <div class="border-b border-gray-700 px-2 py-1 text-xs font-medium text-gray-400">
+      <div class="border-base text-content-tertiary border-b px-2 py-1 text-xs font-medium">
         {{ requirement.item.name }}
       </div>
       <ContextMenuItem
@@ -67,7 +61,7 @@
       <ContextMenuItem
         v-if="isComplete"
         icon="i-mdi-close-circle"
-        label="Mark Incomplete"
+        label="Incomplete"
         @click="
           markIncomplete();
           close();
@@ -92,7 +86,7 @@
               type="number"
               :min="0"
               :max="requirement.count"
-              class="border-primary-500 focus:ring-primary-500 w-20 rounded border bg-gray-700 px-2 py-1 text-center text-sm font-bold focus:ring-1 focus:outline-none"
+              class="border-primary-500 w-20 rounded border bg-gray-700 px-2 py-1 text-center text-sm font-bold"
               :class="isComplete ? 'text-success-400' : 'text-gray-300'"
               @input="handleInput"
               @click.stop
@@ -140,13 +134,17 @@
         "
       />
     </template>
-  </ContextMenu>
+    </ContextMenu>
+  </div>
 </template>
 <script setup lang="ts">
   import { computed, ref, watch } from 'vue';
   import ContextMenu from '@/components/ui/ContextMenu.vue';
   import ContextMenuItem from '@/components/ui/ContextMenuItem.vue';
   import GameItem from '@/components/ui/GameItem.vue';
+  import ItemStatusBadge from '@/components/ui/ItemStatusBadge.vue';
+  import { useMetadataStore } from '@/stores/useMetadata';
+  import { useProgressStore } from '@/stores/useProgress';
   import { useTarkovStore } from '@/stores/useTarkov';
   import { useLocaleNumberFormatter } from '@/utils/formatters';
   interface Props {
@@ -173,8 +171,16 @@
   const formatNumber = useLocaleNumberFormatter();
   const requirementId = computed(() => props.requirement.id);
   const requiredCount = computed(() => props.requirement.count);
+  // Adapt item to match TarkovItem interface (convert nulls to undefined)
+  const adaptedItem = computed(() => ({
+    ...props.requirement.item,
+    link: props.requirement.item.link ?? undefined,
+    wikiLink: props.requirement.item.wikiLink ?? undefined,
+  }));
   // Context menu
   const contextMenu = ref<InstanceType<typeof ContextMenu>>();
+  const metadataStore = useMetadataStore();
+  const progressStore = useProgressStore();
   const inputRef = ref<HTMLInputElement | null>(null);
   const editValue = ref(0);
   // Check if item requires Found in Raid status
@@ -183,6 +189,17 @@
       (attr) => attr.type === 'foundInRaid' || attr.name === 'foundInRaid'
     );
     return firAttribute?.value === 'true';
+  });
+  // Check if item is craftable
+  const getCraftSources = computed(() => {
+    return metadataStore.craftSourcesByItemId.get(props.requirement.item.id) ?? [];
+  });
+  const isItemCraftable = computed(() => getCraftSources.value.length > 0);
+  const isItemCraftableAvailable = computed(() => {
+    return getCraftSources.value.some((source) => {
+      const currentLevel = progressStore.hideoutLevels?.[source.stationId]?.self ?? 0;
+      return currentLevel >= source.stationLevel;
+    });
   });
   // Get current count from store (synced with needed items page)
   const currentCount = computed(() => {

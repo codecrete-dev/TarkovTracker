@@ -1,7 +1,7 @@
 <template>
   <div
     role="menuitem"
-    :class="itemClasses"
+    class="clickable flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 transition-colors duration-150 dark:text-gray-200"
     :aria-disabled="props.disabled"
     :tabindex="props.disabled ? -1 : 0"
     @click="handleClick"

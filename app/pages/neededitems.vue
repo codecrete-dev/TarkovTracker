@@ -1,5 +1,5 @@
 <template>
-  <div class="px-4 py-6">
+  <div class="p-4">
     <!-- Filter Bar -->
     <NeededItemsFilterBar
       v-model="activeFilter"
@@ -15,13 +15,41 @@
       :ungrouped-count="filteredItems.length"
     />
     <!-- Items Container -->
-    <UCard class="bg-contentbackground border border-white/5">
-      <!-- Loading state while items are being fetched -->
-      <div v-if="itemsLoading" class="text-surface-400 flex items-center justify-center gap-2 p-8">
-        <UIcon name="i-mdi-loading" class="h-5 w-5 animate-spin" />
-        <span>{{ $t('page.neededitems.loading', 'Loading items...') }}</span>
+    <UCard class="border-base bg-surface-base border">
+      <!-- Loading State -->
+      <div v-if="metadataStore.loading || !metadataStore.isDataLoaded" class="p-2">
+        <div v-if="viewMode === 'list'" class="divide-base">
+          <div v-for="n in 10" :key="n" class="flex animate-pulse items-center gap-3 py-2">
+            <div class="bg-surface-elevated h-12 w-12 shrink-0 rounded"></div>
+            <div class="flex-1 space-y-2">
+              <div class="bg-surface-elevated h-4 w-1/4 rounded"></div>
+              <div class="bg-surface-elevated h-3 w-1/3 rounded"></div>
+            </div>
+            <div class="bg-surface-elevated h-8 w-24 shrink-0 rounded"></div>
+          </div>
+        </div>
+        <div
+          v-else
+          class="grid grid-cols-2 items-stretch gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7"
+        >
+          <div
+            v-for="n in 12"
+            :key="n"
+            class="border-base bg-surface-elevated relative flex h-64 animate-pulse flex-col overflow-hidden rounded-lg border"
+          >
+            <div class="bg-surface-active/50 aspect-[4/3] w-full"></div>
+            <div class="flex-1 space-y-3 p-2">
+              <div class="bg-surface-active/50 mx-auto mt-2 h-4 w-3/4 rounded"></div>
+              <div class="bg-surface-active/50 mx-auto h-3 w-1/2 rounded"></div>
+              <div class="mt-4 flex justify-center gap-2">
+                <div class="bg-surface-active/50 h-3 w-8 rounded"></div>
+                <div class="bg-surface-active/50 h-3 w-8 rounded"></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div v-else-if="displayItems.length === 0" class="text-surface-400 p-8 text-center">
+      <div v-else-if="displayItems.length === 0" class="text-content-tertiary p-8 text-center">
         {{ $t('page.neededitems.empty', 'No items match your search.') }}
       </div>
       <!-- Grouped View -->
@@ -31,7 +59,7 @@
         >
           <NeededItemGroupedCard
             v-for="(group, index) in visibleGroupedItems"
-            :key="group.item.id"
+            :key="group.itemId"
             :grouped-item="group"
             :active-filter="activeFilter"
             :data-index="index"
@@ -41,31 +69,23 @@
       </div>
       <!-- List View -->
       <div v-else-if="viewMode === 'list'">
-        <div
+        <NeededItem
           v-for="(item, index) in visibleIndividualItems"
           :key="`${item.needType}-${item.id}`"
-          class="border-b border-white/5 pb-1"
-          style="content-visibility: auto; contain-intrinsic-size: auto 128px"
-        >
-          <NeededItem
-            :need="item"
-            item-style="row"
-            :initially-visible="index < adjustedRenderCount"
-          />
-        </div>
-        <div v-if="visibleCount < displayItems.length" ref="listSentinel" class="h-1 w-full"></div>
+          :need="item"
+          item-style="row"
+          :data-index="index"
+        />
+        <div v-if="visibleCount < displayItems.length" ref="listSentinel" class="h-1"></div>
       </div>
       <!-- Grid View -->
-      <div v-else class="p-2">
-        <div
-          class="grid grid-cols-2 items-stretch gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
-        >
+      <div v-else>
+        <div class="grid items-stretch gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
           <NeededItem
             v-for="(item, index) in visibleIndividualItems"
             :key="`${item.needType}-${item.id}`"
             :need="item"
             item-style="card"
-            :initially-visible="index < adjustedRenderCount"
             :data-index="index"
           />
         </div>
@@ -76,121 +96,92 @@
 </template>
 <script setup lang="ts">
   import { storeToRefs } from 'pinia';
-  import { computed, nextTick, ref, watch } from 'vue';
+  import { computed, ref, watch } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { useInfiniteScroll } from '@/composables/useInfiniteScroll';
-  import { useSharedBreakpoints } from '@/composables/useSharedBreakpoints';
+  import { usePageFilters } from '@/composables/usePageFilters';
+  import { useNeededItemsFilterConfig } from '@/features/neededitems/composables/useNeededItemsFilterConfig';
   import NeededItem from '@/features/neededitems/NeededItem.vue';
-  import {
-    getNeededItemData,
-    getNeededItemId,
-    isNonFirSpecialEquipment,
-  } from '@/features/neededitems/neededItemFilters';
+  import { isNonFirSpecialEquipment } from '@/features/neededitems/neededItemFilters';
   import NeededItemGroupedCard from '@/features/neededitems/NeededItemGroupedCard.vue';
-  import {
-    BATCH_SIZE_GRID,
-    BATCH_SIZE_LIST,
-    DEFAULT_INITIAL_RENDER_COUNT,
-    MIN_RENDER_COUNTS,
-    SCREEN_SIZE_MULTIPLIERS,
-  } from '@/features/neededitems/neededitems-constants';
-  import type {
-    NeededItemsFirFilter,
-    NeededItemsFilterType,
-  } from '@/features/neededitems/neededitems-constants';
   import NeededItemsFilterBar from '@/features/neededitems/NeededItemsFilterBar.vue';
   import { useMetadataStore } from '@/stores/useMetadata';
   import { usePreferencesStore } from '@/stores/usePreferences';
   import { useProgressStore } from '@/stores/useProgress';
   import { useTarkovStore } from '@/stores/useTarkov';
-  import type {
-    GroupedNeededItem,
-    NeededItemHideoutModule,
-    NeededItemTaskObjective,
-  } from '@/types/tarkov';
+  import type { FilterType, FirFilter, ViewMode } from '@/types/neededItems';
+  import type { NeededItemHideoutModule, NeededItemTaskObjective } from '@/types/tarkov';
   import { isTaskAvailableForEdition } from '@/utils/editionHelpers';
   import { logger } from '@/utils/logger';
-  // Route meta for layout behavior
-  definePageMeta({
-    usesWindowScroll: true,
-  });
   // Page metadata
   useSeoMeta({
     title: 'Needed Items',
     description:
-      'View all items needed for your active quests and hideout upgrades. Filter by quest, craft, and find-in-raid requirements.',
-  });
-  const props = defineProps({
-    baseRenderCount: {
-      type: Number,
-      default: DEFAULT_INITIAL_RENDER_COUNT,
-      validator: (value: number) => Number.isFinite(value) && value > 0,
-    },
+      'View all items needed for your active tasks and hideout upgrades. Filter by task, craft, and find-in-raid requirements.',
   });
   const { t } = useI18n({ useScope: 'global' });
   const metadataStore = useMetadataStore();
   const progressStore = useProgressStore();
   const preferencesStore = usePreferencesStore();
   const tarkovStore = useTarkovStore();
-  const { neededItemTaskObjectives, neededItemHideoutModules, itemsLoading } =
-    storeToRefs(metadataStore);
-  const { belowMd, xs } = useSharedBreakpoints();
-  // View mode state with persistence (two-way binding with preferences store)
-  const viewMode = computed({
-    get: () => preferencesStore.getNeededItemsViewMode as 'list' | 'grid',
-    set: (value) => preferencesStore.setNeededItemsViewMode(value),
-  });
-  // Scale by layout + screen size to reduce upfront render on small screens.
-  const adjustedRenderCount = computed(() => {
-    // Base count comes from props.baseRenderCount.
-    const baseCount = props.baseRenderCount;
-    // Adjust for view mode (grid uses SCREEN_SIZE_MULTIPLIERS.gridView).
-    // Use Math.max to avoid shrinking below baseCount.
-    const viewAdjusted =
-      viewMode.value === 'grid'
-        ? Math.max(baseCount, Math.ceil(baseCount * SCREEN_SIZE_MULTIPLIERS.gridView))
-        : baseCount;
-    if (xs.value) {
-      // XS screens: apply SCREEN_SIZE_MULTIPLIERS.xs and clamp to MIN_RENDER_COUNTS.xs.
-      return Math.max(MIN_RENDER_COUNTS.xs, Math.ceil(viewAdjusted * SCREEN_SIZE_MULTIPLIERS.xs));
-    }
-    if (belowMd.value) {
-      // belowMd screens: apply SCREEN_SIZE_MULTIPLIERS.belowMd and clamp to MIN_RENDER_COUNTS.belowMd.
-      return Math.max(
-        MIN_RENDER_COUNTS.belowMd,
-        Math.ceil(viewAdjusted * SCREEN_SIZE_MULTIPLIERS.belowMd)
-      );
-    }
-    // Larger screens return the view-adjusted count.
-    return viewAdjusted;
-  });
-  // Filter state with persistence (two-way binding with preferences store)
+  const { neededItemTaskObjectives, neededItemHideoutModules } = storeToRefs(metadataStore);
+  // URL-based filter state
+  // Filter config is extracted to useNeededItemsFilterConfig for sharing with navigation
+  const { filters, setFilter, debouncedInputs } = usePageFilters(useNeededItemsFilterConfig());
+  // Computed aliases for template bindings
   const activeFilter = computed({
-    get: () => preferencesStore.getNeededTypeView as NeededItemsFilterType,
-    set: (value) => preferencesStore.setNeededTypeView(value),
+    get: () => filters.filter!.value as FilterType,
+    set: (v: FilterType) => setFilter('filter', v),
   });
-  const search = ref('');
+  const viewMode = computed({
+    get: () => filters.viewMode!.value as ViewMode,
+    set: (v: ViewMode) => setFilter('viewMode', v),
+  });
   const firFilter = computed({
-    get: () => preferencesStore.getNeededItemsFirFilter as NeededItemsFirFilter,
-    set: (value) => preferencesStore.setNeededItemsFirFilter(value),
+    get: () => (filters.fir?.value ?? 'all') as FirFilter,
+    set: (v: FirFilter) => setFilter('fir', v),
   });
   const groupByItem = computed({
-    get: () => preferencesStore.getNeededItemsGroupByItem,
-    set: (value) => preferencesStore.setNeededItemsGroupByItem(value),
-  });
-  const hideNonFirSpecialEquipment = computed({
-    get: () => preferencesStore.getNeededItemsHideNonFirSpecialEquipment,
-    set: (value) => preferencesStore.setNeededItemsHideNonFirSpecialEquipment(value),
+    get: () => filters.grouped!.value,
+    set: (v: boolean) => setFilter('grouped', v),
   });
   const kappaOnly = computed({
-    get: () => preferencesStore.getNeededItemsKappaOnly,
-    set: (value) => preferencesStore.setNeededItemsKappaOnly(value),
+    get: () => filters.kappa!.value,
+    set: (v: boolean) => setFilter('kappa', v),
   });
-  // Team filter preferences (two-way binding with preferences store)
+  const hideNonFirSpecialEquipment = computed({
+    get: () => filters.hideSpecial!.value,
+    set: (v: boolean) => setFilter('hideSpecial', v),
+  });
+  const search = debouncedInputs.search!;
+  // Team filter preferences (two-way binding with preferences store - not in URL)
   const hideTeamItems = computed({
     get: () => preferencesStore.itemsTeamAllHidden,
     set: (value) => preferencesStore.setItemsTeamHideAll(value),
   });
+  // Grouped item interface
+  interface GroupedItem {
+    itemId: string;
+    item: {
+      id: string;
+      name: string;
+      iconLink?: string;
+      image512pxLink?: string;
+      wikiLink?: string;
+      link?: string;
+      backgroundColor?: string;
+    };
+    taskFir: number;
+    taskFirCurrent: number;
+    taskNonFir: number;
+    taskNonFirCurrent: number;
+    hideoutFir: number;
+    hideoutFirCurrent: number;
+    hideoutNonFir: number;
+    hideoutNonFirCurrent: number;
+    total: number;
+    currentCount: number;
+  }
   // Get user's faction for filtering task objectives
   const userFaction = computed(() => progressStore.playerFaction['self'] ?? 'USEC');
   // Get user's game edition for filtering task objectives
@@ -216,20 +207,23 @@
         if (task && task.factionName !== 'Any' && task.factionName !== userFaction.value) {
           continue;
         }
-        itemId = getNeededItemId(need);
+        // For tasks: get itemId from either item or markerItem (for mark objectives)
+        itemId = need.item?.id || need.markerItem?.id;
         if (!itemId) {
           logger.warn('[NeededItems] Skipping objective without item/markerItem:', need);
           continue;
         }
-        // Aggregate by taskId + itemId (combines multiple objectives for same item in same task)
+        // Aggregate by taskId + itemId
+        // This combines multiple objectives for the same item in the same task
         key = `task:${need.taskId}:${itemId}`;
       } else {
-        itemId = getNeededItemId(need);
+        // For hideout: get itemId from item
+        itemId = need.item?.id;
         if (!itemId) {
           logger.warn('[NeededItems] Skipping hideout requirement without item:', need);
           continue;
         }
-        // Aggregate by hideout module + itemId (combines multiple requirements for same item)
+        // This combines multiple requirements for the same item in the same module
         key = `hideout:${need.hideoutModule.id}:${itemId}`;
       }
       const existing = aggregated.get(key);
@@ -255,43 +249,45 @@
     }
     return false;
   };
-  // Calculate item counts for each filter tab (single-pass for performance)
+  // Calculate item counts for each filter tab
   const filterTabsWithCounts = computed(() => {
-    const counts = { tasks: 0, hideout: 0, completed: 0, incomplete: 0 };
-    for (const item of allItems.value) {
-      const completed = isParentCompleted(item);
-      if (completed) {
-        counts.completed++;
-      } else {
-        counts.incomplete++;
-        if (item.needType === 'taskObjective') counts.tasks++;
-        else counts.hideout++;
-      }
-    }
+    const items = allItems.value;
+    const taskItems = items.filter(
+      (item) => item.needType === 'taskObjective' && !isParentCompleted(item)
+    );
+    const hideoutItems = items.filter(
+      (item) => item.needType === 'hideoutModule' && !isParentCompleted(item)
+    );
+    const completedItems = items.filter((item) => isParentCompleted(item));
+    const allIncomplete = items.filter((item) => !isParentCompleted(item));
     return [
       {
         label: t('page.neededitems.filters.all', 'All'),
-        value: 'all' as NeededItemsFilterType,
+        value: 'all' as FilterType,
         icon: 'i-mdi-clipboard-list',
-        count: counts.incomplete,
+        count: allIncomplete.length,
+        badgeColor: 'badge-soft-accent',
       },
       {
         label: t('page.neededitems.filters.tasks', 'Tasks'),
-        value: 'tasks' as NeededItemsFilterType,
+        value: 'tasks' as FilterType,
         icon: 'i-mdi-checkbox-marked-circle-outline',
-        count: counts.tasks,
+        count: taskItems.length,
+        badgeColor: 'plain',
       },
       {
         label: t('page.neededitems.filters.hideout', 'Hideout'),
-        value: 'hideout' as NeededItemsFilterType,
+        value: 'hideout' as FilterType,
         icon: 'i-mdi-home',
-        count: counts.hideout,
+        count: hideoutItems.length,
+        badgeColor: 'plain',
       },
       {
-        label: t('page.neededitems.filters.completed', 'Completed'),
-        value: 'completed' as NeededItemsFilterType,
+        label: t('page.neededitems.neededviews.collected', 'Collected'),
+        value: 'completed' as FilterType,
         icon: 'i-mdi-check-all',
-        count: counts.completed,
+        count: completedItems.length,
+        badgeColor: 'badge-soft-success',
       },
     ];
   });
@@ -338,7 +334,8 @@
     if (search.value) {
       const searchLower = search.value.toLowerCase();
       items = items.filter((item) => {
-        const itemObj = getNeededItemData(item);
+        // Some task objectives use markerItem instead of item; guard against missing objects
+        const itemObj = item.item || (item as NeededItemTaskObjective).markerItem;
         const itemName = itemObj?.name;
         const itemShortName = itemObj?.shortName;
         if (
@@ -381,24 +378,27 @@
     return items;
   });
   // Group items by itemId for aggregated view
-  type GroupedNeededItemAccumulator = Omit<GroupedNeededItem, 'total' | 'currentCount'>;
-  const groupedItems = computed((): GroupedNeededItem[] => {
-    const groups = new Map<string, GroupedNeededItemAccumulator>();
+  const groupedItems = computed((): GroupedItem[] => {
+    const groups = new Map<string, GroupedItem>();
     for (const need of filteredItems.value) {
-      const itemId = getNeededItemId(need);
+      const itemId = need.item?.id || (need as NeededItemTaskObjective).markerItem?.id;
       if (!itemId) continue;
-      const itemData = getNeededItemData(need);
+      const itemData = need.item || (need as NeededItemTaskObjective).markerItem;
       if (!itemData || !itemData.name) continue;
       const existingGroup = groups.get(itemId);
       if (!existingGroup) {
+        // Use defaultPreset for image display when available (e.g., weapons with attachments)
+        const imageData = itemData.properties?.defaultPreset || itemData;
         groups.set(itemId, {
+          itemId,
           item: {
             id: itemData.id,
             name: itemData.name,
-            iconLink: itemData.iconLink,
-            image512pxLink: itemData.image512pxLink,
+            iconLink: imageData.iconLink || itemData.iconLink,
+            image512pxLink: imageData.image512pxLink || itemData.image512pxLink,
             wikiLink: itemData.wikiLink,
             link: itemData.link,
+            backgroundColor: imageData.backgroundColor || itemData.backgroundColor,
           },
           taskFir: 0,
           taskFirCurrent: 0,
@@ -408,6 +408,8 @@
           hideoutFirCurrent: 0,
           hideoutNonFir: 0,
           hideoutNonFirCurrent: 0,
+          total: 0,
+          currentCount: 0,
         });
       }
       const group = groups.get(itemId)!;
@@ -435,18 +437,10 @@
           group.hideoutNonFirCurrent += needCurrentCount;
         }
       }
+      group.currentCount += needCurrentCount;
+      group.total += count;
     }
-    return Array.from(groups.values())
-      .map((group) => ({
-        ...group,
-        total: group.taskFir + group.taskNonFir + group.hideoutFir + group.hideoutNonFir,
-        currentCount:
-          group.taskFirCurrent +
-          group.taskNonFirCurrent +
-          group.hideoutFirCurrent +
-          group.hideoutNonFirCurrent,
-      }))
-      .sort((a, b) => b.total - a.total);
+    return Array.from(groups.values()).sort((a, b) => b.total - a.total);
   });
   // Display items - either grouped or individual
   const displayItems = computed(() => {
@@ -457,39 +451,40 @@
   });
   const initialVisibleCount = computed(() => {
     if (groupByItem.value) {
-      return BATCH_SIZE_GRID;
+      return 20;
     }
-    return viewMode.value === 'list' ? BATCH_SIZE_LIST : BATCH_SIZE_GRID;
+    return viewMode.value === 'list' ? 50 : 20;
   });
   const visibleCount = ref(initialVisibleCount.value);
   // Separate computed for grouped items to ensure proper typing
   const visibleGroupedItems = computed(() => {
     return groupedItems.value.slice(0, visibleCount.value);
   });
-  // Separate computed for individual items (list and grid views)
+  // Separate computed for individual items to ensure proper typing
   const visibleIndividualItems = computed(() => {
     return filteredItems.value.slice(0, visibleCount.value);
   });
   const loadMore = () => {
     if (visibleCount.value < displayItems.value.length) {
-      const batchSize = viewMode.value === 'list' ? BATCH_SIZE_LIST : BATCH_SIZE_GRID;
-      visibleCount.value += batchSize;
+      visibleCount.value += viewMode.value === 'list' ? 50 : 20;
     }
   };
   // Sentinel refs for infinite scroll
-  const gridSentinel = ref<HTMLElement | null>(null);
   const listSentinel = ref<HTMLElement | null>(null);
-  // Determine which sentinel to use based on view mode
+  const gridSentinel = ref<HTMLElement | null>(null);
+  // Determine which sentinel to use based on view mode and grouping
   const currentSentinel = computed(() => {
     if (groupByItem.value) return gridSentinel.value;
     return viewMode.value === 'list' ? listSentinel.value : gridSentinel.value;
   });
-  // Enable infinite scroll
+  // Enable infinite scroll (as computed ref for reactivity)
   const infiniteScrollEnabled = computed(() => {
     return visibleCount.value < displayItems.value.length;
   });
-  // Set up infinite scroll
-  const { checkAndLoadMore } = useInfiniteScroll(currentSentinel, loadMore, {
+  // Set up infinite scroll - pass enabled as reactive ref
+  useInfiniteScroll(currentSentinel, loadMore, {
+    rootMargin: '200px',
+    threshold: 0,
     enabled: infiniteScrollEnabled,
   });
   // Reset visible count when search or filter changes
@@ -500,9 +495,6 @@
     [search, activeFilter, firFilter, groupByItem, hideNonFirSpecialEquipment, kappaOnly, viewMode],
     () => {
       resetVisibleCount();
-      nextTick(() => {
-        checkAndLoadMore();
-      });
     }
   );
 </script>

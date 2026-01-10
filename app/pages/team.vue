@@ -25,7 +25,7 @@
   useSeoMeta({
     title: 'Team',
     description:
-      'Collaborate with teammates on Escape from Tarkov progress. Share quest completions, hideout status, and coordinate item gathering.',
+      'Collaborate with teammates on Escape from Tarkov progress. Share task completions, hideout status, and coordinate item gathering.',
   });
   const TeamMembers = defineAsyncComponent(() => import('@/features/team/TeamMembers.vue'));
   const TeamOptions = defineAsyncComponent(() => import('@/features/team/TeamOptions.vue'));

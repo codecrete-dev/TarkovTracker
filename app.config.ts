@@ -42,7 +42,7 @@ export default defineAppConfig({
       slots: {
         base: 'relative w-full',
         input:
-          'h-11 bg-surface-900 border border-white/15 text-surface-50 placeholder:text-surface-500 rounded-md pl-10 pr-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-white/20',
+          'h-11 bg-surface-900 border border-white/15 text-surface-50 placeholder:text-surface-500 rounded-md pl-10 pr-3 py-2 focus:ring-2 focus:ring-accent-500 focus:border-white/20',
         leading: 'absolute inset-y-0 left-3 flex items-center pointer-events-none text-surface-300',
         options: 'z-[9999] max-h-60 overflow-auto',
       },
@@ -103,6 +103,12 @@ export default defineAppConfig({
             link: 'text-success-500 hover:text-success-400 underline-offset-4 hover:underline',
           },
         },
+      },
+    },
+    // Input configuration to enforce theme-driven text color
+    input: {
+      slots: {
+        base: 'relative block w-full focus:outline-none border-0 text-accent-700 dark:text-accent-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 bg-transparent',
       },
     },
   },

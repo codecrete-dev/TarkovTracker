@@ -1,9 +1,8 @@
 <template>
   <div
     :class="[
-      'bg-surface-900 border-surface-700/30 cursor-pointer rounded-xl border p-6 shadow-lg',
+      'border-base bg-surface-elevated dark:bg-surface-900 dark:border-accent-700/30 clickable rounded-xl border p-6 shadow-lg',
       'transition-colors',
-      hoverBorderClass,
     ]"
     role="button"
     tabindex="0"
@@ -21,15 +20,17 @@
           <UIcon :name="icon" class="h-5 w-5" :class="iconColorClass" />
         </div>
         <div>
-          <div class="text-surface-400 text-sm tracking-wider uppercase">
+          <div
+            class="text-content-secondary dark:text-surface-400 text-sm tracking-wider uppercase"
+          >
             {{ label }}
           </div>
-          <div class="text-2xl font-bold text-white">{{ completed }}/{{ total }}</div>
+          <div class="text-content-primary text-2xl font-bold">{{ completed }}/{{ total }}</div>
         </div>
       </div>
       <div class="text-3xl font-bold" :class="percentageColorClass">{{ percentageDisplay }}%</div>
     </div>
-    <div class="bg-surface-800 relative h-3 overflow-hidden rounded-full">
+    <div class="bg-surface-200 dark:bg-surface-800 relative h-3 overflow-hidden rounded-full">
       <div
         class="absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ease-out"
         :class="holidayEffectsEnabled ? 'candy-cane' : barGradientClass"
@@ -45,7 +46,16 @@
 </template>
 <script setup lang="ts">
   import { usePreferencesStore } from '@/stores/usePreferences';
-  export type ProgressCardColor = 'primary' | 'info' | 'success' | 'warning' | 'purple';
+  export type ProgressCardColor =
+    | 'primary'
+    | 'accent'
+    | 'info'
+    | 'success'
+    | 'warning'
+    | 'purple'
+    | 'kappa'
+    | 'lightkeeper'
+    | 'item';
   const props = defineProps<{
     icon: string;
     label: string;
@@ -72,42 +82,72 @@
     { hover: string; iconBg: string; icon: string; percentage: string; bar: string }
   > = {
     primary: {
-      hover: 'hover:border-primary-700/50',
-      iconBg: 'bg-primary-600/15',
-      icon: 'text-primary-400',
-      percentage: 'text-primary-400',
-      bar: 'from-primary-600 to-primary-400 bg-gradient-to-r',
+      hover: 'hover:border-primary-500/50 dark:hover:border-primary-700/50',
+      iconBg: 'bg-primary-50 dark:bg-primary-600/15',
+      icon: 'text-primary-600 dark:text-primary-400',
+      percentage: 'text-primary-600 dark:text-primary-400',
+      bar: 'from-primary-500 to-primary-400 bg-gradient-to-r',
+    },
+    accent: {
+      hover: 'hover:border-accent-500/50 dark:hover:border-accent-700/50',
+      iconBg: 'bg-accent-50 dark:bg-accent-600/15',
+      icon: 'text-accent-600 dark:text-accent-400',
+      percentage: 'text-accent-600 dark:text-accent-400',
+      bar: 'from-accent-500 to-accent-400 bg-gradient-to-r',
     },
     info: {
-      hover: 'hover:border-info-700/50',
-      iconBg: 'bg-info-600/15',
-      icon: 'text-info-400',
-      percentage: 'text-info-400',
-      bar: 'from-info-600 to-info-400 bg-gradient-to-r',
+      hover: 'hover:border-info-500/50 dark:hover:border-info-700/50',
+      iconBg: 'bg-info-50 dark:bg-info-600/15',
+      icon: 'text-info-600 dark:text-info-400',
+      percentage: 'text-info-600 dark:text-info-400',
+      bar: 'from-info-500 to-info-400 bg-gradient-to-r',
     },
     success: {
-      hover: 'hover:border-success-700/50',
-      iconBg: 'bg-success-600/15',
-      icon: 'text-success-400',
-      percentage: 'text-success-400',
-      bar: 'from-success-600 to-success-400 bg-gradient-to-r',
+      hover: 'hover:border-success-500/50 dark:hover:border-success-700/50',
+      iconBg: 'bg-success-50 dark:bg-success-600/15',
+      icon: 'text-success-600 dark:text-success-400',
+      percentage: 'text-success-600 dark:text-success-400',
+      bar: 'from-success-500 to-success-400 bg-gradient-to-r',
     },
     warning: {
-      hover: 'hover:border-warning-700/50',
-      iconBg: 'bg-warning-600/15',
-      icon: 'text-warning-400',
-      percentage: 'text-warning-400',
-      bar: 'from-warning-600 to-warning-400 bg-gradient-to-r',
+      hover: 'hover:border-warning-500/50 dark:hover:border-warning-700/50',
+      iconBg: 'bg-warning-50 dark:bg-warning-600/15',
+      icon: 'text-warning-600 dark:text-warning-400',
+      percentage: 'text-warning-600 dark:text-warning-400',
+      bar: 'from-warning-500 to-warning-400 bg-gradient-to-r',
     },
     purple: {
-      hover: 'hover:border-purple-700/50',
-      iconBg: 'bg-purple-600/15',
-      icon: 'text-purple-400',
-      percentage: 'text-purple-400',
-      bar: 'from-purple-600 to-purple-400 bg-gradient-to-r',
+      hover: 'hover:border-purple-500/50 dark:hover:border-purple-700/50',
+      iconBg: 'bg-purple-50 dark:bg-purple-600/15',
+      icon: 'text-purple-600 dark:text-purple-400',
+      percentage: 'text-purple-600 dark:text-purple-400',
+      bar: 'from-purple-500 to-purple-400 bg-gradient-to-r',
+    },
+    kappa: {
+      hover: 'hover:border-[color-mix(in_srgb,var(--color-entity-kappa),transparent_50%)]',
+      iconBg:
+        'bg-[color-mix(in_srgb,var(--color-entity-kappa),white_90%)] dark:bg-[color-mix(in_srgb,var(--color-entity-kappa),transparent_85%)]',
+      icon: 'text-[var(--color-entity-kappa)]',
+      percentage: 'text-[var(--color-entity-kappa)]',
+      bar: 'bg-[var(--color-entity-kappa)]',
+    },
+    lightkeeper: {
+      hover: 'hover:border-[color-mix(in_srgb,var(--color-entity-lightkeeper),transparent_50%)]',
+      iconBg:
+        'bg-[color-mix(in_srgb,var(--color-entity-lightkeeper),white_90%)] dark:bg-[color-mix(in_srgb,var(--color-entity-lightkeeper),transparent_85%)]',
+      icon: 'text-[var(--color-entity-lightkeeper)]',
+      percentage: 'text-[var(--color-entity-lightkeeper)]',
+      bar: 'bg-[var(--color-entity-lightkeeper)]',
+    },
+    item: {
+      hover: 'hover:border-[color-mix(in_srgb,var(--color-reward-item),transparent_50%)]',
+      iconBg:
+        'bg-[color-mix(in_srgb,var(--color-reward-item),white_90%)] dark:bg-[color-mix(in_srgb,var(--color-reward-item),transparent_85%)]',
+      icon: 'text-[var(--color-reward-item)]',
+      percentage: 'text-[var(--color-reward-item)]',
+      bar: 'bg-[var(--color-reward-item)]',
     },
   };
-  const hoverBorderClass = computed(() => colorClasses[props.color].hover);
   const iconBgClass = computed(() => colorClasses[props.color].iconBg);
   const iconColorClass = computed(() => colorClasses[props.color].icon);
   const percentageColorClass = computed(() => colorClasses[props.color].percentage);

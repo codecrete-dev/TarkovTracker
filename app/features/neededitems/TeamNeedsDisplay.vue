@@ -5,24 +5,25 @@
       <span>{{ $t('page.neededitems.teammatesneeded', 'Teammates need this') }}</span>
     </div>
     <div class="flex flex-wrap justify-center gap-1">
-      <UBadge
+      <GameBadge
         v-for="(userNeed, userIndex) in teamNeeds"
         :key="userIndex"
         color="primary"
         variant="soft"
         size="sm"
-        class="flex items-center gap-1"
+        badge-class="flex items-center gap-1"
       >
         <UIcon name="i-mdi-account" class="h-3 w-3" />
         <span>{{ getDisplayName(userNeed.user) }}</span>
         <span class="text-surface-300">
           {{ formatNumber(userNeed.count) }}/{{ formatNumber(neededCount) }}
         </span>
-      </UBadge>
+      </GameBadge>
     </div>
   </div>
 </template>
 <script setup lang="ts">
+  import GameBadge from '@/components/ui/GameBadge.vue';
   import { useProgressStore } from '@/stores/useProgress';
   import { useLocaleNumberFormatter } from '@/utils/formatters';
   const formatNumber = useLocaleNumberFormatter();

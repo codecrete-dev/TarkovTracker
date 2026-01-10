@@ -1,17 +1,29 @@
 <template>
   <div>
     <div class="px-4 py-6">
+      <!-- Task Filter Bar -->
+      <TaskFilterBar
+        v-model:search-query="searchQuery"
+        :single-task-id="singleTaskId"
+        :primary-view="getTaskPrimaryView as string"
+        :secondary-view="getTaskSecondaryView as string"
+        :map-view="getTaskMapView as string"
+        :trader-view="getTaskTraderView as string"
+        @clear-single-task="clearSingleTaskFilter"
+        @update:primary-view="handlePrimaryViewChange"
+        @update:secondary-view="(v) => setFilters({ status: v, task: null })"
+        @update:map-view="(v) => setFilters({ map: v, task: null })"
+        @update:trader-view="(v) => setFilters({ trader: v, task: null })"
+      />
       <TaskLoadingState v-if="isLoading" />
       <div v-else>
-        <!-- Task Filter Bar -->
-        <TaskFilterBar v-model:search-query="searchQuery" />
         <!-- Map Display (shown when MAPS view is selected) -->
         <div v-if="showMapDisplay" class="mb-6">
-          <div class="bg-surface-800/50 rounded-lg p-4">
+          <div class="bg-surface-base dark:bg-surface-800/50 rounded-lg">
             <div class="mb-3 flex items-center justify-between">
-              <h3 class="text-lg font-medium text-gray-200">
+              <h3 class="text-content-primary text-lg font-medium">
                 {{ selectedMapData?.name || 'Map' }}
-                <span class="ml-2 text-sm font-normal text-gray-400">
+                <span class="text-content-tertiary ml-2 text-sm font-normal">
                   {{ displayTime }}
                 </span>
               </h3>
@@ -36,22 +48,16 @@
         <div v-if="filteredTasks.length === 0" class="py-6">
           <TaskEmptyState />
         </div>
-        <div v-else ref="taskListRef" data-testid="task-list">
-          <div
-            v-for="task in visibleTasksSlice"
+        <div v-else class="space-y-4" data-testid="task-list">
+          <TaskCard
+            v-for="task in paginatedTasks"
             :key="task.id"
-            class="pb-4"
-            style="content-visibility: auto; contain-intrinsic-size: auto 280px"
-          >
-            <TaskCard :task="task" @on-task-action="onTaskAction" />
-          </div>
-          <div
-            v-if="visibleTaskCount < filteredTasks.length"
-            ref="loadMoreSentinel"
-            class="flex items-center justify-center py-4"
-          >
-            <UIcon name="i-mdi-loading" class="h-5 w-5 animate-spin text-gray-400" />
-          </div>
+            :task="task"
+            @on-task-action="onTaskAction"
+            @view-all-objectives="forceViewAll"
+          />
+          <!-- Sentinel for infinite scroll -->
+          <div v-if="displayCount < filteredTasks.length" ref="tasksSentinel" class="h-1" />
         </div>
       </div>
     </div>
@@ -68,7 +74,9 @@
           v-if="taskStatusUpdated"
           class="fixed inset-x-0 bottom-6 z-50 flex justify-center px-4"
         >
-          <UCard class="bg-surface-900/95 w-full max-w-xl border border-white/10 shadow-2xl">
+          <UCard
+            class="dark:bg-surface-900/95 w-full max-w-xl border border-gray-200/50 bg-white/95 text-gray-900 shadow-2xl backdrop-blur-sm dark:border-white/10 dark:text-gray-100"
+          >
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
               <span
                 class="text-sm sm:text-base"
@@ -101,12 +109,14 @@
 </template>
 <script setup lang="ts">
   import { storeToRefs } from 'pinia';
-  import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+  import { computed, defineAsyncComponent, ref, watch } from 'vue';
   import { useI18n } from 'vue-i18n';
-  import { useRoute, useRouter } from 'vue-router';
+  import { useRouter } from 'vue-router';
   import { useInfiniteScroll } from '@/composables/useInfiniteScroll';
+  import { usePageFilters } from '@/composables/usePageFilters';
   import { useTarkovTime } from '@/composables/useTarkovTime';
   import { useTaskFiltering } from '@/composables/useTaskFiltering';
+  import { useTasksFilterConfig } from '@/features/tasks/composables/useTasksFilterConfig';
   import TaskCard from '@/features/tasks/TaskCard.vue';
   import TaskEmptyState from '@/features/tasks/TaskEmptyState.vue';
   import TaskLoadingState from '@/features/tasks/TaskLoadingState.vue';
@@ -115,37 +125,20 @@
   import { useProgressStore } from '@/stores/useProgress';
   import { useTarkovStore } from '@/stores/useTarkov';
   import type { Task, TaskObjective } from '@/types/tarkov';
-  import { debounce, isDebounceRejection } from '@/utils/debounce';
   import { logger } from '@/utils/logger';
-  // Route meta for layout behavior
-  definePageMeta({
-    usesWindowScroll: true,
-  });
   // Lazy load LeafletMap for performance
   const LeafletMapComponent = defineAsyncComponent(() => import('@/features/maps/LeafletMap.vue'));
   // Page metadata
   useSeoMeta({
     title: 'Tasks',
     description:
-      'Track your Escape from Tarkov quest progress. View quest objectives, rewards, and dependencies for both PVP and PVE game modes.',
+      'Track your Escape from Tarkov task progress. View task objectives, rewards, and dependencies for both PVP and PVE game modes.',
   });
-  const route = useRoute();
   const router = useRouter();
   const { t } = useI18n({ useScope: 'global' });
   const preferencesStore = usePreferencesStore();
-  const {
-    getTaskPrimaryView,
-    getTaskSecondaryView,
-    getTaskUserView,
-    getTaskMapView,
-    getTaskTraderView,
-    getTaskSortMode,
-    getTaskSortDirection,
-    getTaskSharedByAllOnly,
-    getHideNonKappaTasks,
-    getShowNonSpecialTasks,
-    getShowLightkeeperTasks,
-  } = storeToRefs(preferencesStore);
+  const { getTaskUserView, getHideNonKappaTasks, getShowNonSpecialTasks, getShowLightkeeperTasks } =
+    storeToRefs(preferencesStore);
   const metadataStore = useMetadataStore();
   const { tasks, loading: tasksLoading } = storeToRefs(metadataStore);
   // Use mapsWithSvg getter to get maps with merged SVG config from maps.json
@@ -159,6 +152,79 @@
   // Game edition for filtering (reactive to trigger refresh when edition changes)
   const userGameEdition = computed(() => tarkovStore.getGameEdition());
   const { tarkovTime } = useTarkovTime();
+  // URL-based filter state (URL is single source of truth)
+  // Filter config is extracted to useTasksFilterConfig for sharing with navigation
+  const { filters, setFilter, setFilters, debouncedInputs } =
+    usePageFilters(useTasksFilterConfig());
+  // Computed aliases for cleaner template/code access
+  const getTaskPrimaryView = filters.view!;
+  const getTaskSecondaryView = filters.status!;
+  const getTaskMapView = filters.map!;
+  const getTaskTraderView = filters.trader!;
+  const singleTaskId = computed(() => {
+    const taskId = filters.task?.value;
+    return taskId || null; // Return URL value directly, let watcher handle missing task
+  });
+  const searchQuery = debouncedInputs.search!;
+  // Handle primary view changes with scoped URL params + localStorage persistence
+  // - URL only contains params relevant to current view
+  // - Switching views saves outgoing state to localStorage and restores incoming state
+  const VIEW_STORAGE_KEYS = {
+    maps: 'tarkovTracker.tasks.lastMap',
+    traders: 'tarkovTracker.tasks.lastTrader',
+  } as const;
+  const handlePrimaryViewChange = (view: string) => {
+    const currentView = getTaskPrimaryView.value;
+    // Save outgoing view's state to localStorage before switching
+    if (currentView === 'maps' && getTaskMapView.value !== 'all') {
+      localStorage.setItem(VIEW_STORAGE_KEYS.maps, getTaskMapView.value);
+    } else if (currentView === 'traders' && getTaskTraderView.value !== 'all') {
+      localStorage.setItem(VIEW_STORAGE_KEYS.traders, getTaskTraderView.value);
+    }
+    // Build updates with ONLY params scoped to the target view
+    // Also clear task param to exit single-task mode
+    const updates: Record<string, string | null> = {
+      view,
+      task: null, // Exit single-task mode
+      // Clear params not relevant to target view
+      map: null,
+      trader: null,
+    };
+    // Restore target view's state from localStorage (or use first item as fallback)
+    if (view === 'maps') {
+      const lastMap = localStorage.getItem(VIEW_STORAGE_KEYS.maps);
+      const validMap = lastMap && maps.value.some((m) => m.id === lastMap);
+      updates.map = validMap ? lastMap : (maps.value[0]?.id ?? 'all');
+    } else if (view === 'traders') {
+      const lastTrader = localStorage.getItem(VIEW_STORAGE_KEYS.traders);
+      const validTrader =
+        lastTrader && metadataStore.sortedTraders.some((t) => t.id === lastTrader);
+      updates.trader = validTrader ? lastTrader : (metadataStore.sortedTraders[0]?.id ?? 'all');
+    }
+    setFilters(updates);
+  };
+  // Ensure map/trader views always have a selection (default to first item if 'all')
+  // This handles the case where a user lands directly on the page with view=maps or view=traders
+  // but no specific map/trader selection in the URL
+  watch(
+    [
+      getTaskPrimaryView,
+      getTaskMapView,
+      getTaskTraderView,
+      maps,
+      () => metadataStore.sortedTraders,
+    ],
+    ([view, mapView, traderView, mapsData, tradersData]) => {
+      if (view === 'maps' && mapView === 'all' && mapsData.length > 0) {
+        // Default to first map when maps view is active but no map selected
+        setFilter('map', mapsData[0].id);
+      } else if (view === 'traders' && traderView === 'all' && tradersData.length > 0) {
+        // Default to first trader when traders view is active but no trader selected
+        setFilter('trader', tradersData[0].id);
+      }
+    },
+    { immediate: true }
+  );
   // Maps with static/fixed raid times (don't follow normal day/night cycle)
   const STATIC_TIME_MAPS: Record<string, string> = {
     '55f2d3fd4bdc2d5f408b4567': '15:28 / 03:28', // Factory
@@ -200,8 +266,12 @@
     if (!selectedMapData.value) return [];
     const mapId = selectedMapData.value.id;
     const marks: MapObjectiveMark[] = [];
-    // Get objectives from visible tasks that have location data for this map
-    visibleTasks.value.forEach((task) => {
+    // In single-task mode, only show objectives for the selected task
+    // Otherwise, show objectives for all visible tasks
+    const tasksToShow = singleTaskId.value
+      ? tasks.value.filter((t) => t.id === singleTaskId.value)
+      : visibleTasks.value;
+    tasksToShow.forEach((task) => {
       if (!task.objectives) return;
       const objectiveMaps = metadataStore.objectiveMaps?.[task.id] ?? [];
       const objectiveGps = metadataStore.objectiveGPS?.[task.id] ?? [];
@@ -294,7 +364,7 @@
       mergedIds: (map as unknown as { mergedIds?: string[] }).mergedIds || [map.id],
     }));
   });
-  const lightkeeperTraderId = computed(() => metadataStore.getTraderByName('lightkeeper')?.id);
+  const _lightkeeperTraderId = computed(() => metadataStore.getTraderByName('lightkeeper')?.id);
   const refreshVisibleTasks = () => {
     updateVisibleTasks(
       getTaskPrimaryView.value,
@@ -303,9 +373,7 @@
       getTaskMapView.value,
       getTaskTraderView.value,
       mergedMaps.value,
-      tasksLoading.value,
-      getTaskSortMode.value,
-      getTaskSortDirection.value
+      tasksLoading.value
     ).catch((error) => {
       logger.error('[Tasks] Failed to refresh tasks:', error);
     });
@@ -317,9 +385,6 @@
       getTaskUserView,
       getTaskMapView,
       getTaskTraderView,
-      getTaskSortMode,
-      getTaskSortDirection,
-      getTaskSharedByAllOnly,
       getHideNonKappaTasks,
       getShowNonSpecialTasks,
       getShowLightkeeperTasks,
@@ -340,228 +405,168 @@
   const isLoading = computed(
     () => !metadataStore.hasInitialized || tasksLoading.value || reloadingTasks.value
   );
-  // Search state (debounced to reduce lag)
-  const searchQuery = ref('');
-  const debouncedSearch = ref('');
-  const updateDebouncedSearch = debounce((value: string) => {
-    debouncedSearch.value = value;
-  }, 180);
-  watch(searchQuery, (value) => {
-    if (!value) {
-      updateDebouncedSearch.cancel();
-      debouncedSearch.value = '';
-      return;
+  // When entering single-task mode, scroll to top and auto-set map view if task has map objectives
+  // IMPORTANT: Use router.replace (not setFilters) to avoid creating duplicate history entries.
+  // The user navigated to /tasks?task=xxx - any auto-adjustments should replace, not push.
+  // Watch both singleTaskId and tasksLoading to handle page refresh correctly
+  // Smart Navigation Logic
+  const resolveSmartNavigation = async (
+    to: ReturnType<typeof useRouter>['currentRoute']['value'],
+    from?: ReturnType<typeof useRouter>['currentRoute']['value']
+  ) => {
+    // 1. Basic checks
+    if (isLoading.value || !metadataStore.hasInitialized) return;
+    const taskId = to.query.task as string;
+    if (!taskId) return; // Not in single-task mode
+    // Scroll to top if task changed (and it's not just a view change on the same task)
+    if (from && to.query.task !== from.query.task) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (!from) {
+      // Initial load
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-    void updateDebouncedSearch(value).catch((error) => {
-      if (isDebounceRejection(error)) return;
-      logger.error('[Tasks] Debounced search update failed:', error);
-    });
-  });
-  const normalizedSearch = computed(() => debouncedSearch.value.toLowerCase().trim());
-  // Cache lowercase task names to avoid repeated toLowerCase() calls in filter
-  type TaskWithLowerName = Task & { _lowerName: string };
-  const tasksWithLowerName = computed((): TaskWithLowerName[] => {
-    return visibleTasks.value.map((task) => ({
-      ...task,
-      _lowerName: (task.name ?? '').toLowerCase(),
-    }));
-  });
-  // Filter tasks by search query
-  const filteredTasks = computed((): Task[] => {
-    if (!normalizedSearch.value) {
-      return visibleTasks.value;
-    }
-    const query = normalizedSearch.value;
-    return tasksWithLowerName.value.filter((task) => task._lowerName.includes(query)) as Task[];
-  });
-  const pinnedTaskId = ref<string | null>(null);
-  const pinnedTaskTimeout = ref<ReturnType<typeof setTimeout> | null>(null);
-  const pinnedTask = computed(() => {
-    if (!pinnedTaskId.value) return null;
-    return filteredTasks.value.find((task) => task.id === pinnedTaskId.value) ?? null;
-  });
-  // Progressive rendering - load tasks incrementally for smooth scrolling
-  const INITIAL_BATCH = 15;
-  const BATCH_SIZE = 10;
-  const visibleTaskCount = ref(INITIAL_BATCH);
-  const loadMoreSentinel = ref<HTMLElement | null>(null);
-  const visibleTasksSlice = computed(() => {
-    if (!pinnedTask.value) {
-      return filteredTasks.value.slice(0, visibleTaskCount.value);
-    }
-    const remaining = filteredTasks.value.filter((task) => task.id !== pinnedTask.value?.id);
-    const sliceCount = Math.max(visibleTaskCount.value - 1, 0);
-    return [pinnedTask.value, ...remaining.slice(0, sliceCount)];
-  });
-  const hasMoreTasks = computed(() => visibleTaskCount.value < filteredTasks.value.length);
-  const loadMoreTasks = () => {
-    if (!hasMoreTasks.value) return;
-    visibleTaskCount.value = Math.min(
-      visibleTaskCount.value + BATCH_SIZE,
-      filteredTasks.value.length
-    );
-  };
-  // Use shared infinite scroll composable
-  const { checkAndLoadMore } = useInfiniteScroll(loadMoreSentinel, loadMoreTasks, {
-    enabled: hasMoreTasks,
-  });
-  // Reset visible count when filters change
-  watch(filteredTasks, () => {
-    visibleTaskCount.value = INITIAL_BATCH;
-    if (pinnedTaskId.value && !filteredTasks.value.some((task) => task.id === pinnedTaskId.value)) {
-      pinnedTaskId.value = null;
-    }
-    nextTick(() => {
-      checkAndLoadMore();
-    });
-  });
-  const taskListRef = ref<HTMLElement | null>(null);
-  // Handle deep linking to a specific task via ?task=taskId query param
-  const getTaskStatus = (taskId: string): 'available' | 'locked' | 'completed' | 'failed' => {
-    const isFailed = tasksFailed.value?.[taskId]?.['self'] ?? false;
-    if (isFailed) return 'failed';
-    const isCompleted = tasksCompletions.value?.[taskId]?.['self'] ?? false;
-    if (isCompleted) return 'completed';
-    const isUnlocked = unlockedTasks.value?.[taskId]?.['self'] ?? false;
-    if (isUnlocked) return 'available';
-    return 'locked';
-  };
-  const highlightTimeout = ref<ReturnType<typeof setTimeout> | null>(null);
-  const highlightTask = (taskElement: HTMLElement) => {
-    taskElement.classList.add(
-      'ring-2',
-      'ring-primary-500',
-      'ring-offset-2',
-      'ring-offset-surface-900'
-    );
-    if (highlightTimeout.value) {
-      clearTimeout(highlightTimeout.value);
-    }
-    highlightTimeout.value = setTimeout(() => {
-      taskElement.classList.remove(
-        'ring-2',
-        'ring-primary-500',
-        'ring-offset-2',
-        'ring-offset-surface-900'
-      );
-      highlightTimeout.value = null;
-    }, 2000);
-  };
-  onBeforeUnmount(() => {
-    updateDebouncedSearch.cancel();
-    if (highlightTimeout.value) {
-      clearTimeout(highlightTimeout.value);
-      highlightTimeout.value = null;
-    }
-    if (pinnedTaskTimeout.value) {
-      clearTimeout(pinnedTaskTimeout.value);
-      pinnedTaskTimeout.value = null;
-    }
-  });
-  const scrollToTask = async (taskId: string) => {
-    await nextTick();
-    const taskIndex = filteredTasks.value.findIndex((t) => t.id === taskId);
-    if (taskIndex === -1) return;
-    const pinTaskToTop = () => {
-      pinnedTaskId.value = taskId;
-      if (pinnedTaskTimeout.value) {
-        clearTimeout(pinnedTaskTimeout.value);
+    // 2. If URL already has a view (e.g. user clicked a tab or permalink), respect it.
+    if (to.query.view) return;
+    // 3. Toggle Logic: REMOVED by request.
+    // Ideally we always want "smart resolution" when landing on a clean link.
+    // If the user wants to leave map view, they must now do so explicitly via the "View All" link.
+    // 4. Smart Resolution Logic
+    const task = tasks.value.find((t) => t.id === taskId);
+    // Build the replacement query - start with current query params
+    const newQuery: Record<string, string> = { ...to.query } as Record<string, string>;
+    // Always ensure status is 'all' so task is visible
+    newQuery.status = 'all';
+    // Explicitly set view to 'all' as baseline, overridden below if maps found
+    newQuery.view = 'all';
+    if (task && Array.isArray(task.objectives)) {
+      const mapIncompleteStatus = new Map<string, boolean>();
+      const orderedMapIds: string[] = [];
+      for (const obj of task.objectives) {
+        if (!Array.isArray(obj.maps)) continue;
+        const isComplete = tarkovStore.isTaskObjectiveComplete(obj.id);
+        // Cast to access location properties (same as before)
+        const objectiveWithLocations = obj as typeof obj & {
+          zones?: Array<{ map?: { id: string }; }>
+          possibleLocations?: Array<{ map?: { id: string }; }>
+        };
+        const hasLocationData =
+          (Array.isArray(objectiveWithLocations.zones) && objectiveWithLocations.zones.length > 0) ||
+          (Array.isArray(objectiveWithLocations.possibleLocations) && objectiveWithLocations.possibleLocations.length > 0);
+        if (!hasLocationData) continue;
+        for (const objMap of obj.maps) {
+          if (!objMap?.id) continue;
+          if (!orderedMapIds.includes(objMap.id)) {
+            orderedMapIds.push(objMap.id);
+          }
+          if (!isComplete) {
+            mapIncompleteStatus.set(objMap.id, true);
+          } else if (!mapIncompleteStatus.has(objMap.id)) {
+            mapIncompleteStatus.set(objMap.id, false);
+          }
+        }
       }
-      pinnedTaskTimeout.value = setTimeout(() => {
-        pinnedTaskId.value = null;
-        pinnedTaskTimeout.value = null;
-      }, 8000);
-    };
-    // If task is already in DOM, scroll to it
-    const taskElement = document.getElementById(`task-${taskId}`);
-    if (taskElement) {
-      const rect = taskElement.getBoundingClientRect();
-      const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
-      if (isVisible) {
-        highlightTask(taskElement);
-        return;
+      const firstIncompleteMap = orderedMapIds.find((id) => mapIncompleteStatus.get(id) === true);
+      const targetMap = firstIncompleteMap ?? orderedMapIds[0];
+      if (targetMap) {
+        // Task has map objectives
+        newQuery.view = 'maps';
+        newQuery.map = targetMap;
+        delete newQuery.trader;
+      } else {
+        // No displayable objectives on map
+        newQuery.view = 'all';
+        delete newQuery.map;
+        delete newQuery.trader;
       }
-      const nearbyThreshold = window.innerHeight * 1.5;
-      const isNearby = Math.abs(rect.top) <= nearbyThreshold;
-      if (isNearby) {
-        taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        highlightTask(taskElement);
-        return;
-      }
-      pinTaskToTop();
-      await nextTick();
-      const pinnedElement = document.getElementById(`task-${taskId}`);
-      if (pinnedElement) {
-        highlightTask(pinnedElement);
-      }
-      return;
+    } else {
+      // Task has no objectives
+      newQuery.view = 'all';
+      delete newQuery.map;
+      delete newQuery.trader;
     }
-    pinTaskToTop();
-    await nextTick();
-    const newTaskElement = document.getElementById(`task-${taskId}`);
-    if (!newTaskElement) return;
-    highlightTask(newTaskElement);
+    // Only redirect if the calculated query is different effectively
+    // (Simple check: if we decided on 'maps' view and we are not there)
+    if (newQuery.view === 'maps') {
+       await router.replace({ query: newQuery });
+    }
   };
-  const handleTaskQueryParam = async () => {
-    const taskId = route.query.task as string;
-    if (!taskId || tasksLoading.value) return;
-    const taskInMetadata = tasks.value.find((t) => t.id === taskId);
-    if (!taskInMetadata) return;
-    // Enable the appropriate type filter based on task properties
-    const isKappaRequired = taskInMetadata.kappaRequired === true;
-    const isLightkeeperRequired = taskInMetadata.lightkeeperRequired === true;
-    const isLightkeeperTraderTask =
-      lightkeeperTraderId.value !== undefined
-        ? taskInMetadata.trader?.id === lightkeeperTraderId.value
-        : taskInMetadata.trader?.name?.toLowerCase() === 'lightkeeper';
-    const isNonSpecial = !isKappaRequired && !isLightkeeperRequired && !isLightkeeperTraderTask;
-    // Ensure the task's type filter is enabled so task will appear
-    if (
-      (isLightkeeperRequired || isLightkeeperTraderTask) &&
-      !preferencesStore.getShowLightkeeperTasks
-    ) {
-      preferencesStore.setShowLightkeeperTasks(true);
-    }
-    if (isKappaRequired && preferencesStore.getHideNonKappaTasks) {
-      preferencesStore.setHideNonKappaTasks(false);
-    }
-    if (isNonSpecial && !preferencesStore.getShowNonSpecialTasks) {
-      preferencesStore.setShowNonSpecialTasks(true);
-    }
-    // Determine task status and set appropriate filter
-    // Skip if already in 'all' view since all tasks are visible there
-    const currentSecondaryView = preferencesStore.getTaskSecondaryView;
-    if (currentSecondaryView !== 'all') {
-      const status = getTaskStatus(taskId);
-      if (currentSecondaryView !== status) {
-        preferencesStore.setTaskSecondaryView(status);
-      }
-    }
-    // Set primary view to 'all' to ensure the task is visible regardless of map/trader
-    if (preferencesStore.getTaskPrimaryView !== 'all') {
-      preferencesStore.setTaskPrimaryView('all');
-    }
-    // Clear search query so the target task is visible
-    if (searchQuery.value) {
-      searchQuery.value = '';
-    }
-    // Wait for filter/watch updates to settle
-    await nextTick();
-    // scrollToTask handles scrolling directly via scrollIntoView
-    await scrollToTask(taskId);
-    // Clear the query param to avoid re-triggering on filter changes
-    router.replace({ path: '/tasks', query: {} });
-  };
-  // Watch for task query param and handle it when tasks are loaded
+  // Watch route changes
   watch(
-    [() => route.query.task, tasksLoading, tasksCompletions],
-    ([taskQueryParam, loading]) => {
-      if (taskQueryParam && !loading) {
-        handleTaskQueryParam();
-      }
+    () => router.currentRoute.value,
+    (to, from) => {
+      resolveSmartNavigation(to, from);
     },
     { immediate: true }
   );
+  // Watch loading state to handle initial load / refresh
+  watch(isLoading, (loading) => {
+    if (!loading) {
+      // Pass undefined as 'from' to treat as fresh entry (smart resolve)
+      resolveSmartNavigation(router.currentRoute.value, undefined);
+    }
+  });
+  // Force "View All" mode by explicitly pushing to router (bypassing filter defaults stripping)
+  const forceViewAll = async () => {
+     const newQuery = { ...router.currentRoute.value.query, view: 'all' };
+     delete newQuery.map;
+     delete newQuery.trader;
+     await router.push({ query: newQuery });
+  };
+  // Clear single task filter
+  const clearSingleTaskFilter = () => {
+    setFilter('task', null);
+  };
+  // Filter tasks by search query OR single-task mode
+  const filteredTasks = computed(() => {
+    // Single-task mode takes priority
+    if (singleTaskId.value) {
+      const task = tasks.value.find((t) => t.id === singleTaskId.value);
+      return task ? [task] : [];
+    }
+    // Normal filtering
+    if (!searchQuery.value?.trim()) {
+      return visibleTasks.value;
+    }
+    const query = (searchQuery.value || '').toLowerCase().trim();
+    return visibleTasks.value.filter((task) => task.name?.toLowerCase().includes(query));
+  });
+  /*
+   * Pagination state for infinite scroll
+   * displayCount controls how many tasks are rendered.
+   * We expand this count to reveal tasks deep in the list if needed.
+   */
+  const displayCount = ref(15);
+  const tasksSentinel = ref<HTMLElement | null>(null);
+  const paginatedTasks = computed(() => {
+    return filteredTasks.value.slice(0, displayCount.value);
+  });
+  const loadMoreTasks = () => {
+    if (displayCount.value < filteredTasks.value.length) {
+      displayCount.value += 15;
+    }
+  };
+  // Setup infinite scroll
+  const infiniteScrollEnabled = computed(() => displayCount.value < filteredTasks.value.length);
+  const { stop: _stopInfiniteScroll, start: _startInfiniteScroll } = useInfiniteScroll(
+    tasksSentinel,
+    loadMoreTasks,
+    { rootMargin: '200px', threshold: 0.1, enabled: infiniteScrollEnabled }
+  );
+  watch(
+    [
+      searchQuery,
+      getTaskSecondaryView,
+      getTaskPrimaryView,
+      getTaskMapView,
+      getTaskTraderView,
+      userGameEdition,
+    ],
+    () => {
+      displayCount.value = 15;
+    }
+  );
+  // Note: Single-task mode via ?task=<id> is now handled reactively via singleTaskId computed.
+  // No scroll logic needed - we simply filter to show only that task.
   // Helper Methods for Undo
   const handleTaskObjectives = (
     objectives: TaskObjective[],

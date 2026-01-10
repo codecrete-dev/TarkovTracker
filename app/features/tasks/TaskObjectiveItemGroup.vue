@@ -1,75 +1,109 @@
 <template>
-  <div class="space-y-2">
-    <div class="grid grid-cols-[16px_1fr] items-start gap-2">
-      <UIcon :name="`i-${iconName}`" aria-hidden="true" class="mt-0.5 h-4 w-4 text-gray-400" />
-      <div class="min-w-0">
-        <div class="text-sm font-medium text-gray-100">{{ title }}</div>
+  <div class="space-y-2 px-2 py-2">
+    <div class="flex items-start gap-4">
+      <UIcon
+        :name="`i-${iconName}`"
+        aria-hidden="true"
+        class="h-5 w-5 shrink-0 text-gray-500 dark:text-gray-400"
+      />
+      <div class="min-w-0 pt-0.5">
+        <div class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ title }}</div>
       </div>
     </div>
-    <div class="flex flex-wrap gap-2 pl-6">
+    <div class="flex flex-wrap gap-2">
       <div
         v-for="row in consolidatedRows"
         :key="row.itemKey"
-        class="flex max-w-full items-center gap-2 rounded-md border px-2 py-1 transition-colors"
+        class="flex max-w-full items-center gap-2 rounded-md border p-1 transition-colors"
         :class="[
           row.allComplete
-            ? 'border-success-500/50 bg-success-500/10'
-            : 'border-white/10 bg-white/5',
-          isParentTaskLocked ? 'opacity-70' : '',
+            ? 'border-success-500/50 bg-success-100 text-success-900 dark:bg-success-500/10 dark:text-success-100'
+            : 'border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-white/5',
+          isParentTaskLocked ? 'disabled' : 'clickable',
         ]"
+        @click.stop="toggleCountForRow(row)"
       >
-        <img
-          v-if="row.meta.itemIcon"
-          :src="row.meta.itemIcon"
-          :alt="row.meta.itemName"
-          class="h-16 w-16 shrink-0 rounded-sm object-contain"
-        />
-        <AppTooltip :text="row.meta.itemName">
-          <span class="max-w-48 truncate text-xs font-medium text-gray-100">
-            {{ row.meta.itemName }}
-          </span>
-        </AppTooltip>
-        <span
-          v-if="row.meta.foundInRaid"
-          class="rounded bg-yellow-500/10 px-1 py-0.5 text-[10px] font-semibold text-yellow-300"
-        >
-          FiR
-        </span>
-        <!-- Single set of controls per item - updates all related objectives together -->
-        <ObjectiveCountControls
-          v-if="row.meta.neededCount > 1"
-          :current-count="row.currentCount"
-          :needed-count="row.meta.neededCount"
-          :disabled="isParentTaskLocked"
-          @decrease="decreaseCountForRow(row)"
-          @increase="increaseCountForRow(row)"
-          @toggle="toggleCountForRow(row)"
-          @set-count="(value) => setCountForRow(row, value)"
-        />
-        <button
-          v-else
-          type="button"
-          class="focus-visible:ring-primary-500 focus-visible:ring-offset-surface-900 flex h-7 w-7 items-center justify-center rounded-md border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed"
-          :aria-label="
-            row.allComplete
-              ? t('page.tasks.questcard.uncomplete', 'Uncomplete')
-              : t('page.tasks.questcard.complete', 'Complete')
-          "
-          :aria-pressed="row.allComplete"
-          :disabled="isParentTaskLocked"
-          :class="
-            row.allComplete
-              ? 'bg-success-600 border-success-500 hover:bg-success-500 text-white disabled:opacity-60'
-              : 'border-white/10 bg-white/5 text-gray-300 hover:bg-white/10 disabled:opacity-60'
-          "
-          @click="toggleCountForRow(row)"
-        >
-          <UIcon
-            :name="row.allComplete ? 'i-mdi-check' : 'i-mdi-circle-outline'"
-            aria-hidden="true"
-            class="h-4 w-4"
+        <div v-if="row.meta.item || row.meta.itemIcon" class="relative shrink-0">
+          <ItemStatusBadge
+            :current-count="row.currentCount"
+            :needed-count="row.meta.neededCount"
+            :is-complete="row.allComplete"
+            :found-in-raid="row.meta.foundInRaid"
+            :is-craftable="isItemCraftable(row)"
+            :craftable-title="getCraftableTitle(row)"
+            :is-craftable-available="isItemCraftableAvailable(row)"
+            :is-kappa-required="false"
+            :show-count="false"
+            size="sm"
+            @craft="goToCraftStation(row)"
           />
-        </button>
+          <GameItem :item="row.meta.item" size="medium" simple-mode />
+        </div>
+        <span
+          v-tooltip="row.meta.itemFullName"
+          class="max-w-[12rem] truncate text-xs font-medium text-gray-900 dark:text-gray-100"
+        >
+          {{ row.meta.itemName }}
+        </span>
+        <!-- External links to task guide -->
+        <div v-if="row.task" class="flex shrink-0 items-center gap-0.5" @click.stop>
+          <a
+            v-if="row.task?.wikiLink"
+            v-tooltip="t('page.tasks.questcard.viewOnWiki', 'View on Wiki')"
+            :href="`${row.task?.wikiLink}#Guide`"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center justify-center rounded p-0.5 text-gray-400 transition-colors"
+          >
+            <img src="/img/logos/wikilogo.webp" alt="Wiki" aria-hidden="true" class="h-4 w-4" />
+          </a>
+          <a
+            v-tooltip="t('page.tasks.questcard.viewOnTarkovDev', 'View on tarkov.dev')"
+            :href="`https://tarkov.dev/task/${row.task?.id}#objectives`"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center justify-center rounded p-0.5 text-gray-400 transition-colors"
+          >
+            <img
+              src="/img/logos/tarkovdevlogo.webp"
+              alt="tarkov.dev"
+              aria-hidden="true"
+              class="h-4 w-4"
+            />
+          </a>
+        </div>
+        <!-- Single set of controls per item - updates all related objectives together -->
+        <span v-if="row.meta.neededCount > 1" @click.stop>
+          <ObjectiveCountControls
+            :current-count="row.currentCount"
+            :needed-count="row.meta.neededCount"
+            :disabled="isParentTaskLocked"
+            @decrease="decreaseCountForRow(row)"
+            @increase="increaseCountForRow(row)"
+            @toggle="toggleCountForRow(row)"
+            @set-count="(value) => setCountForRow(row, value)"
+          />
+        </span>
+        <span v-else class="flex items-center" @click.stop>
+          <ToggleButton
+            :is-active="row.allComplete"
+            :disabled="isParentTaskLocked"
+            variant="complete"
+            :active-icon="'i-mdi-check'"
+            :inactive-icon="'i-mdi-circle-outline'"
+            :tooltip="
+              row.allComplete
+                ? t('page.tasks.questcard.uncomplete', 'Uncomplete')
+                : t('page.tasks.questcard.complete', 'Complete')
+            "
+            :aria-label="
+              row.allComplete
+                ? t('page.tasks.questcard.uncomplete', 'Uncomplete')
+                : t('page.tasks.questcard.complete', 'Complete')
+            "
+            @toggle="toggleCountForRow(row)"
+          />
+        </span>
       </div>
     </div>
   </div>
@@ -77,10 +111,14 @@
 <script setup lang="ts">
   import { computed } from 'vue';
   import { useI18n } from 'vue-i18n';
+  import GameItem from '@/components/ui/GameItem.vue';
+  import ItemStatusBadge from '@/components/ui/ItemStatusBadge.vue';
+  import ToggleButton from '@/components/ui/ToggleButton.vue';
   import ObjectiveCountControls from '@/features/tasks/ObjectiveCountControls.vue';
-  import { useMetadataStore } from '@/stores/useMetadata';
+  import { useMetadataStore, type CraftSource } from '@/stores/useMetadata';
+  import { useProgressStore } from '@/stores/useProgress';
   import { useTarkovStore } from '@/stores/useTarkov';
-  import type { TaskObjective } from '@/types/tarkov';
+  import type { TaskObjective, TarkovItem } from '@/types/tarkov';
   const props = defineProps<{
     title: string;
     iconName: string;
@@ -88,12 +126,16 @@
   }>();
   const { t } = useI18n({ useScope: 'global' });
   const tarkovStore = useTarkovStore();
+  const progressStore = useProgressStore();
   const metadataStore = useMetadataStore();
   type ObjectiveMeta = {
+    item?: TarkovItem;
     neededCount: number;
     currentCount: number;
     itemName: string;
+    itemFullName: string;
     itemIcon?: string;
+    backgroundColor?: string;
     foundInRaid: boolean;
   };
   type ObjectiveRow = {
@@ -107,6 +149,7 @@
     objectives: ObjectiveRow[];
     allComplete: boolean;
     currentCount: number;
+    task?: { id: string; wikiLink?: string };
   };
   const fullObjectives = computed(() => metadataStore.objectives);
   const objectiveMetaById = computed<Record<string, ObjectiveMeta>>(() => {
@@ -127,10 +170,10 @@
         objective.items?.[0] ||
         objective.markerItem ||
         objective.questItem;
-      // Prefer defaultPreset image for weapons (shows full gun instead of bare receiver)
+      // Use defaultPreset for image display when available (e.g., weapons with attachments)
       const imageItem = item?.properties?.defaultPreset || item;
-      const image8xLink = imageItem?.image8xLink;
       map[objective.id] = {
+        item,
         neededCount,
         currentCount,
         itemName:
@@ -138,7 +181,13 @@
           item?.name ||
           objective.description ||
           t('page.tasks.questcard.item', 'Item'),
-        itemIcon: imageItem?.iconLink || imageItem?.image512pxLink || image8xLink,
+        itemFullName:
+          item?.name ||
+          item?.shortName ||
+          objective.description ||
+          t('page.tasks.questcard.item', 'Item'),
+        itemIcon: imageItem?.image512pxLink || imageItem?.image8xLink || undefined,
+        backgroundColor: imageItem?.backgroundColor || item?.backgroundColor,
         foundInRaid: full?.foundInRaid === true || objective.foundInRaid === true,
       };
     });
@@ -147,10 +196,13 @@
   const objectiveRows = computed<ObjectiveRow[]>(() => {
     return props.objectives.map((objective) => {
       const fallback: ObjectiveMeta = {
+        item: undefined,
         neededCount: objective.count ?? 1,
         currentCount: tarkovStore.getObjectiveCount(objective.id),
         itemName: objective.description || t('page.tasks.questcard.item', 'Item'),
+        itemFullName: objective.description || t('page.tasks.questcard.item', 'Item'),
         itemIcon: undefined,
+        backgroundColor: undefined,
         foundInRaid: objective.foundInRaid === true,
       };
       return { objective, meta: objectiveMetaById.value[objective.id] ?? fallback };
@@ -226,6 +278,13 @@
           neededCount: totalNeeded,
           currentCount: totalCurrent,
         },
+        task: (() => {
+          const firstObjective = consolidated.objectives[0]?.objective;
+          if (!firstObjective) return undefined;
+          const taskId = getObjectiveTaskId(firstObjective);
+          if (!taskId) return undefined;
+          return metadataStore.tasks.find((t) => t.id === taskId);
+        })(),
       };
     });
   });
@@ -237,6 +296,82 @@
       objective.taskId ?? fullObjectives.value.find((entry) => entry.id === objective.id)?.taskId
     );
   };
+  // Craftable item helpers
+  const getItemIdForRow = (row: ConsolidatedRow): string | undefined => {
+    return row.meta.item?.id;
+  };
+  const getCraftSourcesForRow = (row: ConsolidatedRow): CraftSource[] => {
+    const itemId = getItemIdForRow(row);
+    if (!itemId) return [];
+    return metadataStore.craftSourcesByItemId.get(itemId) ?? [];
+  };
+  const isItemCraftable = (row: ConsolidatedRow): boolean => {
+    return getCraftSourcesForRow(row).length > 0;
+  };
+  const isItemCraftableAvailable = (row: ConsolidatedRow): boolean => {
+    const sources = getCraftSourcesForRow(row);
+    if (sources.length === 0) return false;
+    return sources.some((source) => {
+      const currentLevel = progressStore.hideoutLevels?.[source.stationId]?.self ?? 0;
+      return currentLevel >= source.stationLevel;
+    });
+  };
+  const getCraftableTitle = (row: ConsolidatedRow): string => {
+    const sources = getCraftSourcesForRow(row);
+    if (sources.length === 0) return '';
+    const statuses = sources.map((source) => {
+      const currentLevel = progressStore.hideoutLevels?.[source.stationId]?.self ?? 0;
+      const isAvailable = currentLevel >= source.stationLevel;
+      return { ...source, currentLevel, isAvailable };
+    });
+    const sorted = [...statuses].sort((a, b) => {
+      if (a.isAvailable !== b.isAvailable) return a.isAvailable ? -1 : 1;
+      return a.stationLevel - b.stationLevel;
+    });
+    const lines = sorted.slice(0, 3).map((source) => {
+      if (source.isAvailable) {
+        return `${source.stationName} level ${source.stationLevel}`;
+      }
+      return `${source.stationName} level ${source.stationLevel} (current: ${source.currentLevel})`;
+    });
+    const remainingCount = sorted.length - lines.length;
+    if (remainingCount > 0) {
+      lines.push(`+${remainingCount} more`);
+    }
+    const list = lines.join(', ');
+    const isAvailable = statuses.some((s) => s.isAvailable);
+    return isAvailable ? `Craftable at ${list}` : `Requires ${list}`;
+  };
+  const goToCraftStation = async (row: ConsolidatedRow) => {
+    const sources = getCraftSourcesForRow(row);
+    if (sources.length === 0) return;
+    const statuses = sources.map((source) => {
+      const currentLevel = progressStore.hideoutLevels?.[source.stationId]?.self ?? 0;
+      const isAvailable = currentLevel >= source.stationLevel;
+      return {
+        ...source,
+        currentLevel,
+        isAvailable,
+        missingLevels: Math.max(0, source.stationLevel - currentLevel),
+      };
+    });
+    // Prefer available stations, sorted by level (lowest first)
+    const available = statuses
+      .filter((s) => s.isAvailable)
+      .sort((a, b) => a.stationLevel - b.stationLevel);
+    let targetId = available[0]?.stationId;
+    if (!targetId) {
+      // Find the closest to being available
+      const closest = [...statuses].sort((a, b) => {
+        if (a.missingLevels !== b.missingLevels) return a.missingLevels - b.missingLevels;
+        return a.stationLevel - b.stationLevel;
+      });
+      targetId = closest[0]?.stationId ?? sources[0]?.stationId;
+    }
+    if (targetId) {
+      await navigateTo({ path: '/hideout', query: { station: targetId } });
+    }
+  };
   const parentTaskIds = computed(() => {
     const ids = new Set<string>();
     props.objectives.forEach((objective) => {
@@ -247,16 +382,17 @@
     });
     return Array.from(ids);
   });
-  const isParentTaskComplete = computed(() => {
-    return parentTaskIds.value.some(
-      (taskId) => tarkovStore.isTaskComplete(taskId) && !tarkovStore.isTaskFailed(taskId)
-    );
-  });
-  const isParentTaskFailed = computed(() => {
-    return parentTaskIds.value.some((taskId) => tarkovStore.isTaskFailed(taskId));
-  });
   const isParentTaskLocked = computed(() => {
-    return isParentTaskComplete.value || isParentTaskFailed.value;
+    if (parentTaskIds.value.length === 0) return false;
+    // If ANY associated task is NOT available (locked, complete, failed, or blocked),
+    // we consider the group locked for safety. Usually these are all the same task anyway.
+    return parentTaskIds.value.some((taskId) => {
+      const isUnlocked = progressStore.unlockedTasks[taskId]?.self === true;
+      const isComplete = tarkovStore.isTaskComplete(taskId);
+      const isFailed = tarkovStore.isTaskFailed(taskId);
+      const isInvalid = progressStore.invalidTasks[taskId]?.self === true;
+      return !isUnlocked || isComplete || isFailed || isInvalid;
+    });
   });
   // Update all objectives in a row together
   const decreaseCountForRow = (row: ConsolidatedRow) => {

@@ -1,37 +1,51 @@
 <template>
   <div class="container mx-auto min-h-[calc(100vh-250px)] space-y-4 px-4 py-6">
     <div class="flex justify-center">
-      <div class="w-full max-w-4xl rounded-lg bg-[hsl(240,5%,5%)] px-4 py-3">
+      <div class="bg-surface-elevated w-full max-w-4xl rounded-lg px-4 py-3 shadow-sm">
         <div class="flex flex-wrap justify-center gap-2">
-          <UButton
+          <FilterPill
             v-for="view in primaryViews"
             :key="view.view"
+            :active="activePrimaryView === view.view"
             :icon="`i-${view.icon}`"
-            :variant="'ghost'"
-            :color="'neutral'"
-            size="md"
+            :label="view.title.toUpperCase()"
+            :count="view.count"
+            :count-color="view.badgeColor"
             class="shrink-0"
-            :class="{
-              'border-primary-500 rounded-none border-b-2': activePrimaryView === view.view,
-            }"
+            label-class="text-xs sm:text-sm"
             @click="activePrimaryView = view.view"
-          >
-            <span class="text-xs sm:text-sm">{{ view.title.toUpperCase() }}</span>
-            <span
-              :class="[
-                'ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-bold text-white sm:h-7 sm:min-w-7 sm:px-1.5 sm:text-sm',
-                view.badgeColor,
-              ]"
-            >
-              {{ view.count }}
-            </span>
-          </UButton>
+          />
         </div>
+      </div>
+    </div>
+    <!-- Search Bar -->
+    <div class="flex justify-center">
+      <div class="bg-surface-elevated w-full max-w-lg rounded-lg px-4 py-2.5 shadow-sm">
+        <UInput
+          :model-value="searchQuery"
+          :placeholder="$t('page.hideout.search.placeholder', 'Search stations...')"
+          icon="i-mdi-magnify"
+          size="md"
+          :ui="{ trailing: 'pe-1' }"
+          class="w-full"
+          @update:model-value="searchQuery = $event"
+        >
+          <template v-if="searchQuery?.length" #trailing>
+            <UButton
+              color="neutral"
+              variant="link"
+              size="sm"
+              icon="i-mdi-close-circle"
+              aria-label="Clear search"
+              @click="searchQuery = ''"
+            />
+          </template>
+        </UInput>
       </div>
     </div>
     <div>
       <div v-if="isStoreLoading" class="text-surface-200 flex flex-col items-center gap-3 py-10">
-        <UIcon name="i-heroicons-arrow-path" class="text-primary-500 h-8 w-8 animate-spin" />
+        <UIcon name="i-heroicons-arrow-path" class="text-accent-500 h-8 w-8 animate-spin" />
         <div class="flex items-center gap-2 text-sm">
           {{ $t('page.hideout.loading') }}
           <RefreshButton />
@@ -58,10 +72,15 @@
 </template>
 <script setup lang="ts">
   import { storeToRefs } from 'pinia';
-  import { computed, defineAsyncComponent, nextTick, watch } from 'vue';
+  import { computed, nextTick, watch } from 'vue';
   import { useI18n } from 'vue-i18n';
-  import { useRoute, useRouter } from 'vue-router';
+  import { useRouter } from 'vue-router';
+  import FilterPill from '@/components/FilterPill.vue';
+  import RefreshButton from '@/components/ui/RefreshButton.vue';
   import { useHideoutFiltering } from '@/composables/useHideoutFiltering';
+  import { usePageFilters } from '@/composables/usePageFilters';
+  import { useHideoutFilterConfig } from '@/features/hideout/composables/useHideoutFilterConfig';
+  import HideoutCard from '@/features/hideout/HideoutCard.vue';
   import { useMetadataStore } from '@/stores/useMetadata';
   import { useProgressStore } from '@/stores/useProgress';
   // Page metadata
@@ -70,9 +89,6 @@
     description:
       'Track your hideout module upgrades and requirements. See what items you need to complete each station upgrade.',
   });
-  const HideoutCard = defineAsyncComponent(() => import('@/features/hideout/HideoutCard.vue'));
-  const RefreshButton = defineAsyncComponent(() => import('@/components/ui/RefreshButton.vue'));
-  const route = useRoute();
   const router = useRouter();
   const { t } = useI18n({ useScope: 'global' });
   const metadataStore = useMetadataStore();
@@ -81,34 +97,55 @@
   // Hideout filtering composable
   const { activePrimaryView, isStoreLoading, visibleStations, stationCounts } =
     useHideoutFiltering();
+  // URL-based filter state
+  // Filter config is extracted to useHideoutFilterConfig for sharing with navigation
+  const { filters, setFilter, debouncedInputs } = usePageFilters(useHideoutFilterConfig());
+  // Computed alias for search input
+  const searchQuery = debouncedInputs.search!;
+  // Sync URL filter to activePrimaryView (from useHideoutFiltering)
+  watch(
+    filters.view!,
+    (newView) => {
+      if (newView !== activePrimaryView.value) {
+        activePrimaryView.value = newView;
+      }
+    },
+    { immediate: true }
+  );
+  // Sync activePrimaryView changes back to URL
+  watch(activePrimaryView, (newView) => {
+    if (newView !== filters.view!.value) {
+      setFilter('view', newView);
+    }
+  });
   const primaryViews = computed(() => [
     {
+      title: t('page.hideout.primaryviews.all'),
+      icon: 'mdi-format-list-bulleted',
+      view: 'all',
+      count: stationCounts.value.all,
+      badgeColor: 'badge-soft-accent',
+    },
+    {
       title: t('page.hideout.primaryviews.available'),
-      icon: 'mdi-tag-arrow-up-outline',
+      icon: 'mdi-clipboard-text',
       view: 'available',
       count: stationCounts.value.available,
-      badgeColor: 'bg-primary-500',
+      badgeColor: 'plain',
     },
     {
       title: t('page.hideout.primaryviews.maxed'),
       icon: 'mdi-arrow-collapse-up',
       view: 'maxed',
       count: stationCounts.value.maxed,
-      badgeColor: 'bg-green-600',
+      badgeColor: 'badge-soft-success',
     },
     {
       title: t('page.hideout.primaryviews.locked'),
       icon: 'mdi-lock',
       view: 'locked',
       count: stationCounts.value.locked,
-      badgeColor: 'bg-gray-600',
-    },
-    {
-      title: t('page.hideout.primaryviews.all'),
-      icon: 'mdi-clipboard-check',
-      view: 'all',
-      count: stationCounts.value.all,
-      badgeColor: 'bg-blue-600',
+      badgeColor: 'badge-soft-surface',
     },
   ]);
   // Handle deep linking to a specific station via ?station=stationId query param
@@ -136,42 +173,29 @@
       if (stationElement) {
         stationElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         // Add a brief highlight effect
-        stationElement.classList.add(
-          'ring-2',
-          'ring-primary-500',
-          'ring-offset-2',
-          'ring-offset-surface-900'
-        );
+        stationElement.classList.add('ring-2', 'ring-inset', 'ring-accent-500');
         setTimeout(() => {
-          stationElement.classList.remove(
-            'ring-2',
-            'ring-primary-500',
-            'ring-offset-2',
-            'ring-offset-surface-900'
-          );
+          stationElement.classList.remove('ring-2', 'ring-inset', 'ring-accent-500');
         }, 2000);
       }
     }, 100);
   };
-  const handleStationQueryParam = () => {
-    const stationId = route.query.station as string;
+  const handleStationQueryParam = (stationId: string) => {
     if (!stationId || isStoreLoading.value) return;
     // Determine station status and set appropriate filter
     const status = getStationStatus(stationId);
-    if (activePrimaryView.value !== status) {
-      activePrimaryView.value = status;
-    }
     // Scroll to the station after filters are applied
     scrollToStation(stationId);
-    // Clear the query param to avoid re-triggering on filter changes
-    router.replace({ path: '/hideout', query: {} });
+    // Set view and clear station param in a single replace to avoid double history entry
+    const { station: _, ...restQuery } = router.currentRoute.value.query;
+    router.replace({ query: { ...restQuery, view: status } });
   };
-  // Watch for station query param and handle it when data is loaded
+  // Watch for station filter and handle it when data is loaded
   watch(
-    [() => route.query.station, isStoreLoading],
-    ([stationQueryParam, loading]) => {
-      if (stationQueryParam && !loading) {
-        handleStationQueryParam();
+    [filters.station, () => isStoreLoading.value],
+    ([stationId, loading]) => {
+      if (stationId && !loading) {
+        handleStationQueryParam(stationId);
       }
     },
     { immediate: true }
