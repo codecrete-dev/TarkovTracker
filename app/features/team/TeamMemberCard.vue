@@ -157,16 +157,7 @@
     ).length;
   });
   const groupIcon = computed(() => {
-    // Use the same level logic as the level computed property
-    let levelValue: number;
-    if (props.teammember === $supabase.user.id) {
-      levelValue = progressStore.getLevel(props.teammember);
-    } else {
-      levelValue =
-        teamStore.memberProfiles?.[props.teammember]?.level ??
-        progressStore.getLevel(props.teammember);
-    }
-    const entry = playerLevels.value.find((pl) => pl.level === levelValue);
+    const entry = playerLevels.value.find((pl) => pl.level === level.value);
     return entry?.levelBadgeImageLink ?? '';
   });
   const kickingTeammate = ref(false);

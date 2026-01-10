@@ -59,7 +59,6 @@
     size: 'medium',
     isVisible: true,
   });
-
   const containerClasses = computed(() => {
     // Fluid mode: fills parent container, maintains square aspect ratio
     if (props.size === 'fluid') {
@@ -103,7 +102,6 @@
       hasError.value = false;
     }
   );
-
   const handleImgError = () => {
     hasError.value = true;
     console.warn(`[GameItemImage] Failed to load image: ${props.src}`);

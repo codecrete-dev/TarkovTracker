@@ -2,54 +2,81 @@ import {
   type ComputedRef,
   computed,
   isRef,
+  nextTick,
   onMounted,
   onUnmounted,
   type Ref,
   ref,
   watch,
 } from 'vue';
+import { logger } from '@/utils/logger';
+export interface UseInfiniteScrollOptions {
+  rootMargin?: string;
+  threshold?: number;
+  enabled?: boolean | Ref<boolean> | ComputedRef<boolean>;
+  /** Attach a window scroll listener as a fallback when needed (opt-in). */
+  useScrollFallback?: boolean;
+  scrollThrottleMs?: number;
+}
+// Scroll fallback attaches a global window scroll listener; only enable if needed.
 export function useInfiniteScroll(
   sentinelRef: Ref<HTMLElement | null> | ComputedRef<HTMLElement | null>,
-  onLoadMore: () => void,
-  options: {
-    rootMargin?: string;
-    threshold?: number;
-    enabled?: boolean | Ref<boolean> | ComputedRef<boolean>;
-  } = {}
+  onLoadMore: () => void | Promise<void>,
+  options: UseInfiniteScrollOptions = {}
 ) {
-  const { rootMargin = '200px', threshold = 0 } = options;
+  const {
+    rootMargin = '1500px',
+    threshold = 0,
+    // When true, attaches a window scroll listener; opt-in for cases without IntersectionObserver.
+    useScrollFallback = false,
+    scrollThrottleMs = 100,
+  } = options;
   const enabledOption = options.enabled ?? true;
-  // Make enabled reactive whether passed as boolean or Ref
   const enabled = computed(() => (isRef(enabledOption) ? enabledOption.value : enabledOption));
   let observer: IntersectionObserver | null = null;
   const isLoading = ref(false);
+  let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
+  let pendingScroll = false;
+  const marginPx = parseInt(rootMargin) || 1500;
   const handleIntersection = (entries: IntersectionObserverEntry[]) => {
     const target = entries[0];
-    if (target?.isIntersecting && enabled.value && !isLoading.value) {
-      isLoading.value = true;
-      onLoadMore();
-      // Use nextTick-style timing to allow DOM to update before next check
-      requestAnimationFrame(() => {
-        isLoading.value = false;
-        // Re-check if sentinel is still visible after loading (handles fast scroll)
-        checkAndLoadMore();
-      });
+    if (target?.isIntersecting && enabled.value) {
+      void checkAndLoadMore();
     }
   };
-  // Manual check for when intersection might have been missed
-  const checkAndLoadMore = () => {
+  const checkAndLoadMore = async () => {
     if (!enabled.value || isLoading.value || !sentinelRef.value) return;
     const rect = sentinelRef.value.getBoundingClientRect();
     const viewportHeight = window.innerHeight;
-    // If sentinel is within viewport + rootMargin, trigger load
-    const margin = parseInt(rootMargin) || 200;
-    if (rect.top < viewportHeight + margin) {
+    if (rect.top < viewportHeight + marginPx) {
       isLoading.value = true;
-      onLoadMore();
-      requestAnimationFrame(() => {
+      try {
+        await Promise.resolve(onLoadMore());
+      } catch (error) {
+        // Avoid leaving isLoading stuck on errors
+        logger.error('[useInfiniteScroll] Failed to load more items:', error);
+      } finally {
         isLoading.value = false;
-      });
+      }
     }
+  };
+  const scheduleScrollCheck = () => {
+    scrollTimeout = setTimeout(() => {
+      scrollTimeout = null;
+      void checkAndLoadMore();
+      if (pendingScroll) {
+        pendingScroll = false;
+        scheduleScrollCheck();
+      }
+    }, scrollThrottleMs);
+  };
+  const handleScroll = () => {
+    if (!enabled.value) return;
+    if (scrollTimeout) {
+      pendingScroll = true;
+      return;
+    }
+    scheduleScrollCheck();
   };
   const createObserver = () => {
     if (observer) {
@@ -65,14 +92,25 @@ export function useInfiniteScroll(
   };
   const start = () => {
     createObserver();
-    // Also do an initial check in case sentinel is already visible
-    requestAnimationFrame(checkAndLoadMore);
+    if (useScrollFallback) {
+      window.addEventListener('scroll', handleScroll, { passive: true });
+    }
+    nextTick(() => {
+      checkAndLoadMore();
+    });
   };
   const stop = () => {
     observer?.disconnect();
     observer = null;
+    if (useScrollFallback) {
+      window.removeEventListener('scroll', handleScroll);
+    }
+    if (scrollTimeout) {
+      clearTimeout(scrollTimeout);
+      scrollTimeout = null;
+    }
+    pendingScroll = false;
   };
-  // Watch for sentinel element changes (e.g. when v-if renders it)
   watch(
     sentinelRef,
     (el, oldEl) => {
@@ -81,15 +119,15 @@ export function useInfiniteScroll(
           observer.disconnect();
           if (el) {
             observer.observe(el);
-            // Check if newly rendered sentinel is already visible
-            requestAnimationFrame(checkAndLoadMore);
+            nextTick(() => {
+              checkAndLoadMore();
+            });
           }
         }
       }
     },
     { flush: 'post' }
   );
-  // Watch enabled state to restart observer when re-enabled
   watch(enabled, (newEnabled) => {
     if (newEnabled) {
       start();

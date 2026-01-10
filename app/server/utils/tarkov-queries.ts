@@ -9,7 +9,6 @@ export const TARKOV_DATA_QUERY = `
     gridImageLink
     baseImageLink
     iconLink
-    image8xLink
     backgroundColor
   }
   fragment QuestItemData on QuestItem {
@@ -20,7 +19,6 @@ export const TARKOV_DATA_QUERY = `
     gridImageLink
     baseImageLink
     iconLink
-    image8xLink
   }
   fragment CategoryData on ItemCategory {
     id
@@ -441,25 +439,15 @@ export const TARKOV_ITEMS_QUERY = `
       id
       shortName
       name
-      normalizedName
       link
       wikiLink
       image512pxLink
-      gridImageLink
-      baseImageLink
       iconLink
-      image8xLink
       backgroundColor
       types
       category {
         id
         name
-        normalizedName
-      }
-      categories {
-        id
-        name
-        normalizedName
       }
     }
   }
@@ -598,18 +586,23 @@ export const TARKOV_TASKS_CORE_QUERY = `
     }
   }
 `;
-// Task objectives (and fail conditions) split out to reduce core payload
-export const TARKOV_TASKS_OBJECTIVES_QUERY = `
+const ITEM_REF_FRAGMENT = `
   fragment ItemRef on Item {
     id
     properties {
       ... on ItemPropertiesWeapon {
         defaultPreset {
           id
+          iconLink
+          image512pxLink
         }
       }
     }
   }
+`;
+// Task objectives (and fail conditions) split out to reduce core payload
+export const TARKOV_TASKS_OBJECTIVES_QUERY = `
+  ${ITEM_REF_FRAGMENT}
   fragment QuestItemData on QuestItem {
     id
     shortName
@@ -618,7 +611,6 @@ export const TARKOV_TASKS_OBJECTIVES_QUERY = `
     gridImageLink
     baseImageLink
     iconLink
-    image8xLink
   }
   fragment CategoryData on ItemCategory {
     id
@@ -1022,16 +1014,7 @@ export const TARKOV_TASKS_OBJECTIVES_QUERY = `
 `;
 // Task rewards split out to reduce core payload
 export const TARKOV_TASKS_REWARDS_QUERY = `
-  fragment ItemRef on Item {
-    id
-    properties {
-      ... on ItemPropertiesWeapon {
-        defaultPreset {
-          id
-        }
-      }
-    }
-  }
+  ${ITEM_REF_FRAGMENT}
   query TarkovTaskRewards($lang: LanguageCode, $gameMode: GameMode) {
     tasks(lang: $lang, gameMode: $gameMode) {
       id

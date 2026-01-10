@@ -1,98 +1,31 @@
 import type { TarkovTaskObjectivesQueryResult } from '~/types/tarkov';
 import { createTarkovFetcher, edgeCache } from '~/server/utils/edgeCache';
+import { GraphQLResponseError, validateGraphQLResponse } from '~/server/utils/graphql-validation';
 import { createLogger } from '~/server/utils/logger';
 import { applyOverlay } from '~/server/utils/overlay';
+import { CACHE_TTL_DEFAULT, validateGameMode } from '~/server/utils/tarkov-cache-config';
 import { TARKOV_TASKS_OBJECTIVES_QUERY } from '~/server/utils/tarkov-queries';
 import { API_SUPPORTED_LANGUAGES } from '~/utils/constants';
-type TarkovGraphqlResponse<T> = {
-  data?: T;
-  errors?: Array<{ message: string; [key: string]: unknown }>;
-};
 const logger = createLogger('TarkovTaskObjectives');
-/**
- * Custom error for GraphQL response validation failures
- */
-class GraphQLResponseError extends Error {
-  constructor(
-    message: string,
-    public readonly errors?: Array<{ message: string; [key: string]: unknown }>
-  ) {
-    super(message);
-    this.name = 'GraphQLResponseError';
-  }
-}
-/**
- * Type guard to validate GraphQL response structure
- */
-function isValidGraphQLResponse(
-  response: unknown
-): response is TarkovGraphqlResponse<TarkovTaskObjectivesQueryResult> {
-  return (
-    response !== null &&
-    typeof response === 'object' &&
-    ('data' in response || 'errors' in response)
-  );
-}
-/**
- * Validates GraphQL response and narrows type to ensure data.data exists
- * @param allowPartialData - If true, allows responses with errors as long as data exists
- * @throws GraphQLResponseError if response is invalid or contains errors
- */
-function validateGraphQLResponse(
-  response: unknown,
-  allowPartialData = false
-): asserts response is { data: TarkovTaskObjectivesQueryResult } {
-  // Check basic structure
-  if (!isValidGraphQLResponse(response)) {
-    throw new GraphQLResponseError('Invalid GraphQL response structure');
-  }
-  // Check for missing data
-  if (!response.data) {
-    throw new GraphQLResponseError('GraphQL response missing data field');
-  }
-  // Check for GraphQL errors (only throw if not allowing partial data)
-  if (
-    !allowPartialData &&
-    response.errors &&
-    Array.isArray(response.errors) &&
-    response.errors.length > 0
-  ) {
-    const errorMessages = response.errors.map((e) => e.message).join('; ');
-    throw new GraphQLResponseError(`GraphQL errors: ${errorMessages}`, response.errors);
-  }
-  // If we have partial data and errors, log them but don't throw
-  if (
-    allowPartialData &&
-    response.errors &&
-    Array.isArray(response.errors) &&
-    response.errors.length > 0
-  ) {
-    logger.warn('GraphQL response contains errors but returning partial data:', response.errors);
-  }
-}
-// Valid game modes
-const VALID_GAME_MODES = ['regular', 'pve'] as const;
-// Cache TTL: 12 hours in seconds
-const CACHE_TTL = 43200;
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);
   // Validate and sanitize inputs
   let lang = (query.lang as string)?.toLowerCase() || 'en';
-  let gameMode = (query.gameMode as string)?.toLowerCase() || 'regular';
+  const gameMode = validateGameMode(query.gameMode as string);
   // Ensure valid language (fallback to English if unsupported)
   if (!API_SUPPORTED_LANGUAGES.includes(lang as (typeof API_SUPPORTED_LANGUAGES)[number])) {
     lang = 'en';
-  }
-  // Ensure valid game mode
-  if (!VALID_GAME_MODES.includes(gameMode as (typeof VALID_GAME_MODES)[number])) {
-    gameMode = 'regular';
   }
   const cacheKey = `tasks-objectives-${lang}-${gameMode}`;
   const baseFetcher = createTarkovFetcher(TARKOV_TASKS_OBJECTIVES_QUERY, { lang, gameMode });
   const fetcher = async () => {
     const rawResponse = await baseFetcher();
     try {
-      validateGraphQLResponse(rawResponse, true);
+      validateGraphQLResponse<TarkovTaskObjectivesQueryResult>(
+        rawResponse,
+        logger,
+        /* allowPartialData */ true
+      );
     } catch (error) {
       if (error instanceof GraphQLResponseError) {
         logger.error('GraphQL validation failed:', error.message);
@@ -109,5 +42,5 @@ export default defineEventHandler(async (event) => {
       throw overlayError;
     }
   };
-  return await edgeCache(event, cacheKey, fetcher, CACHE_TTL, { cacheKeyPrefix: 'tarkov' });
+  return await edgeCache(event, cacheKey, fetcher, CACHE_TTL_DEFAULT, { cacheKeyPrefix: 'tarkov' });
 });

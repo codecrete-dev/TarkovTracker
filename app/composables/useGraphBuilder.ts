@@ -18,8 +18,8 @@ import {
   safeAddEdge,
   safeAddNode,
 } from '@/utils/graphHelpers';
-import { normalizeTaskObjectives } from '@/utils/helpers';
 import { logger } from '@/utils/logger';
+import { normalizeTaskObjectives } from '@/utils/taskNormalization';
 import type { AbstractGraph } from 'graphology-types';
 /**
  * Composable for building task and hideout dependency graphs

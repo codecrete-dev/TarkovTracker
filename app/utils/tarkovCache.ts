@@ -13,7 +13,7 @@ import { logger } from './logger';
 // Cache configuration
 export const CACHE_CONFIG = {
   DB_NAME: 'tarkov-tracker-cache',
-  DB_VERSION: 4, // Bumped to force cache clear after splitting task payloads
+  DB_VERSION: 5, // Bumped to force cache clear after trimming item payloads
   STORE_NAME: 'tarkov-data',
   // 12 hours in milliseconds
   DEFAULT_TTL: 12 * 60 * 60 * 1000,
@@ -75,6 +75,76 @@ function openDatabase(): Promise<IDBDatabase> {
   });
 }
 /**
+ * Helper to create a transaction context with common error handling and cleanup
+ */
+interface TransactionContext {
+  db: IDBDatabase;
+  transaction: IDBTransaction;
+  store: IDBObjectStore;
+  settled: boolean;
+  settle: () => void;
+  closeDb: () => void;
+  reject: (error: unknown) => void;
+  resolve: <T>(value: T) => void;
+}
+function createTransactionContext(
+  db: IDBDatabase,
+  mode: IDBTransactionMode,
+  promiseResolve: (value: unknown) => void,
+  promiseReject: (reason: unknown) => void
+): TransactionContext {
+  const transaction = db.transaction(CACHE_CONFIG.STORE_NAME, mode);
+  const store = transaction.objectStore(CACHE_CONFIG.STORE_NAME);
+  const closeDb = () => {
+    try {
+      db.close();
+    } catch {
+      // ignore close errors; nothing else to do here
+    }
+  };
+  const context: TransactionContext = {
+    db,
+    transaction,
+    store,
+    settled: false,
+    settle: () => {
+      context.settled = true;
+    },
+    closeDb,
+    reject: (error: unknown) => {
+      if (!context.settled) {
+        context.settled = true;
+        logger.error('[TarkovCache] Transaction error:', error);
+        promiseReject(error);
+      }
+    },
+    resolve: <T>(value: T) => {
+      if (!context.settled) {
+        context.settled = true;
+        promiseResolve(value);
+      }
+    },
+  };
+  // Set up common transaction handlers
+  transaction.onerror = (event) => {
+    const error =
+      (event.target as IDBRequest | IDBTransaction | null)?.error ??
+      transaction.error ??
+      new Error('Transaction error');
+    context.reject(error);
+    closeDb();
+  };
+  transaction.onabort = () => {
+    if (!context.settled) {
+      context.settled = true;
+      promiseReject(new Error('Transaction aborted'));
+    }
+    closeDb();
+  };
+  transaction.oncomplete = closeDb;
+  return context;
+}
+/**
  * Generic database transaction executor with common error handling and cleanup
  */
 function executeDatabaseTransaction<T>(
@@ -83,40 +153,55 @@ function executeDatabaseTransaction<T>(
 ): Promise<T> {
   return openDatabase().then((db) => {
     return new Promise<T>((resolve, reject) => {
-      let settled = false;
-      const transaction = db.transaction(CACHE_CONFIG.STORE_NAME, mode);
-      const store = transaction.objectStore(CACHE_CONFIG.STORE_NAME);
-      const request = operation(store);
-      const closeDb = () => {
-        try {
-          db.close();
-        } catch {
-          // ignore close errors; nothing else to do here
-        }
-      };
-      const setError = (error: unknown) => {
-        if (!settled) {
-          settled = true;
-          logger.error('[TarkovCache] Transaction error:', error);
-          reject(error);
-        }
-      };
-      request.onerror = () => setError(request.error);
-      transaction.onabort = () => {
-        if (!settled) {
-          settled = true;
-          reject(new Error('Transaction aborted'));
-        }
-        closeDb();
-      };
-      transaction.oncomplete = closeDb;
-      request.onsuccess = () => {
-        if (!settled) {
-          settled = true;
-          resolve(request.result as T);
-        }
-      };
+      const ctx = createTransactionContext(db, mode, resolve as (value: unknown) => void, reject);
+      const request = operation(ctx.store);
+      request.onerror = () => ctx.reject(request.error);
+      request.onsuccess = () => ctx.resolve(request.result as T);
     });
+  });
+}
+/**
+ * Execute a cursor-based operation with common error handling
+ */
+function executeCursorOperation(
+  db: IDBDatabase,
+  mode: IDBTransactionMode,
+  cursorRequest: (store: IDBObjectStore) => IDBRequest,
+  onCursor: (cursor: IDBCursorWithValue) => void,
+  onComplete: () => void
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const ctx = createTransactionContext(db, mode, resolve as (value: unknown) => void, reject);
+    const request = cursorRequest(ctx.store);
+    request.onerror = () => ctx.reject(request.error);
+    request.onsuccess = (event) => {
+      if (ctx.settled) return;
+      const cursor = (event.target as IDBRequest).result as IDBCursorWithValue | null;
+      if (cursor) {
+        try {
+          onCursor(cursor);
+          cursor.continue();
+        } catch (error) {
+          if (!ctx.settled) {
+            ctx.reject(error);
+            try {
+              ctx.transaction.abort();
+            } catch {
+              // ignore abort errors
+            }
+            ctx.closeDb();
+          }
+        }
+      }
+    };
+    ctx.transaction.oncomplete = () => {
+      if (!ctx.settled) {
+        ctx.settled = true;
+        onComplete();
+        resolve();
+      }
+      ctx.closeDb();
+    };
   });
 }
 /**
@@ -211,50 +296,13 @@ export async function clearCacheEntry(
 export async function clearCacheByGameMode(gameMode: string): Promise<void> {
   try {
     const db = await openDatabase();
-    return new Promise((resolve, reject) => {
-      let settled = false;
-      const transaction = db.transaction(CACHE_CONFIG.STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(CACHE_CONFIG.STORE_NAME);
-      const index = store.index('gameMode');
-      const request = index.openCursor(IDBKeyRange.only(gameMode));
-      const closeDb = () => {
-        try {
-          db.close();
-        } catch {
-          // ignore close errors; nothing else to do here
-        }
-      };
-      request.onerror = () => {
-        if (!settled) {
-          settled = true;
-          logger.error('[TarkovCache] Failed to clear cache by game mode:', request.error);
-          reject(request.error);
-        }
-      };
-      request.onsuccess = (event) => {
-        if (settled) return;
-        const cursor = (event.target as IDBRequest).result as IDBCursorWithValue | null;
-        if (cursor) {
-          cursor.delete();
-          cursor.continue();
-        }
-      };
-      transaction.oncomplete = () => {
-        if (!settled) {
-          settled = true;
-          logger.debug(`[TarkovCache] Cleared all cache for gameMode: ${gameMode}`);
-          resolve();
-        }
-        closeDb();
-      };
-      transaction.onabort = () => {
-        if (!settled) {
-          settled = true;
-          reject(new Error('Transaction aborted'));
-        }
-        closeDb();
-      };
-    });
+    await executeCursorOperation(
+      db,
+      'readwrite',
+      (store) => store.index('gameMode').openCursor(IDBKeyRange.only(gameMode)),
+      (cursor) => cursor.delete(),
+      () => logger.debug(`[TarkovCache] Cleared all cache for gameMode: ${gameMode}`)
+    );
   } catch (error) {
     logger.error('[TarkovCache] Error clearing cache by game mode:', error);
     throw error;
@@ -265,44 +313,8 @@ export async function clearCacheByGameMode(gameMode: string): Promise<void> {
  */
 export async function clearAllCache(): Promise<void> {
   try {
-    const db = await openDatabase();
-    return new Promise((resolve, reject) => {
-      let settled = false;
-      const transaction = db.transaction(CACHE_CONFIG.STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(CACHE_CONFIG.STORE_NAME);
-      const request = store.clear();
-      const closeDb = () => {
-        try {
-          db.close();
-        } catch {
-          // ignore close errors; nothing else to do here
-        }
-      };
-      request.onerror = () => {
-        if (!settled) {
-          settled = true;
-          logger.error('[TarkovCache] Failed to clear all cache:', request.error);
-          reject(request.error);
-        }
-      };
-      request.onsuccess = () => {
-        if (!settled) {
-          settled = true;
-          logger.debug('[TarkovCache] All cache CLEARED');
-          resolve();
-        }
-      };
-      transaction.oncomplete = () => {
-        closeDb();
-      };
-      transaction.onabort = () => {
-        if (!settled) {
-          settled = true;
-          reject(new Error('Transaction aborted'));
-        }
-        closeDb();
-      };
-    });
+    await executeDatabaseTransaction<undefined>('readwrite', (store) => store.clear());
+    logger.debug('[TarkovCache] All cache CLEARED');
   } catch (error) {
     logger.error('[TarkovCache] Error clearing all cache:', error);
     throw error;
@@ -325,63 +337,30 @@ export interface CacheStats {
 }
 export async function getCacheStats(): Promise<CacheStats> {
   try {
-    const db = await openDatabase();
-    return new Promise((resolve, _reject) => {
-      let settled = false;
-      const transaction = db.transaction(CACHE_CONFIG.STORE_NAME, 'readonly');
-      const store = transaction.objectStore(CACHE_CONFIG.STORE_NAME);
-      const request = store.getAll();
-      const closeDb = () => {
-        try {
-          db.close();
-        } catch {
-          // ignore close errors; nothing else to do here
-        }
-      };
-      request.onerror = () => {
-        if (!settled) {
-          settled = true;
-          logger.error('[TarkovCache] Failed to get cache stats:', request.error);
-          resolve({ totalEntries: 0, totalSize: 0, entries: [] });
-        }
-      };
-      request.onsuccess = () => {
-        if (!settled) {
-          settled = true;
-          const entries = request.result as CachedData<unknown>[];
-          const now = Date.now();
-          const stats: CacheStats = {
-            totalEntries: entries.length,
-            totalSize: 0,
-            entries: entries.map((entry) => {
-              const age = now - entry.timestamp;
-              // Rough size estimate
-              const entrySize = JSON.stringify(entry.data).length;
-              stats.totalSize += entrySize;
-              return {
-                cacheKey: entry.cacheKey,
-                gameMode: entry.gameMode,
-                lang: entry.lang,
-                age: Math.round(age / 1000 / 60), // minutes
-                ttl: Math.round(entry.ttl / 1000 / 60), // minutes
-                isExpired: age > entry.ttl,
-              };
-            }),
-          };
-          resolve(stats);
-        }
-      };
-      transaction.oncomplete = () => {
-        closeDb();
-      };
-      transaction.onabort = () => {
-        if (!settled) {
-          settled = true;
-          resolve({ totalEntries: 0, totalSize: 0, entries: [] });
-        }
-        closeDb();
+    const entries = await executeDatabaseTransaction<CachedData<unknown>[]>('readonly', (store) =>
+      store.getAll()
+    );
+    const now = Date.now();
+    let totalSize = 0;
+    const mappedEntries = entries.map((entry) => {
+      const age = now - entry.timestamp;
+      // Rough size estimate
+      const entrySize = JSON.stringify(entry.data).length;
+      totalSize += entrySize;
+      return {
+        cacheKey: entry.cacheKey,
+        gameMode: entry.gameMode,
+        lang: entry.lang,
+        age: Math.round(age / 1000 / 60), // minutes
+        ttl: Math.round(entry.ttl / 1000 / 60), // minutes
+        isExpired: age > entry.ttl,
       };
     });
+    return {
+      totalEntries: entries.length,
+      totalSize,
+      entries: mappedEntries,
+    };
   } catch (error) {
     logger.error('[TarkovCache] Error getting cache stats:', error);
     return { totalEntries: 0, totalSize: 0, entries: [] };
@@ -393,58 +372,27 @@ export async function getCacheStats(): Promise<CacheStats> {
 export async function cleanupExpiredCache(): Promise<number> {
   try {
     const db = await openDatabase();
-    return new Promise((resolve, _reject) => {
-      let settled = false;
-      const transaction = db.transaction(CACHE_CONFIG.STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(CACHE_CONFIG.STORE_NAME);
-      const request = store.openCursor();
-      let deletedCount = 0;
-      const now = Date.now();
-      const closeDb = () => {
-        try {
-          db.close();
-        } catch {
-          // ignore close errors; nothing else to do here
+    let deletedCount = 0;
+    const now = Date.now();
+    await executeCursorOperation(
+      db,
+      'readwrite',
+      (store) => store.openCursor(),
+      (cursor) => {
+        const entry = cursor.value as CachedData<unknown>;
+        const age = now - entry.timestamp;
+        if (age > entry.ttl) {
+          cursor.delete();
+          deletedCount++;
         }
-      };
-      request.onerror = () => {
-        if (!settled) {
-          settled = true;
-          logger.error('[TarkovCache] Failed to cleanup expired cache:', request.error);
-          resolve(0);
+      },
+      () => {
+        if (deletedCount > 0) {
+          logger.debug(`[TarkovCache] Cleaned up ${deletedCount} expired entries`);
         }
-      };
-      request.onsuccess = (event) => {
-        if (settled) return;
-        const cursor = (event.target as IDBRequest).result as IDBCursorWithValue | null;
-        if (cursor) {
-          const entry = cursor.value as CachedData<unknown>;
-          const age = now - entry.timestamp;
-          if (age > entry.ttl) {
-            cursor.delete();
-            deletedCount++;
-          }
-          cursor.continue();
-        }
-      };
-      transaction.oncomplete = () => {
-        if (!settled) {
-          settled = true;
-          if (deletedCount > 0) {
-            logger.debug(`[TarkovCache] Cleaned up ${deletedCount} expired entries`);
-          }
-          resolve(deletedCount);
-        }
-        closeDb();
-      };
-      transaction.onabort = () => {
-        if (!settled) {
-          settled = true;
-          resolve(0);
-        }
-        closeDb();
-      };
-    });
+      }
+    );
+    return deletedCount;
   } catch (error) {
     logger.error('[TarkovCache] Error cleaning up expired cache:', error);
     return 0;

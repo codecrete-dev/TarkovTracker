@@ -515,32 +515,45 @@ export const useProgressStore = defineStore('progress', () => {
     // Final fallback
     return teamId.substring(0, 6);
   };
+  const derivedLevelsByTeam = computed(() => {
+    const derivedLevels: Record<string, number> = {};
+    const tasks = metadataStore.tasks;
+    if (!Array.isArray(tasks) || tasks.length === 0) return derivedLevels;
+    const levels = metadataStore.playerLevels;
+    if (!levels || levels.length === 0) return derivedLevels;
+    const teamIds = Object.keys(teamStores.value);
+    if (!teamIds.length) return derivedLevels;
+    for (const teamId of teamIds) {
+      const store = teamStores.value[teamId];
+      const currentData = getGameModeData(store);
+      const completions = currentData?.taskCompletions ?? {};
+      const xpOffset = currentData?.xpOffset ?? 0;
+      let calculatedQuestXP = 0;
+      for (const task of tasks) {
+        const completion = completions[task.id];
+        if (completion?.complete === true && completion?.failed !== true) {
+          calculatedQuestXP += task.experience || 0;
+        }
+      }
+      const totalXP = calculatedQuestXP + xpOffset;
+      let derivedLevel = 1;
+      for (let i = levels.length - 1; i >= 0; i--) {
+        const level = levels[i];
+        if (level && totalXP >= level.exp) {
+          derivedLevel = level.level;
+          break;
+        }
+      }
+      derivedLevels[teamId] = derivedLevel;
+    }
+    return derivedLevels;
+  });
   /**
    * Calculate derived level from XP for any team member
    */
   const calculateDerivedLevel = (teamId: string): number => {
     const storeKey = getTeamIndex(teamId);
-    const store = teamStores.value[storeKey];
-    const currentData = getGameModeData(store);
-    const xpOffset = currentData?.xpOffset ?? 0;
-    // Calculate total XP from completed tasks
-    const calculatedQuestXP = metadataStore.tasks
-      .filter((task) => {
-        const completion = currentData?.taskCompletions?.[task.id];
-        return completion?.complete === true && completion?.failed !== true;
-      })
-      .reduce((sum, task) => sum + (task.experience || 0), 0);
-    const totalXP = calculatedQuestXP + xpOffset;
-    // Find level from total XP
-    const levels = metadataStore.playerLevels;
-    if (!levels || levels.length === 0) return 1;
-    for (let i = levels.length - 1; i >= 0; i--) {
-      const level = levels[i];
-      if (level && totalXP >= level.exp) {
-        return level.level;
-      }
-    }
-    return 1;
+    return derivedLevelsByTeam.value[storeKey] ?? 1;
   };
   const getLevel = (teamId: string): number => {
     const storeKey = getTeamIndex(teamId);

@@ -296,7 +296,6 @@
       objective.taskId ?? fullObjectives.value.find((entry) => entry.id === objective.id)?.taskId
     );
   };
-
   // Craftable item helpers
   const getItemIdForRow = (row: ConsolidatedRow): string | undefined => {
     return row.meta.item?.id;
@@ -383,7 +382,6 @@
     });
     return Array.from(ids);
   });
-
   const isParentTaskLocked = computed(() => {
     if (parentTaskIds.value.length === 0) return false;
     // If ANY associated task is NOT available (locked, complete, failed, or blocked),

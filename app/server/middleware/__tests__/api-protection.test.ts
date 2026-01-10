@@ -48,6 +48,11 @@ global.fetch = mockFetch as typeof fetch;
 mockNuxtImport('useRuntimeConfig', () => () => runtimeConfig);
 describe('API Protection Middleware', () => {
   let mockEvent: Partial<H3Event>;
+  type NodeContext = NonNullable<H3Event['node']>;
+  const createNodeContext = (remoteAddress: string): NodeContext => ({
+    req: { socket: { remoteAddress } } as NodeContext['req'],
+    res: {} as NodeContext['res'],
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset runtime config to default state
@@ -57,13 +62,7 @@ describe('API Protection Middleware', () => {
     runtimeConfig.apiProtection.trustedIpRanges = '';
     runtimeConfig.apiProtection.trustProxy = false;
     mockEvent = {
-      node: {
-        req: {
-          socket: {
-            remoteAddress: '127.0.0.1',
-          },
-        } as Record<string, unknown>,
-      } as Record<string, unknown>,
+      node: createNodeContext('127.0.0.1'),
       method: 'GET',
       context: {},
     } as any;
@@ -131,13 +130,7 @@ describe('API Protection Middleware', () => {
         if (header === 'host') return 'localhost:3000';
         return undefined;
       });
-      mockEvent.node = {
-        req: {
-          socket: {
-            remoteAddress: '192.168.1.100',
-          },
-        },
-      } as Record<string, unknown>;
+      mockEvent.node = createNodeContext('192.168.1.100');
       const { default: middleware } = await import('../api-protection');
       await expect(middleware(mockEvent as H3Event)).resolves.toBeUndefined();
       process.env.NODE_ENV = originalEnv;
@@ -153,13 +146,7 @@ describe('API Protection Middleware', () => {
         if (header === 'host') return 'localhost:3000';
         return undefined;
       });
-      mockEvent.node = {
-        req: {
-          socket: {
-            remoteAddress: '10.0.0.1',
-          },
-        },
-      } as Record<string, unknown>;
+      mockEvent.node = createNodeContext('10.0.0.1');
       const { default: middleware } = await import('../api-protection');
       await expect(middleware(mockEvent as H3Event)).rejects.toThrow();
       process.env.NODE_ENV = originalEnv;
@@ -176,13 +163,7 @@ describe('API Protection Middleware', () => {
         if (header === 'x-forwarded-for') return '203.0.113.50, 10.0.0.1';
         return undefined;
       });
-      mockEvent.node = {
-        req: {
-          socket: {
-            remoteAddress: '10.0.0.1',
-          },
-        },
-      } as Record<string, unknown>;
+      mockEvent.node = createNodeContext('10.0.0.1');
       const { default: middleware } = await import('../api-protection');
       await expect(middleware(mockEvent as H3Event)).resolves.toBeUndefined();
       process.env.NODE_ENV = originalEnv;

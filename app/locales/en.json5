@@ -145,6 +145,17 @@
         all: 'All',
         yourself: 'Yourself',
       },
+      sort: {
+        default: 'Default Order',
+        impact: 'Impact',
+        alphabetical: 'Alphabetical',
+        level: 'Level Required',
+        trader: 'Trader Order',
+        teammates: 'Available to Teammates',
+        xp: 'XP Reward',
+        ascending: 'Ascending',
+        descending: 'Descending',
+      },
       hide_global_tasks: 'Hide Global Tasks',
       show_global_tasks: 'Show Global Tasks',
       hide_non_kappa_tasks: 'Hide Non Kappa Tasks',
@@ -192,6 +203,8 @@
           showKappaTasksTooltip: 'Show tasks required for Kappa container',
           showLightkeeperTasks: 'Show Lightkeeper Tasks and Lightkeeper-required Tasks',
           showLightkeeperTasksTooltip: 'Show tasks from Lightkeeper trader and tasks required for Lightkeeper',
+          sharedByAllOnly: 'Only show tasks available to all visible teammates',
+          sharedByAllOnlyTooltip: 'Filters the list to tasks that every visible teammate has available',
         },
         appearance: {
           hint: 'Tune how task cards look.',
@@ -707,6 +720,8 @@
     },
     danger_zone: {
       title: 'Danger Zone',
+      confirm_delete_instruction: 'Type {word} to confirm:',
+      confirm_word: 'DELETE',
     },
   },
   generic: {

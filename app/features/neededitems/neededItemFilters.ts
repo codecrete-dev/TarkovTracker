@@ -1,4 +1,32 @@
-import type { NeededItemTaskObjective } from '@/types/tarkov';
+import type { NeededItemHideoutModule, NeededItemTaskObjective, TarkovItem } from '@/types/tarkov';
+/**
+ * Type guard to check if a needed item is a task objective (has markerItem property).
+ */
+function isNeededItemTaskObjective(
+  need: NeededItemTaskObjective | NeededItemHideoutModule
+): need is NeededItemTaskObjective {
+  return need.needType === 'taskObjective';
+}
+/**
+ * Extracts the item ID from a needed item (task objective or hideout module).
+ * Handles both regular items and marker items for task objectives.
+ * Uses nullish coalescing to only fallback for null/undefined.
+ */
+export const getNeededItemId = (
+  need: NeededItemTaskObjective | NeededItemHideoutModule
+): string | undefined => {
+  return need.item?.id ?? (isNeededItemTaskObjective(need) ? need.markerItem?.id : undefined);
+};
+/**
+ * Extracts the item data object from a needed item.
+ * Returns either the item or markerItem for task objectives.
+ * Uses nullish coalescing to only fallback for null/undefined.
+ */
+export const getNeededItemData = (
+  need: NeededItemTaskObjective | NeededItemHideoutModule
+): TarkovItem | undefined => {
+  return need.item ?? (isNeededItemTaskObjective(need) ? need.markerItem : undefined);
+};
 const isSpecialEquipmentText = (value: string): boolean => {
   const lower = value.toLowerCase();
   return lower.includes('special') && lower.includes('equipment');

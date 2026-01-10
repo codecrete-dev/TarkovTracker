@@ -102,8 +102,8 @@
   import { useTeamStoreWithSupabase } from '@/stores/useTeamStore';
   import type { SystemState, TeamState } from '@/types/tarkov';
   import type { CreateTeamResponse, LeaveTeamResponse } from '@/types/team';
+  import { delay } from '@/utils/async';
   import { GAME_MODES, LIMITS } from '@/utils/constants';
-  import { delay } from '@/utils/helpers';
   import { logger } from '@/utils/logger';
   const { t } = useI18n({ useScope: 'global' });
   const { teamStore } = useTeamStoreWithSupabase();

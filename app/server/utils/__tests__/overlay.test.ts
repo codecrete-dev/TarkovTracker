@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergeArrayByIdPatches } from '@/server/utils/overlay';
+import { mergeArrayByIdPatches } from '@/server/utils/deepMerge';
 describe('mergeArrayByIdPatches', () => {
   it('deep merges plain-object patches by id and leaves other entries unchanged', () => {
     const sourcePatches = {

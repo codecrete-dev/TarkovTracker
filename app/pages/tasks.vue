@@ -5,10 +5,10 @@
       <TaskFilterBar
         v-model:search-query="searchQuery"
         :single-task-id="singleTaskId"
-        :primary-view="getTaskPrimaryView"
-        :secondary-view="getTaskSecondaryView"
-        :map-view="getTaskMapView"
-        :trader-view="getTaskTraderView"
+        :primary-view="getTaskPrimaryView as string"
+        :secondary-view="getTaskSecondaryView as string"
+        :map-view="getTaskMapView as string"
+        :trader-view="getTaskTraderView as string"
         @clear-single-task="clearSingleTaskFilter"
         @update:primary-view="handlePrimaryViewChange"
         @update:secondary-view="(v) => setFilters({ status: v, task: null })"
@@ -162,7 +162,7 @@
   const getTaskMapView = filters.map!;
   const getTaskTraderView = filters.trader!;
   const singleTaskId = computed(() => {
-    const taskId = filters.task.value;
+    const taskId = filters.task?.value;
     return taskId || null; // Return URL value directly, let watcher handle missing task
   });
   const searchQuery = debouncedInputs.search!;
@@ -416,10 +416,8 @@
   ) => {
     // 1. Basic checks
     if (isLoading.value || !metadataStore.hasInitialized) return;
-
     const taskId = to.query.task as string;
     if (!taskId) return; // Not in single-task mode
-
     // Scroll to top if task changed (and it's not just a view change on the same task)
     if (from && to.query.task !== from.query.task) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -427,46 +425,34 @@
       // Initial load
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-
     // 2. If URL already has a view (e.g. user clicked a tab or permalink), respect it.
     if (to.query.view) return;
-
     // 3. Toggle Logic: REMOVED by request.
     // Ideally we always want "smart resolution" when landing on a clean link.
     // If the user wants to leave map view, they must now do so explicitly via the "View All" link.
-
     // 4. Smart Resolution Logic
     const task = tasks.value.find((t) => t.id === taskId);
-
     // Build the replacement query - start with current query params
     const newQuery: Record<string, string> = { ...to.query } as Record<string, string>;
     // Always ensure status is 'all' so task is visible
     newQuery.status = 'all';
-    
     // Explicitly set view to 'all' as baseline, overridden below if maps found
     newQuery.view = 'all';
-
     if (task && Array.isArray(task.objectives)) {
       const mapIncompleteStatus = new Map<string, boolean>();
       const orderedMapIds: string[] = [];
-      
       for (const obj of task.objectives) {
         if (!Array.isArray(obj.maps)) continue;
-        
         const isComplete = tarkovStore.isTaskObjectiveComplete(obj.id);
-        
         // Cast to access location properties (same as before)
         const objectiveWithLocations = obj as typeof obj & {
           zones?: Array<{ map?: { id: string }; }>
           possibleLocations?: Array<{ map?: { id: string }; }>
         };
-
         const hasLocationData =
           (Array.isArray(objectiveWithLocations.zones) && objectiveWithLocations.zones.length > 0) ||
           (Array.isArray(objectiveWithLocations.possibleLocations) && objectiveWithLocations.possibleLocations.length > 0);
-
         if (!hasLocationData) continue;
-
         for (const objMap of obj.maps) {
           if (!objMap?.id) continue;
           if (!orderedMapIds.includes(objMap.id)) {
@@ -479,10 +465,8 @@
           }
         }
       }
-
       const firstIncompleteMap = orderedMapIds.find((id) => mapIncompleteStatus.get(id) === true);
       const targetMap = firstIncompleteMap ?? orderedMapIds[0];
-
       if (targetMap) {
         // Task has map objectives
         newQuery.view = 'maps';
@@ -500,14 +484,12 @@
       delete newQuery.map;
       delete newQuery.trader;
     }
-
     // Only redirect if the calculated query is different effectively
     // (Simple check: if we decided on 'maps' view and we are not there)
     if (newQuery.view === 'maps') {
        await router.replace({ query: newQuery });
     }
   };
-
   // Watch route changes
   watch(
     () => router.currentRoute.value,
@@ -530,7 +512,6 @@
      delete newQuery.trader;
      await router.push({ query: newQuery });
   };
-
   // Clear single task filter
   const clearSingleTaskFilter = () => {
     setFilter('task', null);

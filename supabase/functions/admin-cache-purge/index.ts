@@ -14,6 +14,10 @@ const CLOUDFLARE_API_URL = 'https://api.cloudflare.com/client/v4';
 // Cache key patterns for targeted purging
 const TARKOV_CACHE_PREFIXES = [
   '/__edge-cache/tarkov/data-',
+  '/__edge-cache/tarkov/tasks-core-',
+  '/__edge-cache/tarkov/tasks-objectives-',
+  '/__edge-cache/tarkov/tasks-rewards-',
+  '/__edge-cache/tarkov/bootstrap-',
   '/__edge-cache/tarkov/hideout-',
   '/__edge-cache/tarkov/items-',
   '/__edge-cache/tarkov/prestige-',

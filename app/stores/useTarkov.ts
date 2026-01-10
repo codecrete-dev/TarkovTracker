@@ -16,6 +16,9 @@ import { GAME_MODES, type GameMode } from '@/utils/constants';
 import { logger } from '@/utils/logger';
 import { STORAGE_KEYS } from '@/utils/storageKeys';
 import { useToast } from '#imports';
+// Throttle state for localStorage quota checks (module-level to persist across serializations)
+let lastQuotaCheckTime = 0;
+const QUOTA_CHECK_INTERVAL_MS = 60000; // Only check quota every 60 seconds
 type UserProgressRow = {
   user_id: string;
   current_game_mode: string | null;
@@ -601,7 +604,11 @@ export const useTarkovStore = defineStore('swapTarkov', {
         };
         const serialized = JSON.stringify(wrappedState);
         // QUOTA MANAGEMENT: Check if localStorage has enough space
-        if (typeof window !== 'undefined') {
+        // Throttled to avoid performance impact - only check every 60 seconds
+        const now = Date.now();
+        const shouldCheckQuota = now - lastQuotaCheckTime > QUOTA_CHECK_INTERVAL_MS;
+        if (shouldCheckQuota && typeof window !== 'undefined') {
+          lastQuotaCheckTime = now;
           try {
             // Estimate current localStorage usage
             let currentUsage = 0;
@@ -902,27 +909,21 @@ export async function initializeTarkovSync() {
                 pve: { ...structuredClone(defaultState.pve), ...((data as any).pve_data || {}) },
               } as UserState)
             : null;
-
           const remoteScore = normalizedRemote ? progressScore(normalizedRemote) : 0;
           const localScore = progressScore(localState);
-
           if (data) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const remoteUpdatedAt = (data as any).updated_at
               ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 Date.parse((data as any).updated_at)
               : null;
-
             const localOwnedByUser = storedUserId === currentUserId;
-
             if (hasLocalProgress && !localOwnedByUser && storedUserId === null) {
               notifyLocalIgnored(
                 'Found local guest progress on this device; your cloud progress was kept.'
               );
             }
-
             let shouldPreferLocal = false;
-
             // Conflict resolution logic
             if (localOwnedByUser && localTimestamp && remoteUpdatedAt) {
               shouldPreferLocal = localTimestamp > remoteUpdatedAt;
@@ -931,7 +932,6 @@ export async function initializeTarkovSync() {
             } else if (localOwnedByUser && !localTimestamp && !remoteUpdatedAt) {
               shouldPreferLocal = localScore > remoteScore;
             }
-
             // If local has more progress than remote, protect local and push it to Supabase.
             if (shouldPreferLocal) {
               logger.warn('[TarkovStore] Local progress ahead of Supabase; preserving local data', {
@@ -946,7 +946,6 @@ export async function initializeTarkovSync() {
                 pvp_data: localState.pvp || defaultState.pvp,
                 pve_data: localState.pve || defaultState.pve,
               });
-
               if (upsertError) {
                 logger.error(
                   '[TarkovStore] Error syncing local progress to Supabase:',
@@ -968,12 +967,10 @@ export async function initializeTarkovSync() {
               pvp_data: localState.pvp || defaultState.pvp,
               pve_data: localState.pve || defaultState.pve,
             };
-
             lastLocalSyncTime = Date.now(); // Track for self-origin filtering
             const { error: upsertError } = await $supabase.client
               .from('user_progress')
               .upsert(migrateData);
-
             if (upsertError) {
               logger.error('[TarkovStore] Error migrating local data to Supabase:', upsertError);
             } else {
@@ -982,16 +979,13 @@ export async function initializeTarkovSync() {
           } else {
             // SAFETY CHECKS: Before treating as "new user", verify this isn't Issue #71 scenario
             // Issue #71: User links a second OAuth provider → race condition → false "no data" → overwrites
-
             // Check 1: Account age
             const accountCreatedAt = $supabase.user.createdAt;
             const accountAgeMs = accountCreatedAt ? Date.now() - Date.parse(accountCreatedAt) : 0;
             const isRecentlyCreated = accountAgeMs < 5000; // 5 seconds threshold
-
             // Check 2: Multiple OAuth providers - strongest signal of Issue #71
             const linkedProviders = $supabase.user.providers || [];
             const hasMultipleProviders = linkedProviders.length > 1;
-
             // ONLY block if hasMultipleProviders (Issue #71 scenario)
             // OLD accounts with single provider are legitimate first-time users who waited to log in
             if (hasMultipleProviders) {
@@ -1006,11 +1000,9 @@ export async function initializeTarkovSync() {
                   userId: $supabase.user.id,
                 }
               );
-
               // Reset to default state but DO NOT sync to Supabase
               // This prevents overwriting potentially existing data
               resetStoreToDefault();
-
               // Notify user of the issue
               const toast = useToast();
               toast.add({
@@ -1111,6 +1103,80 @@ export async function initializeTarkovSync() {
 let realtimeChannel: unknown = null;
 let lastLocalSyncTime = 0; // Track when we last synced locally to filter self-origin updates
 /**
+ * Detect if there are actual data conflicts between local and remote state.
+ * A conflict occurs when both local and remote have different values for the same field,
+ * not just when remote has new data that local doesn't have.
+ * Returns { hasConflict, conflictCount } to determine notification behavior.
+ */
+function detectDataConflicts(
+  local: UserProgressData | undefined,
+  remote: UserProgressData | undefined
+): { hasConflict: boolean; conflictCount: number } {
+  if (!local || !remote) return { hasConflict: false, conflictCount: 0 };
+  let conflictCount = 0;
+  // Check task completion conflicts (different complete/failed status for same task)
+  const localTasks = local.taskCompletions || {};
+  const remoteTasks = remote.taskCompletions || {};
+  for (const taskId of Object.keys(remoteTasks)) {
+    const localTask = localTasks[taskId];
+    const remoteTask = remoteTasks[taskId];
+    if (localTask && remoteTask) {
+      // Normalize booleans to false when undefined to avoid false positives
+      if (
+        (localTask.complete ?? false) !== (remoteTask.complete ?? false) ||
+        (localTask.failed ?? false) !== (remoteTask.failed ?? false)
+      ) {
+        conflictCount++;
+      }
+    }
+    // Remote has task that local doesn't = not a conflict, just new data
+  }
+  // Check task objective conflicts (different counts for same objective)
+  const localObjectives = local.taskObjectives || {};
+  const remoteObjectives = remote.taskObjectives || {};
+  for (const objId of Object.keys(remoteObjectives)) {
+    const localObj = localObjectives[objId];
+    const remoteObj = remoteObjectives[objId];
+    if (localObj && remoteObj) {
+      // Normalize counts to 0 and booleans to false when undefined
+      if (
+        (localObj.count ?? 0) !== (remoteObj.count ?? 0) ||
+        (localObj.complete ?? false) !== (remoteObj.complete ?? false)
+      ) {
+        conflictCount++;
+      }
+    }
+  }
+  // Check hideout module conflicts
+  const localModules = local.hideoutModules || {};
+  const remoteModules = remote.hideoutModules || {};
+  for (const modId of Object.keys(remoteModules)) {
+    const localMod = localModules[modId];
+    const remoteMod = remoteModules[modId];
+    // Normalize booleans to false when undefined
+    if (localMod && remoteMod && (localMod.complete ?? false) !== (remoteMod.complete ?? false)) {
+      conflictCount++;
+    }
+  }
+  // Check hideout part conflicts
+  const localParts = local.hideoutParts || {};
+  const remoteParts = remote.hideoutParts || {};
+  for (const partId of Object.keys(remoteParts)) {
+    const localPart = localParts[partId];
+    const remotePart = remoteParts[partId];
+    if (localPart && remotePart) {
+      // Normalize counts to 0 and booleans to false when undefined
+      if (
+        (localPart.count ?? 0) !== (remotePart.count ?? 0) ||
+        (localPart.complete ?? false) !== (remotePart.complete ?? false)
+      ) {
+        conflictCount++;
+      }
+    }
+  }
+  return { hasConflict: conflictCount > 0, conflictCount };
+}
+/**
  * Setup realtime listener for user_progress changes from other devices
  * This prevents silent data overwrites when using multiple devices simultaneously
  */
@@ -1146,22 +1212,10 @@ function setupRealtimeListener() {
         };
         // SELF-ORIGIN FILTERING: Ignore updates that are likely from this client
         // If update came within 3 seconds of our last local sync, it's probably ours
-        const updateTime = remoteData.updated_at ? Date.parse(remoteData.updated_at) : Date.now();
+        const parsedUpdateTime = remoteData.updated_at ? Date.parse(remoteData.updated_at) : NaN;
+        const updateTime = Number.isNaN(parsedUpdateTime) ? Date.now() : parsedUpdateTime;
         const timeSinceLastSync = updateTime - lastLocalSyncTime;
         const SELF_ORIGIN_THRESHOLD_MS = 3000; // 3 seconds
-        if (timeSinceLastSync < SELF_ORIGIN_THRESHOLD_MS && timeSinceLastSync >= 0) {
-          logger.debug('[TarkovStore] Ignoring realtime update - likely self-origin', {
-            timeSinceLastSync,
-            threshold: SELF_ORIGIN_THRESHOLD_MS,
-          });
-          return;
-        }
-        logger.warn('[TarkovStore] Remote update detected from another device, merging changes');
-        // Pause local sync to prevent update loop
-        const controller = getSyncController();
-        if (controller) {
-          controller.pause();
-        }
         // Get current local state
         const localState = tarkovStore.$state;
         // Merge remote changes with local state
@@ -1173,22 +1227,61 @@ function setupRealtimeListener() {
           pvp: mergeProgressData(localState.pvp, remoteData.pvp_data),
           pve: mergeProgressData(localState.pve, remoteData.pve_data),
         };
+        const nextState: UserState = {
+          currentGameMode: merged.currentGameMode ?? localState.currentGameMode,
+          gameEdition: merged.gameEdition ?? localState.gameEdition,
+          pvp: merged.pvp ?? localState.pvp,
+          pve: merged.pve ?? localState.pve,
+        };
+        const stateUnchanged = deepEqual(nextState, localState);
+        const isLikelySelfOrigin =
+          timeSinceLastSync < SELF_ORIGIN_THRESHOLD_MS && timeSinceLastSync >= 0;
+        if (isLikelySelfOrigin && stateUnchanged) {
+          logger.debug('[TarkovStore] Ignoring realtime update - likely self-origin', {
+            timeSinceLastSync,
+            threshold: SELF_ORIGIN_THRESHOLD_MS,
+          });
+          return;
+        }
+        if (stateUnchanged) {
+          logger.debug('[TarkovStore] Realtime update matches local state; skipping patch');
+          return;
+        }
+        // Detect actual data conflicts (not just new data from API/other sources)
+        const pvpConflicts = detectDataConflicts(localState.pvp, remoteData.pvp_data);
+        const pveConflicts = detectDataConflicts(localState.pve, remoteData.pve_data);
+        const hasRealConflict = pvpConflicts.hasConflict || pveConflicts.hasConflict;
+        const totalConflicts = pvpConflicts.conflictCount + pveConflicts.conflictCount;
+        logger.debug('[TarkovStore] Remote update detected, applying changes', {
+          hasRealConflict,
+          totalConflicts,
+          isLikelySelfOrigin,
+        });
+        // Pause local sync to prevent update loop
+        const controller = getSyncController();
+        if (controller) {
+          controller.pause();
+        }
         // Apply merged state
-        tarkovStore.$patch(merged);
+        tarkovStore.$patch(nextState);
         // Resume sync after a short delay
         setTimeout(() => {
-          if (controller) {
-            controller.resume();
+          const currentController = getSyncController();
+          if (currentController && currentController === controller) {
+            currentController.resume();
           }
         }, 1000);
-        // Notify user
-        const toast = useToast();
-        toast.add({
-          title: 'Progress synced',
-          description: 'Changes from another device were merged with your local progress.',
-          color: 'info',
-          duration: 5000,
-        });
+        // Only notify user if there was an actual data conflict that required merging
+        // Silent sync for API updates or other-device updates that don't conflict
+        if (hasRealConflict) {
+          const toast = useToast();
+          toast.add({
+            title: 'Progress merged',
+            description: `${totalConflicts} conflicting change${totalConflicts > 1 ? 's were' : ' was'} resolved from another source.`,
+            color: 'warning',
+            duration: 5000,
+          });
+        }
       }
     )
     .subscribe((status: string) => {
@@ -1197,7 +1290,7 @@ function setupRealtimeListener() {
 }
 /**
  * Merge two progress data objects, preserving maximum progress from both
- * Strategy: Union of completed items, max values for levels/counts
+ * Strategy: Prefer latest timestamps for task completions, max values for levels/counts
  */
 function mergeProgressData(
   local: UserProgressData | undefined,
@@ -1206,38 +1299,52 @@ function mergeProgressData(
   if (!local && !remote) return {} as UserProgressData;
   if (!local) return remote!;
   if (!remote) return local;
+  // Specialized merge for task completions that preserves completed status
+  const mergeTaskCompletion = (
+    localComp: { complete?: boolean; failed?: boolean; timestamp?: number } | undefined,
+    remoteComp: { complete?: boolean; failed?: boolean; timestamp?: number } | undefined
+  ): { complete?: boolean; failed?: boolean; timestamp?: number } | undefined => {
+    if (!localComp) return remoteComp;
+    if (!remoteComp) return localComp;
+    const localTs = localComp.timestamp ?? 0;
+    const remoteTs = remoteComp.timestamp ?? 0;
+    // Start with timestamp-based merge
+    const base = remoteTs >= localTs ? remoteComp : localComp;
+    const other = remoteTs >= localTs ? localComp : remoteComp;
+    const merged = { ...other, ...base };
+    // Preserve completed status: once complete, only explicit newer incomplete can undo it
+    // If either was complete and the newer one doesn't explicitly set complete to false, keep complete
+    if ((localComp.complete || remoteComp.complete) && merged.complete !== false) {
+      merged.complete = true;
+    }
+    // Use the latest timestamp from either entry
+    merged.timestamp = Math.max(localTs, remoteTs);
+    return merged;
+  };
   return {
     level: Math.max(local.level || 1, remote.level || 1),
     prestigeLevel: Math.max(local.prestigeLevel || 0, remote.prestigeLevel || 0),
     displayName: remote.displayName || local.displayName,
     pmcFaction: remote.pmcFaction || local.pmcFaction,
     xpOffset: remote.xpOffset !== undefined ? remote.xpOffset : local.xpOffset,
-    // Merge task completions - union of both (keep all completed tasks)
-    taskCompletions: {
-      ...local.taskCompletions,
-      ...remote.taskCompletions,
-      // For conflicts, prefer the one marked complete
-      ...Object.fromEntries(
-        Object.entries({ ...local.taskCompletions, ...remote.taskCompletions }).map(
-          ([id, completion]) => {
-            const localComp = local.taskCompletions?.[id];
-            const remoteComp = remote.taskCompletions?.[id];
-            if (localComp && remoteComp) {
-              // Both exist - prefer complete over incomplete
-              return [
-                id,
-                {
-                  complete: localComp.complete || remoteComp.complete,
-                  failed: localComp.failed || remoteComp.failed,
-                  timestamp: Math.max(localComp.timestamp || 0, remoteComp.timestamp || 0),
-                },
-              ];
-            }
-            return [id, completion];
-          }
-        )
-      ),
-    },
+    // Merge task completions - preserve completed status to prevent progress regression
+    taskCompletions: (() => {
+      const allKeys = new Set([
+        ...Object.keys(local.taskCompletions || {}),
+        ...Object.keys(remote.taskCompletions || {}),
+      ]);
+      const merged: UserProgressData['taskCompletions'] = {};
+      for (const id of allKeys) {
+        const resolved = mergeTaskCompletion(
+          local.taskCompletions?.[id],
+          remote.taskCompletions?.[id]
+        );
+        if (resolved) {
+          merged[id] = resolved;
+        }
+      }
+      return merged;
+    })(),
     // Merge objectives - max counts
     taskObjectives: {
       ...local.taskObjectives,
@@ -1339,6 +1446,33 @@ function mergeProgressData(
     },
   };
 }
+const isPlainObject = (value: unknown): value is Record<string, unknown> => {
+  return Object.prototype.toString.call(value) === '[object Object]';
+};
+const deepEqual = (a: unknown, b: unknown): boolean => {
+  if (a === b) return true;
+  if (a === null || b === null) return a === b;
+  if (typeof a !== typeof b) return false;
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b)) return false;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i += 1) {
+      if (!deepEqual(a[i], b[i])) return false;
+    }
+    return true;
+  }
+  if (isPlainObject(a) && isPlainObject(b)) {
+    const aKeys = Object.keys(a);
+    const bKeys = Object.keys(b);
+    if (aKeys.length !== bKeys.length) return false;
+    for (const key of aKeys) {
+      if (!Object.prototype.hasOwnProperty.call(b, key)) return false;
+      if (!deepEqual(a[key], b[key])) return false;
+    }
+    return true;
+  }
+  return false;
+};
 /**
  * Cleanup realtime listener on disconnect
  */

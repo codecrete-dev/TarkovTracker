@@ -45,10 +45,10 @@ export interface TarkovItem {
   link?: string;
   wikiLink?: string;
   image512pxLink?: string;
+  image8xLink?: string;
   gridImageLink?: string;
   baseImageLink?: string;
   iconLink?: string;
-  image8xLink?: string;
   backgroundColor?: string;
   types?: string[];
   category?: ItemCategory;
@@ -371,6 +371,44 @@ export interface NeededItemTaskObjective extends NeededItemBase {
 export interface NeededItemHideoutModule extends NeededItemBase {
   needType: 'hideoutModule';
   hideoutModule: HideoutModule;
+}
+export type GroupedItemInfo = Pick<
+  TarkovItem,
+  'id' | 'iconLink' | 'image512pxLink' | 'wikiLink' | 'link'
+> & {
+  /** Item display name (required - items without names are filtered out during grouping) */
+  name: string;
+};
+/**
+ * Grouped needed item aggregating all requirements for a single item
+ * across tasks and hideout modules.
+ *
+ * Counter field naming conventions:
+ * - "Fir" = "Found in Raid" - items that must be found in raid for the requirement
+ * - "Current" = player's current progress toward that specific requirement category
+ */
+export interface GroupedNeededItem {
+  item: GroupedItemInfo;
+  /** Total count of this item required for tasks with Found in Raid requirement */
+  taskFir: number;
+  /** Player's current progress toward task FIR requirements */
+  taskFirCurrent: number;
+  /** Total count of this item required for tasks without FIR requirement */
+  taskNonFir: number;
+  /** Player's current progress toward task non-FIR requirements */
+  taskNonFirCurrent: number;
+  /** Total count of this item required for hideout modules with FIR requirement */
+  hideoutFir: number;
+  /** Player's current progress toward hideout FIR requirements */
+  hideoutFirCurrent: number;
+  /** Total count of this item required for hideout modules without FIR requirement */
+  hideoutNonFir: number;
+  /** Player's current progress toward hideout non-FIR requirements */
+  hideoutNonFirCurrent: number;
+  /** Grand total of this item required (sum of taskFir + taskNonFir + hideoutFir + hideoutNonFir) */
+  readonly total: number;
+  /** Aggregate current progress (sum of all *Current fields) */
+  readonly currentCount: number;
 }
 // Lookup Types
 export interface ObjectiveMapInfo {

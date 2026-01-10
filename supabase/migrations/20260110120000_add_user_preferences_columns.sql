@@ -1,0 +1,21 @@
+-- Add missing user_preferences columns used by client sync
+ALTER TABLE public.user_preferences
+  ADD COLUMN IF NOT EXISTS task_sort_mode TEXT,
+  ADD COLUMN IF NOT EXISTS task_sort_direction TEXT,
+  ADD COLUMN IF NOT EXISTS task_shared_by_all_only BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS needed_items_view_mode TEXT,
+  ADD COLUMN IF NOT EXISTS needed_items_fir_filter TEXT,
+  ADD COLUMN IF NOT EXISTS needed_items_group_by_item BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS needed_items_hide_non_fir_special_equipment BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS needed_items_kappa_only BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS show_non_special_tasks BOOLEAN DEFAULT TRUE,
+  ADD COLUMN IF NOT EXISTS show_lightkeeper_tasks BOOLEAN DEFAULT TRUE,
+  ADD COLUMN IF NOT EXISTS show_required_labels BOOLEAN DEFAULT TRUE,
+  ADD COLUMN IF NOT EXISTS show_not_required_labels BOOLEAN DEFAULT TRUE,
+  ADD COLUMN IF NOT EXISTS show_experience_rewards BOOLEAN DEFAULT TRUE,
+  ADD COLUMN IF NOT EXISTS show_task_ids BOOLEAN DEFAULT TRUE,
+  ADD COLUMN IF NOT EXISTS show_next_quests BOOLEAN DEFAULT TRUE,
+  ADD COLUMN IF NOT EXISTS show_previous_quests BOOLEAN DEFAULT TRUE,
+  ADD COLUMN IF NOT EXISTS task_card_density TEXT DEFAULT 'compact',
+  ADD COLUMN IF NOT EXISTS enable_holiday_effects BOOLEAN DEFAULT TRUE,
+  ADD COLUMN IF NOT EXISTS show_map_extracts BOOLEAN DEFAULT TRUE;

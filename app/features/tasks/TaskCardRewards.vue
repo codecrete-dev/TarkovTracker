@@ -98,7 +98,6 @@
           }}
         </span>
       </span>
-
     </div>
     <div
       v-if="showDetails && hasExpandableDetails"
@@ -249,7 +248,6 @@
     offerUnlockRewards: OfferUnlock[];
     parentTasks: Task[];
     childTasks: Task[];
-
   }>();
   defineEmits<{
     'item-context-menu': [event: MouseEvent, item: ItemReward['item']];

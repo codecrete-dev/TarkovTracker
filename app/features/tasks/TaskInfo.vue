@@ -187,14 +187,14 @@
   const parentTasks = computed(() => {
     if (!props.task?.parents?.length) return [];
     return props.task.parents
-      .map((id) => metadataStore.tasks.find((t) => t.id === id))
+      .map((id) => metadataStore.getTaskById(id))
       .filter((t): t is Task => t !== undefined);
   });
   // Get immediate child task objects (direct next quests) for display
   const childTasks = computed(() => {
     if (!props.task?.children?.length) return [];
     return props.task.children
-      .map((id) => metadataStore.tasks.find((t) => t.id === id))
+      .map((id) => metadataStore.getTaskById(id))
       .filter((t): t is Task => t !== undefined);
   });
   // Context menu state

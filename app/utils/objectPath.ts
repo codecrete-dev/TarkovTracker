@@ -1,31 +1,15 @@
 /**
- * Creates a debounced version of a function that delays execution until after
- * `wait` milliseconds have elapsed since the last call.
+ * Object Path Utility
  *
- * Note: The debounced function does not return a value since execution is deferred.
+ * Provides lodash-like get/set operations using path strings.
+ * Supports dot notation ("a.b.c") and bracket notation ("items[0].name").
  */
-export function debounce<T extends (...args: unknown[]) => unknown>(
-  func: T,
-  wait: number
-): ((...args: Parameters<T>) => void) & { cancel: () => void } {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-  const debounced = (...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-  debounced.cancel = () => {
-    if (timeout) {
-      clearTimeout(timeout);
-      timeout = null;
-    }
-  };
-  return debounced;
-}
 /**
  * Parse a path string into segments, handling both dot notation and bracket notation.
  * Supports: "a.b.c", "items[0].name", "items.0.name", "a[0][1].b"
  *
  * @throws Error if quoted bracket keys are detected (e.g., items["key"] or items['key'])
+ * @throws Error if path contains consecutive dots
  * @limitation Only numeric bracket indices are supported (e.g., items[0]).
  * Quoted string keys like items["key"] or items['key'] are NOT supported.
  * Use dot notation for string keys: items.key
@@ -53,7 +37,9 @@ function parsePath(path: string): string[] {
  * Check if a string represents a non-negative integer (array index)
  */
 function isArrayIndex(segment: string): boolean {
-  return /^\d+$/.test(segment);
+  if (!/^\d+$/.test(segment)) return false;
+  const value = Number(segment);
+  return Number.isSafeInteger(value) && value >= 0;
 }
 /**
  * Get a value from an object by path.
@@ -63,6 +49,14 @@ function isArrayIndex(segment: string): boolean {
  * @param path - The path string (use '.' or '' to return the object itself)
  * @param defaultValue - Value to return if path doesn't exist
  * @returns The value at path or defaultValue
+ *
+ * @example
+ * ```ts
+ * const data = { user: { name: 'John', items: ['a', 'b'] } };
+ * get(data, 'user.name');        // 'John'
+ * get(data, 'user.items[0]');    // 'a'
+ * get(data, 'user.missing', 42); // 42
+ * ```
  */
 export function get(obj: Record<string, unknown>, path: string, defaultValue?: unknown): unknown {
   if (path === '.' || path === '') return obj;
@@ -77,7 +71,7 @@ export function get(obj: Record<string, unknown>, path: string, defaultValue?: u
         return defaultValue;
       }
       const index = parseInt(key, 10);
-      if (index < 0 || index >= result.length) {
+      if (index >= result.length) {
         return defaultValue;
       }
       result = result[index];
@@ -102,6 +96,13 @@ export function get(obj: Record<string, unknown>, path: string, defaultValue?: u
  * @param value - The value to set
  * @throws TypeError if path '.' is used with non-object value
  * @throws TypeError if trying to traverse through a primitive (non-object/non-array)
+ *
+ * @example
+ * ```ts
+ * const data = {};
+ * set(data, 'user.name', 'John');     // { user: { name: 'John' } }
+ * set(data, 'items[0].id', 1);        // { user: {...}, items: [{ id: 1 }] }
+ * ```
  */
 export function set(obj: Record<string, unknown>, path: string, value: unknown): void {
   if (path === '.' || path === '') {
@@ -116,15 +117,13 @@ export function set(obj: Record<string, unknown>, path: string, value: unknown):
     return;
   }
   const keys = parsePath(path);
-  // Safe: keys is guaranteed non-empty because early returns cover path === '.' and path === '',
-  // and parsePath's normalization + consecutive-dots check (lines 42-46) ensure any other valid
-  // path produces at least one non-empty segment after splitting
+  if (keys.length === 0) {
+    throw new Error(`set(): Path "${path}" resolved to no keys`);
+  }
+  // Defensive guard: parsePath should yield at least one segment for non-empty paths.
   const lastKey = keys[keys.length - 1] as string;
   let current: Record<string, unknown> | unknown[] = obj;
   for (let i = 0; i < keys.length - 1; i++) {
-    // Safe assertion: loop condition guarantees i < keys.length - 1,
-    // and keys array is non-empty, so keys[i] is always defined.
-    // The 'as string' is to satisfy TypeScript's type system.
     const key = keys[i] as string;
     const nextKey = keys[i + 1] as string;
     const nextIsArrayIndex = isArrayIndex(nextKey);
@@ -215,35 +214,4 @@ export function set(obj: Record<string, unknown>, path: string, value: unknown):
   } else {
     (current as Record<string, unknown>)[lastKey] = value;
   }
-}
-/**
- * Simple delay utility for async operations
- * @param ms - Milliseconds to wait
- * @returns Promise that resolves after the delay
- */
-export function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-/**
- * Normalizes objectives to always return an array.
- * Handles cases where objectives might be an object (with numeric or string keys) or already an array.
- * Filters out any null/undefined entries.
- *
- * @param objectives - Objectives in unknown format (array, object, or other)
- * @returns Array of T, guaranteed to be an array (empty if invalid input)
- */
-export function normalizeTaskObjectives<T = unknown>(objectives: unknown): T[] {
-  if (Array.isArray(objectives)) {
-    return objectives.filter(Boolean) as T[];
-  }
-  if (objectives && typeof objectives === 'object') {
-    if (import.meta.env.DEV) {
-      console.debug('[DEV] Normalized non-array objectives to array format');
-    }
-    return Object.values(objectives as Record<string, T>).filter(Boolean) as T[];
-  }
-  if (import.meta.env.DEV && objectives !== null && objectives !== undefined) {
-    console.warn('[DEV] Task objectives in unexpected format, returning empty array', objectives);
-  }
-  return [];
 }

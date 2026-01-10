@@ -1,8 +1,7 @@
 import { createTarkovFetcher, edgeCache } from '~/server/utils/edgeCache';
+import { CACHE_TTL_EXTENDED } from '~/server/utils/tarkov-cache-config';
 import { TARKOV_PRESTIGE_QUERY } from '~/server/utils/tarkov-queries';
 import { API_SUPPORTED_LANGUAGES } from '~/utils/constants';
-// Cache TTL: 24 hours (prestige data rarely changes)
-const CACHE_TTL = 86400;
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);
   // Validate and sanitize language input
@@ -16,5 +15,7 @@ export default defineEventHandler(async (event) => {
   // Create fetcher function for tarkov.dev API
   const fetcher = createTarkovFetcher(TARKOV_PRESTIGE_QUERY, { lang });
   // Use the shared edge cache utility
-  return await edgeCache(event, cacheKey, fetcher, CACHE_TTL, { cacheKeyPrefix: 'tarkov' });
+  return await edgeCache(event, cacheKey, fetcher, CACHE_TTL_EXTENDED, {
+    cacheKeyPrefix: 'tarkov',
+  });
 });

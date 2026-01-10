@@ -1,5 +1,5 @@
-import { getCurrentInstance, onUnmounted, ref, toRaw, watch } from 'vue';
-import { debounce } from '@/utils/helpers';
+import { getCurrentInstance, onUnmounted, ref, toRaw } from 'vue';
+import { debounce, isDebounceRejection } from '@/utils/debounce';
 import { logger } from '@/utils/logger';
 import type { Store } from 'pinia';
 import type { UserProgressData } from '~/stores/progressState';
@@ -36,6 +36,8 @@ export function useSupabaseSync({
   debounceMs = 1000,
 }: SupabaseSyncConfig) {
   logger.debug(`[Sync] useSupabaseSync initialized for table: ${table}, debounce: ${debounceMs}ms`);
+  const tableLabel =
+    table === 'user_progress' ? 'progress' : table === 'user_preferences' ? 'preferences' : table;
   const { $supabase } = useNuxtApp();
   const isSyncing = ref(false);
   const isPaused = ref(false);
@@ -142,9 +144,9 @@ export function useSupabaseSync({
         // All retries exhausted - notify user
         const toast = useToast();
         toast.add({
-          title: 'Sync failed',
+          title: `Sync failed (${tableLabel})`,
           description:
-            "Your progress couldn't be saved to the cloud. Please check your connection and try again.",
+            `Your ${tableLabel} couldn't be saved to the cloud. Please check your connection and try again.`,
           color: 'error',
           duration: 10000,
         });
@@ -196,8 +198,8 @@ export function useSupabaseSync({
       }
       const toast = useToast();
       toast.add({
-        title: 'Sync error',
-        description: 'An unexpected error occurred while saving your progress.',
+        title: `Sync error (${tableLabel})`,
+        description: `An unexpected error occurred while saving your ${tableLabel}.`,
         color: 'error',
         duration: 10000,
       });
@@ -227,18 +229,24 @@ export function useSupabaseSync({
   const debouncedSync = debounce((state: unknown) => {
     void syncToSupabase(state);
   }, debounceMs);
-  const unwatch = watch(
-    () => store.$state,
-    (newState) => {
-      logger.debug(`[Sync] Store state changed for ${table}, triggering debounced sync`);
-      const clonedState = snapshotState(newState);
-      debouncedSync(clonedState);
+  // Use Pinia's $subscribe instead of a deep watcher for better performance.
+  // $subscribe fires once per mutation (batched), not per individual property change.
+  // This avoids Vue tracking every nested property in large state trees.
+  const unsubscribe = store.$subscribe(
+    (_mutation, state) => {
+      logger.debug(`[Sync] Store mutation for ${table}, triggering debounced sync`);
+      const clonedState = snapshotState(state);
+      void debouncedSync(clonedState).catch((error) => {
+        if (!isDebounceRejection(error)) {
+          logger.error('[Sync] Debounced sync failed:', error);
+        }
+      });
     },
-    { deep: true }
+    { detached: true } // Keep subscription active even if component unmounts (we manage cleanup manually)
   );
   const cleanup = () => {
     debouncedSync.cancel();
-    unwatch();
+    unsubscribe();
     // Clear any pending retry timeouts
     if (pendingRetryTimeouts.length > 0) {
       logger.debug(

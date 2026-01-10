@@ -14,6 +14,7 @@
     <div class="mb-2 w-full">
       <NeededItemRow
         :need="props.need"
+        :initially-visible="props.initiallyVisible"
         @decrease-count="decreaseCount()"
         @toggle-count="toggleCount()"
         @increase-count="increaseCount()"
@@ -38,6 +39,10 @@
     itemStyle: {
       type: String,
       default: 'card',
+    },
+    initiallyVisible: {
+      type: Boolean,
+      default: false,
     },
   });
   const progressStore = useProgressStore();

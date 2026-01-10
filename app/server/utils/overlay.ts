@@ -7,11 +7,14 @@
  * Deployment Note: Module-level cache persists across requests in long-running Node.js processes
  * but resets on cold starts in serverless/edge platforms. See fetchOverlay for TTL and fallback logic.
  */
+import { deepMerge, isPlainObject } from './deepMerge';
 import { createLogger } from './logger';
+import { inferFoundInRaid, normalizeObjectiveList } from './objectiveTypeInferrer';
 const logger = createLogger('Overlay');
 // Overlay data structure
 interface OverlayData {
   tasks?: Record<string, Record<string, unknown>>;
+  tasksAdd?: Record<string, Record<string, unknown>>;
   items?: Record<string, Record<string, unknown>>;
   traders?: Record<string, Record<string, unknown>>;
   hideout?: Record<string, Record<string, unknown>>;
@@ -21,6 +24,17 @@ interface OverlayData {
     generated: string;
     sha256: string;
   };
+}
+type OverlayStatus = 'fresh' | 'cached' | 'stale' | 'missing';
+export interface OverlayMeta {
+  status: OverlayStatus;
+  version?: string;
+  generated?: string;
+  sha256?: string;
+  sourceUrl: string;
+  fetchedAt?: string;
+  cacheAgeMs?: number;
+  error?: string;
 }
 // Module-level cache behavior: cachedOverlay and cacheTimestamp persist across requests in
 // long-running Node.js processes but reset on cold starts in serverless/edge platforms.
@@ -35,63 +49,16 @@ const FETCH_TIMEOUT_MS = 5000; // 5 seconds
 const OVERLAY_URL =
   process.env.OVERLAY_URL?.trim() ||
   'https://raw.githubusercontent.com/tarkovtracker-org/tarkov-data-overlay/main/dist/overlay.json';
-/**
- * Deep merge utility that recursively merges objects without mutation
- */
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === 'object' && !Array.isArray(value);
-}
-/**
- * Merge ID-keyed patches into an array of entities without mutating the original array.
- * Iterates the target array and, for each element with an `id`, deep-merges a plain-object
- * patch from sourcePatches[id]; non-object patches (including arrays) and non-entity elements
- * are left unchanged. Returns a new array with merged results.
- */
-export function mergeArrayByIdPatches(
-  sourcePatches: Record<string, unknown>,
-  targetArray: unknown[]
-): unknown[] {
-  return targetArray.map((item) => {
-    if (isPlainObject(item) && 'id' in item) {
-      const itemId = (item as { id: string }).id;
-      const patch = sourcePatches[itemId];
-      if (isPlainObject(patch)) {
-        return deepMerge(item as Record<string, unknown>, patch as Record<string, unknown>);
-      }
-    }
-    return item;
-  });
-}
-function deepMerge<T extends Record<string, unknown>>(
-  target: T,
-  source: Record<string, unknown>
-): T {
-  const result: Record<string, unknown> = { ...target };
-  for (const key in source) {
-    const sourceValue = source[key];
-    const targetValue = result[key];
-    if (isPlainObject(sourceValue) && isPlainObject(targetValue)) {
-      // Recursively merge nested objects
-      result[key] = deepMerge(
-        targetValue as Record<string, unknown>,
-        sourceValue as Record<string, unknown>
-      );
-    } else if (
-      // Special case: merge ID-keyed object patches into array of objects
-      isPlainObject(sourceValue) &&
-      Array.isArray(targetValue) &&
-      targetValue.length > 0 &&
-      isPlainObject(targetValue[0]) &&
-      'id' in targetValue[0]
-    ) {
-      result[key] = mergeArrayByIdPatches(sourceValue, targetValue);
-    } else {
-      // Replace primitive values, arrays, or when target doesn't have the key
-      result[key] = sourceValue;
-    }
-  }
-  return result as T;
-}
+const OVERLAY_CACHE_BUSTER = process.env.OVERLAY_CACHE_BUSTER?.trim();
+const OVERLAY_URL_WITH_BUSTER = OVERLAY_CACHE_BUSTER
+  ? `${OVERLAY_URL}${OVERLAY_URL.includes('?') ? '&' : '?'}v=${encodeURIComponent(
+      OVERLAY_CACHE_BUSTER
+    )}`
+  : OVERLAY_URL;
+let lastOverlayMeta: OverlayMeta = {
+  status: 'missing',
+  sourceUrl: OVERLAY_URL_WITH_BUSTER,
+};
 /**
  * Validate overlay data structure
  */
@@ -108,7 +75,7 @@ function isValidOverlayData(data: unknown): data is OverlayData {
     return false;
   }
   // Validate optional entity collections are records if present
-  const collections = ['tasks', 'items', 'traders', 'hideout'] as const;
+  const collections = ['tasks', 'tasksAdd', 'items', 'traders', 'hideout'] as const;
   for (const collection of collections) {
     if (
       overlay[collection] !== undefined &&
@@ -120,35 +87,65 @@ function isValidOverlayData(data: unknown): data is OverlayData {
   }
   return true;
 }
+function buildOverlayMeta(
+  overlay: OverlayData | null,
+  status: OverlayStatus,
+  extra?: Partial<OverlayMeta>
+): OverlayMeta {
+  return {
+    status,
+    version: overlay?.$meta?.version,
+    generated: overlay?.$meta?.generated,
+    sha256: overlay?.$meta?.sha256,
+    sourceUrl: OVERLAY_URL_WITH_BUSTER,
+    ...extra,
+  };
+}
 /**
  * Fetch the overlay data from CDN (with caching)
  */
-async function fetchOverlay(): Promise<OverlayData | null> {
+async function fetchOverlay(): Promise<{ overlay: OverlayData | null; meta: OverlayMeta }> {
   const now = Date.now();
   // Return cached overlay if still valid
   if (cachedOverlay && now - cacheTimestamp < OVERLAY_CACHE_TTL) {
-    return cachedOverlay;
+    lastOverlayMeta = buildOverlayMeta(cachedOverlay, 'cached', {
+      cacheAgeMs: now - cacheTimestamp,
+    });
+    return { overlay: cachedOverlay, meta: lastOverlayMeta };
   }
   try {
     // Set up abort controller with timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
     try {
-      const response = await fetch(OVERLAY_URL, { signal: controller.signal });
+      const response = await fetch(OVERLAY_URL_WITH_BUSTER, {
+        signal: controller.signal,
+        headers: { Accept: 'application/json' },
+      });
       if (!response.ok) {
         logger.warn(`Failed to fetch overlay: ${response.status}`);
-        return cachedOverlay; // Return stale cache if available
+        lastOverlayMeta = buildOverlayMeta(cachedOverlay, cachedOverlay ? 'stale' : 'missing', {
+          error: `HTTP ${response.status}`,
+        });
+        return { overlay: cachedOverlay, meta: lastOverlayMeta };
       }
       const parsedData = await response.json();
       // Validate the parsed data before caching
       if (!isValidOverlayData(parsedData)) {
         logger.warn('Fetched overlay failed validation, using stale cache');
-        return cachedOverlay;
+        lastOverlayMeta = buildOverlayMeta(cachedOverlay, cachedOverlay ? 'stale' : 'missing', {
+          error: 'validation_failed',
+        });
+        return { overlay: cachedOverlay, meta: lastOverlayMeta };
       }
       cachedOverlay = parsedData;
       cacheTimestamp = now;
       logger.info(`Loaded overlay v${cachedOverlay.$meta?.version}`);
-      return cachedOverlay;
+      lastOverlayMeta = buildOverlayMeta(cachedOverlay, 'fresh', {
+        fetchedAt: new Date(now).toISOString(),
+        cacheAgeMs: 0,
+      });
+      return { overlay: cachedOverlay, meta: lastOverlayMeta };
     } finally {
       clearTimeout(timeoutId);
     }
@@ -158,16 +155,26 @@ async function fetchOverlay(): Promise<OverlayData | null> {
     } else {
       logger.warn('Error fetching overlay:', error);
     }
-    return cachedOverlay; // Return stale cache if available
+    const message = error instanceof Error ? error.message : String(error);
+    lastOverlayMeta = buildOverlayMeta(cachedOverlay, cachedOverlay ? 'stale' : 'missing', {
+      error: message,
+    });
+    return { overlay: cachedOverlay, meta: lastOverlayMeta };
   }
 }
 /**
  * Apply overlay corrections to an array of entities
  * Filters out entities marked as disabled after applying corrections
  */
+type ApplyEntityOverlayOptions = {
+  logLabel?: string;
+  /** If true, log even when appliedCount and disabledCount are both zero. Default: true */
+  logEvenWhenZero?: boolean;
+};
 function applyEntityOverlay<T extends { id: string }>(
   entities: T[],
-  corrections: Record<string, Record<string, unknown>> | undefined
+  corrections: Record<string, Record<string, unknown>> | undefined,
+  options: ApplyEntityOverlayOptions = {}
 ): T[] {
   if (!corrections || !entities) return entities;
   let appliedCount = 0;
@@ -193,13 +200,90 @@ function applyEntityOverlay<T extends { id: string }>(
       }
       return true;
     });
-  logger.info(
-    `Applied ${appliedCount} corrections out of ${Object.keys(corrections).length} available`
-  );
-  if (disabledCount > 0) {
-    logger.info(`Filtered out ${disabledCount} disabled entities`);
+  const logLabel = options.logLabel ? ` (${options.logLabel})` : '';
+  // Log by default unless logEvenWhenZero is explicitly false and counts are zero
+  const shouldLog = appliedCount > 0 || disabledCount > 0 || options.logEvenWhenZero !== false;
+  if (shouldLog) {
+    logger.info(
+      `Applied ${appliedCount} corrections out of ${Object.keys(corrections).length} available${logLabel}`
+    );
+    if (disabledCount > 0) {
+      logger.info(`Filtered out ${disabledCount} disabled entities${logLabel}`);
+    }
   }
   return result;
+}
+type ObjectiveAddEntry = Record<string, unknown>;
+const DEFAULT_OVERLAY_OBJECTIVE_TYPE = 'giveItem';
+const DEFAULT_OVERLAY_OBJECTIVE_COUNT = 1;
+function expandObjectiveAdditions(additions: unknown[]): ObjectiveAddEntry[] {
+  const expanded: ObjectiveAddEntry[] = [];
+  for (const [index, entry] of additions.entries()) {
+    if (!isPlainObject(entry)) continue;
+    const baseId = typeof entry.id === 'string' ? entry.id : `overlay-objective-${index}`;
+    const items = Array.isArray(entry.items) ? entry.items.filter(isPlainObject) : [];
+    const description =
+      typeof entry.description === 'string'
+        ? entry.description
+        : 'Hand over the found in raid item';
+    const foundInRaid = inferFoundInRaid(description, entry);
+    const count = typeof entry.count === 'number' ? entry.count : DEFAULT_OVERLAY_OBJECTIVE_COUNT;
+    // Expand multi-item objectives into individual objectives
+    if (!entry.type && items.length > 1) {
+      for (const [itemIndex, item] of items.entries()) {
+        const itemObj = item as Record<string, unknown>;
+        const itemId = typeof itemObj.id === 'string' ? itemObj.id : `item-${itemIndex}`;
+        const itemName = typeof itemObj.name === 'string' ? itemObj.name : 'item';
+        expanded.push({
+          ...entry,
+          id: `${baseId}:${itemId}`,
+          type: DEFAULT_OVERLAY_OBJECTIVE_TYPE,
+          count,
+          foundInRaid,
+          description: `Hand over the found in raid item: ${itemName}`,
+          items: [item],
+        });
+      }
+      continue;
+    }
+    expanded.push({
+      ...entry,
+      type: entry.type ?? (items.length > 0 ? DEFAULT_OVERLAY_OBJECTIVE_TYPE : entry.type),
+      count,
+      foundInRaid,
+    });
+  }
+  return expanded;
+}
+function applyTaskObjectiveAdditions<T extends { id: string }>(task: T): T {
+  if (!isPlainObject(task)) return task;
+  const obj = task as Record<string, unknown>;
+  const additions = Array.isArray(obj.objectivesAdd) ? obj.objectivesAdd : [];
+  if (additions.length === 0) return task;
+  const existing = Array.isArray(obj.objectives) ? obj.objectives : [];
+  const expanded = expandObjectiveAdditions(additions);
+  if (expanded.length === 0) return task;
+  const { objectivesAdd, ...rest } = obj;
+  return {
+    ...(rest as T),
+    objectives: [...existing, ...expanded],
+  };
+}
+type OverlayTaskAddition = Record<string, unknown> & { id: string };
+function normalizeTaskAdditions(
+  additions: Record<string, Record<string, unknown>> | undefined
+): OverlayTaskAddition[] {
+  if (!additions) return [];
+  return Object.values(additions)
+    .filter((entry): entry is Record<string, unknown> & { id: string } => {
+      return isPlainObject(entry) && typeof entry.id === 'string' && entry.disabled !== true;
+    })
+    .map((entry) => {
+      const factionName = typeof entry.factionName === 'string' ? entry.factionName : 'Any';
+      const objectives = normalizeObjectiveList(entry.objectives);
+      const failConditions = normalizeObjectiveList(entry.failConditions);
+      return { ...entry, factionName, objectives, failConditions };
+    });
 }
 /**
  * Apply overlay corrections to tarkov.dev API response
@@ -214,17 +298,30 @@ type OverlayTargetData = {
   hideoutStations?: Array<{ id: string }>;
 };
 export async function applyOverlay<T extends { data?: OverlayTargetData }>(data: T): Promise<T> {
-  const overlay = await fetchOverlay();
+  const { overlay, meta } = await fetchOverlay();
+  const result = { ...data, dataOverlay: meta } as T & { dataOverlay?: OverlayMeta };
   if (!overlay || !data?.data) {
-    return data;
+    return result;
   }
-  const result = { ...data, data: { ...data.data } };
-  // Apply task corrections
-  if (overlay.tasks && Array.isArray(result.data.tasks)) {
-    result.data.tasks = applyEntityOverlay(
+  result.data = { ...data.data };
+  // Apply task corrections and inject overlay task additions
+  if (Array.isArray(result.data.tasks)) {
+    const correctedTasks = applyEntityOverlay(
       result.data.tasks as Array<{ id: string }>,
       overlay.tasks
+    ).map((task) => applyTaskObjectiveAdditions(task));
+    const normalizedAdditions = normalizeTaskAdditions(overlay.tasksAdd);
+    logger.info(
+      `Overlay tasksAdd: ${normalizedAdditions.length} additions after filtering disabled`
     );
+    const addedTasks = applyEntityOverlay(normalizedAdditions, overlay.tasks, {
+      logLabel: 'tasksAdd',
+      logEvenWhenZero: false,
+    }).map((task) => applyTaskObjectiveAdditions(task));
+    const existingIds = new Set(correctedTasks.map((task) => task.id));
+    const dedupedAdditions = addedTasks.filter((task) => !existingIds.has(task.id));
+    logger.info(`Overlay tasksAdd: ${dedupedAdditions.length} additions after dedupe`);
+    result.data.tasks = [...correctedTasks, ...dedupedAdditions];
   }
   // Apply item corrections (if present)
   if (overlay.items && Array.isArray(result.data.items)) {

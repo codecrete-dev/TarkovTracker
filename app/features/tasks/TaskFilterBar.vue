@@ -317,12 +317,10 @@
   const setPrimaryView = (view: string) => {
     emit('update:primaryView', view);
   };
-
   // Secondary view (available / locked / completed) - now from props
   const setSecondaryView = (view: string) => {
     emit('update:secondaryView', view);
   };
-
   // Map selection
   const mapOptions = computed(() => {
     const counts = mapTaskCounts.value;

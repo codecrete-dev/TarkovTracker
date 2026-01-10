@@ -4,7 +4,8 @@ import { usePreferencesStore } from '@/stores/usePreferences';
 import { useProgressStore } from '@/stores/useProgress';
 import { useTarkovStore } from '@/stores/useTarkov';
 import type { Task } from '@/types/tarkov';
-import { EXCLUDED_SCAV_KARMA_TASKS } from '@/utils/constants';
+import type { TaskSortDirection, TaskSortMode } from '@/types/taskSort';
+import { EXCLUDED_SCAV_KARMA_TASKS, TRADER_ORDER } from '@/utils/constants';
 import { logger } from '@/utils/logger';
 interface MergedMap {
   id: string;
@@ -383,27 +384,28 @@ export function useTaskFiltering() {
   };
   /**
    * Calculate impact score for a task (number of incomplete successor tasks)
-   * Higher impact = more tasks are blocked by this one
    */
   const calculateTaskImpact = (task: Task, userView: string): number => {
-    if (!task.successors?.length) return 0;
-    const teamIds = Object.keys(progressStore.visibleTeamStores || {});
-    return task.successors.filter((successorId) => {
-      if (userView === 'all') {
-        // For "all" view, count as incomplete if ANY team member hasn't completed it
-        return teamIds.some(
-          (teamId) =>
-            progressStore.tasksCompletions?.[successorId]?.[teamId] !== true ||
-            progressStore.tasksFailed?.[successorId]?.[teamId] === true
-        );
-      } else {
-        // For single user view, check that user's completion status
-        return (
-          progressStore.tasksCompletions?.[successorId]?.[userView] !== true ||
-          progressStore.tasksFailed?.[successorId]?.[userView] === true
-        );
+    const successors = task.successors ?? [];
+    if (!successors.length) return 0;
+    const teamIds =
+      userView === 'all' ? Object.keys(progressStore.visibleTeamStores || {}) : [userView];
+    if (!teamIds.length) return 0;
+    const completions = progressStore.tasksCompletions;
+    const failures = progressStore.tasksFailed;
+    let impact = 0;
+    successors.forEach((successorId) => {
+      // Count successor as incomplete if it is not completed OR is failed
+      const isIncomplete = teamIds.some(
+        (teamId) =>
+          completions?.[successorId]?.[teamId] !== true ||
+          failures?.[successorId]?.[teamId] === true
+      );
+      if (isIncomplete) {
+        impact += 1;
       }
-    }).length;
+    });
+    return impact;
   };
   /**
    * Sort tasks by:
@@ -422,6 +424,8 @@ export function useTaskFiltering() {
       return a.id.localeCompare(b.id);
     });
   };
+  // Keep simplified sorting functions for now in case they are needed later, 
+  // or remove them if truly unused. For now, matching HEAD's preference for impact sorting.
   /**
    * Main function to update visible tasks based on all filters
    */
@@ -432,7 +436,9 @@ export function useTaskFiltering() {
     activeMapView: string,
     activeTraderView: string,
     mergedMaps: MergedMap[],
-    tasksLoading: boolean
+    tasksLoading: boolean,
+    _sortMode: TaskSortMode = 'default',
+    _sortDirection: TaskSortDirection = 'asc'
   ) => {
     // Simple guard clauses - data should be available due to global initialization
     if (tasksLoading || !metadataStore.tasks.length) {
