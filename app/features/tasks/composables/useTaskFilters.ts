@@ -1,10 +1,7 @@
-import { debounce, isDebounceRejection } from '@/utils/debounce';
 import { fuzzyMatchScore } from '@/utils/fuzzySearch';
-import { logger } from '@/utils/logger';
-import { getQueryString } from '@/utils/routeHelpers';
 import { getTaskRewardItems } from '@/utils/taskRewards';
 import type { Task } from '@/types/tarkov';
-import type { TaskFilterAndSortOptions } from '@/types/taskFilter';
+import type { TaskFilterAndSortOptions, TaskSecondaryView } from '@/types/taskFilter';
 type RefLike<T> = { value: T };
 type ComputedRefLike<T> = Readonly<{ value: T }>;
 type TaskFilterInputs = {
@@ -16,8 +13,12 @@ type TaskFilterInputs = {
       hideGlobalTasks?: boolean;
     }
   ) => Task[];
+  /** Tasks left out of the map-complete notice count, such as tasks the user hid. */
+  excludedTaskIds: ComputedRefLike<ReadonlySet<string>>;
   getTaskMapView: RefLike<string>;
+  hideCompletedMapObjectives: RefLike<boolean>;
   mapTaskVisibilityFilterOptions: ComputedRefLike<TaskFilterAndSortOptions>;
+  normalizedSearch: ComputedRefLike<string>;
   showMapDisplay: ComputedRefLike<boolean>;
   tasks: RefLike<Task[]>;
   visibleTasks: RefLike<Task[]>;
@@ -45,42 +46,30 @@ export const applySearchToTaskList = (taskList: Task[], query: string): Task[] =
     .sort((a, b) => b.score - a.score)
     .map(({ task }) => task);
 };
+export type TaskStatusCounts = Record<TaskSecondaryView, number>;
+const STATUS_VIEWS: readonly TaskSecondaryView[] = [
+  'all',
+  'available',
+  'locked',
+  'completed',
+  'failed',
+];
 export function useTaskFilters({
   calculateFilteredTasksForOptions,
+  excludedTaskIds,
   getTaskMapView,
+  hideCompletedMapObjectives,
   mapTaskVisibilityFilterOptions,
+  normalizedSearch,
   showMapDisplay,
   tasks,
   visibleTasks,
 }: TaskFilterInputs) {
-  const route = useRoute();
-  const searchQuery = ref(getQueryString(route.query.q) || '');
-  watch(
-    () => route.query.q,
-    (newQ) => {
-      searchQuery.value = getQueryString(newQ) || '';
-    }
-  );
-  const debouncedSearch = ref('');
-  const updateDebouncedSearch = debounce((value: string) => {
-    debouncedSearch.value = value;
-  }, 180);
-  watch(searchQuery, (value) => {
-    if (!value) {
-      updateDebouncedSearch.cancel();
-      debouncedSearch.value = '';
-      return;
-    }
-    void updateDebouncedSearch(value).catch((error) => {
-      if (isDebounceRejection(error)) return;
-      logger.error('[Tasks] Debounced search update failed:', error);
-    });
-  });
-  const normalizedSearch = computed(() => debouncedSearch.value.toLowerCase().trim());
-  const isSearchActive = computed(() => normalizedSearch.value.length > 0);
   const filteredTasks = computed(() => {
     return applySearchToTaskList(visibleTasks.value, normalizedSearch.value);
   });
+  const countIncludedTasks = (taskList: Task[]) =>
+    taskList.filter((task) => !excludedTaskIds.value.has(task.id)).length;
   const mapCompleteTasksCountOnMap = computed(() => {
     if (!showMapDisplay.value) return 0;
     if (!tasks.value.length) return 0;
@@ -94,22 +83,33 @@ export function useTaskFilters({
       calculateFilteredTasksForOptions(tasks.value, mapTaskVisibilityFilterOptions.value, true),
       normalizedSearch.value
     );
-    return Math.max(tasksWithoutHiding.length - tasksWithHiding.length, 0);
+    return Math.max(
+      countIncludedTasks(tasksWithoutHiding) - countIncludedTasks(tasksWithHiding),
+      0
+    );
   });
   const showMapTaskVisibilityNotice = computed(() => {
     return showMapDisplay.value && mapCompleteTasksCountOnMap.value > 0;
   });
-  const activeSearchCount = computed(() => filteredTasks.value.length);
+  // Matches per status tab, run through the same pipeline the list uses for that tab.
+  const searchStatusCounts = computed<TaskStatusCounts | null>(() => {
+    if (!normalizedSearch.value) return null;
+    const options = mapTaskVisibilityFilterOptions.value;
+    const counts = {} as TaskStatusCounts;
+    for (const status of STATUS_VIEWS) {
+      const statusTasks = calculateFilteredTasksForOptions(
+        tasks.value,
+        { ...options, secondaryView: status },
+        hideCompletedMapObjectives.value
+      );
+      counts[status] = applySearchToTaskList(statusTasks, normalizedSearch.value).length;
+    }
+    return counts;
+  });
   return {
-    activeSearchCount,
-    cleanup() {
-      updateDebouncedSearch.cancel();
-    },
     filteredTasks,
-    isSearchActive,
     mapCompleteTasksCountOnMap,
-    normalizedSearch,
-    searchQuery,
+    searchStatusCounts,
     showMapTaskVisibilityNotice,
   };
 }

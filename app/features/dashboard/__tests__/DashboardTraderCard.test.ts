@@ -1,0 +1,220 @@
+// @vitest-environment happy-dom
+import { mockNuxtImport } from '@nuxt/test-utils/runtime';
+import { mount } from '@vue/test-utils';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import DashboardTraderCard from '@/features/dashboard/DashboardTraderCard.vue';
+import type { Trader, TraderLoyaltyLevel } from '@/types/tarkov';
+const mockState = {
+  traderLevel: 1,
+  gameMode: 'pvp',
+};
+const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn() }));
+mockNuxtImport('useRouter', () => () => ({
+  push: pushMock,
+}));
+vi.mock('@/stores/usePreferences', () => ({
+  usePreferencesStore: () => ({
+    setTaskPrimaryView: vi.fn(),
+    setTaskTraderView: vi.fn(),
+  }),
+}));
+vi.mock('@/stores/useTarkov', () => ({
+  useTarkovStore: () => ({
+    getCurrentGameMode: () => mockState.gameMode,
+    getTraderLevel: () => mockState.traderLevel,
+    getTraderReputation: () => 0.5,
+    isTaskComplete: () => false,
+    setTraderLevel: vi.fn(),
+    // Mirror the interface the component uses: commitReputationInput calls this on
+    // reputation-input blur, so any future test exercising that path has a spy.
+    setTraderReputation: vi.fn(),
+  }),
+}));
+const mockTheme = {
+  themeMode: 'dark',
+};
+vi.mock('@/composables/useTheme', () => ({
+  useTheme: () => ({
+    themeMode: { value: mockTheme.themeMode },
+    isLightTheme: { value: mockTheme.themeMode === 'light' },
+    setThemeMode: vi.fn(),
+    toggleThemeMode: vi.fn(),
+  }),
+}));
+describe('DashboardTraderCard', () => {
+  beforeEach(() => {
+    mockState.traderLevel = 1;
+    mockTheme.themeMode = 'dark';
+    document.documentElement.removeAttribute('data-theme');
+    vi.clearAllMocks();
+  });
+  const baseTrader: Trader & { levels: TraderLoyaltyLevel[] } = {
+    id: 'prapor',
+    name: 'Prapor',
+    normalizedName: 'prapor',
+    imageLink: 'https://example.com/prapor.jpg',
+    levels: [
+      {
+        id: 'prapor-1',
+        level: 1,
+        requiredPlayerLevel: 1,
+        requiredReputation: 0,
+        requiredCommerce: 0,
+      },
+      {
+        id: 'prapor-2',
+        level: 2,
+        requiredPlayerLevel: 15,
+        requiredReputation: 0.2,
+        requiredCommerce: 750000,
+      },
+      {
+        id: 'prapor-3',
+        level: 3,
+        requiredPlayerLevel: 26,
+        requiredReputation: 0.35,
+        requiredCommerce: 1500000,
+      },
+      {
+        id: 'prapor-4',
+        level: 4,
+        requiredPlayerLevel: 36,
+        requiredReputation: 0.5,
+        requiredCommerce: 2300000,
+      },
+    ],
+  };
+  const createWrapper = (props = {}) =>
+    mount(DashboardTraderCard, {
+      props: {
+        trader: baseTrader,
+        completedTasks: 5,
+        totalTasks: 20,
+        percentage: 25,
+        ...props,
+      },
+      global: {
+        mocks: {
+          $t: (key: string) => key,
+        },
+        stubs: {
+          NuxtLink: {
+            props: ['to'],
+            template: '<a :data-to="JSON.stringify(to)"><slot /></a>',
+          },
+          RouterLink: {
+            props: ['to'],
+            template: '<a :data-to="JSON.stringify(to)"><slot /></a>',
+          },
+          NuxtImg: {
+            props: ['src', 'alt'],
+            template: '<img :src="src" :alt="alt" />',
+          },
+          UIcon: {
+            props: ['name'],
+            template: '<i :data-icon="name" />',
+          },
+          ReputationInput: {
+            template: '<div data-testid="reputation-input" />',
+          },
+        },
+      },
+    });
+  it('wires the light theme tokens onto the active and inactive loyalty buttons', () => {
+    const wrapper = createWrapper();
+    const buttons = wrapper.findAll(
+      'button[aria-label*="page.dashboard.traders.set_loyalty_level"]'
+    );
+    expect(buttons).toHaveLength(4);
+    const btn1 = buttons[0]!;
+    const btn2 = buttons[1]!;
+    // Level 1 should be active
+    expect(btn1.classes()).toContain('light:text-surface-50');
+    expect(btn1.classes()).toContain('bg-surface-600');
+    // Level 2 should be inactive
+    expect(btn2.classes()).toContain('text-surface-300');
+  });
+  it('renders a storyline requirement for a story-locked trader', () => {
+    const wrapper = createWrapper({
+      unlock: {
+        kind: 'story',
+        chapter: { id: 'tour', name: 'Tour' },
+        objective: { id: 'talk-to-prapor', name: 'Talk to Prapor' },
+      },
+    });
+    expect(wrapper.find('div').classes()).toContain('bg-surface-950/80');
+    const requirement = wrapper.get('[data-testid="trader-unlock-requirement"]');
+    expect(requirement.text()).toContain('Talk to Prapor');
+    expect(JSON.parse(requirement.attributes('data-to')!)).toEqual({
+      path: '/storyline',
+      query: { chapter: 'tour', objective: 'talk-to-prapor' },
+    });
+  });
+  it('opens the traders view on this trader', async () => {
+    const wrapper = createWrapper();
+    await wrapper.get('[aria-label="page.dashboard.traders.view_tasks"]').trigger('click');
+    expect(pushMock).toHaveBeenCalledWith({ path: '/tasks/traders', query: { trader: 'prapor' } });
+  });
+  it('links a task-locked trader to its unlock task', () => {
+    const wrapper = createWrapper({
+      unlock: { kind: 'task', task: { id: 'task-1', name: 'Getting Acquainted' } },
+    });
+    const requirement = wrapper.get('[data-testid="trader-unlock-requirement"]');
+    expect(requirement.text()).toContain('Getting Acquainted');
+    expect(JSON.parse(requirement.attributes('data-to')!)).toEqual({
+      path: '/tasks',
+      query: { task: 'task-1' },
+    });
+  });
+  it('shows an unlinked lock notice while the unlock task is loading', () => {
+    const wrapper = createWrapper({ unlock: { kind: 'task', task: null } });
+    const requirement = wrapper.get('[data-testid="trader-unlock-requirement"]');
+    expect(requirement.element.tagName).toBe('DIV');
+    expect(requirement.text()).toBe('page.dashboard.traders.unlock_via_task');
+  });
+  it('hides progress and loyalty controls while locked', () => {
+    const wrapper = createWrapper({
+      unlock: { kind: 'task', task: { id: 'task-1', name: 'Getting Acquainted' } },
+    });
+    expect(wrapper.find('[role="progressbar"]').exists()).toBe(false);
+    expect(wrapper.find('button[aria-label*="set_loyalty_level"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="reputation-input"]').exists()).toBe(false);
+    expect(wrapper.find('.tabular-nums').exists()).toBe(false);
+  });
+  it('shows no requirement for an open trader', () => {
+    const wrapper = createWrapper({ unlock: null });
+    expect(wrapper.find('[data-testid="trader-unlock-requirement"]').exists()).toBe(false);
+    expect(wrapper.find('[role="progressbar"]').exists()).toBe(true);
+  });
+  it('renders completed trader state', () => {
+    mockState.traderLevel = 4;
+    const wrapper = createWrapper({ percentage: 100 });
+    const container = wrapper.find('div');
+    expect(container.classes()).toContain('border-success-500/15');
+  });
+  it('keeps the in-progress percentage hue gradient readable in both themes', () => {
+    // Dark keeps the authored bright gradient: inline color wins over classes.
+    const darkWrapper = createWrapper({ percentage: 50 });
+    const darkPct = darkWrapper.find('.tabular-nums');
+    expect(darkPct.attributes('style')).toContain('hsl(60, 70%, 55%)');
+    // Light mode keeps the same hue identity but drops to 22% lightness, which
+    // clears AA across the whole 0-120 degree range including the yellow mid-range
+    // that cannot pass on paper surfaces at the dark lightness.
+    mockTheme.themeMode = 'light';
+    const lightWrapper = createWrapper({ percentage: 50 });
+    const lightPct = lightWrapper.find('.tabular-nums');
+    expect(lightPct.attributes('style')).toContain('hsl(60, 70%, 22%)');
+    darkWrapper.unmount();
+    lightWrapper.unmount();
+  });
+  it('keeps the gradient endpoints deep enough for AA in light mode', () => {
+    mockTheme.themeMode = 'light';
+    // Hue 0 (red, ~0%) and hue 120 (green, ~100%) still encode progress.
+    const low = createWrapper({ percentage: 1 });
+    const high = createWrapper({ percentage: 99 });
+    expect(low.find('.tabular-nums').attributes('style')).toContain('hsl(1.2, 70%, 22%)');
+    expect(high.find('.tabular-nums').attributes('style')).toContain('hsl(118.8, 70%, 22%)');
+    low.unmount();
+    high.unmount();
+  });
+});

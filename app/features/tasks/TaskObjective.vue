@@ -5,7 +5,7 @@
     :tabindex="isRowInteractive ? 0 : undefined"
     :aria-label="isRowInteractive ? objectiveAriaLabel : undefined"
     :aria-disabled="isRowInteractive ? undefined : true"
-    class="group flex w-full items-start gap-4 rounded-md px-2 py-2 transition-colors"
+    class="group -mx-1.5 flex items-start gap-2 rounded-md px-1.5 py-1 transition-colors"
     :class="[
       isComplete ? 'bg-success-500/10' : '',
       isRowInteractive
@@ -14,14 +14,14 @@
     ]"
     @click="handleRowClick"
     @keydown.enter.self="handleRowClick"
-    @keydown.space.prevent.self="handleRowClick"
+    @keydown.space.self.prevent="handleRowClick"
     @mouseenter="objectiveMouseEnter()"
     @mouseleave="objectiveMouseLeave()"
   >
     <UIcon
       :name="objectiveIcon.startsWith('mdi-') ? `i-${objectiveIcon}` : objectiveIcon"
       aria-hidden="true"
-      class="mt-1.5 h-4 w-4 shrink-0"
+      class="mt-0.5 h-4 w-4 shrink-0"
       :class="
         isComplete
           ? 'text-success-300'
@@ -30,8 +30,8 @@
             : 'text-surface-300 group-hover:text-surface-200'
       "
     />
-    <div class="flex flex-1 flex-wrap items-center gap-2">
-      <div class="min-w-0">
+    <div class="flex min-w-0 flex-1 flex-wrap items-start gap-2">
+      <div class="min-w-0 flex-1 basis-48">
         <div class="text-surface-100 text-sm leading-5">
           {{ props.objective?.description }}
           <AppTooltip v-if="objectiveModeCountDifference" :text="objectiveModeCountDifferenceText">
@@ -71,7 +71,7 @@
           </div>
         </AppTooltip>
       </div>
-      <div class="flex items-center gap-2" @click.stop>
+      <div class="ml-auto flex shrink-0 items-center gap-2" data-objective-controls>
         <AppTooltip v-if="hasMapLocation" :text="t('page.tasks.questcard.jump_to_map')">
           <button
             type="button"
@@ -266,12 +266,12 @@
   });
   const currentModeBadgeClass = computed(() => {
     if (currentGameMode.value === GAME_MODES.PVE) {
-      return 'border border-pve-500/30 bg-pve-700/25 text-pve-200';
+      return 'border border-pve-500/30 bg-pve-700/25 text-pve-200 light:border-pve-600/40 light:text-pve-900';
     }
     if (currentGameMode.value === GAME_MODES.SEASONAL) {
-      return 'border border-warning-500/30 bg-warning-700/20 text-warning-200';
+      return 'border border-warning-500/30 bg-warning-700/20 text-warning-200 light:border-warning-600/40 light:text-warning-900';
     }
-    return 'border border-pvp-500/30 bg-pvp-700/25 text-pvp-200';
+    return 'border border-pvp-500/30 bg-pvp-700/25 text-pvp-200 light:border-pvp-600/40 light:text-pvp-900';
   });
   const objectiveModeCountDifferenceText = computed(() => {
     const difference = objectiveModeCountDifference.value;
@@ -297,7 +297,10 @@
     if (!taskId) return;
     trackTaskProgressInteraction?.(taskId, 'objective_progress');
   };
-  const handleRowClick = () => {
+  const isObjectiveControlEvent = (event: Event) =>
+    event.target instanceof Element && Boolean(event.target.closest('[data-objective-controls]'));
+  const handleRowClick = (event: Event) => {
+    if (isObjectiveControlEvent(event)) return;
     if (isParentTaskLocked.value) return;
     if (neededCount.value > 1) {
       toggleCount();

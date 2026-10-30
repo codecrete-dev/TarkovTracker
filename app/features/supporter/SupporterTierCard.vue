@@ -21,7 +21,7 @@
     </div>
     <div class="flex flex-1 flex-col gap-5 p-6">
       <div>
-        <h3 class="text-lg font-bold text-white uppercase">
+        <h3 class="light:text-surface-50 text-lg font-bold text-white uppercase">
           {{ t(`page.supporter.tier_${tier.id}_name`) }}
         </h3>
         <p class="text-surface-400 mt-0.5 text-sm">
@@ -30,7 +30,7 @@
       </div>
       <div>
         <div class="flex items-end gap-1">
-          <span class="text-4xl font-bold tracking-tight text-white">
+          <span class="light:text-surface-50 text-4xl font-bold tracking-tight text-white">
             {{ formattedMonthlyCharge }}
           </span>
           <span class="text-surface-400 mb-1 text-sm">
@@ -45,7 +45,9 @@
             class="border-surface-700/50 flex items-center justify-between gap-2 border-b pb-1.5"
           >
             <dt class="text-surface-300">{{ billedLabel }}</dt>
-            <dd class="font-semibold text-white">{{ formattedChargeTotal }}</dd>
+            <dd class="light:text-surface-50 font-semibold text-white">
+              {{ formattedChargeTotal }}
+            </dd>
           </div>
           <div class="flex items-center justify-between gap-2">
             <dt class="text-surface-400 text-xs">
@@ -76,7 +78,7 @@
         >
           <UIcon
             name="i-mdi-check-circle-outline"
-            class="text-success-500 mt-0.5 h-4 w-4 shrink-0"
+            class="text-success-500 light:text-success-800 mt-0.5 h-4 w-4 shrink-0"
           />
           {{ perk }}
         </li>
@@ -120,12 +122,12 @@
         :color="tier.featured ? 'primary' : 'neutral'"
         :variant="tier.featured ? 'solid' : 'soft'"
         size="lg"
-        :loading="(isActiveSubscriber ? manageLoading : checkoutLoading) || !authResolved"
+        :loading="(isSubscribed ? manageLoading : checkoutLoading) || !authResolved"
         :disabled="!authResolved"
-        @click="isActiveSubscriber ? handleManage() : handleCheckout()"
+        @click="isSubscribed ? handleManage() : handleCheckout()"
       >
         {{
-          isActiveSubscriber
+          isSubscribed
             ? t('page.supporter.tier_change_cta', 'Change plan in billing portal')
             : t('page.supporter.tier_cta')
         }}
@@ -156,8 +158,8 @@
   const { locale, t } = useI18n({ useScope: 'global' });
   const { $supabase } = useNuxtApp();
   const {
-    activeTier,
-    isActiveSubscriber,
+    billingSubscription,
+    isSubscribed,
     openBillingPortal,
     createCheckout,
     error: composableError,
@@ -169,10 +171,11 @@
   const authResolved = ref(false);
   const loginLink = '/login?redirect=/supporter';
   const isCurrentTier = computed(
-    () => isActiveSubscriber.value && activeTier.value === props.tier.id
+    () => isSubscribed.value && billingSubscription.value?.tier === props.tier.id
   );
   onMounted(async () => {
     try {
+      await $supabase.ready();
       const { data } = await $supabase.client.auth.getUser();
       currentUserId.value = data?.user?.id ?? null;
     } catch (err) {
@@ -282,9 +285,8 @@
       t('page.supporter.perk_badge'),
       t('page.supporter.perk_discord'),
       t('page.supporter.perk_tier_role', { tier: t(`page.supporter.tier_${props.tier.id}_name`) }),
-      t('page.supporter.perk_api_rate_limit', 'Higher API rate limits'),
-      t('page.supporter.perk_data_retention', 'Extended inactive account retention'),
-      t('page.supporter.perk_early_access'),
+      t('page.supporter.perk_api_rate_limit'),
+      t('page.supporter.perk_subscription_retention'),
     ];
     if (props.tier.id === 'timmy' || props.tier.id === 'chad') {
       base.push(t('page.supporter.perk_priority_support'));

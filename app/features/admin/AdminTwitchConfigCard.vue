@@ -7,6 +7,7 @@
     getAdminErrorCode,
   } from '@/utils/adminErrors';
   import { logger } from '@/utils/logger';
+  import { refreshSupabaseSession } from '@/utils/supabaseAuth';
   const { $supabase } = useNuxtApp();
   const { t } = useI18n({ useScope: 'global' });
   const toast = useToast();
@@ -56,15 +57,17 @@
     const sessionResp = await $supabase.client.auth.getSession();
     const token = sessionResp.data.session?.access_token;
     if (token) return token;
-    const refreshed = await $supabase.client.auth.refreshSession();
-    return refreshed.data.session?.access_token;
+    // A failed refresh means no usable token; report that rather than throwing a
+    // generic error past the caller's authentication-required handling.
+    const refreshed = await refreshSupabaseSession($supabase.client).catch(() => null);
+    return refreshed?.access_token;
   };
   const errorMessage = (error: unknown): string => {
     const code = getAdminErrorCode(error);
     if (code) {
       return t(ADMIN_ERROR_LOCALE_KEYS[code], 'Could not update Twitch config.');
     }
-    return t('admin.twitch_config_failed_description', 'Could not update Twitch config.');
+    return t('admin.error.twitch_config_update_failed', 'Could not update Twitch config.');
   };
   const showSaveResult = (saved: TwitchConfigSaveResult): void => {
     if (saved.cacheInvalidated) {

@@ -10,6 +10,8 @@ const objectiveMaps = ref<Record<string, Array<{ objectiveID: string; mapID: str
 const objectiveGPS = ref<Record<string, Array<{ objectiveID: string; x: number; y: number }>>>({});
 const mapTeamAllHidden = ref(false);
 const pinnedTaskIds = ref<string[]>([]);
+const mapHiddenTaskIds = ref<string[]>([]);
+const mapShowSelfObjectives = ref(true);
 const completedObjectiveIds = ref<Set<string>>(new Set());
 const completedTaskIds = ref<Set<string>>(new Set());
 const failedTaskIds = ref<Set<string>>(new Set());
@@ -24,6 +26,8 @@ const setup = async () => {
   objectiveGPS.value = {};
   mapTeamAllHidden.value = false;
   pinnedTaskIds.value = [];
+  mapHiddenTaskIds.value = [];
+  mapShowSelfObjectives.value = true;
   completedObjectiveIds.value = new Set();
   completedTaskIds.value = new Set();
   failedTaskIds.value = new Set();
@@ -54,6 +58,12 @@ const setup = async () => {
       },
       get getPinnedTaskIds() {
         return pinnedTaskIds.value;
+      },
+      get getMapHiddenTaskIds() {
+        return mapHiddenTaskIds.value;
+      },
+      get getMapShowSelfObjectives() {
+        return mapShowSelfObjectives.value;
       },
     }),
   }));
@@ -87,6 +97,110 @@ const objectiveWithLocation = (id: string, mapId: string) => ({
   ],
 });
 describe('useMapObjectiveMarks', () => {
+  describe('user-hidden quests (#918)', () => {
+    const planTasks: Task[] = [
+      { id: 'task-a', name: 'A', objectives: [objectiveWithLocation('obj-a', 'customs')] },
+      { id: 'task-b', name: 'B', objectives: [objectiveWithLocation('obj-b', 'customs')] },
+    ];
+    const run = async () => {
+      const { useMapObjectiveMarks } = await setup();
+      unlockedTasks.value = { 'task-a': { self: true }, 'task-b': { self: true } };
+      return useMapObjectiveMarks({
+        mapId: computed(() => 'customs'),
+        shouldShowCompletedObjectives: computed(() => false),
+        tasks: computed(() => planTasks),
+      });
+    };
+    it('drops marks and summary visibility for user-hidden tasks but keeps them listed', async () => {
+      const result = await run();
+      mapHiddenTaskIds.value = ['task-a'];
+      expect(result.mapObjectiveMarks.value.map((mark) => mark.id)).toEqual(['obj-b']);
+      expect(result.mapObjectiveVisibility.value.has('obj-a')).toBe(false);
+      expect(result.mapTaskIds.value).toEqual(['task-a', 'task-b']);
+      expect([...result.hiddenTaskIds.value]).toEqual(['task-a']);
+    });
+    it('leaves tasks without a marker on this map out of mapTaskIds', async () => {
+      const { useMapObjectiveMarks } = await setup();
+      unlockedTasks.value = { 'task-a': { self: true }, 'task-global': { self: true } };
+      const result = useMapObjectiveMarks({
+        mapId: computed(() => 'customs'),
+        shouldShowCompletedObjectives: computed(() => false),
+        tasks: computed(() => [
+          planTasks[0]!,
+          { id: 'task-global', name: 'Global', objectives: [{ id: 'obj-global' }] } as Task,
+        ]),
+      });
+      expect(result.mapTaskIds.value).toEqual(['task-a']);
+    });
+    it('leaves tasks drawn only in a disabled marker category out of mapTaskIds', async () => {
+      const result = await run();
+      mapShowSelfObjectives.value = false;
+      expect(result.mapTaskIds.value).toEqual([]);
+    });
+  });
+  describe('locked tasks under the Locked and All filters', () => {
+    const lockedTasks: Task[] = [
+      {
+        id: 'task-locked',
+        name: 'Locked',
+        objectives: [objectiveWithLocation('obj-l', 'customs')],
+      },
+    ];
+    const run = async (shouldShowLockedObjectives: boolean) => {
+      const { useMapObjectiveMarks } = await setup();
+      unlockedTasks.value = { 'task-locked': { self: false } };
+      return useMapObjectiveMarks({
+        mapId: computed(() => 'customs'),
+        shouldShowCompletedObjectives: computed(() => false),
+        shouldShowLockedObjectives: computed(() => shouldShowLockedObjectives),
+        tasks: computed(() => lockedTasks),
+      });
+    };
+    it('draws a locked task objective as a self marker the player does not yet need', async () => {
+      const result = await run(true);
+      expect(result.mapObjectiveMarks.value).toEqual([
+        expect.objectContaining({ id: 'obj-l', users: ['self'] }),
+      ]);
+      expect(result.mapObjectiveVisibility.value.get('obj-l')).toEqual({
+        category: 'self',
+        selfNeedsObjective: false,
+      });
+      expect(result.mapTaskIds.value).toEqual(['task-locked']);
+    });
+    it('keeps locked task objectives off the map for the Available filter', async () => {
+      const result = await run(false);
+      expect(result.mapObjectiveMarks.value).toEqual([]);
+      expect(result.mapTaskIds.value).toEqual([]);
+    });
+    it('keeps a locked objective a teammate needs as a team marker (#126)', async () => {
+      const { useMapObjectiveMarks } = await setup();
+      visibleTeamStores.value = { self: {}, 'teammate-a': {} };
+      unlockedTasks.value = { 'task-locked': { self: false, 'teammate-a': true } };
+      const result = useMapObjectiveMarks({
+        mapId: computed(() => 'customs'),
+        shouldShowCompletedObjectives: computed(() => false),
+        shouldShowLockedObjectives: computed(() => true),
+        tasks: computed(() => lockedTasks),
+      });
+      expect(result.mapObjectiveMarks.value).toEqual([
+        expect.objectContaining({ id: 'obj-l', users: ['teammate-a'] }),
+      ]);
+    });
+    it.each([
+      ['failed', failedTaskIds],
+      ['completed', completedTaskIds],
+    ])('does not draw a %s task as locked', async (_state, taskIds) => {
+      const { useMapObjectiveMarks } = await setup();
+      taskIds.value = new Set(['task-locked']);
+      const result = useMapObjectiveMarks({
+        mapId: computed(() => 'customs'),
+        shouldShowCompletedObjectives: computed(() => false),
+        shouldShowLockedObjectives: computed(() => true),
+        tasks: computed(() => lockedTasks),
+      });
+      expect(result.mapObjectiveMarks.value).toEqual([]);
+    });
+  });
   it('marks a pinned task objective as pinned:true and an unpinned one as pinned:false', async () => {
     const { useMapObjectiveMarks } = await setup();
     const tasks: Task[] = [
@@ -108,7 +222,7 @@ describe('useMapObjectiveMarks', () => {
     pinnedTaskIds.value = ['task-pinned'];
     const mapId = computed(() => 'customs');
     const shouldShowCompletedObjectives = computed(() => false);
-    const { mapObjectiveMarks } = useMapObjectiveMarks({
+    const { mapObjectiveMarks, mapObjectiveVisibility } = useMapObjectiveMarks({
       mapId,
       shouldShowCompletedObjectives,
       tasks: computed(() => tasks),
@@ -117,7 +231,53 @@ describe('useMapObjectiveMarks', () => {
     const unpinnedMark = mapObjectiveMarks.value.find((mark) => mark.id === 'obj-unpinned');
     expect(pinnedMark?.pinned).toBe(true);
     expect(unpinnedMark?.pinned).toBe(false);
+    expect(mapObjectiveVisibility.value.get('obj-pinned')).toEqual({
+      category: 'pinned',
+      selfNeedsObjective: true,
+    });
   });
+  // A pinned task keeps `category: 'pinned'` even when the local player has no stake in the
+  // objective, so the visibility record has to report that separately or the required-items
+  // summary cannot tell a real requirement from a teammate's.
+  it.each([
+    {
+      route: 'the player has not unlocked the task',
+      apply: () => {
+        unlockedTasks.value = { 'task-pinned': { 'teammate-a': true } };
+      },
+    },
+    {
+      route: 'the player failed the task',
+      apply: () => {
+        unlockedTasks.value = { 'task-pinned': { self: true, 'teammate-a': true } };
+        failedTaskIds.value = new Set(['task-pinned']);
+      },
+    },
+  ])(
+    'reports selfNeedsObjective:false on a pinned objective only a teammate needs when $route',
+    async ({ apply }) => {
+      const { useMapObjectiveMarks } = await setup();
+      visibleTeamStores.value = { self: {}, 'teammate-a': {} };
+      pinnedTaskIds.value = ['task-pinned'];
+      apply();
+      const tasks: Task[] = [
+        {
+          id: 'task-pinned',
+          name: 'Pinned Task',
+          objectives: [objectiveWithLocation('obj-pinned', 'customs')],
+        },
+      ];
+      const { mapObjectiveVisibility } = useMapObjectiveMarks({
+        mapId: computed(() => 'customs'),
+        shouldShowCompletedObjectives: computed(() => false),
+        tasks: computed(() => tasks),
+      });
+      expect(mapObjectiveVisibility.value.get('obj-pinned')).toEqual({
+        category: 'pinned',
+        selfNeedsObjective: false,
+      });
+    }
+  );
   it('determines pinned state from task.id, not obj.id', async () => {
     const { useMapObjectiveMarks } = await setup();
     // The objective id on task-1 deliberately collides with a pinned id string,

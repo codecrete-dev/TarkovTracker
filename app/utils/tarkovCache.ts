@@ -14,7 +14,7 @@ import { perfEnabled, perfEnd, perfStart } from './perf';
 // Cache configuration
 export const CACHE_CONFIG = {
   DB_NAME: 'tarkov-tracker-cache',
-  DB_VERSION: 7,
+  DB_VERSION: 8,
   STORE_NAME: 'tarkov-data',
   // 12 hours in milliseconds
   DEFAULT_TTL: 12 * 60 * 60 * 1000,
@@ -33,7 +33,7 @@ export type CacheType =
   | 'map-spawns'
   | 'prestige'
   | 'editions';
-export interface CachedData<T> {
+interface CachedData<T> {
   data: T;
   timestamp: number;
   ttl: number;

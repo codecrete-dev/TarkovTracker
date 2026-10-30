@@ -6,6 +6,7 @@
     ADMIN_ERROR_LOCALE_KEYS,
     getAdminErrorCode,
   } from '@/utils/adminErrors';
+  import { refreshSupabaseSession } from '@/utils/supabaseAuth';
   const { $supabase } = useNuxtApp();
   const { t } = useI18n({ useScope: 'global' });
   const toast = useToast();
@@ -29,7 +30,7 @@
     const code = getAdminErrorCode(error);
     return code
       ? t(ADMIN_ERROR_LOCALE_KEYS[code], 'Could not update supporter access.')
-      : t('admin.supporter_override_failed_description');
+      : t('admin.error.supporter_update_failed');
   };
   const applySupporterOverride = async () => {
     if (!canSave.value) return;
@@ -38,8 +39,10 @@
       const sessionResp = await $supabase.client.auth.getSession();
       let token = sessionResp.data.session?.access_token ?? null;
       if (!token) {
-        const refreshed = await $supabase.client.auth.refreshSession();
-        token = refreshed.data.session?.access_token ?? null;
+        // A failed refresh means no usable token. Fall through to the
+        // authentication-required message instead of the generic failure.
+        const refreshed = await refreshSupabaseSession($supabase.client).catch(() => null);
+        token = refreshed?.access_token ?? null;
       }
       if (!token) {
         toast.add({

@@ -3,10 +3,13 @@ import { mockNuxtImport } from '@nuxt/test-utils/runtime';
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
+import { logger } from '@/utils/logger';
 import type { SupporterTier } from '@/features/supporter/supporterTypes';
 const activeTier = ref<'supporter' | 'scav' | 'timmy' | 'chad' | null>('scav');
 const composableError = ref<string | null>(null);
 const isActiveSubscriber = ref(true);
+const isSubscribed = ref(true);
+const billingSubscription = ref({ tier: 'scav' });
 const mockCreateCheckout = vi.fn();
 const mockOpenBillingPortal = vi.fn();
 vi.mock('@/composables/useSupporter', () => ({
@@ -15,6 +18,8 @@ vi.mock('@/composables/useSupporter', () => ({
     createCheckout: mockCreateCheckout,
     error: composableError,
     isActiveSubscriber,
+    isSubscribed,
+    billingSubscription,
     openBillingPortal: mockOpenBillingPortal,
   }),
 }));
@@ -29,47 +34,84 @@ vi.mock('vue-i18n', async (importOriginal) => ({
 vi.mock('@/utils/logger', () => ({
   logger: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() },
 }));
-mockNuxtImport('useNuxtApp', () => () => ({
-  $supabase: {
-    client: {
-      auth: {
-        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-1' } } }),
-      },
-    },
-  },
-}));
+const readyAuth = {
+  getUser: vi.fn(),
+};
+const supabase = {
+  client: { auth: {} as Partial<typeof readyAuth> },
+  ready: vi.fn(),
+};
+mockNuxtImport('useNuxtApp', () => () => ({ $supabase: supabase }));
 const tier: SupporterTier = { id: 'chad', baseMonthly: 10 };
+const buttonStubs = {
+  UAlert: true,
+  UButton: {
+    emits: ['click'],
+    props: ['color', 'disabled', 'icon', 'loading', 'size', 'to', 'variant'],
+    template: '<button :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
+  },
+  UIcon: true,
+};
+const mountCard = async () => {
+  const { default: SupporterTierCard } = await import('@/features/supporter/SupporterTierCard.vue');
+  return mount(SupporterTierCard, {
+    props: { interval: 'monthly', tier },
+    global: { stubs: buttonStubs },
+  });
+};
 describe('SupporterTierCard', () => {
   beforeEach(() => {
     activeTier.value = 'scav';
     composableError.value = null;
     isActiveSubscriber.value = true;
+    isSubscribed.value = true;
+    billingSubscription.value = { tier: 'scav' };
     mockCreateCheckout.mockReset();
     mockOpenBillingPortal.mockReset().mockResolvedValue(null);
+    readyAuth.getUser.mockReset().mockResolvedValue({ data: { user: { id: 'user-1' } } });
+    supabase.client = { auth: {} };
+    supabase.ready.mockReset().mockImplementation(async () => {
+      supabase.client = { auth: readyAuth };
+      return null;
+    });
+    vi.mocked(logger.error).mockClear();
   });
   it('uses Customer Portal instead of Checkout when an active subscriber changes tiers', async () => {
-    const { default: SupporterTierCard } =
-      await import('@/features/supporter/SupporterTierCard.vue');
-    const wrapper = mount(SupporterTierCard, {
-      props: { interval: 'monthly', tier },
-      global: {
-        stubs: {
-          UAlert: true,
-          UButton: {
-            emits: ['click'],
-            props: ['color', 'disabled', 'icon', 'loading', 'size', 'to', 'variant'],
-            template: '<button :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
-          },
-          UIcon: true,
-        },
-      },
-    });
+    const wrapper = await mountCard();
     await flushPromises();
     const button = wrapper.get('button');
     expect(button.text()).toContain('Change plan in billing portal');
     await button.trigger('click');
     await flushPromises();
     expect(mockOpenBillingPortal).toHaveBeenCalledTimes(1);
+    expect(mockCreateCheckout).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+  it('reads the signed-in user only after the Supabase client is ready', async () => {
+    isActiveSubscriber.value = false;
+    isSubscribed.value = false;
+    const wrapper = await mountCard();
+    await flushPromises();
+    expect(supabase.ready).toHaveBeenCalledTimes(1);
+    expect(readyAuth.getUser).toHaveBeenCalledTimes(1);
+    expect(logger.error).not.toHaveBeenCalled();
+    const button = wrapper.get('button');
+    expect(button.text()).toBe('page.supporter.tier_cta');
+    expect(button.attributes('disabled')).toBeUndefined();
+    wrapper.unmount();
+  });
+  it('manages a past-due plan while a different prepaid tier supplies access', async () => {
+    isActiveSubscriber.value = false;
+    isSubscribed.value = true;
+    billingSubscription.value = { tier: 'chad' };
+    const wrapper = await mountCard();
+    await flushPromises();
+    expect(wrapper.text()).toContain('Current tier');
+    const button = wrapper.get('button');
+    expect(button.text()).toContain('Manage subscription');
+    await button.trigger('click');
+    await flushPromises();
+    expect(mockOpenBillingPortal).toHaveBeenCalledOnce();
     expect(mockCreateCheckout).not.toHaveBeenCalled();
     wrapper.unmount();
   });

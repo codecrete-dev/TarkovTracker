@@ -1,3 +1,4 @@
+import { useI18n } from 'vue-i18n';
 import { useAnalyticsConsent, type AnalyticsConsentState } from '@/composables/useAnalyticsConsent';
 import {
   migrateToGameModeStructure,
@@ -5,6 +6,16 @@ import {
   type UserState,
 } from '@/stores/progressState';
 import { cloneStateSnapshot } from '@/stores/tarkov/localStorage';
+import {
+  readCommittedProgressAuthority,
+  ownedLegacyUpdates,
+  isOwnedProgressRecovery,
+  legacyProgressRecoveryCount,
+  discardExportedLegacyProgress,
+  exportableLegacyUpdates,
+  legacyProgressRecoveryOverflow,
+} from '@/stores/tarkov/progressAuthority';
+import { listSupersededProgressCopies } from '@/stores/tarkov/supersededProgress';
 import {
   getPersistedPreferencesState,
   preferencesDefaultState,
@@ -14,28 +25,35 @@ import {
   usePreferencesStore,
 } from '@/stores/usePreferences';
 import { useTarkovStore } from '@/stores/useTarkov';
-import { ACTIVE_SEASON_NUMBER, GAME_MODES, isGameMode, type GameMode } from '@/utils/constants';
+import { createBackupImportClient, BackupImportCancelled } from '@/utils/backup/importClient';
+import {
+  BACKUP_FORMAT,
+  MAX_RECOVERY_ARCHIVE_SIZE,
+  MAX_RECOVERY_OLDER_ENTRIES,
+  DEBUG_EXPORT_FORMAT,
+  isBackupObject,
+  validateBackup,
+  selectOlderTabRaw,
+  parseRecoveryProgress,
+  buildPreview,
+  type BackupPreviewData,
+  type BackupImportTargetModes,
+  type RecoveryArchiveEntry,
+  type TarkovTrackerExport,
+  type RecoveryArchiveResult,
+} from '@/utils/backup/parsing';
+import { ACTIVE_SEASON_NUMBER, GAME_MODES, type GameMode } from '@/utils/constants';
 import { logger } from '@/utils/logger';
 import { sanitizeOwnedProgressData, sanitizeOwnedUserState } from '@/utils/progressSanitizers';
 import { LEGACY_STORAGE_KEYS, STORAGE_KEYS } from '@/utils/storageKeys';
 import { parseUserScopedStorage } from '@/utils/userScopedStorage';
-const BACKUP_FORMAT = 'tarkovtracker-backup' as const;
-const DEBUG_EXPORT_FORMAT = 'tarkovtracker-debug-export' as const;
-const SUPPORTED_VERSIONS = [1, 2] as const;
-type Faction = 'USEC' | 'BEAR';
-interface TarkovTrackerExport {
-  _format: typeof BACKUP_FORMAT;
-  _version: number;
-  exportedAt: number;
-  appVersion: string;
-  currentGameMode: GameMode;
-  gameEdition: number;
-  tarkovUid: number | null;
-  pvp: UserProgressData;
-  pve: UserProgressData;
-  seasonNumber?: number;
-  seasonal?: UserProgressData;
-}
+import type { BackupReply, BackupMetadata } from '@/utils/backup/importSession';
+export type {
+  BackupPreviewData,
+  BackupImportTargetModes,
+  RecoveryArchiveEntry,
+} from '@/utils/backup/parsing';
+export type BackupImportState = 'idle' | 'parsing' | 'preview' | 'success' | 'error';
 interface DebugExportAuthContext {
   loggedIn: boolean;
   provider: string | null;
@@ -89,41 +107,18 @@ interface DebugExportPayload {
   };
   storage: DebugExportStorageContext;
 }
-export interface BackupPreviewData {
-  exportedAt: number;
-  appVersion: string;
-  gameEdition: number;
-  tarkovUid: number | null;
-  pvp: {
-    level: number;
-    faction: Faction;
-    displayName: string | null;
-    taskCount: number;
-    prestigeLevel: number;
-  };
-  pve: {
-    level: number;
-    faction: Faction;
-    displayName: string | null;
-    taskCount: number;
-    prestigeLevel: number;
-  };
-  seasonal: {
-    level: number;
-    faction: Faction;
-    displayName: string | null;
-    taskCount: number;
-    prestigeLevel: number;
-  } | null;
-}
-export type BackupImportState = 'idle' | 'preview' | 'success' | 'error';
-export type BackupImportTargetModes = {
-  pvp: boolean;
-  pve: boolean;
-  seasonal?: boolean;
-};
 export interface UseDataBackupReturn {
   exportProgress: () => Promise<void>;
+  exportSupersededProgress: () => Promise<void>;
+  exportDeviceProgressRecovery: () => Promise<void>;
+  confirmRecoveryArchiveSaved: () => Promise<void>;
+  recoveryExportPending: Ref<boolean>;
+  recoveryArchiveEntries: Ref<RecoveryArchiveEntry[]>;
+  selectedRecoveryArchiveEntry: Ref<number | null>;
+  reviewRecoveryArchiveEntry: (index: number) => Promise<void>;
+  legacyProgressRecoveryCount: Ref<number>;
+  legacyProgressRecoveryOverflow: Ref<boolean>;
+  reviewOlderTabProgress: (index: number) => Promise<void>;
   exportError: Ref<string | null>;
   exportDebugSnapshot: () => Promise<void>;
   debugExportError: Ref<string | null>;
@@ -133,26 +128,6 @@ export interface UseDataBackupReturn {
   parseBackupFile: (file: File) => Promise<void>;
   confirmBackupImport: (targetModes: BackupImportTargetModes) => Promise<void>;
   resetImport: () => void;
-}
-const ALLOWED_PROGRESS_KEYS = new Set([
-  'level',
-  'pmcFaction',
-  'displayName',
-  'xpOffset',
-  'taskCompletions',
-  'taskObjectives',
-  'hideoutParts',
-  'hideoutModules',
-  'traders',
-  'skills',
-  'prestigeLevel',
-  'progressEpoch',
-  'skillOffsets',
-  'storyChapters',
-]);
-const VALID_FACTIONS = new Set<Faction>(['USEC', 'BEAR']);
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 function getDefaultTaskFilterSettings(): TaskFilterSettings {
   return {
@@ -197,174 +172,14 @@ function createImportedProgressData(
     ),
   };
 }
-function sanitizeProgressData(
-  raw: unknown
-): { ok: true; data: UserProgressData } | { ok: false; error: string } {
-  if (!isPlainObject(raw)) {
-    return { ok: false, error: 'Progress data must be an object' };
-  }
-  if (!VALID_FACTIONS.has(raw.pmcFaction as Faction)) {
-    return { ok: false, error: 'Invalid faction — must be USEC or BEAR' };
-  }
-  const dictFields = [
-    'taskCompletions',
-    'taskObjectives',
-    'hideoutParts',
-    'hideoutModules',
-    'traders',
-    'skills',
-    'skillOffsets',
-    'storyChapters',
-  ] as const;
-  for (const field of dictFields) {
-    if (raw[field] !== undefined && !isPlainObject(raw[field])) {
-      return { ok: false, error: `Field "${field}" must be an object` };
-    }
-  }
-  const stripped: Record<string, unknown> = {};
-  for (const key of ALLOWED_PROGRESS_KEYS) {
-    if (key in raw) {
-      stripped[key] = raw[key];
-    }
-  }
-  return {
-    ok: true,
-    data: sanitizeOwnedProgressData(stripped),
-  };
-}
-type SanitizedBackupModes = {
-  pve: UserProgressData;
-  pvp: UserProgressData;
-  seasonal: UserProgressData | null;
-};
-const validateBackupFormat = (json: Record<string, unknown>): string | null => {
-  if (json._format !== BACKUP_FORMAT) return 'Invalid file format — not a TarkovTracker backup';
-  if (!SUPPORTED_VERSIONS.includes(json._version as (typeof SUPPORTED_VERSIONS)[number])) {
-    return `Unsupported backup version: ${json._version}`;
-  }
-  return null;
-};
-const isValidBackupEdition = (value: unknown): value is number =>
-  typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 6;
-const isValidBackupMode = (json: Record<string, unknown>): boolean =>
-  isGameMode(json.currentGameMode) &&
-  (json._version !== 1 || json.currentGameMode !== GAME_MODES.SEASONAL);
-const validateBackupIdentity = (json: Record<string, unknown>): string | null => {
-  if (!isValidBackupMode(json)) return 'Invalid currentGameMode';
-  if (!isValidBackupEdition(json.gameEdition)) {
-    return 'Invalid gameEdition — must be integer 1-6';
-  }
-  return null;
-};
-const isValidBackupTarkovUid = (value: unknown): boolean =>
-  value === null || (typeof value === 'number' && Number.isFinite(value));
-const isValidBackupSeasonNumber = (value: unknown): boolean =>
-  typeof value === 'number' && Number.isInteger(value) && value > 0;
-const validateBackupAccount = (json: Record<string, unknown>): string | null => {
-  if (!isValidBackupTarkovUid(json.tarkovUid)) {
-    return 'Invalid tarkovUid — must be a number or null';
-  }
-  if (json._version === 2 && !isValidBackupSeasonNumber(json.seasonNumber)) {
-    return 'Invalid seasonNumber';
-  }
-  return null;
-};
-type SanitizedModeResult = { ok: true; data: UserProgressData } | { ok: false; error: string };
-const sanitizeNamedBackupMode = (label: string, raw: unknown): SanitizedModeResult => {
-  const result = sanitizeProgressData(raw);
-  return result.ok ? result : { ok: false, error: `${label} data: ${result.error}` };
-};
-const sanitizePersistentBackupModes = (
-  json: Record<string, unknown>
-): { ok: true; pve: UserProgressData; pvp: UserProgressData } | { ok: false; error: string } => {
-  const pvp = sanitizeNamedBackupMode('PvP', json.pvp);
-  if (!pvp.ok) return pvp;
-  const pve = sanitizeNamedBackupMode('PvE', json.pve);
-  if (!pve.ok) return pve;
-  return { ok: true, pve: pve.data, pvp: pvp.data };
-};
-const sanitizeSeasonalBackupMode = (
-  json: Record<string, unknown>
-): SanitizedModeResult | { ok: true; data: null } => {
-  if (json._version !== 2) return { ok: true, data: null };
-  if (json.seasonal === undefined || json.seasonal === null) return { ok: true, data: null };
-  return sanitizeNamedBackupMode('Seasonal', json.seasonal);
-};
-const sanitizeBackupModes = (
-  json: Record<string, unknown>
-): { ok: true; data: SanitizedBackupModes } | { ok: false; error: string } => {
-  const persistent = sanitizePersistentBackupModes(json);
-  if (!persistent.ok) return persistent;
-  const seasonal = sanitizeSeasonalBackupMode(json);
-  if (!seasonal.ok) return seasonal;
-  return {
-    ok: true,
-    data: {
-      pvp: persistent.pvp,
-      pve: persistent.pve,
-      seasonal: seasonal.data,
-    },
-  };
-};
-function validateBackup(json: unknown):
-  | {
-      ok: true;
-      data: {
-        export: TarkovTrackerExport;
-        pvp: UserProgressData;
-        pve: UserProgressData;
-        seasonal: UserProgressData | null;
-      };
-    }
-  | { ok: false; error: string } {
-  if (!isPlainObject(json)) {
-    return { ok: false, error: 'Invalid file format — expected a JSON object' };
-  }
-  const validationError = [
-    validateBackupFormat(json),
-    validateBackupIdentity(json),
-    validateBackupAccount(json),
-  ].find((error) => error !== null);
-  if (validationError) return { ok: false, error: validationError };
-  const modes = sanitizeBackupModes(json);
-  if (!modes.ok) return modes;
-  const seasonal =
-    json._version === 2 && json.seasonNumber === ACTIVE_SEASON_NUMBER ? modes.data.seasonal : null;
-  return {
-    ok: true,
-    data: {
-      export: json as unknown as TarkovTrackerExport,
-      pvp: modes.data.pvp,
-      pve: modes.data.pve,
-      seasonal,
-    },
-  };
-}
-function buildPreview(
-  exportData: TarkovTrackerExport,
-  pvp: UserProgressData,
-  pve: UserProgressData,
-  seasonal: UserProgressData | null
-): BackupPreviewData {
-  const modePreview = (data: UserProgressData) => ({
-    level: data.level,
-    faction: data.pmcFaction,
-    displayName: data.displayName,
-    taskCount: Object.keys(data.taskCompletions).length,
-    prestigeLevel: data.prestigeLevel,
-  });
-  return {
-    exportedAt: exportData.exportedAt,
-    appVersion: exportData.appVersion,
-    gameEdition: exportData.gameEdition,
-    tarkovUid: exportData.tarkovUid,
-    pvp: modePreview(pvp),
-    pve: modePreview(pve),
-    seasonal: seasonal ? modePreview(seasonal) : null,
-  };
-}
 function stripInternalSyncMetadata(data: UserProgressData): UserProgressData {
-  const { apiUpdateHistory: _, lastApiUpdate: __, ...rest } = data;
+  const {
+    apiUpdateHistory: _,
+    lastApiUpdate: __,
+    manualActivityHistory: ___,
+    manualActivityEpoch: ____,
+    ...rest
+  } = data;
   return sanitizeOwnedProgressData(rest);
 }
 async function fingerprintValue(value: string | number | null | undefined): Promise<string | null> {
@@ -401,7 +216,7 @@ async function sanitizePreferencesForDebug(
   state: PersistedPreferencesState
 ): Promise<PersistedPreferencesState> {
   const sanitizedState = cloneStateSnapshot(state);
-  const rawTeamHide = isPlainObject(sanitizedState.teamHide) ? sanitizedState.teamHide : {};
+  const rawTeamHide = isBackupObject(sanitizedState.teamHide) ? sanitizedState.teamHide : {};
   const teamHideEntries = await Promise.all(
     Object.entries(rawTeamHide).map(async ([teamId, hidden]) => {
       const fingerprint = await fingerprintValue(teamId);
@@ -421,8 +236,8 @@ async function sanitizePreferencesForDebug(
   }
   sanitizedState.taskFilterPresets = await Promise.all(
     rawTaskFilterPresets.map(async (preset, index): Promise<TaskFilterPreset> => {
-      const sanitizedPreset = isPlainObject(preset) ? preset : null;
-      const sanitizedSettings = isPlainObject(sanitizedPreset?.settings)
+      const sanitizedPreset = isBackupObject(preset) ? preset : null;
+      const sanitizedSettings = isBackupObject(sanitizedPreset?.settings)
         ? sanitizedPreset.settings
         : {};
       return {
@@ -446,7 +261,7 @@ async function sanitizePreferencesForDebug(
   return sanitizedState;
 }
 function normalizePreferencesForDebug(value: unknown): PersistedPreferencesState {
-  if (!isPlainObject(value)) {
+  if (!isBackupObject(value)) {
     throw new Error('Persisted preferences state must be an object');
   }
   return getPersistedPreferencesState(value);
@@ -457,7 +272,7 @@ function sanitizeProgressForDebug(data: UserProgressData): UserProgressData {
   return sanitizedData;
 }
 async function sanitizeTarkovStateForDebug(state: unknown): Promise<UserState> {
-  if (!isPlainObject(state)) {
+  if (!isBackupObject(state)) {
     throw new Error('Persisted progress state must be an object');
   }
   const clonedState = sanitizeOwnedUserState(migrateToGameModeStructure(cloneStateSnapshot(state)));
@@ -483,29 +298,68 @@ function getStorageKeys(storage: Storage | null): string[] {
 function isSupabaseAuthStorageKey(key: string): boolean {
   return key.endsWith('-auth-token') || key.endsWith('-code-verifier');
 }
-async function sanitizeStorageKey(key: string): Promise<string> {
-  if (
+type ProgressBackupIdentity = { prefix: string; owner: string; createdAt: number | null };
+function getProgressBackupIdentity(key: string): ProgressBackupIdentity | null {
+  const prefix =
     key.startsWith(STORAGE_KEYS.progressBackupPrefix) ||
     key.startsWith(LEGACY_STORAGE_KEYS.progressBackupPrefix)
-  ) {
-    const prefix = key.startsWith(STORAGE_KEYS.progressBackupPrefix)
-      ? STORAGE_KEYS.progressBackupPrefix
-      : LEGACY_STORAGE_KEYS.progressBackupPrefix;
-    const suffix = key.slice(prefix.length);
-    const separatorIndex = suffix.lastIndexOf('_');
-    const owner = separatorIndex >= 0 ? suffix.slice(0, separatorIndex) : suffix;
-    const createdAtRaw = separatorIndex >= 0 ? suffix.slice(separatorIndex + 1) : '';
-    const ownerFingerprint =
-      owner === 'anonymous' ? 'anonymous' : ((await fingerprintValue(owner)) ?? 'unknown');
-    const createdAt = Number.parseInt(createdAtRaw, 10);
-    return `${prefix}{owner:${ownerFingerprint},createdAt:${
-      Number.isFinite(createdAt) ? createdAt : 'unknown'
-    }}`;
-  }
-  return key;
+      ? key.startsWith(STORAGE_KEYS.progressBackupPrefix)
+        ? STORAGE_KEYS.progressBackupPrefix
+        : LEGACY_STORAGE_KEYS.progressBackupPrefix
+      : null;
+  if (!prefix) return null;
+  const suffix = key.slice(prefix.length);
+  const separatorIndex = suffix.lastIndexOf('_');
+  const owner = separatorIndex >= 0 ? suffix.slice(0, separatorIndex) : suffix;
+  const createdAtRaw = separatorIndex >= 0 ? suffix.slice(separatorIndex + 1) : '';
+  const createdAt = Number.parseInt(createdAtRaw, 10);
+  return { prefix, owner, createdAt: Number.isFinite(createdAt) ? createdAt : null };
+}
+async function sanitizeProgressBackupKey(key: string): Promise<string | null> {
+  const identity = getProgressBackupIdentity(key);
+  if (!identity) return null;
+  const ownerFingerprint =
+    identity.owner === 'anonymous'
+      ? 'anonymous'
+      : ((await fingerprintValue(identity.owner)) ?? 'unknown');
+  return `${identity.prefix}{owner:${ownerFingerprint},createdAt:${
+    identity.createdAt ?? 'unknown'
+  }}`;
+}
+/** Keys named `${prefix}${userId}` keep their prefix with the owner fingerprinted. */
+const OWNER_SUFFIXED_PREFIXES = [
+  STORAGE_KEYS.progressRecoveryPrefix,
+  STORAGE_KEYS.deviceDataRemovalIncompletePrefix,
+];
+async function sanitizeRecoveryKey(key: string): Promise<string | null> {
+  const prefix = OWNER_SUFFIXED_PREFIXES.find((candidate) => key.startsWith(candidate));
+  if (!prefix) return null;
+  const owner = key.slice(prefix.length);
+  return `${prefix}{owner:${(await fingerprintValue(owner)) ?? 'unknown'}}`;
+}
+async function sanitizeSupersededKey(key: string): Promise<string | null> {
+  if (!key.startsWith(STORAGE_KEYS.progressSupersededPrefix)) return null;
+  const suffix = key.slice(STORAGE_KEYS.progressSupersededPrefix.length);
+  const separatorIndex = suffix.indexOf('_');
+  const owner = separatorIndex >= 0 ? suffix.slice(0, separatorIndex) : suffix;
+  const copyId = separatorIndex >= 0 ? suffix.slice(separatorIndex + 1) : 'unknown';
+  return `${STORAGE_KEYS.progressSupersededPrefix}{owner:${
+    (await fingerprintValue(owner)) ?? 'unknown'
+  },copy:${copyId}}`;
+}
+async function sanitizeStorageKey(key: string): Promise<string> {
+  const backupKey = await sanitizeProgressBackupKey(key);
+  if (backupKey) return backupKey;
+  const recoveryKey = await sanitizeRecoveryKey(key);
+  if (recoveryKey) return recoveryKey;
+  const supersededKey = await sanitizeSupersededKey(key);
+  return supersededKey ?? key;
 }
 async function sanitizeStorageKeys(storage: Storage | null): Promise<string[]> {
-  const keys = getStorageKeys(storage).filter((key) => !isSupabaseAuthStorageKey(key));
+  const keys = getStorageKeys(storage).filter(
+    (key) =>
+      !isSupabaseAuthStorageKey(key) && !key.startsWith(STORAGE_KEYS.progressQuarantinePrefix)
+  );
   return await Promise.all(keys.map((key) => sanitizeStorageKey(key)));
 }
 async function buildProgressBackupSnapshots(
@@ -518,18 +372,13 @@ async function buildProgressBackupSnapshots(
   );
   return await Promise.all(
     backupKeys.map(async (key) => {
-      const prefix = key.startsWith(STORAGE_KEYS.progressBackupPrefix)
-        ? STORAGE_KEYS.progressBackupPrefix
-        : LEGACY_STORAGE_KEYS.progressBackupPrefix;
-      const suffix = key.slice(prefix.length);
-      const separatorIndex = suffix.lastIndexOf('_');
-      const owner = separatorIndex >= 0 ? suffix.slice(0, separatorIndex) : suffix;
-      const createdAtRaw = separatorIndex >= 0 ? suffix.slice(separatorIndex + 1) : '';
-      const createdAt = Number.parseInt(createdAtRaw, 10);
+      const identity = getProgressBackupIdentity(key);
+      if (!identity) throw new Error('Progress backup key is not recognized');
       return {
         storageKey: await sanitizeStorageKey(key),
-        ownerFingerprint: owner === 'anonymous' ? 'anonymous' : await fingerprintValue(owner),
-        createdAt: Number.isFinite(createdAt) ? createdAt : null,
+        ownerFingerprint:
+          identity.owner === 'anonymous' ? 'anonymous' : await fingerprintValue(identity.owner),
+        createdAt: identity.createdAt,
       };
     })
   );
@@ -646,11 +495,16 @@ async function buildPreferencesStorageSnapshot(
     };
   }
 }
-async function downloadJsonFile(filenamePrefix: string, payload: unknown): Promise<void> {
+async function downloadJsonFile(
+  filenamePrefix: string,
+  payload: unknown,
+  sizeLimit?: { bytes: number; error: string }
+): Promise<void> {
   let url: string | null = null;
   try {
     const json = JSON.stringify(payload, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
+    if (sizeLimit && blob.size > sizeLimit.bytes) throw new Error(sizeLimit.error);
     url = URL.createObjectURL(blob);
     const date = new Date().toISOString().split('T')[0];
     const anchor = document.createElement('a');
@@ -670,16 +524,25 @@ export function useDataBackup(): UseDataBackupReturn {
   const preferencesStore = usePreferencesStore();
   const analyticsConsent = useAnalyticsConsent();
   const { $supabase } = useNuxtApp();
+  const { t } = useI18n();
   const exportError = ref<string | null>(null);
   const debugExportError = ref<string | null>(null);
   const importState = ref<BackupImportState>('idle');
   const importPreview = ref<BackupPreviewData | null>(null);
   const importError = ref<string | null>(null);
+  const recoveryExportPending = ref(false);
+  let recoveryExportReceipt: { owner: string | null; copies: string[] } | null = null;
+  const recoveryArchiveEntries = ref<RecoveryArchiveEntry[]>([]);
+  const selectedRecoveryArchiveEntry = ref<number | null>(null);
+  let importClient: ReturnType<typeof createBackupImportClient> | null = null;
+  let importGeneration = 0;
+  let workerOwner: string | null | undefined;
   let parsedPvp: UserProgressData | null = null;
   let parsedPve: UserProgressData | null = null;
   let parsedSeasonal: UserProgressData | null = null;
-  let parsedExport: TarkovTrackerExport | null = null;
-  function resetImport(): void {
+  let parsedExport: BackupMetadata | null = null;
+  let previewOwner: string | null | undefined;
+  function clearParsedImport(): void {
     importState.value = 'idle';
     importPreview.value = null;
     importError.value = null;
@@ -687,6 +550,120 @@ export function useDataBackup(): UseDataBackupReturn {
     parsedPve = null;
     parsedSeasonal = null;
     parsedExport = null;
+    previewOwner = undefined;
+  }
+  function resetImport(): void {
+    importGeneration++;
+    importClient?.cancel();
+    importClient = null;
+    workerOwner = undefined;
+    clearParsedImport();
+    recoveryArchiveEntries.value = [];
+    selectedRecoveryArchiveEntry.value = null;
+  }
+  function applyBackupPreview(value: unknown): void {
+    const result = validateBackup(value);
+    if (!result.ok) {
+      importState.value = 'error';
+      importError.value = result.error;
+      return;
+    }
+    parsedPvp = result.data.pvp;
+    parsedPve = result.data.pve;
+    parsedSeasonal = result.data.seasonal;
+    parsedExport = result.data.export;
+    previewOwner = $supabase.user.id ?? null;
+    importPreview.value = buildPreview(
+      result.data.export,
+      result.data.pvp,
+      result.data.pve,
+      result.data.seasonal
+    );
+    importState.value = 'preview';
+  }
+  function applyResolvedRecovery(resolved: RecoveryArchiveResult): void {
+    if (!resolved.ok) {
+      importState.value = 'error';
+      importError.value = t(`settings.data_management.${resolved.error}`);
+      return;
+    }
+    applyBackupPreview(resolved.value);
+  }
+  const currentImportOwner = (): string | null => $supabase.user.id ?? null;
+  function rejectChangedImportOwner(): void {
+    resetImport();
+    importState.value = 'error';
+    importError.value = t('settings.data_management.import_owner_changed');
+  }
+  function workerResultIsCurrent(generation: number, owner: string | null): boolean {
+    if (generation !== importGeneration) return false;
+    if (owner === currentImportOwner()) return true;
+    rejectChangedImportOwner();
+    return false;
+  }
+  function applyWorkerReply(reply: BackupReply, owner: string | null): void {
+    if (!('summary' in reply)) throw new Error('Invalid backup worker response');
+    previewOwner = owner;
+    importPreview.value = reply.summary.preview;
+    recoveryArchiveEntries.value = reply.summary.entries;
+    selectedRecoveryArchiveEntry.value = reply.summary.selected;
+    importState.value = 'preview';
+  }
+  function releaseFailedWorker(): void {
+    if (importClient?.closed) resetImport();
+  }
+  function handleImportFailure(error: unknown): void {
+    if (error instanceof BackupImportCancelled) return;
+    releaseFailedWorker();
+    importState.value = 'error';
+    const message = error instanceof Error ? error.message : 'Failed to read backup file';
+    importError.value = message.startsWith('settings.') ? t(message) : message;
+  }
+  function failCurrentImport(error: unknown, generation: number, owner: string | null): void {
+    if (workerResultIsCurrent(generation, owner)) handleImportFailure(error);
+  }
+  function receivingOwner(reply: BackupReply, owner: string | null): string | null {
+    if ('summary' in reply && !reply.summary.ownerBound) return currentImportOwner();
+    return owner;
+  }
+  async function requestImportSummary(request: () => Promise<BackupReply>): Promise<void> {
+    const generation = importGeneration;
+    const owner = currentImportOwner();
+    importState.value = 'parsing';
+    try {
+      const reply = await request();
+      const resultOwner = receivingOwner(reply, owner);
+      if (workerResultIsCurrent(generation, resultOwner)) applyWorkerReply(reply, resultOwner);
+    } catch (error) {
+      failCurrentImport(error, generation, owner);
+    }
+  }
+  async function reviewRecoveryArchiveEntry(index: number): Promise<void> {
+    if (workerOwner !== currentImportOwner()) {
+      rejectChangedImportOwner();
+      return;
+    }
+    clearParsedImport();
+    selectedRecoveryArchiveEntry.value = index;
+    const client = importClient;
+    if (!client) return;
+    importGeneration++;
+    await requestImportSummary(() => client.request({ op: 'select', index }));
+  }
+  if (getCurrentScope()) {
+    onScopeDispose(resetImport);
+    watch(
+      () => $supabase.user.id ?? null,
+      () => {
+        if (previewOwner === undefined) return;
+        const wasActive = importState.value === 'parsing' || importState.value === 'preview';
+        resetImport();
+        if (!wasActive) return;
+        importState.value = 'error';
+        importError.value = t('settings.data_management.import_owner_changed');
+      },
+      { flush: 'sync' }
+    );
   }
   async function exportProgress(): Promise<void> {
     exportError.value = null;
@@ -722,6 +699,82 @@ export function useDataBackup(): UseDataBackupReturn {
       throw error instanceof Error ? error : new Error(detail);
     }
   }
+  async function readOlderTabRecord() {
+    try {
+      return await readCommittedProgressAuthority();
+    } catch (error) {
+      logger.error('[DataBackup] Older-copy read failed:', error);
+      throw new Error(t('settings.data_management.older_edit_read_failed'), { cause: error });
+    }
+  }
+  async function reviewOlderTabProgress(index: number): Promise<void> {
+    resetImport();
+    const generation = importGeneration;
+    const owner = currentImportOwner();
+    importState.value = 'parsing';
+    try {
+      const record = await readOlderTabRecord();
+      if (!workerResultIsCurrent(generation, owner)) return;
+      const copies = ownedLegacyUpdates(record, owner);
+      applyResolvedRecovery(
+        parseRecoveryProgress(
+          selectOlderTabRaw(copies, index, t('settings.data_management.older_edit_unavailable'))
+        )
+      );
+    } catch (error) {
+      failCurrentImport(error, generation, owner);
+    }
+  }
+  async function exportDeviceProgressRecovery(): Promise<void> {
+    recoveryExportReceipt = null;
+    recoveryExportPending.value = false;
+    const owner = $supabase.user.id ?? null;
+    const record = await readCommittedProgressAuthority(false);
+    if (owner !== ($supabase.user.id ?? null))
+      throw new Error(t('settings.data_management.recovery_owner_changed'));
+    const belongsToOwner = (raw: string | null) => isOwnedProgressRecovery(raw, owner);
+    const copies = [...exportableLegacyUpdates(record, owner)];
+    if (copies.length > MAX_RECOVERY_OLDER_ENTRIES)
+      throw new Error(t('settings.data_management.invalid_device_archive'));
+    await downloadJsonFile(
+      'tarkovtracker-device-progress',
+      {
+        _format: 'tarkovtracker-device-progress',
+        _version: 1,
+        exportedAt: Date.now(),
+        current: belongsToOwner(record.raw) ? record.raw : null,
+        original: belongsToOwner(record.legacyRaw) ? record.legacyRaw : null,
+        older_tab_edits: copies,
+      },
+      {
+        bytes: MAX_RECOVERY_ARCHIVE_SIZE,
+        error: t('settings.data_management.recovery_archive_too_large'),
+      }
+    );
+    recoveryExportReceipt = { owner, copies: [...copies] };
+    recoveryExportPending.value = true;
+  }
+  async function confirmRecoveryArchiveSaved(): Promise<void> {
+    const receipt = recoveryExportReceipt;
+    if (!receipt) throw new Error(t('settings.data_management.recovery_archive_download_required'));
+    if (receipt.owner !== ($supabase.user.id ?? null))
+      throw new Error(t('settings.data_management.recovery_owner_changed'));
+    await discardExportedLegacyProgress(receipt.owner, receipt.copies);
+    recoveryExportReceipt = null;
+    recoveryExportPending.value = false;
+  }
+  async function exportSupersededProgress(): Promise<void> {
+    const ownerId = $supabase.user.id;
+    if (!ownerId) throw new Error('Sign in to export superseded progress');
+    const copies = listSupersededProgressCopies(ownerId);
+    if (copies.length === 0) throw new Error('No superseded progress copies are available');
+    await downloadJsonFile('tarkovtracker-superseded-progress', {
+      _format: 'tarkovtracker-superseded-progress',
+      _version: 1,
+      exportedAt: Date.now(),
+      copies: copies.map(({ ownerId: _ownerId, ...copy }) => copy),
+    });
+  }
   async function exportDebugSnapshot(): Promise<void> {
     debugExportError.value = null;
     try {
@@ -730,9 +783,12 @@ export function useDataBackup(): UseDataBackupReturn {
       const currentPreferences = await sanitizePreferencesForDebug(
         getPersistedPreferencesState(preferencesStore.$state)
       );
-      const rawProgressStorage =
-        localStorage.getItem(STORAGE_KEYS.progress) ??
-        localStorage.getItem(LEGACY_STORAGE_KEYS.progress);
+      const rawProgressStorage = await readCommittedProgressAuthority(false)
+        .then((record) => record.raw)
+        .catch((error) => {
+          logger.warn('[DataBackup] Progress authority unavailable for debug export:', error);
+          return null;
+        });
       const rawPreferencesStorage =
         localStorage.getItem(STORAGE_KEYS.preferences) ??
         localStorage.getItem(LEGACY_STORAGE_KEYS.preferences);
@@ -755,8 +811,9 @@ export function useDataBackup(): UseDataBackupReturn {
         },
         runtime: {
           path: window.location.pathname,
-          query: window.location.search,
-          hash: window.location.hash,
+          // URL query and fragment values may contain credentials or private identifiers.
+          query: '',
+          hash: '',
           language: navigator.language ?? null,
           languages: Array.isArray(navigator.languages) ? [...navigator.languages] : [],
           timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? null,
@@ -785,48 +842,55 @@ export function useDataBackup(): UseDataBackupReturn {
     }
   }
   async function parseBackupFile(file: File): Promise<void> {
-    importError.value = null;
-    const MAX_BACKUP_SIZE = 5 * 1024 * 1024;
-    if (file.size > MAX_BACKUP_SIZE) {
+    resetImport();
+    if (file.size > MAX_RECOVERY_ARCHIVE_SIZE) {
       importState.value = 'error';
-      importError.value = 'Backup file is too large (max 5 MB)';
+      importError.value = t('settings.data_management.recovery_archive_too_large');
       return;
     }
+    await requestImportSummary(() => {
+      workerOwner = currentImportOwner();
+      importClient = createBackupImportClient();
+      return importClient.request({ op: 'open', file, owner: workerOwner });
+    });
+  }
+  function previewMatchesCurrentOwner(): boolean {
+    if (previewOwner === ($supabase.user.id ?? null)) return true;
+    resetImport();
+    importState.value = 'error';
+    importError.value = t('settings.data_management.import_owner_changed');
+    return false;
+  }
+  async function receiveSelectedBackup(): Promise<boolean> {
+    if (!importClient) return true;
+    const generation = importGeneration;
+    const owner = previewOwner as string | null;
+    importState.value = 'parsing';
     try {
-      const text = await file.text();
-      let json: unknown;
-      try {
-        json = JSON.parse(text);
-      } catch {
-        importState.value = 'error';
-        importError.value = 'Failed to parse JSON — file may be corrupted';
-        return;
-      }
-      const result = validateBackup(json);
-      if (!result.ok) {
-        importState.value = 'error';
-        importError.value = result.error;
-        return;
-      }
-      parsedPvp = result.data.pvp;
-      parsedPve = result.data.pve;
-      parsedSeasonal = result.data.seasonal;
-      parsedExport = result.data.export;
-      importPreview.value = buildPreview(
-        result.data.export,
-        result.data.pvp,
-        result.data.pve,
-        result.data.seasonal
-      );
+      const data = await importClient.read();
+      if (!workerResultIsCurrent(generation, owner)) return false;
+      parsedPvp = data.pvp;
+      parsedPve = data.pve;
+      parsedSeasonal = data.seasonal;
+      parsedExport = data.export;
       importState.value = 'preview';
-    } catch (e) {
-      importState.value = 'error';
-      importError.value = 'Failed to read backup file';
-      logger.error('[DataBackup] Parse error:', e);
+      return true;
+    } catch (error) {
+      failCurrentImport(error, generation, owner);
+      return false;
     }
   }
   async function confirmBackupImport(targetModes: BackupImportTargetModes): Promise<void> {
-    if (importState.value !== 'preview' || !parsedPvp || !parsedPve || !parsedExport) {
+    if (!targetModes.pvp && !targetModes.pve && !targetModes.seasonal) return;
+    if (importState.value !== 'preview' || !previewMatchesCurrentOwner()) return;
+    if (!(await receiveSelectedBackup())) return;
+    if (
+      importState.value !== 'preview' ||
+      !parsedPvp ||
+      !parsedPve ||
+      !parsedExport ||
+      !previewMatchesCurrentOwner()
+    ) {
       return;
     }
     try {
@@ -869,6 +933,11 @@ export function useDataBackup(): UseDataBackupReturn {
           state.currentGameMode = GAME_MODES.SEASONAL;
         }
       });
+      importClient?.cancel();
+      importClient = null;
+      workerOwner = undefined;
+      recoveryArchiveEntries.value = [];
+      selectedRecoveryArchiveEntry.value = null;
       importState.value = 'success';
     } catch (e) {
       importState.value = 'error';
@@ -878,6 +947,16 @@ export function useDataBackup(): UseDataBackupReturn {
   }
   return {
     exportProgress,
+    exportSupersededProgress,
+    exportDeviceProgressRecovery,
+    confirmRecoveryArchiveSaved,
+    recoveryExportPending,
+    recoveryArchiveEntries,
+    selectedRecoveryArchiveEntry,
+    reviewRecoveryArchiveEntry,
+    reviewOlderTabProgress,
+    legacyProgressRecoveryCount,
+    legacyProgressRecoveryOverflow,
     exportError,
     exportDebugSnapshot,
     debugExportError,

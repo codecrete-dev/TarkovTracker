@@ -1,12 +1,21 @@
 import {
+  capApiTaskUpdates,
+  type ApiTaskUpdateEntry,
+} from '@tarkovtracker/progress-contracts/apiTaskUpdates';
+import { hasMaterializedProgress } from '@tarkovtracker/progress-contracts/modeProgress';
+import {
   createError,
   defineEventHandler,
   getRequestHeader,
   getRouterParam,
   setResponseHeader,
 } from 'h3';
+import { normalizeSupabaseUrl } from '@/server/utils/adminSupabase';
 import { fetchWithTimeout, isAbortError } from '@/server/utils/fetchWithTimeout';
+import { resolveGameModeSeason } from '@/server/utils/gameModeSeason';
 import { createLogger } from '@/server/utils/logger';
+import { fetchOverlay } from '@/server/utils/overlay';
+import { projectStoryChapters } from '@/server/utils/overlayProjectors';
 import { getProxyAwareClientIdentifier } from '@/server/utils/requestIdentity';
 import {
   consumeSharedRateLimit,
@@ -17,13 +26,7 @@ import {
   type SharedCacheHandle,
 } from '@/server/utils/sharedEdgeStore';
 import { fetchTarkovJsonEndpoint, type JsonTasksPayload } from '@/server/utils/tarkov-json';
-import {
-  API_GAME_MODES,
-  getGameModeSeasonNumber,
-  isGameMode,
-  type GameMode,
-} from '@/utils/constants';
-import { getLegacyModeProgressField, resolveModeProgressData } from '@/utils/modeProgressFallback';
+import { API_GAME_MODES, isGameMode, type GameMode } from '@/utils/constants';
 import {
   isRecord,
   sanitizeDisplayName,
@@ -36,7 +39,10 @@ import {
   sanitizeTraderMap,
   toFiniteNumber,
 } from '@/utils/progressSanitizers';
+import { effectiveStoryProgress } from '@/utils/storylineCompletion';
+import { sanitizeTaskAvailabilityMap } from '@/utils/taskAvailabilityConfirmation';
 import type { ApiProtectionConfig } from '@/server/middleware/api-protection';
+import type { StoryChapter } from '@/types/tarkov';
 const logger = createLogger('SharedProfileApi');
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const REST_FETCH_TIMEOUT_MS = 8000;
@@ -57,14 +63,10 @@ type JsonTaskFailureMetadata = {
   failConditions?: JsonFailCondition[] | null;
 };
 type PreferencesRow = {
-  profile_share_pve_public?: boolean | null;
-  profile_share_pvp_public?: boolean | null;
   streamer_mode?: boolean | null;
 };
 type ProgressRow = {
   game_edition?: number | null;
-  pve_data?: unknown | null;
-  pvp_data?: unknown | null;
   user_id: string;
 };
 type ModeProgressRow = {
@@ -91,15 +93,12 @@ type SanitizedTrader = {
   level: number;
   reputation: number;
 };
-type SanitizedApiTaskUpdate = {
-  id: string;
-  state: 'completed' | 'failed' | 'uncompleted';
-};
 type SanitizedApiUpdateMeta = {
   id: string;
   at: number;
   source: 'api';
-  tasks?: SanitizedApiTaskUpdate[];
+  tasks?: ApiTaskUpdateEntry[];
+  taskCount?: number;
 };
 type SanitizedProgressData = Partial<{
   displayName: string;
@@ -116,9 +115,9 @@ type SanitizedProgressData = Partial<{
     { complete?: boolean; objectives?: Record<string, { complete?: boolean; timestamp?: number }> }
   >;
   taskCompletions: Record<string, SanitizedTaskCompletion>;
+  taskAvailability: Record<string, { requirements: string; timestamp: number }>;
   taskObjectives: Record<string, SanitizedObjectiveProgress>;
   traders: Record<string, SanitizedTrader>;
-  xpOffset: number;
 }>;
 type SharedProfilePayload = {
   data: SanitizedProgressData | null;
@@ -147,6 +146,8 @@ const toCleanString = (value: unknown, maxLength = 128): string | null => {
   }
   return trimmed.slice(0, maxLength);
 };
+const cleanApiTaskUpdate = (task: unknown): unknown =>
+  isRecord(task) ? { id: toCleanString(task.id, 128), state: task.state } : null;
 const sanitizeApiUpdateMeta = (value: unknown): SanitizedApiUpdateMeta | null => {
   if (!isRecord(value)) {
     return null;
@@ -161,22 +162,15 @@ const sanitizeApiUpdateMeta = (value: unknown): SanitizedApiUpdateMeta | null =>
     at: Math.max(0, Math.trunc(at)),
     source: 'api',
   };
-  if (Array.isArray(value.tasks)) {
-    const tasks: SanitizedApiTaskUpdate[] = [];
-    for (const task of value.tasks) {
-      if (!isRecord(task)) {
-        continue;
-      }
-      const taskId = toCleanString(task.id, 128);
-      const state = task.state;
-      if (!taskId || (state !== 'completed' && state !== 'failed' && state !== 'uncompleted')) {
-        continue;
-      }
-      tasks.push({ id: taskId, state });
-    }
-    if (tasks.length > 0) {
-      sanitized.tasks = tasks;
-    }
+  const { tasks, taskCount } = capApiTaskUpdates(
+    Array.isArray(value.tasks) ? value.tasks.map(cleanApiTaskUpdate) : [],
+    value.taskCount
+  );
+  if (tasks.length > 0) {
+    sanitized.tasks = tasks;
+  }
+  if (taskCount !== undefined) {
+    sanitized.taskCount = taskCount;
   }
   return sanitized;
 };
@@ -200,10 +194,6 @@ const sanitizeProgressPayload = (
   }
   if (value.pmcFaction === 'BEAR' || value.pmcFaction === 'USEC') {
     sanitized.pmcFaction = sanitizeFaction(value.pmcFaction);
-  }
-  const xpOffset = toFiniteNumber(value.xpOffset);
-  if (xpOffset !== null) {
-    sanitized.xpOffset = Math.trunc(xpOffset);
   }
   const taskCompletions = sanitizeTaskCompletionMap(value.taskCompletions);
   if (Object.keys(taskCompletions).length > 0) {
@@ -241,11 +231,37 @@ const sanitizeProgressPayload = (
   if (Object.keys(storyChapters).length > 0) {
     sanitized.storyChapters = storyChapters;
   }
+  const taskAvailability = sanitizeTaskAvailabilityMap(value.taskAvailability);
+  if (Object.keys(taskAvailability).length > 0) {
+    sanitized.taskAvailability = taskAvailability;
+  }
   const lastApiUpdate = sanitizeApiUpdateMeta(value.lastApiUpdate);
   if (lastApiUpdate) {
     sanitized.lastApiUpdate = lastApiUpdate;
   }
   return sanitized;
+};
+/** Effective read model; backups continue exporting the unmodified recorded store. */
+const projectStoryReadModel = (
+  data: SanitizedProgressData | null,
+  chapters: StoryChapter[]
+): SanitizedProgressData | null => {
+  const storyChapters = effectiveStoryProgress(data?.storyChapters, chapters);
+  return data || Object.keys(storyChapters).length ? { ...data, storyChapters } : data;
+};
+const enrichStoryProgress = async (
+  data: SanitizedProgressData | null,
+  mode: GameMode
+): Promise<SanitizedProgressData | null> => {
+  try {
+    const { overlay } = await fetchOverlay();
+    if (!overlay) return data;
+    const chapters = projectStoryChapters(overlay, API_GAME_MODES[mode], 'en');
+    return projectStoryReadModel(data, chapters);
+  } catch {
+    logger.warn('Story baseline metadata unavailable; preserving recorded profile progress');
+    return data;
+  }
 };
 const normalizeStatusList = (statuses: unknown): string[] => {
   if (!Array.isArray(statuses)) {
@@ -545,7 +561,8 @@ export default defineEventHandler(async (event) => {
   }
   const typedConfig = useRuntimeConfig(event) as ReturnType<typeof useRuntimeConfig> &
     ApiProtectionConfig;
-  const { supabaseAnonKey, supabaseUrl } = typedConfig;
+  const { supabaseAnonKey } = typedConfig;
+  const supabaseUrl = normalizeSupabaseUrl(typedConfig.supabaseUrl);
   const supabaseServiceKey =
     typeof typedConfig.supabaseServiceKey === 'string' ? typedConfig.supabaseServiceKey : '';
   if (
@@ -600,7 +617,8 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 429, statusMessage: 'Too many requests' });
     }
   }
-  const sharedProfileCacheKey = `${userId}:${mode}:${requesterKey}`;
+  const seasonNumber = await resolveGameModeSeason(mode, { supabaseUrl, supabaseServiceKey });
+  const sharedProfileCacheKey = `${userId}:${mode}:${seasonNumber}:${requesterKey}`;
   if (!isTestEnvironment) {
     const cached = await getCachedProfile(sharedCacheHandle, sharedProfileCacheKey);
     if (cached) {
@@ -619,54 +637,37 @@ export default defineEventHandler(async (event) => {
   if (!restAuthorization) {
     throw createError({ statusCode: 401, statusMessage: 'Missing auth token' });
   }
-  const restFetch = async (path: string, signal?: AbortSignal) => {
-    const url = `${supabaseUrl}/rest/v1/${path}`;
-    return fetch(url, {
-      headers: {
-        Accept: 'application/json',
-        Authorization: restAuthorization,
-        'Content-Type': 'application/json',
-        apikey: restApiKey,
+  const resourcesController = new AbortController();
+  const restFetch = (path: string) =>
+    fetchWithTimeout(
+      `${supabaseUrl}/rest/v1/${path}`,
+      {
+        headers: {
+          Accept: 'application/json',
+          Authorization: restAuthorization,
+          'Content-Type': 'application/json',
+          apikey: restApiKey,
+        },
+        signal: resourcesController.signal,
       },
-      signal,
-    });
-  };
-  const progressController = new AbortController();
-  const modeProgressController = new AbortController();
-  const preferencesController = new AbortController();
-  const progressTimeout = setTimeout(() => {
-    progressController.abort();
-  }, REST_FETCH_TIMEOUT_MS);
-  const preferencesTimeout = setTimeout(() => {
-    preferencesController.abort();
-  }, REST_FETCH_TIMEOUT_MS);
-  const modeProgressTimeout = setTimeout(() => {
-    modeProgressController.abort();
-  }, REST_FETCH_TIMEOUT_MS);
+      REST_FETCH_TIMEOUT_MS,
+      'Timed out while loading shared profile data'
+    );
   let progressResponse: Response;
   let modeProgressResponse: Response;
   let preferencesResponse: Response;
-  const legacyProgressField = getLegacyModeProgressField(mode);
-  const progressSelect = ['user_id', 'game_edition', legacyProgressField].filter(Boolean).join(',');
+  const progressSelect = 'user_id,game_edition';
   try {
     [progressResponse, modeProgressResponse, preferencesResponse] = await Promise.all([
+      restFetch(`user_progress?select=${progressSelect}&user_id=eq.${userId}&limit=1`),
       restFetch(
-        `user_progress?select=${progressSelect}&user_id=eq.${userId}&limit=1`,
-        progressController.signal
+        `user_game_mode_progress?select=user_id,progress_data,profile_public&user_id=eq.${userId}&game_mode=eq.${mode}&season_number=eq.${seasonNumber}&limit=1`
       ),
-      restFetch(
-        `user_game_mode_progress?select=user_id,progress_data,profile_public&user_id=eq.${userId}&game_mode=eq.${mode}&season_number=eq.${getGameModeSeasonNumber(mode)}&limit=1`,
-        modeProgressController.signal
-      ),
-      restFetch(
-        `user_preferences?select=streamer_mode,profile_share_pvp_public,profile_share_pve_public&user_id=eq.${userId}&limit=1`,
-        preferencesController.signal
-      ),
+      restFetch(`user_preferences?select=streamer_mode&user_id=eq.${userId}&limit=1`),
     ]);
   } catch (error) {
-    progressController.abort();
-    modeProgressController.abort();
-    preferencesController.abort();
+    resourcesController.abort();
+    if (Object(error).statusCode === 504) throw error;
     if (isAbortError(error)) {
       throw createError({
         statusCode: 504,
@@ -678,10 +679,6 @@ export default defineEventHandler(async (event) => {
       statusCode: 502,
       statusMessage: 'Failed to load shared profile data',
     });
-  } finally {
-    clearTimeout(progressTimeout);
-    clearTimeout(modeProgressTimeout);
-    clearTimeout(preferencesTimeout);
   }
   if (!progressResponse.ok || !modeProgressResponse.ok) {
     throw createError({ statusCode: 500, statusMessage: 'Failed to load profile data' });
@@ -704,23 +701,19 @@ export default defineEventHandler(async (event) => {
     });
   }
   const isOwner = requesterUserId === userId;
-  const legacyModePublic =
-    mode === 'pvp'
-      ? preferencesRow?.profile_share_pvp_public === true
-      : mode === 'pve'
-        ? preferencesRow?.profile_share_pve_public === true
-        : false;
-  const isModePublic = modeProgressRow ? modeProgressRow.profile_public === true : legacyModePublic;
+  const isModePublic = modeProgressRow?.profile_public === true;
   if (!isOwner && !isModePublic) {
     throw createError({ statusCode: 403, statusMessage: 'Profile is private for this mode' });
   }
-  const profileData = resolveModeProgressData(mode, modeProgressRow?.progress_data, progressRow);
+  const profileData = hasMaterializedProgress(modeProgressRow?.progress_data)
+    ? modeProgressRow?.progress_data
+    : null;
   const hideDisplayName = !isOwner && preferencesRow?.streamer_mode === true;
   const sanitizedData = sanitizeProgressPayload(profileData, {
     includeDisplayName: !hideDisplayName,
   });
   const payload: SharedProfilePayload = {
-    data: await enrichProgressTaskFailures(sanitizedData, mode),
+    data: await enrichProgressTaskFailures(await enrichStoryProgress(sanitizedData, mode), mode),
     gameEdition: typeof progressRow.game_edition === 'number' ? progressRow.game_edition : 1,
     mode,
     userId,

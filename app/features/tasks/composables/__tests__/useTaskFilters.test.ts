@@ -1,13 +1,8 @@
-import { mockNuxtImport } from '@nuxt/test-utils/runtime';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { computed, nextTick, reactive, ref } from 'vue';
+import { describe, expect, it, vi } from 'vitest';
+import { computed, ref } from 'vue';
 import { applySearchToTaskList, useTaskFilters } from '@/features/tasks/composables/useTaskFilters';
 import type { Task } from '@/types/tarkov';
-import type { TaskFilterAndSortOptions } from '@/types/taskFilter';
-const routeState = reactive({
-  query: reactive<Record<string, string | undefined>>({}),
-});
-mockNuxtImport('useRoute', () => () => routeState);
+import type { TaskFilterAndSortOptions, TaskSecondaryView } from '@/types/taskFilter';
 const createTask = (
   id: string,
   name: string,
@@ -47,13 +42,22 @@ const createTask = (
     objectives: [],
     taskRequirements: [],
   }) as Task;
+const createOptions = (overrides: Partial<TaskFilterAndSortOptions> = {}) =>
+  computed(
+    () =>
+      ({
+        mapView: 'all',
+        mergedMaps: [],
+        primaryView: 'all',
+        secondaryView: 'available',
+        sortDirection: 'asc',
+        sortMode: 'none',
+        traderView: 'all',
+        userView: 'self',
+        ...overrides,
+      }) as TaskFilterAndSortOptions
+  );
 describe('useTaskFilters', () => {
-  beforeEach(() => {
-    routeState.query.q = undefined;
-  });
-  afterEach(() => {
-    vi.useRealTimers();
-  });
   it('keeps list order when search query is empty', () => {
     const tasks = [createTask('a', 'First'), createTask('b', 'Second')];
     expect(applySearchToTaskList(tasks, '')).toEqual(tasks);
@@ -69,140 +73,89 @@ describe('useTaskFilters', () => {
     ];
     expect(applySearchToTaskList(tasks, 'ledx').map((task) => task.id)).toEqual(['b']);
   });
-  it('updates debounced search state and filtered tasks', async () => {
-    vi.useFakeTimers();
+  it('filters visible tasks by the normalized search', () => {
     const visibleTasks = ref([createTask('1', 'Alpha Task'), createTask('2', 'Bravo')]);
-    const tasks = ref([...visibleTasks.value]);
-    const getTaskMapView = ref('all');
-    const showMapDisplay = computed(() => false);
-    const options = computed(
-      () =>
-        ({
-          mapView: 'all',
-          mergedMaps: [],
-          primaryView: 'all',
-          secondaryView: 'available',
-          sortDirection: 'asc',
-          sortMode: 'none',
-          traderView: 'all',
-          userView: 'self',
-        }) as TaskFilterAndSortOptions
-    );
-    const { filteredTasks, isSearchActive, searchQuery } = useTaskFilters({
+    const normalizedSearch = ref('');
+    const { filteredTasks, searchStatusCounts } = useTaskFilters({
       calculateFilteredTasksForOptions: (inputTasks) => inputTasks,
-      getTaskMapView,
-      mapTaskVisibilityFilterOptions: options,
-      showMapDisplay,
-      tasks,
+      excludedTaskIds: computed(() => new Set<string>()),
+      getTaskMapView: ref('all'),
+      hideCompletedMapObjectives: ref(false),
+      mapTaskVisibilityFilterOptions: createOptions(),
+      normalizedSearch,
+      showMapDisplay: computed(() => false),
+      tasks: ref([...visibleTasks.value]),
       visibleTasks,
     });
-    searchQuery.value = 'alpha';
-    await vi.advanceTimersByTimeAsync(200);
-    expect(isSearchActive.value).toBe(true);
+    expect(filteredTasks.value.map((task) => task.id)).toEqual(['1', '2']);
+    expect(searchStatusCounts.value).toBeNull();
+    normalizedSearch.value = 'alpha';
     expect(filteredTasks.value.map((task) => task.id)).toEqual(['1']);
   });
-  it('calculates hidden map objective task count with search applied', async () => {
-    vi.useFakeTimers();
-    const tasks = ref([createTask('1', 'Alpha Task'), createTask('2', 'Bravo Task')]);
-    const visibleTasks = ref([...tasks.value]);
-    const getTaskMapView = ref('woods');
-    const showMapDisplay = computed(() => true);
-    const options = computed(
-      () =>
-        ({
-          mapView: 'woods',
-          mergedMaps: [{ id: 'woods', mergedIds: ['woods'] }],
-          primaryView: 'maps',
-          secondaryView: 'available',
-          sortDirection: 'asc',
-          sortMode: 'none',
-          traderView: 'all',
-          userView: 'self',
-        }) as TaskFilterAndSortOptions
+  it('counts search matches per status through the status filter pipeline', () => {
+    const statusById: Record<string, TaskSecondaryView> = {
+      mole: 'locked',
+      other: 'available',
+      shortage: 'completed',
+    };
+    const tasks = ref([
+      createTask('mole', 'Saving the Mole'),
+      createTask('other', 'Debut'),
+      createTask('shortage', 'Shortage', 'Saving kit'),
+    ]);
+    const calculateFilteredTasksForOptions = vi.fn(
+      (inputTasks: Task[], options: TaskFilterAndSortOptions, hide?: boolean) => {
+        expect(hide).toBe(true);
+        if (options.secondaryView === 'all') return inputTasks;
+        return inputTasks.filter((task) => statusById[task.id] === options.secondaryView);
+      }
     );
+    const { searchStatusCounts } = useTaskFilters({
+      calculateFilteredTasksForOptions,
+      excludedTaskIds: computed(() => new Set<string>()),
+      getTaskMapView: ref('all'),
+      hideCompletedMapObjectives: ref(true),
+      mapTaskVisibilityFilterOptions: createOptions(),
+      normalizedSearch: ref('saving'),
+      showMapDisplay: computed(() => false),
+      tasks,
+      visibleTasks: ref([]),
+    });
+    expect(searchStatusCounts.value).toEqual({
+      all: 2,
+      available: 0,
+      completed: 1,
+      failed: 0,
+      locked: 1,
+    });
+  });
+  it('calculates hidden map objective task count with search applied', () => {
+    const tasks = ref([createTask('1', 'Alpha Task'), createTask('2', 'Bravo Task')]);
     const calculateFilteredTasksForOptions = vi.fn(
       (_tasks: Task[], _options: TaskFilterAndSortOptions, hideCompletedMapObjectives?: boolean) =>
         hideCompletedMapObjectives ? [tasks.value[0]!] : tasks.value
     );
-    const { mapCompleteTasksCountOnMap, searchQuery, showMapTaskVisibilityNotice } = useTaskFilters(
-      {
-        calculateFilteredTasksForOptions,
-        getTaskMapView,
-        mapTaskVisibilityFilterOptions: options,
-        showMapDisplay,
-        tasks,
-        visibleTasks,
-      }
-    );
-    searchQuery.value = 'task';
-    await vi.advanceTimersByTimeAsync(200);
+    const excludedTaskIds = ref<ReadonlySet<string>>(new Set());
+    const { mapCompleteTasksCountOnMap, showMapTaskVisibilityNotice } = useTaskFilters({
+      calculateFilteredTasksForOptions,
+      excludedTaskIds,
+      getTaskMapView: ref('woods'),
+      hideCompletedMapObjectives: ref(true),
+      mapTaskVisibilityFilterOptions: createOptions({
+        mapView: 'woods',
+        mergedMaps: [{ id: 'woods', mergedIds: ['woods'] }],
+        primaryView: 'maps',
+      }),
+      normalizedSearch: ref('task'),
+      showMapDisplay: computed(() => true),
+      tasks,
+      visibleTasks: ref([...tasks.value]),
+    });
     expect(mapCompleteTasksCountOnMap.value).toBe(1);
     expect(calculateFilteredTasksForOptions).toHaveBeenCalledTimes(2);
     expect(showMapTaskVisibilityNotice.value).toBe(true);
-  });
-  it('initializes searchQuery from route.query.q and updates on changes', async () => {
-    routeState.query.q = 'initial-search';
-    const visibleTasks = ref([createTask('1', 'Alpha Task')]);
-    const tasks = ref([...visibleTasks.value]);
-    const getTaskMapView = ref('all');
-    const showMapDisplay = computed(() => false);
-    const options = computed(
-      () =>
-        ({
-          mapView: 'all',
-          mergedMaps: [],
-          primaryView: 'all',
-          secondaryView: 'available',
-          sortDirection: 'asc',
-          sortMode: 'none',
-          traderView: 'all',
-          userView: 'self',
-        }) as TaskFilterAndSortOptions
-    );
-    const { searchQuery } = useTaskFilters({
-      calculateFilteredTasksForOptions: (inputTasks) => inputTasks,
-      getTaskMapView,
-      mapTaskVisibilityFilterOptions: options,
-      showMapDisplay,
-      tasks,
-      visibleTasks,
-    });
-    expect(searchQuery.value).toBe('initial-search');
-    routeState.query.q = 'new-search';
-    await nextTick();
-    expect(searchQuery.value).toBe('new-search');
-    routeState.query.q = undefined;
-    await nextTick();
-    expect(searchQuery.value).toBe('');
-  });
-  it('falls back to an empty string when route.query.q is an array', async () => {
-    routeState.query.q = ['foo', 'bar'] as unknown as string;
-    const visibleTasks = ref([createTask('1', 'Alpha Task')]);
-    const tasks = ref([...visibleTasks.value]);
-    const getTaskMapView = ref('all');
-    const showMapDisplay = computed(() => false);
-    const options = computed(
-      () =>
-        ({
-          mapView: 'all',
-          mergedMaps: [],
-          primaryView: 'all',
-          secondaryView: 'available',
-          sortDirection: 'asc',
-          sortMode: 'none',
-          traderView: 'all',
-          userView: 'self',
-        }) as TaskFilterAndSortOptions
-    );
-    const { searchQuery } = useTaskFilters({
-      calculateFilteredTasksForOptions: (inputTasks) => inputTasks,
-      getTaskMapView,
-      mapTaskVisibilityFilterOptions: options,
-      showMapDisplay,
-      tasks,
-      visibleTasks,
-    });
-    expect(searchQuery.value).toBe('foo');
-    expect(typeof searchQuery.value).toBe('string');
+    excludedTaskIds.value = new Set(['2']);
+    expect(mapCompleteTasksCountOnMap.value).toBe(0);
+    expect(showMapTaskVisibilityNotice.value).toBe(false);
   });
 });

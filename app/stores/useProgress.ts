@@ -1,8 +1,9 @@
+import { computeInvalidProgress } from '@tarkovtracker/progress-contracts/progressInvalidation';
 import { defineStore } from 'pinia';
 import { registerProgressMetadataHooks } from '@/stores/tarkov/metadataStoreBridge';
 import {
-  buildTaskAvailability,
-  type TaskAvailabilityMap,
+  buildTaskEvaluations,
+  type TaskEvaluationMap,
   type TaskAvailabilityTeamData,
 } from '@/stores/taskAvailability';
 import { useMetadataStore } from '@/stores/useMetadata';
@@ -12,8 +13,8 @@ import { useTeammateStores, useTeamStore } from '@/stores/useTeamStore';
 import { GAME_MODES, SPECIAL_STATIONS, TASK_STATE, type TaskState } from '@/utils/constants';
 import { logger } from '@/utils/logger';
 import { perfEnd, perfStart } from '@/utils/perf';
-import { computeInvalidProgress } from '@/utils/progressInvalidation';
 import { createDefaultOwnedProgressData } from '@/utils/progressSanitizers';
+import { effectiveStoryProgress, storyCatalogForMode } from '@/utils/storylineCompletion';
 import {
   getCompletionFlags,
   getTaskStatusFromFlags,
@@ -35,22 +36,26 @@ const createTaskAvailabilityTeamData = (
   level: number
 ): TaskAvailabilityTeamData => {
   const currentData = getGameModeData(store);
+  const metadata = useMetadataStore();
+  const storyCatalog = storyCatalogForMode(
+    metadata.storyChapters ?? [],
+    metadata.storyChaptersGameMode,
+    store.$state.currentGameMode
+  );
   return {
     mode: store.$state.currentGameMode,
     level,
     faction: currentData.pmcFaction ?? 'USEC',
     completions: currentData.taskCompletions ?? {},
+    confirmations: currentData.taskAvailability ?? {},
     traders: currentData.traders ?? {},
+    prestigeLevel: currentData.prestigeLevel,
+    storyCatalog,
+    storyChapters: effectiveStoryProgress(currentData.storyChapters, storyCatalog),
   };
 };
 const hasTaskAvailabilityInputs = (tasks: Task[], teamIds: string[]) =>
   [tasks.length > 0, teamIds.length > 0].every(Boolean);
-const getFenceTraderId = (
-  traders: Array<{ id: string; normalizedName?: string }>
-): string | null => {
-  const fence = traders.find((trader) => trader.normalizedName === 'fence');
-  return fence ? fence.id : null;
-};
 type TeamStoresMap = Record<string, Store<string, UserState>>;
 type CompletionsMap = Record<string, Record<string, boolean>>;
 type FailedTasksMap = Record<string, Record<string, boolean>>;
@@ -159,11 +164,10 @@ export const useProgressStore = defineStore('progress', () => {
    * Pre-collects team data once, then iterates tasks with early exits.
    * This reduces redundant store lookups that were happening per-task-per-team.
    */
-  const unlockedTasks = computed(() => {
+  const taskEvaluations = computed<TaskEvaluationMap>(() => {
     const perfTimer = perfStart('[Progress] unlockedTasks', {
       tasks: metadataStore.tasks.length,
     });
-    const available: TaskAvailabilityMap = {};
     const tasks = metadataStore.tasks as Task[];
     const teamIds = Object.keys(visibleTeamStores.value);
     if (!hasTaskAvailabilityInputs(tasks, teamIds)) {
@@ -174,18 +178,23 @@ export const useProgressStore = defineStore('progress', () => {
     for (const [teamId, store] of Object.entries(visibleTeamStores.value)) {
       teamDataCache.set(teamId, createTaskAvailabilityTeamData(store, getLevel(teamId)));
     }
-    Object.assign(
-      available,
-      buildTaskAvailability(
-        tasks,
-        teamDataCache,
-        getFenceTraderId(metadataStore.traders),
-        preferencesStore.getTasksRequireTraderLevels
-      )
-    );
+    const evaluations = buildTaskEvaluations(tasks, teamDataCache, {
+      requireTraderLevels: preferencesStore.getTasksRequireTraderLevels,
+      prestigeTaskMap: metadataStore.prestigeTaskMap,
+    });
     perfEnd(perfTimer, { tasks: tasks.length, teams: teamIds.length });
-    return available;
+    return evaluations;
   });
+  const unlockedTasks = computed(() =>
+    Object.fromEntries(
+      Object.entries(taskEvaluations.value).map(([taskId, users]) => [
+        taskId,
+        Object.fromEntries(
+          Object.entries(users).map(([userId, evaluation]) => [userId, evaluation.available])
+        ),
+      ])
+    )
+  );
   const objectiveCompletions = computed(() => {
     const perfTimer = perfStart('[Progress] objectiveCompletions', {
       objectives: metadataStore.objectives.length,
@@ -471,51 +480,10 @@ export const useProgressStore = defineStore('progress', () => {
     // Final fallback
     return teamId.substring(0, 6);
   };
-  // Only compute derived level for 'self' since automatic calculation is never applied to teammates
-  const derivedLevelForSelf = computed(() => {
-    const tasks = metadataStore.tasks;
-    if (!Array.isArray(tasks) || tasks.length === 0) return 1;
-    const levels = metadataStore.playerLevels;
-    if (!levels || levels.length === 0) return 1;
-    const store = teamStores.value['self'];
-    if (!store) return 1;
-    const currentData = getGameModeData(store);
-    const completions = currentData?.taskCompletions ?? {};
-    const xpOffset = currentData?.xpOffset ?? 0;
-    let calculatedQuestXP = 0;
-    for (const task of tasks) {
-      const completion = completions[task.id];
-      const flags = getCompletionFlags(completion);
-      if (flags.complete && !flags.failed) {
-        calculatedQuestXP += task.experience || 0;
-      }
-    }
-    const totalXP = calculatedQuestXP + xpOffset;
-    let derivedLevel = 1;
-    for (let i = levels.length - 1; i >= 0; i--) {
-      const level = levels[i];
-      if (level && totalXP >= level.exp) {
-        derivedLevel = level.level;
-        break;
-      }
-    }
-    return derivedLevel;
-  });
-  /**
-   * Calculate derived level from XP (only applies to 'self')
-   */
-  const calculateDerivedLevel = (): number => {
-    return derivedLevelForSelf.value;
-  };
   const getLevel = (teamId: string): number => {
     const storeKey = getTeamIndex(teamId);
     const store = teamStores.value[storeKey];
     const currentData = getGameModeData(store);
-    // For the current user (self), check if automatic level calculation is enabled
-    if (storeKey === 'self' && preferencesStore.getUseAutomaticLevelCalculation) {
-      return calculateDerivedLevel();
-    }
-    // For teammates or when manual mode, use stored level
     return currentData?.level ?? 1;
   };
   const getTaskStatus = (teamId: string, taskId: string): 'completed' | 'failed' | 'incomplete' => {
@@ -589,6 +557,7 @@ export const useProgressStore = defineStore('progress', () => {
     gameEditionData,
     playerFaction,
     unlockedTasks,
+    taskEvaluations,
     objectiveCompletions,
     invalidTasks,
     hideoutLevels,

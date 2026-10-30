@@ -92,7 +92,7 @@
             <div class="mb-2.5 flex items-center text-sm font-medium sm:mb-3 sm:text-[15px]">
               <UIcon
                 name="i-mdi-package-variant-closed-check"
-                class="text-success-500 mr-1.5 h-4 w-4 sm:mr-2 sm:h-5 sm:w-5"
+                class="text-success-500 light:text-success-800 mr-1.5 h-4 w-4 sm:mr-2 sm:h-5 sm:w-5"
               />
               {{ nextLevelLabel }}
             </div>
@@ -227,7 +227,10 @@
                 class="text-xs sm:text-sm"
               >
                 <div class="text-error-400 flex items-center gap-1.5 font-semibold sm:gap-2">
-                  <UIcon name="i-mdi-home" class="text-error-500 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <UIcon
+                    name="i-mdi-home"
+                    class="text-error-500 light:text-error-800 h-3.5 w-3.5 sm:h-4 sm:w-4"
+                  />
                   <i18n-t keypath="page.hideout.stationcard.requirements.station" scope="global">
                     <template #level>{{ requirement.level }}</template>
                     <template #stationname>{{ requirement.station.name }}</template>
@@ -244,7 +247,10 @@
                 class="text-xs sm:text-sm"
               >
                 <div class="text-error-400 flex items-center gap-1.5 font-semibold sm:gap-2">
-                  <UIcon name="i-mdi-star" class="text-error-500 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <UIcon
+                    name="i-mdi-star"
+                    class="text-error-500 light:text-error-800 h-3.5 w-3.5 sm:h-4 sm:w-4"
+                  />
                   <i18n-t keypath="page.hideout.stationcard.requirements.skill" scope="global">
                     <template #level>{{ requirement.level }}</template>
                     <template #skillname>{{ requirement.name }}</template>
@@ -263,7 +269,7 @@
                 <div class="text-error-400 flex items-center gap-1.5 font-semibold sm:gap-2">
                   <UIcon
                     name="i-mdi-account-tie"
-                    class="text-error-500 h-3.5 w-3.5 sm:h-4 sm:w-4"
+                    class="text-error-500 light:text-error-800 h-3.5 w-3.5 sm:h-4 sm:w-4"
                   />
                   <i18n-t keypath="page.hideout.stationcard.requirements.trader" scope="global">
                     <template #loyaltylevel>{{ requirement.value }}</template>
@@ -280,7 +286,7 @@
         </div>
         <div v-else class="bg-surface-800 rounded p-2.5 sm:p-3">
           <div
-            class="text-warning-500 flex items-center justify-center text-center text-sm font-medium sm:text-base"
+            class="text-warning-500 light:text-warning-800 flex items-center justify-center text-center text-sm font-medium sm:text-base"
           >
             <UIcon name="i-mdi-star-check" class="mr-1.5 h-5 w-5 sm:mr-2 sm:h-6 sm:w-6" />
             {{ maxedLabel }}
@@ -324,6 +330,7 @@
 </template>
 <script setup lang="ts">
   import { useMetadataStore } from '@/stores/useMetadata';
+  import { CARD_HIGHLIGHT_GRADIENTS } from '@/utils/cardHighlights';
   import { useLocaleNumberFormatter } from '@/utils/formatters';
   import type { HideoutLevel, HideoutStation, ItemRequirement } from '@/types/tarkov';
   const GenericCard = defineAsyncComponent(() => import('@/components/ui/GenericCard.vue'));
@@ -553,22 +560,16 @@
     return Math.max(availableDemoLevel.value.level - 1, 0);
   });
   const buildLevel = computed(() => activeDemoLevel.value.level || 1);
-  const highlightColor = computed<'error' | 'primary' | 'success'>(() => {
+  const highlightColor = computed<'locked' | 'primary' | 'success'>(() => {
     if (props.mode === 'maxed') return 'primary';
-    return props.mode === 'locked' ? 'error' : 'success';
+    return props.mode === 'locked' ? 'locked' : 'success';
   });
-  const highlightClasses = computed(() => {
-    if (highlightColor.value === 'primary') {
-      return { 'bg-gradient-to-br from-primary-800 via-primary-700 to-primary-600': true };
-    }
-    if (highlightColor.value === 'error') {
-      return { 'bg-gradient-to-br from-error-800 via-error-700 to-error-600': true };
-    }
-    return { 'bg-gradient-to-br from-success-800 via-success-700 to-success-600': true };
-  });
+  const highlightClasses = computed(() => ({
+    [CARD_HIGHLIGHT_GRADIENTS[highlightColor.value]]: true,
+  }));
   const statusBadgeClasses = computed(() => {
     if (props.mode === 'locked') {
-      return 'border-error-500/50 bg-error-500/20 text-error-400';
+      return 'border-locked-500/50 bg-locked-500/20 text-locked-400';
     }
     return 'bg-success-500/20 border-success-500/50 text-success-400';
   });

@@ -1,4 +1,7 @@
-import { extractUserMetadataDisplayName, extractUserMetadataUsername } from '@/utils/userMetadata';
+import {
+  extractUserMetadataDisplayName,
+  extractUserMetadataUsername,
+} from '@tarkovtracker/progress-contracts/userMetadata';
 import type { User } from '@supabase/supabase-js';
 /**
  * User object structure for hydration.

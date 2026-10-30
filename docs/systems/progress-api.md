@@ -1,0 +1,186 @@
+# Progress API
+
+Part of the [systems spec](./README.md): summary, flow, files, and invariants per system.
+
+## Progress API data flow
+
+**Summary.** External clients (TarkovMonitor, RatScanner, tarkov.dev) read and write user progress
+through the `api-gateway` Worker on `api.tarkovtracker.org`. A progress read touches several
+layers; this section is the canonical map of those layers so a failure can be located quickly
+instead of guessed at. Rate-limit ownership details live in
+[`rate-limiting.md`](../rate-limiting.md); client-facing quota docs live in
+[`api.md`](../api.md#rate-limits-api-gateway).
+
+### Diagram
+
+```mermaid
+sequenceDiagram
+  participant C as Client (Bearer token)
+  participant W as api-gateway Worker
+  participant AG as IP abuse gate (CF RateLimit binding)
+  participant DO as ApiGatewayRateLimiter DO (daily quota)
+  participant SB as Supabase
+  participant TD as json.tarkov.dev (1h memory cache)
+
+  C->>W: GET /progress (User-Agent + Authorization)
+  W->>AG: limit({ key: "api:{ip}" })
+  alt abuse gate denies
+    W-->>C: 429 + Retry-After (pre-auth, no X-RateLimit-*)
+  end
+  W->>SB: api_tokens lookup (token hash)
+  W->>SB: supporters tier (60s cache)
+  W->>DO: daily-read:{user_id} (utc-day anchor, retain)
+  alt DO unavailable
+    W-->>C: 200 or 304 (fail open, no X-RateLimit-* headers)
+  else daily quota denied
+    W-->>C: 429 + Retry-After + X-RateLimit-*
+  end
+  W->>SB: user_game_mode_progress select (token mode + active season)
+  W->>SB: user_progress select (account game edition)
+  W->>TD: tasks + hideout metadata (cached)
+  W->>W: transform + invalidation + hideout auto-complete
+  alt If-None-Match matches payload ETag
+    W-->>C: 304 Not Modified (empty body)
+  else no acceptable Accept-Encoding
+    W-->>C: 406 no_acceptable_encoding
+  else
+    W-->>C: 200 JSON (weak ETag, private max-age=15, gzip if accepted)
+  end
+```
+
+### Flow
+
+1. **Routing + User-Agent gate.** [TarkovTracker-API/src/router.ts](https://github.com/tarkovtracker-org/TarkovTracker-API/blob/v0.1.2/src/router.ts) normalizes the path,
+   enforces the api host boundary (non-api host requests outside `/health` return 404, while
+   loopback hosts such as `localhost` and `127.0.0.1` are admitted for local development), and
+   rejects protected endpoint requests without a 5–200 character `User-Agent`; infrastructure routes
+   are exempt. The Worker's sole production route is `api.tarkovtracker.org/*`; retired apex/www
+   Worker bindings are removed. Pages owns the apex legacy-family 410 JSON response (204 only for
+   valid browser preflights; other OPTIONS requests receive 410), while www redirects to the apex
+   with 308. The Worker's off-host 404 is a local handler boundary, not the public legacy-host
+   response; see [legacy retirement](../api-ownership.md#legacy-address-retirement).
+2. **Pre-auth abuse gate.** A Cloudflare Workers Rate Limiting binding (`API_ABUSE_LIMITER`) keys
+   on `CF-Connecting-IP` and shields the `api_tokens` lookup from token-rotation floods. It is
+   infrastructure protection, not a customer quota, and fails open on binding errors.
+3. **Token auth.** [TarkovTracker-API/src/auth.ts](https://github.com/tarkovtracker-org/TarkovTracker-API/blob/v0.1.2/src/auth.ts) validates the bearer token against
+   `api_tokens` by hash and checks the permission (`GP`/`TP`/`WP`).
+   After successful validation, the request's `ExecutionContext.waitUntil` retains the entire
+   lifetime-accounting operation, including any permitted fallback, without blocking the response.
+   This attempts one atomic `increment_token_usage` RPC before daily-quota enforcement, so valid
+   tokens count even when later throttled or rejected by input validation. Invalid, inactive,
+   expired, mode-mismatched, or permission-denied tokens do not count. Calls without a Worker
+   execution context await accounting rather than leaving an unowned promise.
+   Each accounting request has a three-second timeout covering headers and body handling; only
+   a bounded error body (at most 1 KiB) is parsed. HTTP 404 with PostgREST code `PGRST202` confirms
+   a missing RPC and permits one timestamp-only PATCH. That fallback does not recover the lost
+   `usage_count` increment. Network errors, timeouts, authorization errors, other HTTP failures,
+   and malformed/oversized missing-RPC responses never trigger an increment retry or fallback:
+   the original increment may already have committed. Failures and timestamp-only outcomes emit
+   `token_usage_outcome` with a fixed operation/outcome and optional HTTP status, without tokens,
+   keys, user payloads, response bodies, or exception messages. Accounting stays best effort:
+   `waitUntil` is bounded by the runtime and does not provide durable or exactly-once delivery.
+4. **Tier + daily quota.** `resolveTier` reads `public.supporters` (cached 60s), then a single
+   `ApiGatewayRateLimiter` Durable Object call (`daily-{kind}:{user_id}`, UTC-day anchor, retained)
+   admits or denies the request. The quota counts admitted requests — downstream Supabase failures
+   do not trigger refunds. The daily quota fails open on DO unavailability.
+5. **Data fetch.** [TarkovTracker-API/src/handlers/progress.ts](https://github.com/tarkovtracker-org/TarkovTracker-API/blob/v0.1.2/src/handlers/progress.ts) selects the token mode's
+   `progress_data` from `user_game_mode_progress` using the mode's season number, selects only
+   account-wide `game_edition` from `user_progress`, resolves a display-name fallback from Supabase
+   Auth (24h cache), and loads matching tasks/hideout metadata from `json.tarkov.dev` via
+   [TarkovTracker-API/src/services/tarkov.ts](https://github.com/tarkovtracker-org/TarkovTracker-API/blob/v0.1.2/src/services/tarkov.ts) (1h memory cache).
+   Concurrent misses share one fetch/normalization per resource and upstream mode within an isolate.
+   The originating request retains that operation with `waitUntil`; streams are consumed there and
+   only parsed public catalog data is shared. Every settled operation leaves the in-flight map;
+   failures remain uncached and retryable, with the existing 30-second fetch timeout.
+   Missing, empty, or structurally malformed required catalogs return 503 with the ordinary error
+   envelope and any available quota headers. Progress and team reads do not return partial derived
+   state or ETags on this path. Single and batch task writes await validated task rules before
+   applying transitions or calling the progress merge RPC; level and objective patches do not
+   evaluate task rules and retain their existing behavior. Expired catalogs are not used as a
+   last-good fallback.
+6. **Transform.** [TarkovTracker-API/src/utils/transform.ts](https://github.com/tarkovtracker-org/TarkovTracker-API/blob/v0.1.2/src/utils/transform.ts) converts the JSONB objects into the
+   public array format, applies invalidation (`@tarkovtracker/progress-contracts/progressInvalidation`, the same
+   algorithm the app uses) and game-edition hideout auto-completes.
+   Browser and Worker catalogs compile completion-triggered failure edges through
+   `@tarkovtracker/progress-contracts/taskFailureEdges`. The existing internal `alternatives` projection remains
+   compatible with repair/action consumers; it is derived from `failConditions`, not upstream
+   `alternatives`. Missing references do not create edges, and a reverse edge is inferred only
+   for the existing active-only requirement pattern backed by an explicit completion failure.
+   Gateway task catalogs are frozen and registered with a prepared dependency graph once per catalog
+   snapshot. Expiry replaces the catalog and graph together. Each player still gets fresh invalidation
+   state. The app's mutable entry point rebuilds its graph so in-place metadata edits remain visible.
+7. **Conditional response.** `conditionalReadResponse` in [TarkovTracker-API/src/responses.ts](https://github.com/tarkovtracker-org/TarkovTracker-API/blob/v0.1.2/src/responses.ts)
+   serializes once, derives a weak `ETag` from the payload, answers `304` on a matching
+   `If-None-Match`, and sets `Cache-Control: private, max-age=15` plus
+   `Vary: Accept-Encoding, Authorization, Origin`. Bodies ≥1 KiB are gzipped when the client
+   accepts gzip; an explicit `gzip;q=0` is honored as a rejection, `identity;q=0` bypasses the
+   size threshold, and a client that refuses every available coding gets `406`.
+8. **Usage accounting.** [TarkovTracker-API/src/services/usage.ts](https://github.com/tarkovtracker-org/TarkovTracker-API/blob/v0.1.2/src/services/usage.ts) records the read/write (and
+   throttle flag) in `public.api_usage_daily` via `record_api_usage`, off the response path.
+
+### Files
+
+- [TarkovTracker-API/src/index.ts](https://github.com/tarkovtracker-org/TarkovTracker-API/blob/v0.1.2/src/index.ts) — Worker entrypoint; delegates to the modules below
+- [TarkovTracker-API/src/router.ts](https://github.com/tarkovtracker-org/TarkovTracker-API/blob/v0.1.2/src/router.ts) — path normalization, User-Agent gate, API host boundary enforcement, route dispatch
+- [TarkovTracker-API/src/authentication.ts](https://github.com/tarkovtracker-org/TarkovTracker-API/blob/v0.1.2/src/authentication.ts) — abuse gate, token auth, daily-quota enforcement
+- [TarkovTracker-API/src/rateLimiter.ts](https://github.com/tarkovtracker-org/TarkovTracker-API/blob/v0.1.2/src/rateLimiter.ts) — `ApiGatewayRateLimiter` Durable Object + quota client
+- [TarkovTracker-API/src/responses.ts](https://github.com/tarkovtracker-org/TarkovTracker-API/blob/v0.1.2/src/responses.ts) — CORS, envelopes, conditional response, ETag/compression
+- [TarkovTracker-API/src/auth.ts](https://github.com/tarkovtracker-org/TarkovTracker-API/blob/v0.1.2/src/auth.ts) — token validation
+- [TarkovTracker-API/src/handlers/progress.ts](https://github.com/tarkovtracker-org/TarkovTracker-API/blob/v0.1.2/src/handlers/progress.ts), [TarkovTracker-API/src/handlers/team.ts](https://github.com/tarkovtracker-org/TarkovTracker-API/blob/v0.1.2/src/handlers/team.ts) —
+  progress reads/writes
+- [TarkovTracker-API/src/services/supporter.ts](https://github.com/tarkovtracker-org/TarkovTracker-API/blob/v0.1.2/src/services/supporter.ts), [TarkovTracker-API/src/services/usage.ts](https://github.com/tarkovtracker-org/TarkovTracker-API/blob/v0.1.2/src/services/usage.ts),
+  [TarkovTracker-API/src/services/tarkov.ts](https://github.com/tarkovtracker-org/TarkovTracker-API/blob/v0.1.2/src/services/tarkov.ts)
+- [TarkovTracker-API/src/utils/transform.ts](https://github.com/tarkovtracker-org/TarkovTracker-API/blob/v0.1.2/src/utils/transform.ts)
+- `@tarkovtracker/progress-contracts/progressInvalidation` — runtime-independent task/objective invalidation
+  (faction, failed-only and failed prerequisites, `failed`-tolerant requirements), shared by the
+  app progress store, public profile/streamer views, and the Worker transform
+- `@tarkovtracker/progress-contracts/requirementStatus` — runtime-independent task-requirement status predicates,
+  shared by invalidation, app task actions, failed-state repair, and the Worker
+- `@tarkovtracker/progress-contracts/taskTransitions` — runtime-independent explicit task-state transitions (dependent
+  lock/unlock) used by Worker task writes
+- `@tarkovtracker/progress-contracts/userMetadata` — runtime-independent provider metadata parsing, shared with app
+  user hydration through `@tarkovtracker/progress-contracts/userMetadata` in Nuxt and the Worker
+- [TarkovTracker-API/src/utils/user-display-name.ts](https://github.com/tarkovtracker-org/TarkovTracker-API/blob/v0.1.2/src/utils/user-display-name.ts) — cached Auth metadata lookup shared by
+  personal and team API progress
+- `docs/rate-limiting.md`, `docs/api.md` — ownership map and client-facing docs
+
+### Invariants
+
+- App user hydration, personal API progress, and team API progress share provider metadata fallback
+  ordering. Both API consumers use the same per-user display-name cache, so either endpoint must
+  resolve the same metadata before populating it. The app and API share one invalidation algorithm:
+  a requirement whose `status` includes `failed`
+  never invalidates its task when the prerequisite is failed. Shared utilities must not import
+  Nuxt or Worker runtime modules; invalidation logic must not be re-implemented per runtime.
+- Gateway task catalogs are frozen with one prepared dependency graph per snapshot. Catalog expiry
+  replaces the catalog and graph together.
+- Each player receives fresh invalidation state; mutable player state is never shared between
+  requests through the catalog or prepared graph.
+- Completed and failed tasks (including legacy records with both flags set) and their objectives
+  are never marked invalid. This terminal-state guard applies to faction, prerequisite, and legacy
+  alternative entry points. Completed tasks stop propagation; failed tasks still invalidate strict
+  dependents, but not dependents whose requirements accept failure. Faction mismatch alone does
+  not cascade.
+- A request makes at most one Durable Object call (the daily quota). There is no burst bucket, no
+  IP backstop bucket, and no refund reconciliation; reintroducing any of those is a regression.
+- The daily quota fails open on DO unavailability (logs `daily_quota_unavailable`); the pre-auth
+  abuse gate fails open on binding errors (logs `abuse_gate_unavailable`). Neither is recorded as a
+  throttle in `api_usage_daily`.
+- The daily quota counts admitted requests, not successful responses. A Supabase 500 after
+  admission consumes one slot — no refund system exists or is needed.
+- Invalid task/objective states return 400 with rate-limit headers after authentication and quota
+  checks. Error messages preserve scalar values but label arrays and objects without invoking
+  client-controlled string coercion, which could otherwise turn malformed input into a 500.
+- Progress reads select one exact `(user_id, game_mode, season_number)` row and account metadata;
+  they never read another mode's progress or use `select=*`.
+- Read responses derive the `ETag` from the serialized payload (not `updated_at`), so a `304` can
+  never hide a change that came from task metadata or invalidation rather than the user's row.
+- Read responses are `private` (token-scoped) — no shared/edge caching of authenticated progress.
+- The ETag digest and the gzip decision both derive from the same serialized UTF-8 payload bytes,
+  so the validator and the payload can never disagree. The wire body is those bytes uncompressed,
+  or a `CompressionStream('gzip')` over them when gzip is negotiated — the ETag always represents
+  the uncompressed entity, keyed by `Vary: Accept-Encoding`.
+- gzip is applied when the client accepts it and the payload clears the 1 KiB size threshold, or
+  when the client accepts gzip but explicitly refused identity (`identity;q=0`), in which case
+  uncompressed is not an acceptable response and the threshold is bypassed. If no acceptable
+  encoding exists the gateway returns `406 no_acceptable_encoding`.

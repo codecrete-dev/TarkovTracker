@@ -73,20 +73,13 @@ describe('useEdgeFunctions.getTeamMembers', () => {
     expect(mockFetch).not.toHaveBeenCalled();
     expect(mockSupabaseClient.functions.invoke).not.toHaveBeenCalled();
   });
-  it('falls back to team-members when refresh retry fails with server error', async () => {
+  it('throws the retry server error after refreshing the session', async () => {
     const firstError = { status: 401 };
     const secondError = { status: 500 };
     mockFetch.mockRejectedValueOnce(firstError).mockRejectedValueOnce(secondError);
-    mockSupabaseClient.functions.invoke.mockResolvedValue({
-      data: { members: ['fallback-member'] },
-      error: null,
-    });
     const { useEdgeFunctions } = await import('@/composables/api/useEdgeFunctions');
     const edgeFunctions = useEdgeFunctions();
-    await expect(edgeFunctions.getTeamMembers('team-1')).resolves.toEqual({
-      members: ['fallback-member'],
-      profiles: {},
-    });
+    await expect(edgeFunctions.getTeamMembers('team-1')).rejects.toBe(secondError);
     expect(mockSupabaseClient.auth.refreshSession).toHaveBeenCalledTimes(1);
     expect(mockFetch).toHaveBeenNthCalledWith(
       1,
@@ -110,10 +103,26 @@ describe('useEdgeFunctions.getTeamMembers', () => {
         query: { teamId: 'team-1' },
       })
     );
-    expect(mockSupabaseClient.functions.invoke).toHaveBeenCalledWith('team-members', {
-      body: { teamId: 'team-1' },
-      method: 'POST',
-    });
+    expect(mockSupabaseClient.functions.invoke).not.toHaveBeenCalled();
+  });
+  it('throws a server error without refreshing the session', async () => {
+    const serverError = { status: 503 };
+    mockFetch.mockRejectedValueOnce(serverError);
+    const { useEdgeFunctions } = await import('@/composables/api/useEdgeFunctions');
+    const edgeFunctions = useEdgeFunctions();
+    await expect(edgeFunctions.getTeamMembers('team-1')).rejects.toBe(serverError);
+    expect(mockSupabaseClient.auth.refreshSession).not.toHaveBeenCalled();
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockSupabaseClient.functions.invoke).not.toHaveBeenCalled();
+  });
+  it('throws the original auth error when the session refresh fails', async () => {
+    const authError = { status: 401 };
+    mockFetch.mockRejectedValueOnce(authError);
+    mockSupabaseClient.auth.refreshSession.mockRejectedValueOnce(new Error('refresh failed'));
+    const { useEdgeFunctions } = await import('@/composables/api/useEdgeFunctions');
+    const edgeFunctions = useEdgeFunctions();
+    await expect(edgeFunctions.getTeamMembers('team-1')).rejects.toBe(authError);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
   it('throws the retry auth error instead of the original auth error', async () => {
     const firstError = { status: 401 };
@@ -153,6 +162,11 @@ describe('useEdgeFunctions.team mutations', () => {
     runtimeConfig.public = {
       teamGatewayUrl: 'https://legacy-gateway.tarkovtracker.test',
     };
+    mockSupabaseReady.mockResolvedValue(undefined);
+    mockSupabaseClient.auth.getSession.mockResolvedValue({
+      data: { session: { access_token: 'token-1' } },
+      error: null,
+    });
   });
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -177,6 +191,21 @@ describe('useEdgeFunctions.team mutations', () => {
       method: 'POST',
     });
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+  it('invokes the atomic team disband function', async () => {
+    mockSupabaseClient.functions.invoke.mockResolvedValue({
+      data: { success: true, message: 'Team disbanded successfully' },
+      error: null,
+    });
+    const { useEdgeFunctions } = await import('@/composables/api/useEdgeFunctions');
+    const edgeFunctions = useEdgeFunctions();
+    await expect(
+      edgeFunctions.disbandTeam('00000000-0000-0000-0000-000000000001')
+    ).resolves.toEqual({ success: true, message: 'Team disbanded successfully' });
+    expect(mockSupabaseClient.functions.invoke).toHaveBeenCalledWith('team-disband', {
+      body: { teamId: '00000000-0000-0000-0000-000000000001' },
+      method: 'POST',
+    });
   });
 });
 describe('useEdgeFunctions.createToken', () => {
@@ -293,42 +322,28 @@ describe('useEdgeFunctions.createToken', () => {
     });
     expect(mockFetch).not.toHaveBeenCalled();
   });
-  it('uses DELETE invocation for token revoke', async () => {
-    mockSupabaseClient.functions.invoke.mockResolvedValue({
-      data: { success: true },
-      error: null,
-    });
-    const { useEdgeFunctions } = await import('@/composables/api/useEdgeFunctions');
-    const edgeFunctions = useEdgeFunctions();
-    await expect(edgeFunctions.revokeToken('token-1')).resolves.toEqual({ success: true });
-    expect(mockSupabaseClient.functions.invoke).toHaveBeenCalledWith('token-revoke', {
-      body: { tokenId: 'token-1' },
-      method: 'DELETE',
-    });
-    expect(mockFetch).not.toHaveBeenCalled();
+});
+describe('useEdgeFunctions.purgeCache', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.resetAllMocks();
+    mockSupabaseReady.mockResolvedValue({ access_token: 'token-1' });
   });
-  it('falls back to direct delete when token-revoke is unavailable', async () => {
-    const deleteEq = vi.fn(() => ({ error: null }));
-    const deleteFn = vi.fn(() => ({
-      eq: deleteEq,
-    }));
-    mockSupabaseClient.from.mockReturnValueOnce({
-      delete: deleteFn,
-      eq: vi.fn(),
-    } as never);
-    mockSupabaseClient.functions.invoke.mockResolvedValue({
+  it('preserves cache purge error codes for localized admin messages', async () => {
+    mockSupabaseClient.functions.invoke.mockResolvedValueOnce({
       data: null,
-      error: { status: 404, data: { message: 'Not found' } },
+      error: {
+        context: new Response(
+          JSON.stringify({ error: 'cache_purge_failed', code: 'cache_purge_failed' }),
+          { status: 502 }
+        ),
+        message: 'Edge Function returned a non-2xx status code',
+      },
     });
     const { useEdgeFunctions } = await import('@/composables/api/useEdgeFunctions');
-    const edgeFunctions = useEdgeFunctions();
-    await expect(edgeFunctions.revokeToken('token-1')).resolves.toEqual({ success: true });
-    expect(mockSupabaseClient.functions.invoke).toHaveBeenCalledWith('token-revoke', {
-      body: { tokenId: 'token-1' },
-      method: 'DELETE',
+    await expect(useEdgeFunctions().purgeCache('tarkov-data')).rejects.toMatchObject({
+      status: 502,
+      data: { code: 'cache_purge_failed' },
     });
-    expect(mockSupabaseClient.from).toHaveBeenCalledWith('api_tokens');
-    expect(deleteFn).toHaveBeenCalledTimes(1);
-    expect(deleteEq).toHaveBeenCalledWith('token_id', 'token-1');
   });
 });

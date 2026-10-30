@@ -2,14 +2,17 @@ name: Precompute Tarkov Data
 # Runs the heavy tasks-core fetch/adapt/overlay pipeline off Cloudflare and
 # writes the resulting payloads to the TARKOV_DATA KV namespace (7-day TTL).
 # The Pages request handlers read these entries via edgeCache's `precomputed`
-# option; a missed run degrades to slightly stale data, never an outage.
+# option; a missed run degrades to slightly stale data. EFT log imports read
+# only the English tasks-import snapshots, so they fail once those expire.
 #
 # Runs here instead of a scheduled Worker because the account is on the
 # Workers Free tier (10ms CPU/invocation), which cannot fit even a single
 # lang x gameMode transform.
 #
 # Requires (see scripts/precompute/run.ts):
+#   environment production-precompute - main branch only; credentials below must not exist at repository scope
 #   secret CLOUDFLARE_API_TOKEN          - scoped to Workers KV Storage: Edit
+#   secret OVERLAY_TOKEN                 - read-only Contents on the private tarkov-data-overlay repo
 #   variable CLOUDFLARE_ACCOUNT_ID       - account that owns the namespace
 #   variable TARKOV_DATA_KV_NAMESPACE_ID - id of the TARKOV_DATA namespace
 on:
@@ -23,7 +26,11 @@ on:
         required: false
         type: string
       gameMode:
-        description: 'Restrict to one game mode (regular or pve). Empty runs both.'
+        description: 'Restrict to one game mode (regular, pve, or pvp-season). Empty runs all.'
+        required: false
+        type: string
+      expectedOverlaySha:
+        description: 'Required overlay SHA for this release (optional).'
         required: false
         type: string
 concurrency:
@@ -35,27 +42,16 @@ permissions:
 jobs:
   precompute:
     name: Precompute tasks-core payloads
-    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production-precompute
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Setup Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version-file: .nvmrc
-      - name: Install pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@11.14.0 --activate
-      - name: Setup pnpm cache
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version-file: .nvmrc
-          cache: 'pnpm'
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-project
       - name: Precompute and write to KV
         # Filters flow through env vars, never shell interpolation, so
         # workflow_dispatch inputs cannot inject into the run command.
@@ -63,13 +59,23 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           TARKOV_DATA_KV_NAMESPACE_ID: ${{ vars.TARKOV_DATA_KV_NAMESPACE_ID }}
+          EXPECTED_OVERLAY_SHA: ${{ inputs.expectedOverlaySha }}
+          OVERLAY_TOKEN: ${{ secrets.OVERLAY_TOKEN }}
           PRECOMPUTE_LANG: ${{ inputs.lang }}
           PRECOMPUTE_GAME_MODE: ${{ inputs.gameMode }}
         run: pnpm run precompute:tarkov
+      - name: Upload overlay provenance
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: overlay-precompute-manifest
+          path: precompute-manifest.json
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Open or update failure issue
         if: failure() && github.event_name == 'schedule'
         continue-on-error: true
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const title = 'Precompute Tarkov Data failed';
@@ -81,6 +87,7 @@ jobs:
               `- Commit: ${context.sha}`,
               '',
               'KV entries have a 7-day TTL; investigate before they expire.',
+              'EFT log imports fail once the tasks-import snapshots expire (no runtime fallback).',
             ].join('\n');
             const issues = await github.paginate(github.rest.issues.listForRepo, {
               owner: context.repo.owner,

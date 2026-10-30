@@ -1,17 +1,38 @@
 import { useSupporter } from '@/composables/useSupporter';
 import { useToastI18n } from '@/composables/useToastI18n';
+import { initializeProgressAuthority } from '@/stores/tarkov/progressAuthority';
+import {
+  hasPendingCloudChanges,
+  markCloudSyncUnavailable,
+} from '@/stores/tarkov/progressSaveStatus';
 import { useActivityLogStore } from '@/stores/useActivityLogStore';
 import { useMetadataStore } from '@/stores/useMetadata';
 import { usePreferencesStore } from '@/stores/usePreferences';
 import {
   initializeTarkovSync,
+  hasPendingProgressHandoff,
+  mayHoldUnsyncedProgress,
+  preserveUnsavedSessionProgress,
   resetTarkovStoreForSessionTransition,
+  resetTarkovSync,
+  settlePendingProgressHandoffs,
   useTarkovStore,
 } from '@/stores/useTarkov';
 import { logger } from '@/utils/logger';
+import { isProgressPayloadTooLarge } from '@/utils/progressPayload';
 interface AccountActivityResponse {
   recorded: boolean;
 }
+/**
+ * Bounded same-session retry for a failed authenticated initial sync. The auth
+ * watcher only reruns on identity changes, so without this cycle a transient
+ * failure would strand the deferred legacy activity adoption until the next
+ * login. A fixed 30-second interval keeps the retry deterministic; five
+ * attempts cover roughly 2.5 minutes of transient unavailability without
+ * retrying forever against a hard-down server.
+ */
+export const SYNC_RETRY_DELAY_MS = 30_000;
+export const SYNC_RETRY_MAX_ATTEMPTS = 5;
 /**
  * Handles app-level initialization:
  * - Locale setup from user preferences
@@ -60,52 +81,264 @@ export function useAppInitialization() {
   };
   let syncStarted = false;
   let migrationAttempted = false;
-  let accountActivityRecordedForUserId: string | null = null;
+  let syncRetryTimer: ReturnType<typeof setTimeout> | null = null;
+  let syncRetryAttempts = 0;
+  let payloadFailureReported = false;
+  let stopProgressRecovery: (() => void) | null = null;
+  const activityRecordedAt = new Map<string, number>();
+  const activityRequests = new Map<string, number>();
+  let disposed = false;
   let supporterLoadedForUserId: string | null = null;
   let authChangeToken = 0;
-  const resetTarkovState = (reason: string, previousUserId: string | null = null) => {
-    resetTarkovStoreForSessionTransition(previousUserId, reason);
-    activityLogStore.resetForSession();
+  const cancelSyncRetry = () => {
+    if (syncRetryTimer !== null) {
+      clearTimeout(syncRetryTimer);
+      syncRetryTimer = null;
+    }
   };
+  const cancelProgressRecovery = () => {
+    stopProgressRecovery?.();
+    stopProgressRecovery = null;
+  };
+  // True when a guarded initialization step would act on a stale session or a
+  // superseded auth change, matching the guards inside each step.
+  const isStaleInitialization = (expectedUserId?: string, expectedToken?: number) =>
+    disposed ||
+    (expectedUserId !== undefined && getAuthenticatedUserId() !== expectedUserId) ||
+    (expectedToken !== undefined && expectedToken !== authChangeToken);
+  const reportSyncFailure = () => {
+    if (syncRetryAttempts === 0) {
+      showLoadFailed();
+      return;
+    }
+    logger.warn(
+      `[useAppInitialization] Initial sync retry ${syncRetryAttempts}/${SYNC_RETRY_MAX_ATTEMPTS} failed`
+    );
+  };
+  const reportPayloadFailure = () => {
+    if (payloadFailureReported) return;
+    payloadFailureReported = true;
+    showLoadFailed();
+  };
+  const scheduleSyncRetry = (expectedUserId?: string, expectedToken?: number) => {
+    cancelSyncRetry();
+    syncRetryTimer = setTimeout(() => {
+      syncRetryTimer = null;
+      void retryAuthenticatedInitialization(expectedUserId, expectedToken);
+    }, SYNC_RETRY_DELAY_MS);
+    syncRetryAttempts += 1;
+  };
+  const captureRecoveryProgress = () => {
+    const state = useTarkovStore().$state;
+    return JSON.stringify([
+      state.pvp,
+      state.pve,
+      state.seasonal,
+      state.gameEdition,
+      state.tarkovUid,
+      state.seasonalSeasonNumber,
+    ]);
+  };
+  const scheduleProgressRecovery = (userId: string, token: number, rejected: string) => {
+    cancelSyncRetry();
+    syncRetryTimer = setTimeout(() => {
+      syncRetryTimer = null;
+      if (isStaleInitialization(userId, token)) return;
+      if (captureRecoveryProgress() === rejected) {
+        recoverAfterProgressChange(userId, token);
+        return;
+      }
+      void retrySyncNow(userId, token);
+    }, SYNC_RETRY_DELAY_MS);
+  };
+  /** A burst of edits gets one delayed retry, preserving the latest progress when it fires. */
+  const recoverAfterProgressChange = (userId: string, token = authChangeToken) => {
+    cancelSyncRetry();
+    cancelProgressRecovery();
+    const rejected = captureRecoveryProgress();
+    stopProgressRecovery = watch(
+      captureRecoveryProgress,
+      () => {
+        stopProgressRecovery = null;
+        if (isStaleInitialization(userId, token)) return;
+        scheduleProgressRecovery(userId, token, rejected);
+      },
+      { once: true }
+    );
+  };
+  const publishSyncFailure = (
+    userId: string,
+    payloadTooLarge: boolean,
+    expectedUserId?: string,
+    expectedToken?: number
+  ) => {
+    // A payload rejection proves a save was attempted, even during first-sign-in or repair.
+    if (payloadTooLarge || mayHoldUnsyncedProgress(userId)) {
+      markCloudSyncUnavailable(
+        () => retrySyncNow(expectedUserId, expectedToken),
+        payloadTooLarge ? 'payload_too_large' : 'unknown'
+      );
+    }
+  };
+  const scheduleBoundedSyncRetry = (expectedUserId?: string, expectedToken?: number) => {
+    if (syncRetryAttempts >= SYNC_RETRY_MAX_ATTEMPTS) {
+      showLoadFailed();
+      return;
+    }
+    scheduleSyncRetry(expectedUserId, expectedToken);
+  };
+  const handleSyncFailure = (error: unknown, expectedUserId?: string, expectedToken?: number) => {
+    const userId = getAuthenticatedUserId();
+    if (isStaleInitialization(expectedUserId, expectedToken) || !userId) return;
+    // A failure after the sync controller or realtime listener was created
+    // leaves them partially initialized; the same-user guard inside
+    // initializeTarkovSync would then skip listener setup on the retry and
+    // disconnect cross-device updates. Tear the machinery down so the retry
+    // starts from a clean slate.
+    resetTarkovSync('initial sync failed', { preserveStorageBaselineForUserId: userId });
+    const payloadTooLarge = isProgressPayloadTooLarge(error);
+    publishSyncFailure(userId, payloadTooLarge, expectedUserId, expectedToken);
+    if (payloadTooLarge) {
+      reportPayloadFailure();
+      recoverAfterProgressChange(userId, expectedToken);
+      return;
+    }
+    reportSyncFailure();
+    scheduleBoundedSyncRetry(expectedUserId, expectedToken);
+  };
+  /** Manual retry from the save indicator: restart initialization now with a fresh budget. */
+  const retrySyncNow = async (expectedUserId?: string, expectedToken?: number) => {
+    cancelSyncRetry();
+    cancelProgressRecovery();
+    syncRetryAttempts = 0;
+    await retryAuthenticatedInitialization(expectedUserId, expectedToken);
+    return !hasPendingCloudChanges();
+  };
+  /** A retry must not let the startup load rehydrate over edits held only in memory. */
+  const retryAuthenticatedInitialization = async (
+    expectedUserId?: string,
+    expectedToken?: number
+  ) => {
+    if (expectedUserId && !isStaleInitialization(expectedUserId, expectedToken)) {
+      preserveUnsavedSessionProgress(expectedUserId);
+    }
+    await runAuthenticatedInitialization(expectedUserId, expectedToken);
+  };
+  const runAuthenticatedInitialization = async (
+    expectedUserId?: string,
+    expectedToken?: number
+  ) => {
+    await startSyncIfNeeded(expectedUserId, expectedToken);
+    if (isStaleInitialization(expectedUserId, expectedToken)) return;
+    await runMigrationIfNeeded(expectedUserId, expectedToken);
+    if (isStaleInitialization(expectedUserId, expectedToken)) return;
+    await loadSupporterStatusIfNeeded(expectedUserId, expectedToken);
+    if (isStaleInitialization(expectedUserId, expectedToken)) return;
+    await recordAccountActivityIfNeeded(expectedUserId, expectedToken);
+  };
+  onScopeDispose(cancelSyncRetry);
+  onScopeDispose(cancelProgressRecovery);
+  const resetTarkovState = async (reason: string, previousUserId: string | null = null) => {
+    try {
+      const transition = resetTarkovStoreForSessionTransition(previousUserId, reason);
+      activityLogStore.resetForSession();
+      await transition;
+      return true;
+    } catch (error) {
+      logger.error('[useAppInitialization] Failed to transition progress owner:', error);
+      return false;
+    }
+  };
+  const resetInitializationState = (loggedIn: boolean) => {
+    syncStarted = false;
+    migrationAttempted = false;
+    payloadFailureReported = false;
+    cancelSyncRetry();
+    cancelProgressRecovery();
+    syncRetryAttempts = 0;
+    supporterLoadedForUserId = null;
+    supporter.reset();
+    if (!loggedIn) activityLogStore.migrateLegacyManualEntries();
+  };
+  const isCurrentSupporterRequest = (expectedUserId?: string, expectedToken?: number) =>
+    (!expectedUserId || getAuthenticatedUserId() === expectedUserId) &&
+    (expectedToken === undefined || expectedToken === authChangeToken);
   const loadSupporterStatusIfNeeded = async (expectedUserId?: string, expectedToken?: number) => {
     const authenticatedUserId = getAuthenticatedUserId();
-    if (expectedUserId && authenticatedUserId !== expectedUserId) return;
-    if (expectedToken !== undefined && expectedToken !== authChangeToken) return;
+    if (!isCurrentSupporterRequest(expectedUserId, expectedToken)) return;
     if (!authenticatedUserId) return;
     if (supporterLoadedForUserId === authenticatedUserId) return;
     try {
-      await supporter.fetchStatus(authenticatedUserId);
-      if (expectedUserId && getAuthenticatedUserId() !== expectedUserId) return;
-      if (expectedToken !== undefined && expectedToken !== authChangeToken) return;
-      supporter.subscribe(authenticatedUserId);
-      supporterLoadedForUserId = authenticatedUserId;
+      let loaded = await supporter.subscribe(authenticatedUserId);
+      if (!isCurrentSupporterRequest(expectedUserId, expectedToken)) return;
+      // An unclean channel leave can decline the subscription before any status
+      // request runs. Supporter status remains available over the normal read.
+      if (!loaded) loaded = await supporter.fetchStatus(authenticatedUserId);
+      if (!isCurrentSupporterRequest(expectedUserId, expectedToken)) return;
+      if (loaded) supporterLoadedForUserId = authenticatedUserId;
     } catch (error) {
       logger.error('[useAppInitialization] Failed to load supporter status:', error);
     }
   };
-  const recordAccountActivityIfNeeded = async (expectedUserId?: string, expectedToken?: number) => {
-    const authenticatedUserId = getAuthenticatedUserId();
-    if (expectedUserId && authenticatedUserId !== expectedUserId) return;
-    if (expectedToken !== undefined && expectedToken !== authChangeToken) return;
-    if (!authenticatedUserId || accountActivityRecordedForUserId === authenticatedUserId) return;
-    try {
-      const { data } = await $supabase.client.auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) return;
-      const response = await $fetch<AccountActivityResponse>('/api/account/activity', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.recorded && getAuthenticatedUserId() === authenticatedUserId) {
-        accountActivityRecordedForUserId = authenticatedUserId;
-      }
-    } catch (error) {
-      logger.warn('[useAppInitialization] Failed to record account activity:', {
-        userId: authenticatedUserId,
-        error,
-      });
+  const isCurrentActivityRequest = (userId: string, token: number) =>
+    !disposed && getAuthenticatedUserId() === userId && authChangeToken === token;
+  const isActivityThrottled = (userId: string, token: number) =>
+    Date.now() - (activityRecordedAt.get(userId) ?? -Infinity) < 86_400_000 ||
+    activityRequests.get(userId) === token;
+  const markRecordedActivity = (
+    response: AccountActivityResponse,
+    userId: string,
+    token: number
+  ) => {
+    if (response.recorded && isCurrentActivityRequest(userId, token)) {
+      activityRecordedAt.set(userId, Date.now());
     }
   };
+  const sendAccountActivity = async (userId: string, authToken: number) => {
+    const { data } = await $supabase.client.auth.getSession();
+    if (!isCurrentActivityRequest(userId, authToken)) return;
+    const token = data.session?.access_token;
+    if (!token) return;
+    const response = await $fetch<AccountActivityResponse>('/api/account/activity', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    markRecordedActivity(response, userId, authToken);
+  };
+  const finishActivityRequest = (userId: string, token: number) => {
+    if (activityRequests.get(userId) === token) activityRequests.delete(userId);
+  };
+  const tryAccountActivity = async (userId: string, token: number) => {
+    activityRequests.set(userId, token);
+    try {
+      await sendAccountActivity(userId, token);
+    } catch (error) {
+      logger.warn('[useAppInitialization] Failed to record account activity:', { userId, error });
+    } finally {
+      finishActivityRequest(userId, token);
+    }
+  };
+  const canRecordActivity = (userId: string, token: number) =>
+    isCurrentActivityRequest(userId, token) && !isActivityThrottled(userId, token);
+  const recordAccountActivityIfNeeded = async (expectedUserId?: string, expectedToken?: number) => {
+    const userId = getAuthenticatedUserId();
+    if (!userId) return;
+    if (isStaleInitialization(expectedUserId, expectedToken)) return;
+    const token = authChangeToken;
+    if (!canRecordActivity(userId, token)) return;
+    await tryAccountActivity(userId, token);
+  };
+  const recordForegroundActivity = () => {
+    if (document.visibilityState !== 'visible') return;
+    const userId = getAuthenticatedUserId();
+    if (userId) void recordAccountActivityIfNeeded(userId, authChangeToken);
+  };
+  if (import.meta.client) document.addEventListener('visibilitychange', recordForegroundActivity);
+  onScopeDispose(() => {
+    disposed = true;
+    if (import.meta.client)
+      document.removeEventListener('visibilitychange', recordForegroundActivity);
+  });
   const startSyncIfNeeded = async (expectedUserId?: string, expectedToken?: number) => {
     const authenticatedUserId = getAuthenticatedUserId();
     if (expectedUserId && authenticatedUserId !== expectedUserId) return;
@@ -113,18 +346,26 @@ export function useAppInitialization() {
     if (!authenticatedUserId || syncStarted) return;
     syncStarted = true;
     try {
+      await initializeProgressAuthority(
+        authenticatedUserId,
+        false,
+        () => !isStaleInitialization(expectedUserId, expectedToken)
+      );
+      if (isStaleInitialization(expectedUserId, expectedToken)) return;
       await initializeTarkovSync();
-      if (expectedUserId && getAuthenticatedUserId() !== expectedUserId) {
-        syncStarted = false;
-        return;
-      }
-      if (expectedToken !== undefined && expectedToken !== authChangeToken) {
-        syncStarted = false;
-      }
+      // The replacement session owns syncStarted; stale completions must not clear it.
+      if (isStaleInitialization(expectedUserId, expectedToken)) return;
+      activityLogStore.migrateLegacyManualEntries();
+      payloadFailureReported = false;
+      cancelSyncRetry();
+      cancelProgressRecovery();
+      syncRetryAttempts = 0;
     } catch (error) {
+      // Cancel silently rather than reporting failure or resetting a newer session.
+      if (isStaleInitialization(expectedUserId, expectedToken)) return;
       syncStarted = false;
       logger.error('[useAppInitialization] Error initializing Supabase sync:', error);
-      showLoadFailed();
+      handleSyncFailure(error, expectedUserId, expectedToken);
     }
   };
   const runMigrationIfNeeded = async (expectedUserId?: string, expectedToken?: number) => {
@@ -144,40 +385,54 @@ export function useAppInitialization() {
       showLoadFailed();
     }
   };
-  // React to authentication changes so login-after-load users get sync/migration too
+  // React to authentication changes so login-after-load users get sync/migration too.
+  // The transition branches are named helpers: fallow's new-only gate attributes
+  // complexity findings of anonymous arrows by position, and each helper also
+  // stays below the CRAP threshold for uncovered code.
+  const resetForPreviousUser = (loggedIn: boolean, prevUserId: string) => {
+    void resetTarkovState(loggedIn ? 'user unavailable' : 'logout', prevUserId);
+  };
+  const resetForAuthLoss = (
+    loggedIn: boolean,
+    prevLoggedIn: boolean,
+    prevUserId: string | null
+  ) => {
+    if (!prevLoggedIn) {
+      resetInitializationState(loggedIn);
+      return;
+    }
+    if (prevUserId) {
+      resetForPreviousUser(loggedIn, prevUserId);
+    } else if (!loggedIn) {
+      void resetTarkovState('logout');
+    }
+    resetInitializationState(loggedIn);
+  };
+  const didSwitchUser = (previousUserId: string | null, currentUserId: string): boolean =>
+    Boolean(previousUserId) && previousUserId !== currentUserId;
+  const resolvePreviousAuthState = (previous?: readonly [boolean, string | null]) =>
+    previous ?? ([false, null] as const);
   watch(
     () => [$supabase.user.loggedIn, $supabase.user.id] as const,
     async ([loggedIn, userId], previous) => {
       const token = ++authChangeToken;
-      const [prevLoggedIn, prevUserId] = previous ?? [false, null];
+      const [prevLoggedIn, prevUserId] = resolvePreviousAuthState(previous);
       if (!loggedIn || !userId) {
-        if (prevLoggedIn && prevUserId) {
-          resetTarkovState(!loggedIn ? 'logout' : 'user unavailable', prevUserId);
-        } else if (!loggedIn && prevLoggedIn) {
-          resetTarkovState('logout');
-        }
-        syncStarted = false;
-        migrationAttempted = false;
-        accountActivityRecordedForUserId = null;
-        supporterLoadedForUserId = null;
-        supporter.reset();
+        resetForAuthLoss(loggedIn, prevLoggedIn, prevUserId);
         return;
       }
-      if (prevUserId && userId && prevUserId !== userId) {
-        resetTarkovState('user switched', prevUserId);
-        syncStarted = false;
-        migrationAttempted = false;
-        accountActivityRecordedForUserId = null;
-        supporterLoadedForUserId = null;
-        supporter.reset();
+      if (didSwitchUser(prevUserId, userId)) {
+        resetInitializationState(loggedIn);
+        if (!(await resetTarkovState('user switched', prevUserId))) {
+          if (token === authChangeToken) showLoadFailed();
+          return;
+        }
+        if (token !== authChangeToken) return;
+      } else if (hasPendingProgressHandoff()) {
+        await settlePendingProgressHandoffs();
+        if (token !== authChangeToken) return;
       }
-      await startSyncIfNeeded(userId, token);
-      if (token !== authChangeToken) return;
-      await runMigrationIfNeeded(userId, token);
-      if (token !== authChangeToken) return;
-      await loadSupporterStatusIfNeeded(userId, token);
-      if (token !== authChangeToken) return;
-      await recordAccountActivityIfNeeded(userId, token);
+      await runAuthenticatedInitialization(userId, token);
     },
     { immediate: true }
   );

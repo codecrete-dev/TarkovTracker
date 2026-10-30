@@ -1,17 +1,18 @@
 <template>
+  <!-- Below sm: a full-width three-column control with the discount on its own line. -->
   <div
-    class="bg-surface-800/60 ring-surface-700/40 flex items-center justify-center gap-1 rounded-full p-1 ring-1"
+    class="bg-surface-800/60 ring-surface-700/40 grid w-full grid-cols-3 gap-1 rounded-2xl p-1 ring-1 sm:flex sm:w-auto sm:items-center sm:justify-center sm:rounded-full"
   >
     <button
       v-for="opt in options"
       :key="opt.value"
       type="button"
       :aria-pressed="modelValue === opt.value"
-      class="relative flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200"
+      class="relative flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-1.5 text-center text-sm font-medium wrap-anywhere hyphens-auto transition-all duration-200 sm:flex-row sm:gap-1.5 sm:rounded-full sm:px-4"
       :class="
         modelValue === opt.value
           ? 'bg-primary-600 text-white shadow-md'
-          : 'text-surface-300 hover:text-white'
+          : 'text-surface-300 light:hover:text-surface-50 hover:text-white'
       "
       @click="emit('update:modelValue', opt.value)"
     >
@@ -20,7 +21,9 @@
         v-if="opt.discount"
         class="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
         :class="
-          modelValue === opt.value ? 'bg-white/20 text-white' : 'bg-success-500/20 text-success-400'
+          modelValue === opt.value
+            ? 'light:bg-surface-700/70 light:text-surface-50 bg-white/20 text-white'
+            : 'bg-success-500/20 text-success-400 light:text-success-700'
         "
       >
         -{{ opt.discount }}%

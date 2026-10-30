@@ -1,0 +1,130 @@
+import { deepEqual } from '@/stores/tarkov/deepEqual';
+type Snapshot = Record<string, unknown>;
+export type WithRemoteSnapshot = <T>(
+  read: (reconcile: RemoteStateMerge) => Promise<T>
+) => Promise<T>;
+type RemoteAdvance = { before: Snapshot; after: Snapshot; next?: RemoteAdvance };
+export type RemoteStateMerge = (
+  remote: Snapshot,
+  merged?: Snapshot,
+  preserveChanges?: boolean
+) => Snapshot;
+const isRecord = (value: unknown): value is Snapshot =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+// Marks a field the persistence contract cannot carry, so the caller can tell
+// an explicit undefined field apart from a value JSON cannot serialize.
+const UNSERIALIZABLE = Symbol('unserializable');
+const cloneSerializable = (value: unknown): unknown => {
+  try {
+    const json = JSON.stringify(value);
+    if (json === undefined) return value === undefined ? undefined : UNSERIALIZABLE;
+    return JSON.parse(json);
+  } catch {
+    // Cyclic or otherwise non-encodable UI state.
+    return UNSERIALIZABLE;
+  }
+};
+// Snapshot JSON-backed fields independently so transient UI references cannot
+// prevent reconciliation of the persisted fields next to them.
+export const snapshotSyncState = (state: unknown): Snapshot => {
+  const result: Snapshot = {};
+  if (!isRecord(state)) return result;
+  for (const [key, value] of Object.entries(state)) {
+    const clone = cloneSerializable(value);
+    if (clone !== UNSERIALIZABLE) result[key] = clone;
+  }
+  return result;
+};
+// Applies the per-key half of the three-way merge: a key the local side dropped
+// is deleted from the remote result, and every other key recurses.
+const mergePendingKeys = (base: Snapshot, local: Snapshot, remote: unknown): Snapshot => {
+  const result: Snapshot = isRecord(remote) ? { ...remote } : {};
+  for (const key of new Set([...Object.keys(base), ...Object.keys(local)])) {
+    if (Object.hasOwn(local, key)) {
+      result[key] = preservePendingPaths(base[key], local[key], result[key]);
+    } else {
+      Reflect.deleteProperty(result, key);
+    }
+  }
+  return result;
+};
+// Three-way merge: retain only paths changed locally since the acknowledged
+// baseline. Remote changes to other paths still apply, including other modes.
+export const preservePendingPaths = (base: unknown, local: unknown, remote: unknown): unknown => {
+  if (deepEqual(base, local)) return remote;
+  if (!isRecord(base) || !isRecord(local)) return local;
+  return mergePendingKeys(base, local, remote);
+};
+const reconcileValue = (
+  base: unknown,
+  local: unknown,
+  remote: unknown,
+  preserveChanges: boolean
+) => (preserveChanges ? preservePendingPaths(base, local, remote) : remote);
+const advanceReadBaseline = (cursor: { next?: RemoteAdvance }, baseline: Snapshot) => {
+  while (cursor.next) {
+    const advance = cursor.next;
+    baseline = preservePendingPaths(advance.before, advance.after, baseline) as Snapshot;
+    cursor = advance;
+  }
+  return { cursor, baseline };
+};
+export const createPendingStateTracker = (
+  getState: () => unknown,
+  initialAcknowledgedState = getState()
+) => {
+  let baseline = snapshotSyncState(initialAcknowledgedState);
+  const replacements = new Map<string, symbol>();
+  // Only in-flight captures retain earlier links. The tracker holds the tail,
+  // so completed reads do not leave an ever-growing event history.
+  let remoteCursor: { next?: RemoteAdvance } = {};
+  return {
+    captureAcknowledgement: (state: Snapshot): (() => void) => {
+      const beforeWrite = baseline;
+      const beforeReplacements = new Map(replacements);
+      return () => {
+        // A save acknowledges its changed paths, not unrelated remote values
+        // accepted while that save was queued or in flight.
+        const acknowledged = snapshotSyncState(preservePendingPaths(beforeWrite, state, baseline));
+        // A newer authoritative replacement (such as a remote reset) invalidates
+        // older writes only for its own scope, not unrelated queued save paths.
+        for (const [key, token] of replacements) {
+          if (beforeReplacements.get(key) !== token) acknowledged[key] = baseline[key];
+        }
+        baseline = acknowledged;
+      };
+    },
+    capture: (): RemoteStateMerge => {
+      let beforeRead = baseline;
+      let cursor = remoteCursor;
+      return (remote, merged = remote, preserveChanges = true) => {
+        const advanced = advanceReadBaseline(cursor, beforeRead);
+        beforeRead = advanced.baseline;
+        cursor = advanced.cursor;
+        const current = snapshotSyncState(getState());
+        const result = { ...merged };
+        const acknowledged = { ...baseline };
+        for (const key of Object.keys(remote)) {
+          result[key] = reconcileValue(beforeRead[key], current[key], merged[key], preserveChanges);
+          // Retain accepted domain fallbacks, but remove unsaved local paths
+          // from the acknowledgement. A domain merge can contain those edits.
+          const accepted = preserveChanges
+            ? preservePendingPaths(current[key], beforeRead[key], merged[key])
+            : merged[key];
+          acknowledged[key] = reconcileValue(
+            beforeRead[key],
+            baseline[key],
+            accepted,
+            preserveChanges
+          );
+          if (!preserveChanges) replacements.set(key, Symbol());
+        }
+        const advance: RemoteAdvance = { before: baseline, after: snapshotSyncState(acknowledged) };
+        remoteCursor.next = advance;
+        remoteCursor = advance;
+        baseline = advance.after;
+        return result;
+      };
+    },
+  };
+};

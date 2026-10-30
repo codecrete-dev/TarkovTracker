@@ -1,445 +1,148 @@
 <template>
   <div class="mb-6 space-y-3">
-    <div
-      class="bg-surface-900 flex flex-wrap items-center gap-3 rounded-lg border border-white/12 px-3 py-3 shadow-sm sm:px-4"
+    <StatusTabBar
+      :tabs="statusTabs"
+      :model-value="selectedStatusView"
+      :group-label="t('page.tasks.status_tabs_label')"
+      :inert-when-selected="!isSearchActive"
+      @update:model-value="setSecondaryView"
     >
-      <div class="w-full sm:w-56 sm:max-w-64 lg:max-w-72">
-        <UInput
-          id="task-search"
-          :model-value="searchQuery"
-          name="task-search"
-          :placeholder="t('page.tasks.search.placeholder')"
-          :aria-label="t('page.tasks.search.aria_label')"
-          icon="i-mdi-magnify"
-          size="sm"
-          :ui="{ trailing: 'pe-1' }"
-          class="w-full"
-          @update:model-value="$emit('update:searchQuery', $event)"
-        >
-          <template v-if="searchQuery?.length" #trailing>
-            <UButton
-              color="neutral"
-              variant="link"
-              size="xs"
-              icon="i-mdi-close-circle"
-              :aria-label="t('common.clear_search')"
-              @click="$emit('update:searchQuery', '')"
-            />
-          </template>
-        </UInput>
-      </div>
-      <div class="flex flex-1 items-center justify-center gap-1">
-        <UButton
-          variant="ghost"
-          color="neutral"
-          size="sm"
-          class="leading-none"
-          :disabled="primaryView === 'all'"
-          :aria-label="t('common.list')"
-          :aria-pressed="primaryView === 'all'"
-          :class="getPrimaryViewButtonClass(primaryView === 'all')"
-          @click="setPrimaryView('all')"
-        >
-          <UIcon name="i-mdi-checkbox-multiple-marked" class="h-4 w-4 shrink-0 sm:mr-1.5" />
-          <span class="hidden text-xs leading-none uppercase sm:inline">
-            {{ t('common.list') }}
-          </span>
-        </UButton>
-        <UButton
-          variant="ghost"
-          color="neutral"
-          size="sm"
-          class="leading-none"
-          :disabled="primaryView === 'traders'"
-          :aria-label="t('common.traders')"
-          :aria-pressed="primaryView === 'traders'"
-          :class="getPrimaryViewButtonClass(primaryView === 'traders')"
-          @click="setPrimaryView('traders')"
-        >
-          <UIcon name="i-mdi-account-group" class="h-4 w-4 shrink-0 sm:mr-1.5" />
-          <span class="hidden text-xs leading-none uppercase sm:inline">
-            {{ t('common.traders') }}
-          </span>
-        </UButton>
-        <UButton
-          variant="ghost"
-          color="neutral"
-          size="sm"
-          class="leading-none"
-          :disabled="primaryView === 'maps'"
-          :aria-label="t('common.maps')"
-          :aria-pressed="primaryView === 'maps'"
-          :class="getPrimaryViewButtonClass(primaryView === 'maps')"
-          @click="setPrimaryView('maps')"
-        >
-          <UIcon name="i-mdi-map" class="h-4 w-4 shrink-0 sm:mr-1.5" />
-          <span class="hidden text-xs leading-none uppercase sm:inline">
-            {{ t('common.maps') }}
-          </span>
-        </UButton>
-        <UButton
-          variant="ghost"
-          color="neutral"
-          size="sm"
-          class="hidden leading-none lg:inline-flex"
-          :disabled="primaryView === 'graph'"
-          :aria-label="t('page.tasks.primary_views.graph')"
-          :aria-pressed="primaryView === 'graph'"
-          :class="getPrimaryViewButtonClass(primaryView === 'graph')"
-          @click="setPrimaryView('graph')"
-        >
-          <UIcon name="i-mdi-graph-outline" class="h-4 w-4 shrink-0 sm:mr-1.5" />
-          <span class="hidden text-xs leading-none uppercase sm:inline">
-            {{ t('page.tasks.primary_views.graph') }}
-          </span>
-        </UButton>
-      </div>
-      <div class="flex shrink-0 items-center gap-2">
-        <SelectMenuFixed
+      <template #actions>
+        <TaskTeamFilter />
+        <TaskFiltersPopover />
+        <!-- The graph lays tasks out by dependency, so sorting only applies to list views. -->
+        <SortControl
+          v-if="!isGraphView"
           v-model="taskSortMode"
           :items="sortOptions"
-          value-key="value"
-          size="sm"
-          class="w-28 sm:w-44"
-          :aria-label="t('page.tasks.sort.aria_label')"
-        >
-          <template #leading>
-            <UIcon :name="currentSortIcon" class="h-4 w-4" />
-          </template>
-          <template #item="{ item }">
-            <div class="flex items-center gap-2">
-              <UIcon :name="item.icon" class="h-4 w-4" />
-              <span>{{ item.label }}</span>
-            </div>
-          </template>
-        </SelectMenuFixed>
-        <UButton
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          :icon="sortDirectionIcon"
-          :aria-label="sortDirectionLabel"
-          @click="toggleSortDirection"
+          :label="t('page.tasks.sort.aria_label')"
+          :leading-icon="currentSortIcon"
+          :direction="taskSortDirection"
+          select-class="min-w-0 flex-1 sm:w-40 sm:flex-none 2xl:w-44"
+          @toggle-direction="toggleSortDirection"
         />
-        <AppTooltip :text="t('page.tasks.settings.title')">
-          <UButton
-            variant="ghost"
-            color="neutral"
-            size="sm"
-            icon="i-mdi-cog"
-            :aria-label="t('page.tasks.settings.title')"
-            :aria-pressed="isDrawerOpen"
-            :class="isDrawerOpen ? 'bg-white/10 text-white' : 'text-surface-400'"
-            @click="toggleDrawer"
-          />
-        </AppTooltip>
+        <SettingsButton
+          data-testid="task-settings-button"
+          page-key="tasks"
+          :label="t('page.tasks.settings.title')"
+        />
+      </template>
+    </StatusTabBar>
+    <ActiveFilterChips test-id-prefix="task-active-filters" :filters="activeFilters" />
+    <div
+      v-if="primaryView === 'maps' && maps.length > 0"
+      class="w-full scrollbar-thin overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]"
+    >
+      <div
+        class="bg-surface-900 flex w-max min-w-full gap-1 rounded-lg border border-white/12 px-3 py-3 shadow-sm sm:px-4"
+      >
+        <UButton
+          v-for="mapOption in mapOptions"
+          :key="mapOption.value"
+          type="button"
+          variant="ghost"
+          color="neutral"
+          size="sm"
+          :disabled="preferencesStore.getTaskMapView === mapOption.value"
+          :aria-pressed="preferencesStore.getTaskMapView === mapOption.value"
+          :class="[
+            'gap-1.5',
+            ...getTabClass('neutral', preferencesStore.getTaskMapView === mapOption.value),
+          ]"
+          @click="onMapSelect(mapOption)"
+        >
+          <span class="text-xs font-medium whitespace-nowrap">{{ mapOption.label }}</span>
+          <span
+            :class="[
+              'light:text-surface-50 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-bold text-white',
+              mapOption.countClass,
+            ]"
+          >
+            {{ mapOption.count }}
+          </span>
+        </UButton>
       </div>
     </div>
-    <div class="space-y-3">
+    <div
+      v-if="isTraderView && traders.length > 0"
+      class="w-full scrollbar-thin overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]"
+    >
       <div
-        class="bg-surface-900 flex scrollbar-none items-center gap-3 overflow-x-auto rounded-lg border border-white/12 px-3 py-3 shadow-sm [-webkit-overflow-scrolling:touch] sm:flex-wrap sm:justify-center sm:overflow-x-visible sm:px-4"
+        class="bg-surface-900 flex w-max min-w-full gap-1 rounded-lg border border-white/12 px-3 py-3 shadow-sm sm:px-4"
       >
-        <div class="flex shrink-0 items-center gap-1">
-          <UButton
-            v-if="showAllStatusButton"
-            variant="ghost"
-            color="neutral"
-            size="sm"
-            class="leading-none"
-            :disabled="secondaryView === 'all'"
-            :aria-pressed="secondaryView === 'all'"
-            :class="getStatusButtonClass('all', secondaryView === 'all')"
-            @click="setSecondaryView('all')"
-          >
-            <UIcon
-              name="i-mdi-format-list-bulleted"
-              class="hidden h-4 w-4 shrink-0 sm:mr-1 sm:block"
-            />
-            <span class="text-xs leading-none uppercase sm:text-sm">
-              {{ t('common.all', 'All') }}
-            </span>
-            <span
-              class="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-bold text-white"
-              :class="displayStatusCounts.all > 0 ? 'bg-surface-500' : 'bg-surface-600'"
-            >
-              {{ displayStatusCounts.all }}
-            </span>
-          </UButton>
-          <span
-            v-if="showStatusAllDivider"
-            aria-hidden="true"
-            class="bg-surface-700/60 h-6 w-px self-center"
-          ></span>
-          <UButton
-            v-if="!isGraphView && preferencesStore.getShowAvailableFilter"
-            variant="ghost"
-            color="neutral"
-            size="sm"
-            class="leading-none"
-            :disabled="secondaryView === 'available'"
-            :aria-pressed="secondaryView === 'available'"
-            :class="getStatusButtonClass('available', secondaryView === 'available')"
-            @click="setSecondaryView('available')"
-          >
-            <UIcon name="i-mdi-clipboard-text" class="hidden h-4 w-4 shrink-0 sm:mr-1 sm:block" />
-            <span class="text-xs leading-none uppercase sm:text-sm">
-              {{ t('common.available') }}
-            </span>
-            <span
-              class="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-bold text-white"
-              :class="displayStatusCounts.available > 0 ? 'bg-info-500' : 'bg-surface-600'"
-            >
-              {{ displayStatusCounts.available }}
-            </span>
-          </UButton>
-          <UButton
-            v-if="!isGraphView && preferencesStore.getShowLockedFilter"
-            variant="ghost"
-            color="neutral"
-            size="sm"
-            class="leading-none"
-            :disabled="secondaryView === 'locked'"
-            :aria-pressed="secondaryView === 'locked'"
-            :class="getStatusButtonClass('locked', secondaryView === 'locked')"
-            @click="setSecondaryView('locked')"
-          >
-            <UIcon name="i-mdi-lock" class="hidden h-4 w-4 shrink-0 sm:mr-1 sm:block" />
-            <span class="text-xs leading-none uppercase sm:text-sm">
-              {{ t('common.locked') }}
-            </span>
-            <span
-              class="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-bold text-white"
-              :class="displayStatusCounts.locked > 0 ? 'bg-surface-600' : 'bg-surface-700'"
-            >
-              {{ displayStatusCounts.locked }}
-            </span>
-          </UButton>
-          <UButton
-            v-if="showCompletedFilterButton"
-            variant="ghost"
-            color="neutral"
-            size="sm"
-            class="leading-none"
-            :disabled="secondaryView === 'completed'"
-            :aria-pressed="secondaryView === 'completed'"
-            :class="getStatusButtonClass('completed', secondaryView === 'completed')"
-            @click="setSecondaryView('completed')"
-          >
-            <UIcon name="i-mdi-check-circle" class="hidden h-4 w-4 shrink-0 sm:mr-1 sm:block" />
-            <span class="text-xs leading-none uppercase sm:text-sm">
-              {{ t('common.completed') }}
-            </span>
-            <span
-              class="bg-success-500 ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-bold text-white"
-            >
-              {{ displayStatusCounts.completed }}
-            </span>
-          </UButton>
-          <UButton
-            v-if="showFailedFilterButton"
-            variant="ghost"
-            color="neutral"
-            size="sm"
-            class="leading-none"
-            :disabled="secondaryView === 'failed'"
-            :aria-pressed="secondaryView === 'failed'"
-            :class="getStatusButtonClass('failed', secondaryView === 'failed')"
-            @click="setSecondaryView('failed')"
-          >
-            <UIcon name="i-mdi-close-circle" class="hidden h-4 w-4 shrink-0 sm:mr-1 sm:block" />
-            <span class="text-xs leading-none uppercase sm:text-sm">
-              {{ t('common.failed') }}
-            </span>
-            <span
-              class="bg-error-500 ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-bold text-white"
-            >
-              {{ displayStatusCounts.failed }}
-            </span>
-          </UButton>
-        </div>
-        <div class="hidden h-6 w-px shrink-0 bg-white/20 sm:block" />
-        <div class="flex shrink-0 items-center gap-1">
-          <UButton
-            variant="ghost"
-            color="neutral"
-            size="sm"
-            class="leading-none"
-            :disabled="preferencesStore.getTaskUserView === 'self'"
-            :aria-pressed="preferencesStore.getTaskUserView === 'self'"
-            :class="getSegmentButtonClass(preferencesStore.getTaskUserView === 'self')"
-            @click="onUserViewSelect({ label: currentUserDisplayName, value: 'self' })"
-          >
-            <UIcon name="i-mdi-account-circle" class="h-4 w-4 shrink-0 sm:mr-1" />
-            <span class="hidden text-xs leading-none uppercase sm:inline sm:text-sm">
-              {{ currentUserDisplayName }}
-            </span>
-            <UBadge size="sm" color="primary" variant="solid" class="ml-1 uppercase">
-              {{ t('page.tasks.user_views.yourself') }}
-            </UBadge>
-          </UButton>
-          <template v-for="teamId in teammates" :key="teamId">
-            <UButton
-              variant="ghost"
-              color="neutral"
-              size="sm"
-              class="leading-none"
-              :disabled="preferencesStore.getTaskUserView === teamId"
-              :aria-pressed="preferencesStore.getTaskUserView === teamId"
-              :class="
-                getSegmentButtonClass(
-                  preferencesStore.getTaskUserView === teamId,
-                  isTeammateHidden(teamId)
-                )
-              "
-              @click="onUserViewSelect({ label: getTeammateDisplayName(teamId), value: teamId })"
-            >
-              <UIcon name="i-mdi-account" class="h-4 w-4 shrink-0 sm:mr-1" />
-              <span class="text-xs leading-none uppercase sm:text-sm">
-                {{ getTeammateDisplayName(teamId) }}
-              </span>
-            </UButton>
-            <UButton
-              variant="ghost"
-              size="sm"
-              :color="isTeammateHidden(teamId) ? 'error' : 'success'"
-              :icon="isTeammateHidden(teamId) ? 'i-mdi-eye-off' : 'i-mdi-eye'"
-              :disabled="preferencesStore.taskTeamAllHidden"
-              :aria-label="getTeammateVisibilityLabel(teamId)"
-              :aria-pressed="!isTeammateHidden(teamId)"
-              @click="toggleTeammateVisibility(teamId)"
-            />
-          </template>
-          <UButton
-            v-if="teammates.length > 0"
-            variant="ghost"
-            color="neutral"
-            size="sm"
-            class="leading-none"
-            :disabled="preferencesStore.getTaskUserView === 'all'"
-            :aria-pressed="preferencesStore.getTaskUserView === 'all'"
-            :class="getSegmentButtonClass(preferencesStore.getTaskUserView === 'all')"
-            @click="onUserViewSelect({ label: t('common.all'), value: 'all' })"
-          >
-            <UIcon name="i-mdi-account-multiple" class="h-4 w-4 shrink-0 sm:mr-1" />
-            <span class="text-xs leading-none uppercase sm:text-sm">
-              {{ t('common.all') }}
-            </span>
-          </UButton>
-        </div>
-      </div>
-      <div
-        v-if="primaryView === 'maps' && maps.length > 0"
-        class="w-full scrollbar-thin overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]"
-      >
-        <div
-          class="bg-surface-900 flex w-max min-w-full justify-center gap-1 rounded-lg border border-white/12 px-3 py-3 shadow-sm sm:px-4"
+        <UButton
+          v-for="trader in traders"
+          :key="trader.id"
+          type="button"
+          variant="ghost"
+          color="neutral"
+          size="sm"
+          :disabled="preferencesStore.getTaskTraderView === trader.id"
+          :aria-pressed="preferencesStore.getTaskTraderView === trader.id"
+          :class="[
+            'gap-2',
+            ...getTabClass('neutral', preferencesStore.getTaskTraderView === trader.id),
+          ]"
+          @click="onTraderSelect(trader.id)"
         >
-          <UButton
-            v-for="mapOption in mapOptions"
-            :key="mapOption.value"
-            type="button"
-            variant="ghost"
-            color="neutral"
-            size="sm"
-            :disabled="preferencesStore.getTaskMapView === mapOption.value"
-            :aria-pressed="preferencesStore.getTaskMapView === mapOption.value"
-            :class="[
-              'gap-1.5',
-              ...getSegmentButtonClass(preferencesStore.getTaskMapView === mapOption.value),
-            ]"
-            @click="onMapSelect(mapOption)"
-          >
-            <span class="text-xs font-medium whitespace-nowrap">{{ mapOption.label }}</span>
-            <span
-              :class="[
-                'inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-bold text-white',
-                (mapOption.count ?? 0) > 0 ? 'bg-pve-500' : 'bg-surface-600',
-              ]"
-            >
-              {{ mapOption.count ?? 0 }}
-            </span>
-          </UButton>
-        </div>
-      </div>
-      <div
-        v-if="(primaryView === 'traders' || primaryView === 'graph') && traders.length > 0"
-        class="w-full scrollbar-thin overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]"
-      >
-        <div
-          class="bg-surface-900 flex w-max min-w-full justify-center gap-1 rounded-lg border border-white/12 px-3 py-3 shadow-sm sm:px-4"
-        >
-          <UButton
-            v-for="trader in traders"
-            :key="trader.id"
-            type="button"
-            variant="ghost"
-            color="neutral"
-            size="sm"
-            :disabled="preferencesStore.getTaskTraderView === trader.id"
-            :aria-pressed="preferencesStore.getTaskTraderView === trader.id"
-            :class="[
-              'gap-2',
-              ...getSegmentButtonClass(preferencesStore.getTaskTraderView === trader.id),
-            ]"
-            @click="onTraderSelect({ label: trader.name, value: trader.id })"
-          >
-            <div class="relative">
-              <div class="bg-surface-800 h-8 w-8 overflow-hidden rounded-full">
-                <img
-                  v-if="trader.imageLink"
-                  :src="trader.imageLink"
-                  :alt="trader.name"
-                  class="h-full w-full object-cover"
-                />
-                <UIcon v-else name="i-mdi-account-circle" class="text-surface-500 h-full w-full" />
-              </div>
-              <span
-                :class="[
-                  'absolute -top-1 -right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[10px] font-bold text-white',
-                  (traderCounts[trader.id] ?? 0) > 0 ? 'bg-pve-500' : 'bg-surface-600',
-                ]"
-              >
-                {{ traderCounts[trader.id] ?? 0 }}
-              </span>
+          <div class="relative">
+            <div class="bg-surface-800 h-8 w-8 overflow-hidden rounded-full">
+              <img
+                v-if="trader.imageLink"
+                :src="trader.imageLink"
+                :alt="trader.name"
+                class="h-full w-full object-cover"
+              />
+              <UIcon v-else name="i-mdi-account-circle" class="text-surface-500 h-full w-full" />
             </div>
-            <span class="text-xs font-medium whitespace-nowrap">{{ trader.name }}</span>
-          </UButton>
-        </div>
+            <span
+              class="bg-pve-500 light:text-surface-50 absolute -top-1 -right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[10px] font-bold text-white"
+            >
+              {{ traderCounts[trader.id] }}
+            </span>
+          </div>
+          <span class="text-xs font-medium whitespace-nowrap">{{ trader.name }}</span>
+        </UButton>
       </div>
     </div>
   </div>
 </template>
 <script setup lang="ts">
-  import { usePageSettingsDrawer } from '@/composables/usePageSettingsDrawer';
+  import ActiveFilterChips from '@/components/ui/ActiveFilterChips.vue';
+  import SettingsButton from '@/components/ui/SettingsButton.vue';
+  import SortControl from '@/components/ui/SortControl.vue';
+  import StatusTabBar from '@/components/ui/StatusTabBar.vue';
   import { useTaskFiltering } from '@/composables/useTaskFiltering';
+  import { useTaskContentFilters } from '@/features/tasks/composables/useTaskContentFilters';
+  import TaskFiltersPopover from '@/features/tasks/TaskFiltersPopover.vue';
+  import TaskTeamFilter from '@/features/tasks/TaskTeamFilter.vue';
   import { useMetadataStore } from '@/stores/useMetadata';
   import { usePreferencesStore } from '@/stores/usePreferences';
-  import { useProgressStore } from '@/stores/useProgress';
-  import { useSystemStoreWithSupabase } from '@/stores/useSystemStore';
-  import { useTeamStore } from '@/stores/useTeamStore';
   import { TASK_SORT_MODES } from '@/types/taskSort';
+  import { ALL_TAB_ICON, getTabClass } from '@/utils/statusTones';
   import {
     getTaskSecondaryViewForPrimaryView,
     normalizeSecondaryView,
     normalizeSortMode,
   } from '@/utils/taskFilterNormalization';
+  import type { TaskStatusCounts } from '@/features/tasks/composables/useTaskFilters';
   import type { TaskSecondaryView } from '@/types/taskFilter';
   import type { TaskSortDirection, TaskSortMode } from '@/types/taskSort';
+  import type { StatusTabItem, StatusTone } from '@/utils/statusTones';
   const props = defineProps<{
-    searchQuery: string;
-    activeSearchCount?: number;
+    /** A search is typed, so status tabs narrow it instead of saving a preference. */
     isSearchActive?: boolean;
+    /** Status the list currently filters by; `all` while a search spans every status. */
+    activeStatusView?: TaskSecondaryView;
+    searchStatusCounts?: TaskStatusCounts | null;
   }>();
-  defineEmits<{
-    'update:searchQuery': [value: string];
+  const emit = defineEmits<{
+    'pin-status': [status: TaskSecondaryView];
   }>();
   const { t } = useI18n({ useScope: 'global' });
   const preferencesStore = usePreferencesStore();
   const metadataStore = useMetadataStore();
-  const progressStore = useProgressStore();
-  const teamStore = useTeamStore();
-  const { hasInitiallyLoaded: hasSystemInitiallyLoaded, hasTeam } = useSystemStoreWithSupabase();
-  const { isOpen: isDrawerOpen, toggle: toggleDrawer } = usePageSettingsDrawer('tasks');
+  const { activeFilters } = useTaskContentFilters();
   const { calculateMapTaskTotals, calculateStatusCounts, calculateTraderCounts } =
     useTaskFiltering();
   const primaryView = computed(() => preferencesStore.getTaskPrimaryView);
@@ -448,127 +151,73 @@
   const secondaryView = computed(() =>
     getTaskSecondaryViewForPrimaryView(primaryView.value, preferencesStore.getTaskSecondaryView)
   );
+  const selectedStatusView = computed(() => props.activeStatusView ?? secondaryView.value);
   const traderCounts = computed(() => {
     const userView = preferencesStore.getTaskUserView;
-    return calculateTraderCounts(userView, secondaryView.value);
+    return calculateTraderCounts(userView, selectedStatusView.value);
   });
+  // The traders and graph views show one trader at a time, picked from those with tasks left.
+  const isTraderView = computed(() => primaryView.value === 'traders' || isGraphView.value);
   const traders = computed(() => {
     return metadataStore.sortedTraders.filter((trader) => (traderCounts.value[trader.id] ?? 0) > 0);
   });
-  const currentUserDisplayName = computed(() => {
-    return progressStore.getDisplayName('self') || t('page.tasks.user_views.yourself', 'You');
-  });
-  const teammates = computed(() => {
-    return teamStore.teammates || [];
-  });
-  const canValidateSelectedTeammateView = computed(() => {
-    if (teammates.value.length > 0) return true;
-    if (teamStore.teamMembers.length > 0) return true;
-    if (!hasSystemInitiallyLoaded.value) return false;
-    return !hasTeam();
-  });
-  const showStatusAllDivider = computed(() => {
-    return (
-      showAllStatusButton.value &&
-      !isGraphView.value &&
-      (preferencesStore.getShowAvailableFilter ||
-        preferencesStore.getShowLockedFilter ||
-        preferencesStore.getShowCompletedFilter ||
-        preferencesStore.getShowFailedFilter)
-    );
-  });
+  const onTraderSelect = (traderId: string) => {
+    if (preferencesStore.getTaskTraderView !== traderId) {
+      preferencesStore.setTaskTraderView(traderId);
+    }
+  };
   const showAllStatusButton = computed(
     () => isGraphView.value || preferencesStore.getShowAllFilter
   );
-  const showCompletedFilterButton = computed(() => {
-    return !isGraphView.value && preferencesStore.getShowCompletedFilter;
-  });
-  const showFailedFilterButton = computed(() => {
-    return !isGraphView.value && preferencesStore.getShowFailedFilter;
-  });
-  type StatusToggleView = 'all' | 'available' | 'locked' | 'completed' | 'failed';
-  const statusViewVisibility = computed<Record<StatusToggleView, boolean>>(() => ({
+  const statusViewVisibility = computed<Record<TaskSecondaryView, boolean>>(() => ({
     all: showAllStatusButton.value,
     available: !isGraphView.value && preferencesStore.getShowAvailableFilter,
     locked: !isGraphView.value && preferencesStore.getShowLockedFilter,
-    completed: showCompletedFilterButton.value,
-    failed: showFailedFilterButton.value,
+    completed: !isGraphView.value && preferencesStore.getShowCompletedFilter,
+    failed: !isGraphView.value && preferencesStore.getShowFailedFilter,
   }));
   const visibleStatusViews = computed<TaskSecondaryView[]>(() => {
     return (['all', 'available', 'locked', 'completed', 'failed'] as const).filter(
       (view) => statusViewVisibility.value[view]
     );
   });
-  const toggleButtonBaseClass =
-    'border border-transparent font-medium transition-colors duration-150 disabled:cursor-default disabled:opacity-100';
-  const primaryToggleInactiveClass =
-    'text-surface-200 hover:border-white/10 hover:bg-white/5 hover:text-white';
-  const secondaryToggleInactiveClass =
-    'text-surface-400 hover:border-white/10 hover:bg-white/5 hover:text-white';
-  const selectedToggleClass =
-    'border-primary-500/45 bg-primary-500/12 text-white ring-1 ring-primary-500/25';
-  const neutralSelectedToggleClass = 'border-white/15 bg-white/10 text-white ring-1 ring-white/10';
-  const statusToggleSelectedClasses: Record<StatusToggleView, string> = {
-    all: selectedToggleClass,
-    available: 'border-info-500/45 bg-info-500/12 text-white ring-1 ring-info-500/25',
-    locked: neutralSelectedToggleClass,
-    completed: 'border-success-500/45 bg-success-500/12 text-white ring-1 ring-success-500/25',
-    failed: 'border-error-500/45 bg-error-500/12 text-white ring-1 ring-error-500/25',
-  };
-  const getPrimaryViewButtonClass = (isActive: boolean): string[] => {
-    return [toggleButtonBaseClass, isActive ? selectedToggleClass : primaryToggleInactiveClass];
-  };
-  const getStatusButtonClass = (view: StatusToggleView, isActive: boolean): string[] => {
-    return [
-      toggleButtonBaseClass,
-      isActive ? statusToggleSelectedClasses[view] : secondaryToggleInactiveClass,
-    ];
-  };
-  const getSegmentButtonClass = (isActive: boolean, isDimmed = false): string[] => {
-    return [
-      toggleButtonBaseClass,
-      isActive ? selectedToggleClass : secondaryToggleInactiveClass,
-      isDimmed ? 'opacity-50' : '',
-    ];
-  };
-  const getTeammateDisplayName = (teamId: string): string => {
-    return progressStore.getDisplayName(teamId) || teamId;
-  };
-  const isTeammateHidden = (teamId: string): boolean => {
-    return preferencesStore.teamIsHidden(teamId);
-  };
-  const isTeammateIndividuallyHidden = (teamId: string): boolean => {
-    return preferencesStore.teamHide?.[teamId] === true;
-  };
-  const getTeammateVisibilityLabel = (teamId: string): string => {
-    const actionLabel = isTeammateHidden(teamId) ? t('common.show') : t('common.hide');
-    return `${actionLabel} ${getTeammateDisplayName(teamId)}`;
-  };
-  const toggleTeammateVisibility = (teamId: string) => {
-    if (preferencesStore.taskTeamAllHidden) {
-      return;
-    }
-    const wasHidden = isTeammateHidden(teamId);
-    preferencesStore.toggleHidden(teamId);
-    if (!wasHidden && preferencesStore.getTaskUserView === teamId) {
-      preferencesStore.setTaskUserView('all');
-    }
-  };
   // Calculate task counts for badges
   const statusCounts = computed(() => {
     const userView = preferencesStore.getTaskUserView;
     return calculateStatusCounts(userView);
   });
-  const displayStatusCounts = computed(() => {
-    if (!props.isSearchActive || props.activeSearchCount === undefined) {
-      return statusCounts.value;
-    }
-    const activeView = secondaryView.value;
-    return {
-      ...statusCounts.value,
-      [activeView]: props.activeSearchCount,
-    };
-  });
+  const displayStatusCounts = computed(() => props.searchStatusCounts ?? statusCounts.value);
+  const STATUS_TABS: Array<{
+    value: TaskSecondaryView;
+    labelKey: string;
+    icon: string;
+    tone: StatusTone;
+  }> = [
+    { value: 'all', labelKey: 'common.all', icon: ALL_TAB_ICON, tone: 'neutral' },
+    {
+      value: 'available',
+      labelKey: 'common.available',
+      icon: 'i-mdi-clipboard-text',
+      tone: 'info',
+    },
+    { value: 'locked', labelKey: 'common.locked', icon: 'i-mdi-lock', tone: 'locked' },
+    {
+      value: 'completed',
+      labelKey: 'common.completed',
+      icon: 'i-mdi-check-circle',
+      tone: 'success',
+    },
+    { value: 'failed', labelKey: 'common.failed', icon: 'i-mdi-close-circle', tone: 'error' },
+  ];
+  const statusTabs = computed<StatusTabItem<TaskSecondaryView>[]>(() =>
+    STATUS_TABS.filter((tab) => statusViewVisibility.value[tab.value]).map((tab) => ({
+      value: tab.value,
+      label: t(tab.labelKey),
+      icon: tab.icon,
+      tone: tab.tone,
+      count: displayStatusCounts.value[tab.value],
+    }))
+  );
   type SortOption = {
     value: TaskSortMode;
     label: string;
@@ -579,6 +228,7 @@
     impact: 'i-mdi-chart-line',
     alphabetical: 'i-mdi-sort-alphabetical-ascending',
     level: 'i-mdi-sort-numeric-ascending',
+    progression: 'i-mdi-stairs-up',
     trader: 'i-mdi-account',
     teammates: 'i-mdi-account-multiple',
     xp: 'i-mdi-star',
@@ -598,14 +248,6 @@
     get: () => preferencesStore.getTaskSortDirection,
     set: (value: TaskSortDirection) => preferencesStore.setTaskSortDirection(value),
   });
-  const sortDirectionIcon = computed(() =>
-    taskSortDirection.value === 'asc' ? 'i-mdi-sort-ascending' : 'i-mdi-sort-descending'
-  );
-  const sortDirectionLabel = computed(() =>
-    taskSortDirection.value === 'asc'
-      ? t('page.tasks.sort.ascending')
-      : t('page.tasks.sort.descending')
-  );
   const toggleSortDirection = () => {
     taskSortDirection.value = taskSortDirection.value === 'asc' ? 'desc' : 'asc';
   };
@@ -633,92 +275,58 @@
       preferencesStore.getHideCompletedMapObjectives
     );
   });
-  // Primary view (all / maps / traders)
   const ensureSelectedTrader = (visibleTraders: Array<{ id: string }>) => {
-    if (!visibleTraders.length) return;
-    const hasSelectedTrader = visibleTraders.some(
-      (trader) => trader.id === preferencesStore.getTaskTraderView
-    );
-    if (hasSelectedTrader) return;
     const firstTrader = visibleTraders[0];
-    if (firstTrader?.id) {
-      preferencesStore.setTaskTraderView(firstTrader.id);
-    }
+    if (firstTrader?.id) preferencesStore.setTaskTraderView(firstTrader.id);
   };
-  const setPrimaryView = (view: string) => {
-    if (preferencesStore.getTaskPrimaryView === view) return;
-    preferencesStore.setTaskPrimaryView(view);
-    // When switching to maps, ensure a map is selected
-    if (view === 'maps' && maps.value.length > 0 && preferencesStore.getTaskMapView === 'all') {
-      const firstMap = maps.value[0];
-      if (firstMap?.id) {
-        preferencesStore.setTaskMapView(firstMap.id);
-      }
-    }
-    if (view === 'traders' || view === 'graph') {
-      ensureSelectedTrader(traders.value);
-    }
+  const ensureSelectedMap = (availableMaps: Array<{ id: string }>) => {
+    const firstMap = availableMaps[0];
+    if (firstMap?.id) preferencesStore.setTaskMapView(firstMap.id);
   };
   // Secondary view (available / locked / completed)
+  // A tab picked during a search only narrows that search; the saved tab is left alone. While
+  // searching every tab stays clickable so it can pin the search; otherwise the shown tab is inert.
   const setSecondaryView = (view: string) => {
     const normalizedView = getTaskSecondaryViewForPrimaryView(primaryView.value, view);
+    emit('pin-status', normalizedView);
+    if (props.isSearchActive) return;
     if (preferencesStore.getTaskSecondaryView === normalizedView) return;
     preferencesStore.setTaskSecondaryView(normalizedView);
   };
   // Map selection
   const mapOptions = computed(() => {
     const counts = mapTaskCounts.value;
-    return maps.value.map((map) => ({
-      label: map.name,
-      value: map.id,
-      count: counts[map.id] ?? 0,
-    }));
+    return maps.value.map((map) => {
+      const count = counts[map.id] ?? 0;
+      return {
+        label: map.name,
+        value: map.id,
+        count,
+        countClass: count > 0 ? 'bg-pve-500' : 'bg-surface-600',
+      };
+    });
   });
   const onMapSelect = (selected: { label: string; value: string }) => {
     if (selected?.value && preferencesStore.getTaskMapView !== selected.value) {
       preferencesStore.setTaskMapView(selected.value);
     }
   };
-  // Trader selection
-  const onTraderSelect = (selected: { label: string; value: string }) => {
-    if (selected?.value && preferencesStore.getTaskTraderView !== selected.value) {
-      preferencesStore.setTaskTraderView(selected.value);
-    }
-  };
-  // User view selection (yourself / all team members)
-  const onUserViewSelect = (selected: { label: string; value: string }) => {
-    if (selected?.value) {
-      const selectedUserView = selected.value;
-      if (preferencesStore.getTaskUserView === selectedUserView) return;
-      if (
-        selectedUserView !== 'self' &&
-        selectedUserView !== 'all' &&
-        !preferencesStore.taskTeamAllHidden &&
-        isTeammateIndividuallyHidden(selectedUserView)
-      ) {
-        preferencesStore.toggleHidden(selectedUserView);
-      }
-      preferencesStore.setTaskUserView(selectedUserView);
-    }
-  };
   watch(
-    [() => preferencesStore.getTaskPrimaryView, traders, () => preferencesStore.getTaskTraderView],
-    ([view, visibleTraders, selectedTrader]) => {
-      if (view !== 'traders' && view !== 'graph') return;
+    [isTraderView, traders, () => preferencesStore.getTaskTraderView],
+    ([showsTrader, visibleTraders, selectedTrader]) => {
+      if (!showsTrader) return;
       if (visibleTraders.some((trader) => trader.id === selectedTrader)) return;
       ensureSelectedTrader(visibleTraders);
     },
     { immediate: true }
   );
+  // The maps route always shows one map; land on the first when none is picked yet.
   watch(
-    [() => preferencesStore.getTaskUserView, teammates, canValidateSelectedTeammateView],
-    ([selectedUserView, currentTeammates, canValidate]) => {
-      if (selectedUserView === 'self' || selectedUserView === 'all') return;
-      if (!canValidate) return;
-      if (!currentTeammates.includes(selectedUserView) || isTeammateHidden(selectedUserView)) {
-        const canShowAllOption = currentTeammates.length > 0;
-        preferencesStore.setTaskUserView(canShowAllOption ? 'all' : 'self');
-      }
+    [primaryView, maps, () => preferencesStore.getTaskMapView],
+    ([view, availableMaps, selectedMap]) => {
+      if (view !== 'maps') return;
+      if (availableMaps.some((map) => map.id === selectedMap)) return;
+      ensureSelectedMap(availableMaps);
     },
     { immediate: true }
   );

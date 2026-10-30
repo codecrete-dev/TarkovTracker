@@ -114,7 +114,6 @@ export default withNuxt(
       // Block parent relative imports (use @/ aliases instead)
       'import-x/no-relative-parent-imports': 'error',
       // Import order: builtin → external → internal → parent → sibling → index → object → type
-      // (Keep in sync with CLAUDE.md, AGENTS.md, GEMINI.md)
       'import-x/order': [
         'warn',
         {
@@ -180,5 +179,23 @@ export default withNuxt(
       '@typescript-eslint/no-unused-vars': 'off',
       'vue/no-unused-vars': 'error',
     },
+  },
+  {
+    // The route registry and native Node workflow tests run without Nuxt's @ alias resolver.
+    files: [
+      'app/utils/routeSeo.ts',
+      'scripts/preview/controller.mjs',
+      'scripts/workflow-tests/preview.mjs',
+      'scripts/workflow-tests/preview-request.mjs',
+      'scripts/workflow-tests/review-admission.mjs',
+      'scripts/workflow-tests/controller-events.mjs',
+      'scripts/workflow-tests/actionlint-queue.mjs',
+      'scripts/workflow-tests/merge-queue-policy.mjs',
+      'scripts/workflow-tests/merge-queue.mjs',
+      'scripts/workflow-tests/preview-retention.mjs',
+      'scripts/workflow-tests/workflows.mjs',
+      'scripts/workflow-tests/helpers/automation-fixture.mjs',
+    ],
+    rules: { 'import-x/no-relative-parent-imports': 'off' },
   }
 );

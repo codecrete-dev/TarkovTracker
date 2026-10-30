@@ -6,25 +6,13 @@ import { createI18n } from 'vue-i18n';
 import { useSkillCalculation } from '@/composables/useSkillCalculation';
 import SkillsCard from '@/features/settings/SkillsCard.vue';
 import { MAX_SKILL_LEVEL } from '@/utils/constants';
+import { createTestLocaleMessages } from '#tests/test-helpers/i18nMessages';
 const i18n = createI18n({
   legacy: false,
   locale: 'en',
   missingWarn: false,
   fallbackWarn: false,
-  messages: {
-    en: {},
-    cs: {},
-    de: {},
-    es: {},
-    fr: {},
-    it: {},
-    ru: {},
-    uk: {},
-    zh: {},
-    ko: {},
-    pl: {},
-    pt: {},
-  },
+  messages: createTestLocaleMessages(),
 });
 vi.mock('@/composables/useSkillCalculation');
 vi.mock('@/stores/usePreferences', () => ({
@@ -284,5 +272,31 @@ describe('SkillsCard', () => {
     };
     await input.trigger('keydown', event);
     expect(event.preventDefault).not.toHaveBeenCalled();
+  });
+  it("makes the card header the level input's native label for click-to-focus", () => {
+    const wrapper = createWrapper();
+    document.body.appendChild(wrapper.element);
+    try {
+      const label = wrapper.find('label[for="skill-input-Strength"]');
+      expect(label.exists()).toBe(true);
+      // The visible header row (icon, name, badges, level) is the label, so a large
+      // click target natively focuses the input — happy-dom does not implement
+      // label->input activation forwarding, so assert the structural contract and
+      // let the real-browser check verify the interaction.
+      expect(label.text()).toContain('Strength');
+      expect(label.classes()).toContain('cursor-pointer');
+    } finally {
+      wrapper.unmount();
+      wrapper.element.remove();
+    }
+  });
+  it('keeps the card container free of role and tabindex attributes', () => {
+    const wrapper = createWrapper();
+    // The native <label for> in the header supplies the click-to-focus convenience, so
+    // the card needs no button role (SonarCloud S6819) and no tab stop of its own.
+    const card = wrapper.find('#settings-skill-Strength');
+    expect(card.attributes('role')).toBeUndefined();
+    expect(card.attributes('tabindex')).toBeUndefined();
+    wrapper.unmount();
   });
 });

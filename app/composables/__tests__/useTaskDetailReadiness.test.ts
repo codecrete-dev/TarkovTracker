@@ -1,0 +1,311 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { effectScope, nextTick, reactive } from 'vue';
+import { TASK_DETAIL_WAIT_MS, useTaskDetailReadiness } from '@/composables/useTaskDetailReadiness';
+const metadata = reactive({
+  hasInitialized: true,
+  loading: false,
+  tasksCoreRefreshing: false,
+  languageCode: 'en',
+  mode: 'regular',
+  tasks: [{ id: 'task' }],
+  tasksCoreRevision: 0,
+  editionsLoading: false,
+  objectiveModeCountDifferencesHydrated: true,
+  getApiGameMode: () => metadata.mode,
+  fetchTaskObjectivesData: vi.fn<() => Promise<void>>(),
+  fetchTaskRewardsData: vi.fn<() => Promise<void>>(),
+  fetchItemsLiteData: vi.fn<() => Promise<void>>(),
+  ensureEditionsData: vi.fn<() => Promise<void>>(),
+  fetchObjectiveModeCountDifferences: vi.fn<() => Promise<'stale' | undefined>>(),
+});
+vi.mock('@/stores/useMetadata', () => ({ useMetadataStore: () => metadata }));
+const deferred = () => {
+  let resolve!: () => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<undefined>((done, fail) => {
+    resolve = () => done(undefined);
+    reject = fail;
+  });
+  return { promise, resolve, reject };
+};
+let scope: ReturnType<typeof effectScope>;
+const start = () => scope.run(() => useTaskDetailReadiness())!;
+const flush = async () => {
+  await vi.advanceTimersByTimeAsync(0);
+  await nextTick();
+};
+/*
+ * The composable's bounded wait is the only timer this suite owns, but the Nuxt
+ * test environment can start unrelated tickers of its own — the Supabase auth
+ * client schedules a token refresh as soon as it is configured. A global
+ * `vi.getTimerCount()` therefore measures the environment rather than the
+ * composable, and passes or fails depending on whether Supabase happens to be
+ * configured. Track the bounded wait by its duration instead, derived from the
+ * composable's exported constant so the tracker stays in sync with the source.
+ */
+type SetTimeoutFn = typeof globalThis.setTimeout;
+type ClearTimeoutFn = typeof globalThis.clearTimeout;
+const pendingWaitTimers = new Set<ReturnType<SetTimeoutFn>>();
+let observedWaitTimers = 0;
+let restoreTimerTracking: (() => void) | undefined;
+const expectWaitSettled = () => {
+  // Guards against the tracker silently missing the wait (for example if the
+  // composable's duration changes), which would make the emptiness check vacuous.
+  expect(observedWaitTimers).toBeGreaterThan(0);
+  expect(pendingWaitTimers.size).toBe(0);
+};
+const trackWaitTimers = () => {
+  const realSetTimeout: SetTimeoutFn = globalThis.setTimeout;
+  const realClearTimeout: ClearTimeoutFn = globalThis.clearTimeout;
+  globalThis.setTimeout = ((...args: Parameters<SetTimeoutFn>) => {
+    if (args[1] !== TASK_DETAIL_WAIT_MS) return realSetTimeout(...args);
+    const handler = args[0];
+    const handlerArgs = args.slice(2);
+    // Drop the id when the wait fires as well as when it is cleared, so the set
+    // tracks timers that are still pending rather than every timer created.
+    const tracked: { id?: ReturnType<SetTimeoutFn> } = {};
+    const invoke = () => {
+      if (tracked.id !== undefined) pendingWaitTimers.delete(tracked.id);
+      if (typeof handler === 'function') (handler as (...rest: unknown[]) => void)(...handlerArgs);
+    };
+    tracked.id = realSetTimeout(invoke, args[1]);
+    pendingWaitTimers.add(tracked.id);
+    observedWaitTimers += 1;
+    return tracked.id;
+  }) as SetTimeoutFn;
+  globalThis.clearTimeout = ((...args: Parameters<ClearTimeoutFn>) => {
+    pendingWaitTimers.delete(args[0] as ReturnType<SetTimeoutFn>);
+    return realClearTimeout(...args);
+  }) as ClearTimeoutFn;
+  restoreTimerTracking = () => {
+    globalThis.setTimeout = realSetTimeout;
+    globalThis.clearTimeout = realClearTimeout;
+  };
+};
+describe('useTaskDetailReadiness', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    pendingWaitTimers.clear();
+    observedWaitTimers = 0;
+    trackWaitTimers();
+    scope = effectScope();
+    metadata.hasInitialized = true;
+    metadata.loading = false;
+    metadata.tasksCoreRefreshing = false;
+    metadata.languageCode = 'en';
+    metadata.mode = 'regular';
+    metadata.tasks = [{ id: 'task' }];
+    metadata.tasksCoreRevision = 0;
+    metadata.editionsLoading = false;
+    metadata.objectiveModeCountDifferencesHydrated = true;
+    metadata.fetchTaskObjectivesData.mockReset().mockResolvedValue();
+    metadata.fetchTaskRewardsData.mockReset().mockResolvedValue();
+    metadata.fetchItemsLiteData.mockReset().mockResolvedValue();
+    metadata.ensureEditionsData.mockReset().mockResolvedValue();
+    metadata.fetchObjectiveModeCountDifferences.mockReset().mockResolvedValue(undefined);
+  });
+  afterEach(() => {
+    scope.stop();
+    restoreTimerTracking?.();
+    restoreTimerTracking = undefined;
+    vi.useRealTimers();
+  });
+  it('requests both details promptly and waits for both to settle', async () => {
+    const objectives = deferred();
+    const rewards = deferred();
+    metadata.fetchTaskObjectivesData.mockReturnValue(objectives.promise);
+    metadata.fetchTaskRewardsData.mockReturnValue(rewards.promise);
+    const ready = start();
+    expect(metadata.fetchTaskObjectivesData).toHaveBeenCalledOnce();
+    expect(metadata.fetchTaskRewardsData).toHaveBeenCalledOnce();
+    expect(ready.value).toBe(false);
+    objectives.resolve();
+    await flush();
+    expect(ready.value).toBe(false);
+    rewards.resolve();
+    await flush();
+    expect(ready.value).toBe(true);
+    expectWaitSettled();
+  });
+  it('waits for item-lite hydration before revealing localized cards', async () => {
+    const items = deferred();
+    metadata.fetchItemsLiteData.mockReturnValue(items.promise);
+    const ready = start();
+    await flush();
+    expect(ready.value).toBe(false);
+    items.resolve();
+    await flush();
+    expect(ready.value).toBe(true);
+  });
+  it('does not retry handled objective count failures', async () => {
+    // Handled failures resolve undefined and leave hydration false; neither permits a retry.
+    metadata.objectiveModeCountDifferencesHydrated = false;
+    metadata.fetchObjectiveModeCountDifferences.mockResolvedValueOnce(undefined);
+    const ready = start();
+    await flush();
+    expect(ready.value).toBe(true);
+    expect(metadata.fetchObjectiveModeCountDifferences).toHaveBeenCalledTimes(1);
+  });
+  it('keeps cached locale details hidden while bootstrap and core refresh are pending', async () => {
+    const ready = start();
+    await flush();
+    expect(ready.value).toBe(true);
+    metadata.fetchTaskRewardsData.mockClear();
+    metadata.tasksCoreRefreshing = true;
+    metadata.languageCode = 'fr';
+    await flush();
+    expect(ready.value).toBe(false);
+    expect(metadata.fetchTaskRewardsData).not.toHaveBeenCalled();
+    metadata.tasksCoreRefreshing = false;
+    metadata.tasksCoreRevision += 1;
+    await flush();
+    expect(ready.value).toBe(true);
+  });
+  it('waits for core metadata before requesting details', async () => {
+    metadata.hasInitialized = false;
+    const ready = start();
+    expect(metadata.fetchTaskObjectivesData).not.toHaveBeenCalled();
+    expect(ready.value).toBe(false);
+    metadata.hasInitialized = true;
+    await nextTick();
+    await flush();
+    expect(ready.value).toBe(true);
+  });
+  it('waits for edition eligibility so the first cards use the final filters', async () => {
+    const editions = deferred();
+    metadata.ensureEditionsData.mockReturnValue(editions.promise);
+    const ready = start();
+    await flush();
+    expect(ready.value).toBe(false);
+    editions.resolve();
+    await flush();
+    expect(ready.value).toBe(true);
+  });
+  it('does not hold an empty task result for optional requests', () => {
+    metadata.tasks = [];
+    expect(start().value).toBe(true);
+    expect(metadata.fetchTaskRewardsData).not.toHaveBeenCalled();
+  });
+  it.each([true, false])(
+    're-arms cached core replacement without loading (previous tasks: %s)',
+    async (hadTasks) => {
+      if (!hadTasks) metadata.tasks = [];
+      const ready = start();
+      await flush();
+      expect(ready.value).toBe(true);
+      const replacement = deferred();
+      metadata.fetchTaskObjectivesData.mockReturnValueOnce(replacement.promise);
+      metadata.tasks = [{ id: 'localized-task' }];
+      metadata.tasksCoreRevision += 1;
+      await nextTick();
+      expect(ready.value).toBe(false);
+      replacement.resolve();
+      await flush();
+      expect(ready.value).toBe(true);
+    }
+  );
+  it('waits for background edition revalidation after the cache read settles', async () => {
+    metadata.editionsLoading = true;
+    const ready = start();
+    await flush();
+    expect(ready.value).toBe(false);
+    metadata.editionsLoading = false;
+    await nextTick();
+    expect(ready.value).toBe(true);
+  });
+  it('waits for objective count differences after the objectives merge', async () => {
+    const differences = deferred();
+    metadata.fetchObjectiveModeCountDifferences.mockReturnValue(differences.promise);
+    const ready = start();
+    await flush();
+    expect(ready.value).toBe(false);
+    differences.resolve();
+    await flush();
+    expect(ready.value).toBe(true);
+  });
+  it('retries a discarded count request once after detail hydration', async () => {
+    metadata.objectiveModeCountDifferencesHydrated = false;
+    const replacement = deferred();
+    metadata.fetchObjectiveModeCountDifferences
+      .mockResolvedValueOnce('stale')
+      .mockReturnValueOnce(replacement.promise);
+    const ready = start();
+    await flush();
+    expect(metadata.fetchObjectiveModeCountDifferences).toHaveBeenCalledTimes(2);
+    expect(ready.value).toBe(false);
+    replacement.resolve();
+    await flush();
+    expect(ready.value).toBe(true);
+    expect(metadata.fetchObjectiveModeCountDifferences).toHaveBeenCalledTimes(2);
+  });
+  it('does not let stalled edition revalidation hold the page indefinitely', async () => {
+    metadata.editionsLoading = true;
+    const ready = start();
+    await flush();
+    expect(ready.value).toBe(false);
+    await vi.advanceTimersByTimeAsync(TASK_DETAIL_WAIT_MS);
+    expect(ready.value).toBe(true);
+  });
+  it('releases the page on request failure', async () => {
+    metadata.fetchTaskObjectivesData.mockRejectedValue(new Error('offline'));
+    const ready = start();
+    await flush();
+    expect(ready.value).toBe(true);
+  });
+  it('releases stalled requests after three seconds without cancelling data loading', async () => {
+    const objectives = deferred();
+    metadata.fetchTaskObjectivesData.mockReturnValue(objectives.promise);
+    const ready = start();
+    await vi.advanceTimersByTimeAsync(2999);
+    expect(ready.value).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(ready.value).toBe(true);
+    objectives.resolve();
+    await flush();
+    expect(ready.value).toBe(true);
+  });
+  it.each(['mode', 'languageCode'] as const)(
+    'ignores an old request when %s changes',
+    async (key) => {
+      const old = deferred();
+      const current = deferred();
+      metadata.fetchTaskObjectivesData
+        .mockReturnValueOnce(old.promise)
+        .mockReturnValueOnce(current.promise);
+      const ready = start();
+      metadata[key] = key === 'mode' ? 'pve' : 'de';
+      await nextTick();
+      old.resolve();
+      await flush();
+      expect(ready.value).toBe(false);
+      current.resolve();
+      await flush();
+      expect(ready.value).toBe(true);
+    }
+  );
+  it('resets readiness for a core reload and ignores the previous request', async () => {
+    const old = deferred();
+    metadata.fetchTaskObjectivesData.mockReturnValueOnce(old.promise);
+    const ready = start();
+    metadata.loading = true;
+    await nextTick();
+    old.resolve();
+    await flush();
+    expect(ready.value).toBe(false);
+    metadata.loading = false;
+    await nextTick();
+    await flush();
+    expect(ready.value).toBe(true);
+    expect(metadata.fetchTaskObjectivesData).toHaveBeenCalledTimes(2);
+  });
+  it('cleans up timers and ignores settlement after leaving the page', async () => {
+    const request = deferred();
+    metadata.fetchTaskRewardsData.mockReturnValue(request.promise);
+    const ready = start();
+    scope.stop();
+    request.resolve();
+    await flush();
+    expect(ready.value).toBe(false);
+    expectWaitSettled();
+  });
+});

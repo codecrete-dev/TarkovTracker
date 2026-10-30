@@ -1,49 +1,27 @@
+import { buildTarkovCacheUrls } from './cache-targets.ts';
 import {
   authenticateUser,
   handleCorsPreflight,
   validateMethod,
-  createErrorResponse,
   createSuccessResponse,
   type AuthSuccess,
 } from 'shared/auth';
+type CachePurgeErrorCode =
+  | 'authentication_required'
+  | 'admin_privileges_required'
+  | 'invalid_purge_type'
+  | 'method_not_allowed'
+  | 'service_config_missing'
+  | 'cache_purge_failed';
+const createPurgeError = (code: CachePurgeErrorCode, status: number, req: Request): Response =>
+  createSuccessResponse({ error: code, code }, status, req);
 // Cloudflare API configuration
 const CLOUDFLARE_API_URL = 'https://api.cloudflare.com/client/v4';
-const EDGE_CACHE_PATH = '/__edge-cache/tarkov';
 const TWITCH_CONFIG_CACHE_TAG = 'promoted-twitch-config';
 const TWITCH_CONFIG_PATH = '/api/twitch/config';
 const TWITCH_CONFIG_REPURGE_DELAY_MS = 6000;
 const PURGE_TIMEOUT_MS = 8000;
 const PURGE_CHUNK_SIZE = 30;
-const TARKOV_CACHE_KEYS = [
-  { key: 'bootstrap', includesGameMode: false },
-  { key: 'tasks-core', includesGameMode: true },
-  { key: 'tasks-objectives', includesGameMode: true },
-  { key: 'tasks-rewards', includesGameMode: true },
-  { key: 'hideout', includesGameMode: true },
-  { key: 'items', includesGameMode: false },
-  { key: 'items-lite', includesGameMode: false },
-  { key: 'prestige', includesGameMode: false },
-];
-// Keep in sync with app/utils/constants.ts (API_SUPPORTED_LANGUAGES)
-const TARKOV_LANGUAGES = [
-  'cs',
-  'de',
-  'en',
-  'es',
-  'fr',
-  'hu',
-  'it',
-  'ja',
-  'ko',
-  'pl',
-  'pt',
-  'ro',
-  'ru',
-  'sk',
-  'tr',
-  'zh',
-];
-const TARKOV_GAME_MODES = ['regular', 'pve'];
 type PurgeType = 'all' | 'tarkov-data' | 'twitch-config';
 const PURGE_AUDIT_ACTION: Record<PurgeType, string> = {
   all: 'cache_purge',
@@ -180,32 +158,6 @@ function chunkArray<T>(items: T[], size: number): T[][] {
   }
   return chunks;
 }
-function buildEntryUrls(
-  cacheBase: string,
-  entry: { key: string; includesGameMode: boolean }
-): string[] {
-  const urls: string[] = [];
-  for (const lang of TARKOV_LANGUAGES) {
-    if (entry.includesGameMode) {
-      for (const gameMode of TARKOV_GAME_MODES) {
-        urls.push(`${cacheBase}/${entry.key}-${lang}-${gameMode}`);
-      }
-    } else {
-      urls.push(`${cacheBase}/${entry.key}-${lang}`);
-    }
-  }
-  return urls;
-}
-function buildTarkovCacheUrls(baseUrl: string): string[] {
-  const urls: string[] = [];
-  for (const origin of buildCacheOrigins(baseUrl)) {
-    const cacheBase = `${origin}${EDGE_CACHE_PATH}`;
-    for (const entry of TARKOV_CACHE_KEYS) {
-      urls.push(...buildEntryUrls(cacheBase, entry));
-    }
-  }
-  return urls;
-}
 function buildTwitchConfigUrls(baseUrl: string): string[] {
   if (!baseUrl) return [];
   try {
@@ -312,7 +264,10 @@ async function purgeTarkovDataCache(
     result: { id: '' },
   };
   const resultIds: string[] = [];
-  for (const chunk of chunkArray(buildTarkovCacheUrls(baseUrl), PURGE_CHUNK_SIZE)) {
+  for (const chunk of chunkArray(
+    buildTarkovCacheUrls(buildCacheOrigins(baseUrl)),
+    PURGE_CHUNK_SIZE
+  )) {
     const result = await purgeCloudflareCache(zoneId, apiToken, { files: chunk });
     markPurgeFailure(aggregate, result);
     collectPurgeIds(resultIds, result);
@@ -327,17 +282,17 @@ Deno.serve(async (req) => {
   try {
     // Validate HTTP method
     const methodError = validateMethod(req, ['POST']);
-    if (methodError) return methodError;
+    if (methodError) return createPurgeError('method_not_allowed', 405, req);
     // Authenticate user
     const authResult = await authenticateUser(req);
     if ('error' in authResult) {
-      return createErrorResponse(authResult.error, authResult.status, req);
+      return createPurgeError('authentication_required', authResult.status, req);
     }
     const { user, supabase } = authResult as AuthSuccess;
     // Verify admin status
     const isAdmin = await verifyAdminStatus(supabase, user.id);
     if (!isAdmin) {
-      return createErrorResponse('Admin access required', 403, req);
+      return createPurgeError('admin_privileges_required', 403, req);
     }
     // Parse request body
     const rawBody = await req.text();
@@ -363,24 +318,20 @@ Deno.serve(async (req) => {
     const purgeType = body.purgeType!;
     // Validate purge type
     if (!['all', 'tarkov-data', 'twitch-config'].includes(purgeType)) {
-      return createErrorResponse(
-        "Invalid purgeType. Must be 'all', 'tarkov-data', or 'twitch-config'",
-        400,
-        req
-      );
+      return createPurgeError('invalid_purge_type', 400, req);
     }
     // Get Cloudflare credentials
     const zoneId = Deno.env.get('CLOUDFLARE_ZONE_ID');
     const apiToken = Deno.env.get('CLOUDFLARE_API_TOKEN');
     if (!zoneId || !apiToken) {
       console.error('[admin-cache-purge] Missing Cloudflare credentials');
-      return createErrorResponse('Cloudflare credentials not configured', 500, req);
+      return createPurgeError('service_config_missing', 500, req);
     }
     const baseUrl = Deno.env.get('APP_URL')?.trim() ?? '';
     if (purgeType === 'tarkov-data') {
       if (!baseUrl) {
         console.error('[admin-cache-purge] Missing APP_URL');
-        return createErrorResponse('Application URL not configured', 500, req);
+        return createPurgeError('service_config_missing', 500, req);
       }
       try {
         const protocol = new URL(baseUrl).protocol;
@@ -389,7 +340,7 @@ Deno.serve(async (req) => {
         }
       } catch {
         console.error('[admin-cache-purge] Invalid APP_URL');
-        return createErrorResponse('Application URL invalid', 500, req);
+        return createPurgeError('service_config_missing', 500, req);
       }
     }
     // Execute cache purge
@@ -425,7 +376,7 @@ Deno.serve(async (req) => {
           ? errors.map((e) => e.message).join(', ')
           : 'Unknown error (no details provided by Cloudflare)';
       console.error('[admin-cache-purge] Cloudflare purge failed:', errorMessages);
-      return createErrorResponse(`Cache purge failed: ${errorMessages}`, 502, req);
+      return createPurgeError('cache_purge_failed', 502, req);
     }
     return createSuccessResponse(
       {
@@ -440,6 +391,6 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error('[admin-cache-purge] Error:', error);
-    return createErrorResponse('Internal server error', 500, req);
+    return createPurgeError('cache_purge_failed', 500, req);
   }
 });

@@ -1,3 +1,4 @@
+import { normalizeTaskIdList } from '@/features/maps/utils/mapTaskVisibility';
 import {
   normalizeNeededItemsCardStyle,
   normalizeNeededItemsFilterType,
@@ -15,16 +16,26 @@ import type { NeededItemsFilterType } from '@/features/neededitems/neededitems-c
 import type { PreferencesState } from '@/stores/usePreferences';
 export type PersistedPreferencesState = Partial<Omit<PreferencesState, 'saving'>>;
 export type PersistedPreferencesStateWithLegacy = PersistedPreferencesState & {
+  taskCardDensity?: unknown;
+  useAutomaticLevelCalculation?: unknown;
   neededItemsHideCollected?: boolean;
   onlyTasksWithSuggestedKeys?: boolean;
+  hideoutSortReadyFirst?: unknown;
+  hideoutCollapseCompleted?: unknown;
 };
+// Keys from retired or renamed preferences; a saved state holding any of them is re-persisted after
+// sanitizing.
+const LEGACY_PREFERENCE_KEYS = [
+  'useAutomaticLevelCalculation',
+  'taskCardDensity',
+  'hideoutSortReadyFirst',
+  'hideoutCollapseCompleted',
+  'neededItemsHideCollected',
+  'onlyTasksWithSuggestedKeys',
+] as const;
 export const requiresLegacyPreferencesMigration = (
   persistedState: PersistedPreferencesStateWithLegacy
-): boolean => {
-  return (
-    'neededItemsHideCollected' in persistedState || 'onlyTasksWithSuggestedKeys' in persistedState
-  );
-};
+): boolean => LEGACY_PREFERENCE_KEYS.some((key) => key in persistedState);
 const isPlainObject = (value: unknown): value is Record<string, unknown> => {
   if (!value || typeof value !== 'object') {
     return false;
@@ -161,12 +172,21 @@ const normalizeOptionalNeededItemsCardStyle = (
 export const clonePreferencesSnapshot = <T>(value: T): T => {
   return cloneSerializablePreferencesValue(value) as T;
 };
+const sanitizeMapTaskVisibilityIds = (state: PersistedPreferencesStateWithLegacy): void => {
+  if ('mapHiddenTaskIds' in state)
+    state.mapHiddenTaskIds = normalizeTaskIdList(state.mapHiddenTaskIds);
+  if ('hiddenTaskIds' in state) state.hiddenTaskIds = normalizeTaskIdList(state.hiddenTaskIds);
+};
 export const sanitizePersistedPreferencesState = (
   persistedState: PersistedPreferencesStateWithLegacy = {}
 ): PersistedPreferencesState => {
   const sanitizedState = clonePreferencesSnapshot(
     persistedState
   ) as PersistedPreferencesStateWithLegacy;
+  delete sanitizedState.useAutomaticLevelCalculation;
+  delete sanitizedState.taskCardDensity;
+  delete sanitizedState.hideoutSortReadyFirst;
+  delete sanitizedState.hideoutCollapseCompleted;
   const legacyHideCollected = sanitizedState.neededItemsHideCollected;
   if (
     typeof sanitizedState.neededItemsHideOwned !== 'boolean' &&
@@ -245,6 +265,7 @@ export const sanitizePersistedPreferencesState = (
       sanitizedState.neededItemsCardStyle
     );
   }
+  sanitizeMapTaskVisibilityIds(sanitizedState);
   if ('keybindOmnibar' in sanitizedState) {
     sanitizedState.keybindOmnibar = sanitizeKeybind(
       sanitizedState.keybindOmnibar,

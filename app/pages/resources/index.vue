@@ -1,19 +1,7 @@
 <template>
-  <div class="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 sm:py-6">
+  <div class="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
     <div class="flex flex-col gap-5">
-      <header class="mx-auto max-w-2xl space-y-2 text-center">
-        <h1 class="text-2xl font-bold tracking-wide text-white sm:text-3xl">
-          {{ t('page.resources.title', 'Resources & Guides') }}
-        </h1>
-        <p class="text-surface-300 text-sm leading-relaxed sm:text-base">
-          {{
-            t(
-              'page.resources.subtitle',
-              'Find companion apps, community tools, developer resources, and guides for getting more from TarkovTracker.'
-            )
-          }}
-        </p>
-      </header>
+      <PageHeader :title="t('page.resources.title')" :description="t('page.resources.subtitle')" />
       <div class="space-y-3">
         <label :for="searchInputId" class="sr-only">
           {{ t('page.resources.search_placeholder', 'Search tools and guides...') }}
@@ -54,7 +42,7 @@
               'min-h-9 px-4',
               activeCategory === filter.id
                 ? 'ring-primary-400/40 ring-1'
-                : 'text-surface-200 hover:text-white',
+                : 'text-surface-200 light:hover:text-surface-50 hover:text-white',
             ]"
             :label="filter.label"
             @click="activeCategory = filter.id"
@@ -112,7 +100,7 @@
       >
         <div class="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div class="min-w-0 space-y-1">
-            <h2 class="text-base font-semibold tracking-wide text-white">
+            <h2 class="light:text-surface-50 text-base font-semibold tracking-wide text-white">
               {{ t('page.resources.suggest_title', 'Know a useful Tarkov resource?') }}
             </h2>
             <p class="text-surface-400 text-sm leading-relaxed sm:text-[0.9375rem]">
@@ -132,15 +120,19 @@
             variant="soft"
             icon="i-mdi-lightbulb-on-outline"
             trailing-icon="i-mdi-open-in-new"
-            class="min-h-9 shrink-0"
-            :label="t('page.resources.suggest_cta', 'Suggest a resource')"
-          />
+            class="min-h-9 w-full shrink-0 justify-center sm:w-auto"
+          >
+            <span class="text-center sm:truncate">
+              {{ t('page.resources.suggest_cta', 'Suggest a resource') }}
+            </span>
+          </UButton>
         </div>
       </section>
     </div>
   </div>
 </template>
 <script setup lang="ts">
+  import PageHeader from '@/components/ui/PageHeader.vue';
   import ResourceCard from '@/features/resources/ResourceCard.vue';
   import {
     CATEGORY_LABEL_FALLBACKS,
@@ -153,14 +145,6 @@
   type CategoryFilterId = 'all' | ResourceCategory;
   const { t } = useI18n({ useScope: 'global' });
   definePageMeta({ layout: 'default' });
-  const subtitleFallback =
-    'Find companion apps, community tools, developer resources, and guides for getting more from TarkovTracker.';
-  useSeoMeta({
-    title: computed(() => t('page.resources.title', 'Resources & Guides')),
-    description: computed(() => t('page.resources.subtitle', subtitleFallback)),
-    ogTitle: computed(() => t('page.resources.title', 'Resources & Guides')),
-    ogDescription: computed(() => t('page.resources.subtitle', subtitleFallback)),
-  });
   const searchInputId = useId();
   const searchQuery = ref('');
   const activeCategory = ref<CategoryFilterId>('all');

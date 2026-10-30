@@ -10,7 +10,7 @@
   />
   <template v-if="showImportTools">
     <GenericCard
-      v-if="!isBlockedByOtherDataFlow && !isBackupOrEftLogsImportPreviewActive"
+      v-if="!isBlockedByOtherDataFlow && !isBackupOrEftLogsImportPreviewActive && !eftLogsIsParsing"
       icon="mdi-account-arrow-up"
       icon-color="info"
       highlight-color="info"
@@ -315,6 +315,8 @@
                 icon="i-mdi-check"
                 color="primary"
                 class="flex-1"
+                :loading="tarkovDevIsImporting"
+                :disabled="tarkovDevIsImporting"
                 @click="handleTarkovDevConfirm"
               >
                 {{ $t('common.confirm_import') }}
@@ -323,6 +325,7 @@
                 variant="soft"
                 color="neutral"
                 class="flex-1"
+                :disabled="tarkovDevIsImporting"
                 @click="resetTarkovDevImport()"
               >
                 {{ $t('common.cancel') }}
@@ -389,12 +392,13 @@
           <p class="text-surface-500 text-sm">
             {{ $t('settings.data_management.eft_logs_section_description') }}
           </p>
-          <template v-if="!isAnyImportPreviewActive">
+          <template v-if="!isAnyImportPreviewActive && !eftLogsIsParsing">
             <UButton
+              ref="eftLogsFolderButtonRef"
               icon="i-mdi-folder-upload-outline"
               block
               :ui="{
-                base: 'bg-info-900 hover:bg-info-800 active:bg-info-700 text-info-200 focus-visible:ring focus-visible:ring-info-500',
+                base: 'bg-info-900 light:bg-info-50 hover:bg-info-800 light:hover:bg-info-100 active:bg-info-700 light:active:bg-info-100 text-info-200 focus-visible:ring focus-visible:ring-info-500',
               }"
               :disabled="isAnyImportActive"
               @click="showEftLogsFolderInput"
@@ -404,6 +408,7 @@
             <div class="bg-surface-900/80 rounded-md border border-white/10 p-3">
               <p class="text-surface-300 text-xs font-semibold">
                 {{ $t('settings.log_import.upload_hint') }}
+                {{ $t('settings.log_import.large_folder_hint') }}
               </p>
               <ul class="text-surface-400 mt-2 list-disc space-y-1 pl-4 text-xs">
                 <li>{{ $t('settings.log_import.logs_folder_required') }}</li>
@@ -429,7 +434,52 @@
               </ul>
             </div>
           </template>
+          <div class="space-y-2">
+            <output class="block">
+              <span v-if="eftLogsIsParsing" class="text-sm">
+                {{ $t('settings.log_import.reading_logs') }}
+              </span>
+            </output>
+            <template v-if="eftLogsIsParsing">
+              <progress
+                :value="eftLogsParseProgress.bytesRead"
+                :max="eftLogsParseProgress.totalBytes || 1"
+                :aria-label="$t('settings.log_import.reading_logs')"
+                class="w-full"
+              />
+              <UButton color="neutral" variant="soft" @click="cancelEftLogsParsing()">
+                {{ $t('common.cancel') }}
+              </UButton>
+            </template>
+          </div>
           <template v-if="eftLogsImportState === 'preview' && eftLogsPreview">
+            <UAlert
+              v-if="eftLogsPreview.hasMultipleAccounts"
+              icon="i-mdi-account-multiple"
+              color="warning"
+              variant="soft"
+              :title="$t('settings.log_import.multiple_accounts_title')"
+              :description="$t('settings.log_import.multiple_accounts_description')"
+            />
+            <div v-if="eftLogsAccountItems.length > 1" class="space-y-1">
+              <div class="flex items-center gap-1">
+                <span class="text-surface-200 text-sm font-semibold" aria-hidden="true">
+                  {{ $t('settings.log_import.account_filter_label') }}
+                </span>
+                <UTooltip :text="$t('settings.log_import.account_filter_tooltip')">
+                  <UIcon name="i-mdi-information" class="text-surface-500 h-3.5 w-3.5" />
+                </UTooltip>
+              </div>
+              <URadioGroup
+                :model-value="eftLogsPreview.selectedAccount ?? undefined"
+                :items="eftLogsAccountItems"
+                :legend="$t('settings.log_import.account_filter_label')"
+                :ui="{ legend: 'sr-only' }"
+                value-key="value"
+                :disabled="eftLogsIsImporting"
+                @update:model-value="(account) => handleEftLogsAccountChange(String(account))"
+              />
+            </div>
             <div class="space-y-1">
               <div class="flex items-center gap-1">
                 <label class="text-surface-200 text-sm font-semibold">
@@ -445,8 +495,9 @@
                   :key="version"
                   :model-value="eftLogsIncludedVersions.includes(version)"
                   :disabled="
-                    eftLogsIncludedVersions.length === 1 &&
-                    eftLogsIncludedVersions.includes(version)
+                    eftLogsIsImporting ||
+                    (eftLogsIncludedVersions.length === 1 &&
+                      eftLogsIncludedVersions.includes(version))
                   "
                   :label="formatEftLogsVersionLabel(version)"
                   @update:model-value="
@@ -458,6 +509,13 @@
                 {{ $t('settings.log_import.version_filter_hint') }}
               </p>
             </div>
+            <EftLogImportControls
+              :model-value="eftLogsSelection"
+              :events="eftLogsPreview.events ?? []"
+              :target-mode="eftLogsTargetMode"
+              :disabled="eftLogsIsImporting"
+              @update:model-value="setEftLogsSelection"
+            />
             <div
               class="bg-surface-900/80 divide-surface-700 divide-y rounded-md border border-white/10"
             >
@@ -605,11 +663,33 @@
                 </div>
               </div>
             </div>
+            <div v-if="eftLogsUnknownFailedTaskIds.length" class="space-y-1">
+              <p class="text-surface-400 text-xs">
+                {{ $t('settings.log_import.unknown_failed_events') }}
+              </p>
+              <ul class="text-surface-100 space-y-1 text-xs">
+                <li v-for="taskId in eftLogsUnknownFailedTaskIds" :key="`unknown-failed-${taskId}`">
+                  {{ formatEftLogsUnknownTask(taskId) }}
+                </li>
+              </ul>
+            </div>
+            <p class="text-surface-300 text-sm">
+              {{ $t('settings.log_import.failed_tasks', { count: eftLogsFailedCount }) }}
+            </p>
+            <UAlert
+              v-if="eftLogsPreview.parseErrorCount || eftLogsPreview.skippedSeasonalEventCount"
+              color="warning"
+              :description="eftLogsSkippedEventsMessage"
+            />
+            <UAlert v-if="eftLogsPreviewError" color="error" :description="eftLogsPreviewError" />
             <div v-if="eftLogsRequiresManualModeSelection" class="space-y-1">
               <label class="text-surface-200 text-sm font-semibold">
                 {{ $t('settings.log_import.import_unknown_to_mode') }}
               </label>
-              <GameModeToggle v-model="eftLogsTargetMode" :disabled-modes="[GAME_MODES.SEASONAL]" />
+              <GameModeToggle
+                v-model="eftLogsTargetMode"
+                :disabled-modes="eftLogsDisabledTargetModes"
+              />
               <p class="text-surface-400 text-xs">
                 {{ $t('settings.log_import.import_unknown_to_mode_hint') }}
               </p>
@@ -617,16 +697,37 @@
             <p v-else class="text-surface-400 text-xs">
               {{ $t('settings.log_import.auto_mode_hint') }}
             </p>
+            <p class="text-surface-200 text-sm" role="status">
+              {{
+                $t('settings.log_import.selection_summary', {
+                  count: eftLogsEffectiveEvents.length,
+                  modes: eftLogsSelectedModeLabel,
+                })
+              }}
+            </p>
             <div class="flex gap-2">
               <UButton
                 icon="i-mdi-check"
                 color="primary"
                 class="flex-1"
+                :loading="eftLogsIsImporting"
+                :disabled="
+                  eftLogsIsImporting ||
+                  eftLogsHasOutsideSeasonEvents ||
+                  !eftLogsEffectiveEvents.length ||
+                  eftLogsInvalidDate
+                "
                 @click="handleEftLogsConfirm"
               >
                 {{ $t('common.confirm_import') }}
               </UButton>
-              <UButton variant="soft" color="neutral" class="flex-1" @click="resetEftLogsImport()">
+              <UButton
+                variant="soft"
+                color="neutral"
+                class="flex-1"
+                :disabled="eftLogsIsImporting"
+                @click="resetEftLogsImport()"
+              >
                 {{ $t('common.cancel') }}
               </UButton>
             </div>
@@ -646,6 +747,7 @@
                 $t('settings.log_import.success_description', {
                   active_count: eftLogsActiveCount,
                   complete_count: eftLogsCompletedCount,
+                  failed_count: eftLogsFailedCount,
                 })
               "
             />
@@ -670,7 +772,12 @@
   </template>
   <template v-if="showBackupTools">
     <GenericCard
-      v-if="!isBlockedByOtherDataFlow && !isTarkovDevImportPreviewActive && !isEftLogsPreviewActive"
+      v-if="
+        !isBlockedByOtherDataFlow &&
+        !isTarkovDevImportPreviewActive &&
+        !isEftLogsPreviewActive &&
+        !eftLogsIsParsing
+      "
       icon="mdi-backup-restore"
       icon-color="primary"
       highlight-color="primary"
@@ -690,12 +797,91 @@
           <p class="text-surface-500 text-sm">
             {{ $t('settings.data_management.backup_restore_section_description') }}
           </p>
-          <template v-if="!isAnyImportPreviewActive">
+          <div class="bg-surface-900/80 space-y-2 rounded-md border border-white/10 p-3">
+            <p
+              v-if="legacyProgressRecoveryOverflow"
+              class="text-warning-300 text-sm"
+              data-testid="older-tab-recovery-overflow"
+            >
+              {{ $t('settings.data_management.older_tab_recovery_full') }}
+            </p>
+            <p v-if="legacyProgressRecoveryCount" class="text-warning-300 text-sm">
+              {{
+                $t('settings.data_management.older_tab_recovery_available', {
+                  count: legacyProgressRecoveryCount,
+                })
+              }}
+            </p>
+            <UButton
+              v-for="index in legacyProgressRecoveryCount"
+              :key="index"
+              color="neutral"
+              variant="soft"
+              :data-testid="`older-tab-review-${index}`"
+              :disabled="backupImportState === 'parsing'"
+              @click="reviewOlderTabProgress(index - 1)"
+            >
+              {{ $t('settings.data_management.review_older_edit', { index }) }}
+            </UButton>
+            <UButton
+              icon="i-mdi-download"
+              color="neutral"
+              variant="soft"
+              data-testid="device-progress-recovery-export"
+              @click="handleExportDeviceRecovery"
+            >
+              {{ $t('settings.data_management.export_device_recovery') }}
+            </UButton>
+            <UButton
+              v-if="
+                (legacyProgressRecoveryCount || legacyProgressRecoveryOverflow) &&
+                !confirmRecoveryCleanup
+              "
+              color="neutral"
+              variant="soft"
+              data-testid="older-tab-cleanup"
+              @click="confirmRecoveryCleanup = true"
+            >
+              {{ $t('settings.data_management.clear_older_copies') }}
+            </UButton>
+            <div v-if="confirmRecoveryCleanup" class="space-y-2">
+              <p class="text-surface-400 text-sm">
+                {{ $t('settings.data_management.clear_older_copies_confirmation') }}
+              </p>
+              <UButton
+                color="warning"
+                :loading="recoveryCleanupRunning"
+                :disabled="recoveryCleanupRunning"
+                data-testid="older-tab-cleanup-confirm"
+                @click="handleRecoveryCleanupDownload"
+              >
+                {{ $t('settings.data_management.export_device_recovery') }}
+              </UButton>
+              <UButton
+                v-if="recoveryExportPending"
+                color="warning"
+                :disabled="recoveryCleanupRunning"
+                data-testid="older-tab-cleanup-saved-confirm"
+                @click="handleRecoveryCleanup"
+              >
+                {{ $t('settings.data_management.saved_recovery_archive_confirmation') }}
+              </UButton>
+              <UButton
+                color="neutral"
+                variant="soft"
+                :disabled="recoveryCleanupRunning"
+                @click="confirmRecoveryCleanup = false"
+              >
+                {{ $t('common.cancel') }}
+              </UButton>
+            </div>
+          </div>
+          <template v-if="!isAnyImportPreviewActive && !eftLogsIsParsing">
             <div class="grid gap-3 md:grid-cols-2">
               <div class="bg-surface-900/80 space-y-4 rounded-md border border-white/10 p-4">
                 <div class="flex items-start gap-3">
                   <div
-                    class="bg-primary-900/70 text-primary-200 border-primary-700/60 flex h-9 w-9 shrink-0 items-center justify-center rounded-md border"
+                    class="bg-primary-900/70 light:bg-primary-100 text-primary-200 border-primary-700/60 flex h-9 w-9 shrink-0 items-center justify-center rounded-md border"
                   >
                     <UIcon name="i-mdi-download" class="h-5 w-5" />
                   </div>
@@ -712,7 +898,7 @@
                   icon="i-mdi-download"
                   block
                   :ui="{
-                    base: 'bg-primary-900 hover:bg-primary-800 active:bg-primary-700 text-primary-200 focus-visible:ring focus-visible:ring-primary-500',
+                    base: 'bg-primary-900 light:bg-primary-50 hover:bg-primary-800 light:hover:bg-primary-100 active:bg-primary-700 light:active:bg-primary-100 text-primary-200 focus-visible:ring focus-visible:ring-primary-500',
                   }"
                   :disabled="isAnyImportActive"
                   @click="handleExportProgress"
@@ -723,7 +909,7 @@
               <div class="bg-surface-900/80 space-y-4 rounded-md border border-white/10 p-4">
                 <div class="flex items-start gap-3">
                   <div
-                    class="bg-primary-900/70 text-primary-200 border-primary-700/60 flex h-9 w-9 shrink-0 items-center justify-center rounded-md border"
+                    class="bg-primary-900/70 light:bg-primary-100 text-primary-200 border-primary-700/60 flex h-9 w-9 shrink-0 items-center justify-center rounded-md border"
                   >
                     <UIcon name="i-mdi-file-upload-outline" class="h-5 w-5" />
                   </div>
@@ -737,10 +923,11 @@
                   </div>
                 </div>
                 <UButton
+                  ref="backupImportButtonRef"
                   icon="i-mdi-file-upload-outline"
                   block
                   :ui="{
-                    base: 'bg-primary-900 hover:bg-primary-800 active:bg-primary-700 text-primary-200 focus-visible:ring focus-visible:ring-primary-500',
+                    base: 'bg-primary-900 light:bg-primary-50 hover:bg-primary-800 light:hover:bg-primary-100 active:bg-primary-700 light:active:bg-primary-100 text-primary-200 focus-visible:ring focus-visible:ring-primary-500',
                   }"
                   :disabled="isAnyImportActive"
                   @click="backupFileInputRef?.click()"
@@ -750,6 +937,37 @@
               </div>
             </div>
           </template>
+          <div class="flex items-center gap-3">
+            <output data-testid="backup-reading-status" class="text-surface-300 text-sm">
+              {{ backupReadingLabel }}
+            </output>
+            <template v-if="backupImportState === 'parsing'">
+              <UIcon name="i-mdi-loading" class="h-5 w-5 animate-spin" aria-hidden="true" />
+              <UButton variant="soft" color="neutral" @click="cancelBackupParsing">
+                {{ $t('common.cancel') }}
+              </UButton>
+            </template>
+          </div>
+          <div v-if="recoveryArchiveEntries.length" class="space-y-2">
+            <p class="text-surface-400 text-sm">
+              {{ $t('settings.data_management.recovery_archive_select_entry') }}
+            </p>
+            <UButton
+              v-for="(entry, index) in recoveryArchiveEntries"
+              :key="index"
+              color="neutral"
+              :variant="selectedRecoveryArchiveEntry === index ? 'solid' : 'soft'"
+              :data-testid="`recovery-archive-entry-${index}`"
+              :disabled="backupImportState === 'parsing'"
+              @click="reviewRecoveryArchiveEntry(index)"
+            >
+              {{
+                $t(`settings.data_management.recovery_archive_${entry.kind}`, {
+                  index: entry.index + 1,
+                })
+              }}
+            </UButton>
+          </div>
           <template v-if="backupImportState === 'preview' && backupPreview">
             <div
               class="bg-surface-900/80 divide-surface-700 divide-y rounded-md border border-white/10"
@@ -928,7 +1146,7 @@
             icon="i-mdi-bug-outline"
             block
             :ui="{
-              base: 'bg-warning-900 hover:bg-warning-800 active:bg-warning-700 text-warning-200 focus-visible:ring focus-visible:ring-warning-500',
+              base: 'bg-warning-900 light:bg-warning-50 hover:bg-warning-800 light:hover:bg-warning-100 active:bg-warning-700 light:active:bg-warning-100 text-warning-200 focus-visible:ring focus-visible:ring-warning-500',
             }"
             :disabled="isAnyImportActive"
             @click="handleExportDebugSnapshot"
@@ -943,6 +1161,7 @@
 <script setup lang="ts">
   import GenericCard from '@/components/ui/GenericCard.vue';
   import { useTurnstileWidget } from '@/composables/useTurnstile';
+  import EftLogImportControls from '@/features/settings/EftLogImportControls.vue';
   import GameModeToggle from '@/features/settings/GameModeToggle.vue';
   import {
     useDataManagementSession,
@@ -956,11 +1175,19 @@
   import { useTarkovStore } from '@/stores/useTarkov';
   import {
     GAME_MODES,
+    GAME_MODE_VALUES,
     getGameModeLabel,
     sortSkillsByGameOrder,
     type GameMode,
-    type ImportableGameMode,
   } from '@/utils/constants';
+  import { hasInvalidEftLogCutoff, selectEftImportEvents } from '@/utils/eftLogImportSelection';
+  import {
+    hasOutsideSeasonEvents,
+    isCurrentSeasonLogEvent,
+    isEligibleImportEvent,
+    UNIDENTIFIED_LOG_ACCOUNT,
+    type EftLogAccountSummary,
+  } from '@/utils/eftLogQuestParser';
   import { logger } from '@/utils/logger';
   import { getImportCooldownRemainingMs } from '@/utils/tarkovDevImportCooldown';
   import { buildTarkovDevProfileUrl } from '@/utils/tarkovDevProfileUrl';
@@ -991,6 +1218,15 @@
   const dataManagementSession = props.session ?? useDataManagementSession();
   const {
     exportProgress,
+    exportDeviceProgressRecovery,
+    confirmRecoveryArchiveSaved,
+    recoveryExportPending,
+    recoveryArchiveEntries,
+    selectedRecoveryArchiveEntry,
+    reviewRecoveryArchiveEntry,
+    reviewOlderTabProgress,
+    legacyProgressRecoveryCount,
+    legacyProgressRecoveryOverflow,
     exportError: backupExportError,
     exportDebugSnapshot,
     debugExportError,
@@ -1001,11 +1237,22 @@
     confirmBackupImport,
     resetImport: resetBackupImport,
   } = dataManagementSession.backup;
+  const backupReadingLabel = computed(() =>
+    backupImportState.value === 'parsing' ? t('settings.data_management.reading_backup') : ''
+  );
+  const confirmRecoveryCleanup = ref(false);
+  const recoveryCleanupRunning = ref(false);
   const backupFileInputRef = ref<HTMLInputElement | null>(null);
+  const backupImportButtonRef = ref<{ $el?: HTMLElement } | null>(null);
   const importTarget = ref<GameMode | 'all'>('all');
   function resetBackupPreview() {
     importTarget.value = 'all';
     resetBackupImport();
+  }
+  function cancelBackupParsing() {
+    resetBackupPreview();
+    // Cancellation unmounts the focused control; return to the file picker.
+    void nextTick(() => backupImportButtonRef.value?.$el?.focus());
   }
   async function handleExportProgress() {
     try {
@@ -1018,6 +1265,46 @@
         description: backupExportError.value,
         color: 'error',
       });
+    }
+  }
+  async function handleExportDeviceRecovery() {
+    try {
+      await exportDeviceProgressRecovery();
+      confirmRecoveryCleanup.value = true;
+    } catch (error) {
+      logger.error('DataManagementCard: recovery export failed', error);
+      toast.add({
+        title: t('settings.data_management.export_error_title'),
+        description:
+          error instanceof Error &&
+          error.message === t('settings.data_management.recovery_archive_too_large')
+            ? error.message
+            : t('settings.data_management.recovery_export_failed'),
+        color: 'error',
+      });
+    }
+  }
+  async function handleRecoveryCleanupDownload() {
+    await handleExportDeviceRecovery();
+  }
+  async function handleRecoveryCleanup() {
+    recoveryCleanupRunning.value = true;
+    try {
+      await confirmRecoveryArchiveSaved();
+      confirmRecoveryCleanup.value = false;
+    } catch (error) {
+      logger.error('DataManagementCard: recovery cleanup failed', error);
+      toast.add({
+        title: t('settings.data_management.export_error_title'),
+        description:
+          error instanceof Error &&
+          error.message === t('settings.data_management.recovery_owner_changed')
+            ? error.message
+            : t('settings.data_management.recovery_cleanup_failed'),
+        color: 'error',
+      });
+    } finally {
+      recoveryCleanupRunning.value = false;
     }
   }
   async function handleExportDebugSnapshot() {
@@ -1083,6 +1370,7 @@
   }
   const {
     importState: tarkovDevImportState,
+    isImporting: tarkovDevIsImporting,
     previewData: tarkovDevPreview,
     importError: tarkovDevImportError,
     importErrorCode: tarkovDevImportErrorCode,
@@ -1103,8 +1391,7 @@
   const tarkovDevProfileUrlInput = ref('');
   const tarkovDevRequestGeneration = ref(0);
   const currentTarkovDevMode = (): GameMode => tarkovStore.getCurrentGameMode();
-  const currentImportableMode = (): ImportableGameMode =>
-    tarkovStore.getCurrentGameMode() === GAME_MODES.PVE ? GAME_MODES.PVE : GAME_MODES.PVP;
+  const currentImportableMode = (): GameMode => tarkovStore.getCurrentGameMode();
   const tarkovDevFixedTargetMode = ref<GameMode | null>(null);
   const tarkovDevTargetMode = ref<GameMode>(currentTarkovDevMode());
   const tarkovDevRefetchMode = ref<TarkovDevRefetchMode>(currentTarkovDevMode());
@@ -1113,11 +1400,17 @@
   );
   const isTarkovDevProfileUrlLoading = computed(() => tarkovDevImportState.value === 'loading');
   const {
+    isImporting: eftLogsIsImporting,
     importState: eftLogsImportState,
     previewData: eftLogsPreview,
     importError: eftLogsImportError,
+    isParsing: eftLogsIsParsing,
+    parseProgress: eftLogsParseProgress,
     parseFiles: parseEftLogsFiles,
     setIncludedVersions: setEftLogsIncludedVersions,
+    setAccount: setEftLogsAccount,
+    selection: eftLogsSelection,
+    setSelection: setEftLogsSelection,
     confirmImport: confirmEftLogsImport,
     reset: resetEftLogsImport,
   } = dataManagementSession.eftLogs;
@@ -1126,7 +1419,16 @@
     t('settings.log_import.session_folder_example_path')
   );
   const eftLogsFolderInputRef = ref<HTMLInputElement | null>(null);
-  const eftLogsTargetMode = ref<ImportableGameMode>(currentImportableMode());
+  const eftLogsFolderButtonRef = ref<{ $el?: HTMLElement } | null>(null);
+  const eftLogsTargetMode = ref<GameMode>();
+  watch([eftLogsImportState, () => eftLogsPreview.value?.selectedAccount], () => {
+    eftLogsTargetMode.value = undefined;
+  });
+  const eftLogsDisabledTargetModes = computed(() =>
+    GAME_MODE_VALUES.filter(
+      (mode) => eftLogsIsImporting.value || !eftLogsSelection.value.modes.includes(mode)
+    )
+  );
   const eftLogsNoQuestEventsError = computed(() =>
     t('settings.log_import.errors.no_quest_events_found')
   );
@@ -1273,6 +1575,11 @@
   function showEftLogsFolderInput() {
     eftLogsFolderInputRef.value?.click();
   }
+  /** Cancelling unmounts the Cancel button, so return focus to the picker it replaced. */
+  function cancelEftLogsParsing() {
+    resetEftLogsImport();
+    void nextTick(() => eftLogsFolderButtonRef.value?.$el?.focus());
+  }
   function updateTarkovDevImportTarget(
     sourceMode: GameMode | null | undefined,
     fallbackMode?: GameMode
@@ -1408,9 +1715,17 @@
       );
     }
   }
-  async function handleEftLogsConfirm() {
+  function handleEftLogsAccountChange(accountId: string) {
     try {
-      await confirmEftLogsImport(eftLogsTargetMode.value);
+      setEftLogsAccount(accountId);
+    } catch (err) {
+      logger.error('DataManagementCard: setEftLogsAccount failed', err, eftLogsImportError.value);
+    }
+  }
+  async function handleEftLogsConfirm() {
+    if (eftLogsDestinationError.value) return;
+    try {
+      await confirmEftLogsImport(eftLogsTargetMode.value ?? currentImportableMode());
     } catch (err) {
       logger.error(
         'DataManagementCard: confirmEftLogsImport failed',
@@ -1420,6 +1735,21 @@
       return;
     }
   }
+  /** Labels accounts by a short ID suffix only, so full account identifiers never reach the UI. */
+  function formatEftLogsAccountLabel(account: EftLogAccountSummary): string {
+    const name =
+      account.id === UNIDENTIFIED_LOG_ACCOUNT
+        ? t('settings.log_import.account_unidentified')
+        : t('settings.log_import.account_label', { suffix: account.id.slice(-4) });
+    const lastSeen = account.lastSeen === null ? '' : ` · ${formatDate(account.lastSeen)}`;
+    return `${name} (${account.sessionCount})${lastSeen}`;
+  }
+  const eftLogsAccountItems = computed(() =>
+    (eftLogsPreview.value?.availableAccounts ?? []).map((account) => ({
+      value: account.id,
+      label: formatEftLogsAccountLabel(account),
+    }))
+  );
   const eftUnknownVersionKey = 'unknown';
   function formatEftLogsVersionLabel(version: string): string {
     const versionLabel =
@@ -1439,62 +1769,115 @@
     if (!taskName) return taskId;
     return `${taskName} (${taskId})`;
   }
-  const eftLogsCompletedCount = computed(() => eftLogsPreview.value?.matchedTaskIds.length ?? 0);
-  const eftLogsActiveTaskIds = computed(() => {
-    const matchedTaskIds = eftLogsPreview.value?.matchedTaskIds ?? [];
-    const matchedStartedTaskIds = eftLogsPreview.value?.matchedStartedTaskIds ?? [];
-    if (matchedStartedTaskIds.length === 0) return [];
-    if (matchedTaskIds.length === 0) return matchedStartedTaskIds;
-    const completedTaskIdSet = new Set(matchedTaskIds);
-    return matchedStartedTaskIds.filter((taskId) => !completedTaskIdSet.has(taskId));
+  /** Uses only eligible, in-season latest states for the selected destination's preview totals. */
+  const eftLogsSelectedEvents = computed(() =>
+    selectEftImportEvents(
+      eftLogsPreview.value?.events ?? [],
+      eftLogsSelection.value,
+      eftLogsTargetMode.value
+    )
+  );
+  const eftLogsEffectiveEvents = computed(() =>
+    eftLogsSelectedEvents.value
+      .filter(isEligibleImportEvent)
+      .filter((event) => event.mode !== GAME_MODES.SEASONAL || isCurrentSeasonLogEvent(event))
+  );
+  /** Applies the confirmation guard before enabling a Seasonal import. */
+  const eftLogsHasOutsideSeasonEvents = computed(() =>
+    hasOutsideSeasonEvents(
+      eftLogsSelectedEvents.value,
+      eftLogsTargetMode.value ?? currentImportableMode()
+    )
+  );
+  const eftLogsInvalidDate = computed(() =>
+    hasInvalidEftLogCutoff(eftLogsSelection.value, eftLogsTargetMode.value)
+  );
+  /** Shows selection errors immediately while preserving application errors. */
+  function eftLogsSelectionError(): string | null {
+    if (eftLogsInvalidDate.value) return t('settings.log_import.errors.invalid_date');
+    if (eftLogsHasOutsideSeasonEvents.value)
+      return t('settings.log_import.errors.outside_active_season');
+    if (!eftLogsEffectiveEvents.value.length)
+      return t('settings.log_import.errors.empty_selection');
+    return null;
+  }
+  const eftLogsDestinationError = computed(() => {
+    if (!eftLogsRequiresManualModeSelection.value) return null;
+    const target = eftLogsTargetMode.value;
+    if (target && eftLogsSelection.value.modes.includes(target)) return null;
+    return t('settings.log_import.errors.choose_unknown_mode');
   });
-  const eftLogsActiveCount = computed(() => eftLogsActiveTaskIds.value.length);
+  const eftLogsPreviewError = computed(
+    () => eftLogsImportError.value ?? eftLogsDestinationError.value ?? eftLogsSelectionError()
+  );
+  const eftLogsSelectedModeLabel = computed(
+    () =>
+      GAME_MODE_VALUES.filter((mode) =>
+        eftLogsEffectiveEvents.value.some((event) => event.mode === mode)
+      )
+        .map((mode) => t(getGameModeLabel(mode)))
+        .join(' + ') || t('settings.log_import.no_modes')
+  );
+  const eftLogsCompletedCount = computed(
+    () => eftLogsEffectiveEvents.value.filter((event) => event.status === 'completed').length
+  );
+  const eftLogsActiveCount = computed(
+    () => eftLogsEffectiveEvents.value.filter((event) => event.status === 'started').length
+  );
+  const eftLogsFailedCount = computed(
+    () => eftLogsEffectiveEvents.value.filter((event) => event.status === 'failed').length
+  );
   const eftLogsAvailableVersions = computed(() => eftLogsPreview.value?.availableVersions ?? []);
   const eftLogsIncludedVersions = computed(() => eftLogsPreview.value?.includedVersions ?? []);
   const eftLogsVersionSessionCounts = computed(
     () => eftLogsPreview.value?.versionSessionCounts ?? {}
   );
-  const eftLogsPvpCount = computed(() => {
-    const matchedTaskIdsByMode = eftLogsPreview.value?.matchedTaskIdsByMode;
-    const matchedStartedTaskIdsByMode = eftLogsPreview.value?.matchedStartedTaskIdsByMode;
-    if (!matchedTaskIdsByMode || !matchedStartedTaskIdsByMode) return 0;
-    return matchedTaskIdsByMode.pvp.length + matchedStartedTaskIdsByMode.pvp.length;
+  /** Formats a nonzero skipped-event count using the appropriate singular or plural message. */
+  const eftLogsSkippedClause = (kind: 'malformed' | 'seasonal', count: number) => {
+    if (count <= 0) return '';
+    return t(`settings.log_import.skipped_${kind}.${count === 1 ? 'single' : 'plural'}`, { count });
+  };
+  /** Combines only the applicable malformed-record and out-of-season warnings. */
+  const eftLogsSkippedEventsMessage = computed(() => {
+    const preview = eftLogsPreview.value;
+    if (!preview) return '';
+    const malformed = preview.parseErrorCount ?? 0;
+    const seasonal = preview.skippedSeasonalEventCount ?? 0;
+    return [
+      eftLogsSkippedClause('malformed', malformed),
+      eftLogsSkippedClause('seasonal', seasonal),
+    ]
+      .filter(Boolean)
+      .join(' ');
   });
-  const eftLogsPveCount = computed(() => {
-    const matchedTaskIdsByMode = eftLogsPreview.value?.matchedTaskIdsByMode;
-    const matchedStartedTaskIdsByMode = eftLogsPreview.value?.matchedStartedTaskIdsByMode;
-    if (!matchedTaskIdsByMode || !matchedStartedTaskIdsByMode) return 0;
-    return matchedTaskIdsByMode.pve.length + matchedStartedTaskIdsByMode.pve.length;
-  });
-  const eftLogsUnknownCount = computed(() => {
-    const matchedTaskIdsByMode = eftLogsPreview.value?.matchedTaskIdsByMode;
-    const matchedStartedTaskIdsByMode = eftLogsPreview.value?.matchedStartedTaskIdsByMode;
-    if (!matchedTaskIdsByMode || !matchedStartedTaskIdsByMode) return 0;
-    return matchedTaskIdsByMode.unknown.length + matchedStartedTaskIdsByMode.unknown.length;
-  });
+  /** Counts eligible raw mode buckets before the user routes unresolved events. */
+  const eftLogsModeCount = (mode: GameMode | 'unknown') => {
+    const preview = eftLogsPreview.value;
+    if (!preview) return 0;
+    return [
+      preview.matchedTaskIdsByMode,
+      preview.matchedStartedTaskIdsByMode,
+      preview.matchedFailedTaskIdsByMode,
+    ].reduce((count, buckets) => count + (buckets?.[mode]?.length ?? 0), 0);
+  };
+  const eftLogsUnknownCount = computed(() => eftLogsModeCount('unknown'));
   const eftLogsUnknownCompletedTaskIds = computed(
     () => eftLogsPreview.value?.matchedTaskIdsByMode.unknown ?? []
   );
   const eftLogsUnknownStartedTaskIds = computed(
     () => eftLogsPreview.value?.matchedStartedTaskIdsByMode.unknown ?? []
   );
-  const eftLogsHasPvpMatches = computed(() => eftLogsPvpCount.value > 0);
-  const eftLogsHasPveMatches = computed(() => eftLogsPveCount.value > 0);
+  const eftLogsUnknownFailedTaskIds = computed(
+    () => eftLogsPreview.value?.matchedFailedTaskIdsByMode?.unknown ?? []
+  );
   const eftLogsRequiresManualModeSelection = computed(
-    () =>
-      eftLogsUnknownCount.value > 0 || (!eftLogsHasPvpMatches.value && !eftLogsHasPveMatches.value)
+    () => eftLogsUnknownCount.value > 0 && eftLogsSelection.value.modes.includes('unknown')
   );
   const eftLogsModeSummaryLabel = computed(() => {
-    if (eftLogsHasPvpMatches.value && eftLogsHasPveMatches.value) {
-      return t('settings.log_import.mode_summary_both');
-    }
-    if (eftLogsHasPveMatches.value) {
-      return t('settings.log_import.mode_summary_pve');
-    }
-    if (eftLogsHasPvpMatches.value) {
-      return t('settings.log_import.mode_summary_pvp');
-    }
-    return t('common.unknown');
+    const labels = [GAME_MODES.PVP, GAME_MODES.PVE, GAME_MODES.SEASONAL]
+      .filter((mode) => eftLogsModeCount(mode) > 0)
+      .map((mode) => t(getGameModeLabel(mode)));
+    return labels.length ? labels.join(' + ') : t('common.unknown');
   });
   const editionLabelFromBackup = computed(() => getEditionLabel(backupPreview.value?.gameEdition));
   const showImportTools = computed(() => props.view === 'all' || props.view === 'imports');
@@ -1506,10 +1889,10 @@
     if (tarkovDevImportState.value === 'loading' || isTarkovDevImportPreviewActive.value) {
       return 'tarkov-dev';
     }
-    if (isEftLogsPreviewActive.value) {
+    if (isEftLogsPreviewActive.value || eftLogsIsParsing.value) {
       return 'eft-logs';
     }
-    if (backupImportState.value === 'preview') {
+    if (backupImportState.value === 'preview' || backupImportState.value === 'parsing') {
       return 'backup';
     }
     return null;
@@ -1542,7 +1925,11 @@
     () => isBackupOrEftLogsImportPreviewActive.value || isTarkovDevImportPreviewActive.value
   );
   const isAnyImportActive = computed(
-    () => isAnyImportPreviewActive.value || tarkovDevImportState.value === 'loading'
+    () =>
+      isAnyImportPreviewActive.value ||
+      backupImportState.value === 'parsing' ||
+      tarkovDevImportState.value === 'loading' ||
+      eftLogsIsParsing.value
   );
   function formatDate(ts: number): string {
     return new Date(ts).toLocaleDateString(undefined, {

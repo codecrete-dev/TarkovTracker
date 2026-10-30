@@ -51,7 +51,7 @@
     }, '');
   };
   const defaultUi = {
-    base: 'bg-surface-900 border border-surface-700 rounded-md px-3 py-2 ring-0 outline-none',
+    base: 'bg-surface-900 min-w-0 max-w-full border border-surface-700 rounded-md px-3 py-2 ring-0 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-900',
     leading: 'shrink-0 text-surface-300',
     trailing: 'shrink-0 text-surface-400',
     value: 'text-surface-100',
@@ -59,7 +59,7 @@
     content:
       'bg-surface-900 border border-surface-700 rounded-lg shadow-xl z-[9999] max-w-[90vw] min-w-fit overflow-auto',
     viewport: 'p-1 max-h-60 overflow-y-auto',
-    item: 'px-3 py-2 text-sm cursor-pointer transition-colors rounded text-surface-300 data-[highlighted]:bg-surface-800 data-[highlighted]:text-white data-[state=checked]:bg-surface-700 data-[state=checked]:text-white data-[state=checked]:font-medium',
+    item: 'px-3 py-2 text-sm cursor-pointer transition-colors rounded text-surface-300 data-[highlighted]:bg-surface-800 data-[highlighted]:text-white light:data-[highlighted]:text-surface-50 data-[state=checked]:bg-surface-700 data-[state=checked]:text-white light:data-[state=checked]:text-surface-50 data-[state=checked]:font-medium',
     itemLabel: 'break-words whitespace-normal',
     itemTrailingIcon: 'text-surface-400 shrink-0',
   };
@@ -80,11 +80,13 @@
     @update:model-value="$emit('update:modelValue', $event)"
   >
     <template v-if="!hasCustomDefault" #default>
-      <span class="inline-grid">
-        <span class="col-start-1 row-start-1 justify-self-start">
+      <span class="inline-grid max-w-full min-w-0">
+        <span
+          class="col-start-1 row-start-1 min-w-0 justify-self-start break-words whitespace-normal"
+        >
           {{ getCurrentLabel() }}
         </span>
-        <span class="invisible col-start-1 row-start-1 pr-6 whitespace-nowrap">
+        <span aria-hidden="true" class="invisible col-start-1 row-start-1 min-w-0 truncate pr-6">
           {{ getLongestLabel() }}
         </span>
       </span>

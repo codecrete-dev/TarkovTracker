@@ -2,43 +2,33 @@ name: PR Checks
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    paths-ignore:
-      - 'app/locales/cs.json'
-      - 'app/locales/de.json'
-      - 'app/locales/es.json'
-      - 'app/locales/fr.json'
-      - 'app/locales/it.json'
-      - 'app/locales/ko.json'
-      - 'app/locales/pl.json'
-      - 'app/locales/pt.json'
-      - 'app/locales/ru.json'
-      - 'app/locales/uk.json'
-      - 'app/locales/zh.json'
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
+# Jobs opt into the write scopes they need; the workflow default stays read-only.
+permissions:
+  contents: read
 jobs:
   pr-meta:
     name: PR Meta
-    runs-on: ubuntu-latest
-    outputs:
-      run_lighthouse: ${{ steps.lighthouse-gate.outputs.run_lighthouse }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
       contents: read
       pull-requests: write
+    # PR title format is checked by `pr-title.yml`, which also re-runs when the title is edited.
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
           persist-credentials: false
       - name: Auto-label PR
         if: github.event.pull_request.head.repo.full_name == github.repository
-        uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13
+        uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13 # v7.0.0
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Calculate and apply size label
         if: github.event.pull_request.head.repo.full_name == github.repository
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const files = await github.paginate(github.rest.pulls.listFiles, {
@@ -85,9 +75,18 @@ jobs:
               issue_number: context.issue.number,
               labels: [label],
             });
+  lighthouse-scope:
+    name: Lighthouse scope
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    outputs:
+      run_lighthouse: ${{ steps.lighthouse-gate.outputs.run_lighthouse }}
+    steps:
       - name: Detect Lighthouse scope
         id: lighthouse-gate
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const labels = context.payload.pull_request.labels.map(({ name }) => name);
@@ -99,7 +98,7 @@ jobs:
               per_page: 100,
             });
             const pathMatch = files.some(({ filename }) =>
-              filename === 'lighthouserc.json' ||
+              filename === '.github/lighthouserc.json' ||
               filename === '.github/workflows/pr-checks.yml' ||
               filename.startsWith('app/components/') ||
               filename.startsWith('app/features/')
@@ -107,51 +106,21 @@ jobs:
             const runLighthouse = labelMatch || pathMatch;
             core.setOutput('run_lighthouse', runLighthouse ? 'true' : 'false');
             console.log(`Lighthouse gate ${runLighthouse ? 'enabled' : 'skipped'}`);
-      - name: Setup Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version-file: .nvmrc
-      - name: Install pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@11.14.0 --activate
-      - name: Setup pnpm cache
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version-file: .nvmrc
-          cache: 'pnpm'
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Validate commit messages
-        run: pnpm exec commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
   lighthouse:
     name: Lighthouse
-    runs-on: ubuntu-latest
-    needs: pr-meta
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    needs: lighthouse-scope
     if: |
       github.event.pull_request.head.repo.full_name == github.repository &&
-      needs.pr-meta.outputs.run_lighthouse == 'true'
+      needs.lighthouse-scope.outputs.run_lighthouse == 'true'
     env:
       API_ALLOWED_HOSTS: localhost,127.0.0.1
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Setup Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version-file: .nvmrc
-      - name: Install pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@11.14.0 --activate
-      - name: Setup pnpm cache
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version-file: .nvmrc
-          cache: 'pnpm'
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-project
       - name: Build Cloudflare Pages app
         run: pnpm run build
         env:
@@ -173,18 +142,29 @@ jobs:
             --show-interactive-dev-session=false \
             --log-level error &
           echo $! > /tmp/server.pid
-          pnpm exec wait-on \
-            http-get://localhost:3000 \
-            http-get://localhost:3000/api/tarkov/cache-meta \
-            http-get://localhost:3000/api/tarkov/bootstrap?lang=en \
-            http-get://localhost:3000/tasks \
-            http-get://localhost:3000/hideout \
-            --timeout 120000 \
-            --httpTimeout 20000
+          deadline=$((SECONDS + 120))
+          for url in \
+            http://localhost:3000 \
+            http://localhost:3000/api/tarkov/cache-meta \
+            'http://localhost:3000/api/tarkov/bootstrap?lang=en' \
+            http://localhost:3000/tasks \
+            http://localhost:3000/hideout; do
+            while :; do
+              remaining=$((deadline - SECONDS))
+              if (( remaining <= 0 )); then
+                echo "::error::Timed out waiting for $url"
+                exit 1
+              fi
+              if curl -fsS -o /dev/null --max-time $((remaining < 20 ? remaining : 20)) "$url"; then
+                break
+              fi
+              sleep 2
+            done
+          done
       - name: Lighthouse CI
-        uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18
+        uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18 # 12.6.2
         with:
-          configPath: lighthouserc.json
+          configPath: .github/lighthouserc.json
           urls: |
             http://localhost:3000
             http://localhost:3000/tasks

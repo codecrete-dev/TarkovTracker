@@ -1,11 +1,9 @@
-export type UserScopedStorageEnvelope<T> = {
-  _timestamp?: number;
-  _userId: string | null;
-  data: T;
-};
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
-};
+import type { UserScopedStorageEnvelope } from '@/utils/storage/envelope';
+export {
+  parseUserScopedStorage,
+  recoveryRawOwner,
+  isOwnedProgressRecovery,
+} from '@/utils/storage/envelope';
 export const getCurrentSupabaseUserId = (): string | null => {
   try {
     const nuxtApp = useNuxtApp();
@@ -24,21 +22,4 @@ export const serializeUserScopedStorage = <T>(
     _userId: userId,
     data,
   } satisfies UserScopedStorageEnvelope<T>);
-};
-export const parseUserScopedStorage = <T>(raw: string): UserScopedStorageEnvelope<T> | null => {
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!isRecord(parsed) || !('data' in parsed)) {
-      return null;
-    }
-    const userId = typeof parsed._userId === 'string' ? parsed._userId : null;
-    const timestamp = typeof parsed._timestamp === 'number' ? parsed._timestamp : undefined;
-    return {
-      _timestamp: timestamp,
-      _userId: userId,
-      data: parsed.data as T,
-    };
-  } catch {
-    return null;
-  }
 };

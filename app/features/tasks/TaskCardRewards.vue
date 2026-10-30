@@ -8,7 +8,7 @@
       class="text-surface-400 focus-visible:ring-primary-500 focus-visible:ring-offset-surface-900 group flex w-full flex-wrap items-center gap-1.5 text-xs transition-colors select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:gap-2"
       :class="[
         hasExpandableDetails ? 'hover:bg-surface-700/20 cursor-pointer' : '',
-        isCompact ? 'px-3 py-1.5' : 'px-4 py-2',
+        'min-h-7 px-3 py-1',
       ]"
       :role="hasExpandableDetails ? 'button' : undefined"
       :tabindex="hasExpandableDetails ? 0 : undefined"
@@ -17,11 +17,8 @@
       @keydown.enter="toggleDetails"
       @keydown.space.prevent="toggleDetails"
     >
-      <span
-        class="text-surface-500 inline-flex items-center gap-1 leading-none font-bold tracking-wider uppercase"
-      >
-        <UIcon name="i-mdi-gift" aria-hidden="true" class="h-3.5 w-3.5 shrink-0" />
-        <span class="leading-none">{{ t('page.tasks.questcard.rewards') }}:</span>
+      <span class="text-surface-400 text-[10px] leading-none font-bold tracking-wider uppercase">
+        {{ t('page.tasks.questcard.rewards') }}
       </span>
       <template v-for="standing in traderStandingRewards" :key="`standing-${standing.trader.id}`">
         <div
@@ -54,7 +51,7 @@
       </template>
       <div
         v-if="displayedTraderUnlock?.name"
-        class="bg-warning-900 inline-flex items-center gap-1 rounded px-1.5 py-0.5 leading-none"
+        class="bg-warning-900 light:bg-warning-100 inline-flex items-center gap-1 rounded px-1.5 py-0.5 leading-none"
       >
         <UIcon
           name="i-mdi-lock-open-variant"
@@ -67,7 +64,7 @@
       </div>
       <div
         v-if="itemRewards.length > 0"
-        class="bg-success-900 inline-flex items-center gap-1 rounded px-1.5 py-0.5 leading-none"
+        class="bg-success-900 light:bg-success-100 inline-flex items-center gap-1 rounded px-1.5 py-0.5 leading-none"
       >
         <UIcon
           name="i-mdi-package-variant"
@@ -86,7 +83,7 @@
       </div>
       <div
         v-if="offerUnlockRewards.length > 0"
-        class="bg-info-900 inline-flex items-center gap-1 rounded px-1.5 py-0.5 leading-none"
+        class="bg-info-900 light:bg-info-100 inline-flex items-center gap-1 rounded px-1.5 py-0.5 leading-none"
       >
         <UIcon
           name="i-mdi-cart-check"
@@ -105,7 +102,7 @@
       </div>
       <div
         v-if="showExperienceRewards && experienceValue > 0"
-        class="bg-warning-900 inline-flex items-center gap-1 rounded px-1.5 py-0.5 leading-none"
+        class="bg-warning-900 light:bg-warning-100 inline-flex items-center gap-1 rounded px-1.5 py-0.5 leading-none"
       >
         <UIcon name="i-mdi-star" aria-hidden="true" class="text-warning-400 h-3.5 w-3.5 shrink-0" />
         <span class="text-warning-300 leading-none font-medium">
@@ -137,13 +134,17 @@
           <span class="leading-none">{{ t('common.impact') }}: {{ impactCount }}</span>
         </div>
       </AppTooltip>
-      <UIcon
+      <span
         v-if="hasExpandableDetails"
-        name="i-mdi-chevron-down"
         aria-hidden="true"
-        class="text-surface-500 group-hover:text-surface-300 h-5 w-5 transition-transform duration-200"
-        :class="{ 'rotate-180': showDetails }"
-      />
+        class="text-surface-400 group-hover:text-surface-200 ml-auto flex h-5 w-7 shrink-0 items-center justify-center"
+      >
+        <UIcon
+          name="i-mdi-chevron-down"
+          class="h-4 w-4 transition-transform duration-200"
+          :class="{ 'rotate-180': showDetails }"
+        />
+      </span>
     </div>
     <Transition
       enter-active-class="transition duration-200 ease-out"
@@ -155,8 +156,7 @@
     >
       <div
         v-if="showDetails && hasExpandableDetails"
-        class="border-surface-700/30 bg-surface-900/30 border-t p-4"
-        :class="{ 'p-3': isCompact }"
+        class="border-surface-700/30 bg-surface-900/30 border-t p-3"
       >
         <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           <div v-if="showPreviousTasks" class="space-y-2">
@@ -308,7 +308,6 @@
     parentTasks: Task[];
     childTasks: Task[];
     experience?: number;
-    isCompact?: boolean;
     unlocksNextCount?: number;
     impactCount?: number;
   }>();

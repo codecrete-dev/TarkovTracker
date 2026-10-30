@@ -1,7 +1,14 @@
 import { mockNuxtImport } from '@nuxt/test-utils/runtime';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ref, type Ref } from 'vue';
 import DataManagementCard from '@/features/settings/DataManagementCard.vue';
+import { ACTIVE_SEASON } from '@/utils/constants';
+import {
+  createEftLogImportSelection,
+  type EftLogImportSelection,
+} from '@/utils/eftLogImportSelection';
+import { parseEftLogsForQuestImport } from '@/utils/eftLogQuestParser';
 const {
   backupFns,
   backupState,
@@ -24,18 +31,26 @@ const {
     confirmBackupImport: vi.fn(async () => undefined),
     exportDebugSnapshot: vi.fn(async () => undefined),
     exportProgress: vi.fn(async () => undefined),
+    exportDeviceProgressRecovery: vi.fn(async () => {
+      backupState.recoveryExportPending.value = true;
+    }),
+    confirmRecoveryArchiveSaved: vi.fn(async () => undefined),
+    reviewRecoveryArchiveEntry: vi.fn(),
+    reviewOlderTabProgress: vi.fn(async () => undefined),
     parseBackupFile: vi.fn(async () => undefined),
     resetImport: vi.fn(),
   },
   backupState: {
+    recoveryExportPending: {} as Ref<boolean>,
+    recoveryArchiveEntries: {} as Ref<Array<{ kind: string; index: number }>>,
+    selectedRecoveryArchiveEntry: {} as Ref<number | null>,
+    legacyProgressRecoveryCount: { __v_isRef: true as const, value: 0 },
+    legacyProgressRecoveryOverflow: { __v_isRef: true as const, value: false },
     debugExportError: { __v_isRef: true as const, value: null as string | null },
     exportError: { __v_isRef: true as const, value: null as string | null },
     importError: { __v_isRef: true as const, value: null as string | null },
     importPreview: { __v_isRef: true as const, value: null as Record<string, unknown> | null },
-    importState: {
-      __v_isRef: true as const,
-      value: 'idle' as 'idle' | 'preview' | 'success' | 'error',
-    },
+    importState: {} as Ref<'idle' | 'parsing' | 'preview' | 'success' | 'error'>,
   },
   tarkovDevFns: {
     confirmImport: vi.fn(async () => undefined),
@@ -72,10 +87,16 @@ const {
     parseFiles: vi.fn(async () => undefined),
     reset: vi.fn(),
     setIncludedVersions: vi.fn(),
+    setAccount: vi.fn(),
+    setSelection: vi.fn(),
   },
   eftLogsState: {
+    selection: {} as Ref<EftLogImportSelection>,
+    isParsing: {} as Ref<boolean>,
+    parseProgress: {} as Ref<{ bytesRead: number; totalBytes: number }>,
+    isImporting: {} as Ref<boolean>,
     importError: { __v_isRef: true as const, value: null as string | null },
-    previewData: { __v_isRef: true as const, value: null as Record<string, unknown> | null },
+    previewData: {} as Ref<Record<string, unknown> | null>,
     importState: {
       __v_isRef: true as const,
       value: 'idle' as 'idle' | 'preview' | 'success' | 'error',
@@ -114,6 +135,15 @@ vi.mock('@/composables/useDataBackup', () => ({
     exportDebugSnapshot: backupFns.exportDebugSnapshot,
     debugExportError: backupState.debugExportError,
     exportProgress: backupFns.exportProgress,
+    exportDeviceProgressRecovery: backupFns.exportDeviceProgressRecovery,
+    confirmRecoveryArchiveSaved: backupFns.confirmRecoveryArchiveSaved,
+    recoveryExportPending: backupState.recoveryExportPending,
+    recoveryArchiveEntries: backupState.recoveryArchiveEntries,
+    selectedRecoveryArchiveEntry: backupState.selectedRecoveryArchiveEntry,
+    reviewRecoveryArchiveEntry: backupFns.reviewRecoveryArchiveEntry,
+    reviewOlderTabProgress: backupFns.reviewOlderTabProgress,
+    legacyProgressRecoveryCount: backupState.legacyProgressRecoveryCount,
+    legacyProgressRecoveryOverflow: backupState.legacyProgressRecoveryOverflow,
     exportError: backupState.exportError,
     importState: backupState.importState,
     importPreview: backupState.importPreview,
@@ -139,12 +169,18 @@ vi.mock('@/composables/useTarkovDevImport', () => ({
 }));
 vi.mock('@/composables/useEftLogsImport', () => ({
   useEftLogsImport: () => ({
+    isParsing: eftLogsState.isParsing,
+    parseProgress: eftLogsState.parseProgress,
     importState: eftLogsState.importState,
+    isImporting: eftLogsState.isImporting,
     previewData: eftLogsState.previewData,
     importError: eftLogsState.importError,
     parseFile: eftLogsFns.parseFile,
     parseFiles: eftLogsFns.parseFiles,
     setIncludedVersions: eftLogsFns.setIncludedVersions,
+    setAccount: eftLogsFns.setAccount,
+    selection: eftLogsState.selection,
+    setSelection: eftLogsFns.setSelection,
     confirmImport: eftLogsFns.confirmImport,
     reset: eftLogsFns.reset,
   }),
@@ -204,6 +240,15 @@ describe('DataManagementCard', () => {
     backupFns.confirmBackupImport.mockReset();
     backupFns.exportDebugSnapshot.mockReset();
     backupFns.exportProgress.mockReset();
+    backupState.recoveryExportPending = ref(false);
+    backupState.recoveryArchiveEntries = ref([]);
+    backupState.selectedRecoveryArchiveEntry = ref(null);
+    backupFns.confirmRecoveryArchiveSaved.mockReset();
+    backupFns.exportDeviceProgressRecovery.mockReset().mockImplementation(async () => {
+      backupState.recoveryExportPending.value = true;
+    });
+    backupState.legacyProgressRecoveryCount.value = 0;
+    backupState.legacyProgressRecoveryOverflow.value = false;
     backupFns.parseBackupFile.mockReset();
     backupFns.resetImport.mockReset();
     tarkovDevFns.confirmImport.mockReset();
@@ -216,6 +261,11 @@ describe('DataManagementCard', () => {
     eftLogsFns.parseFiles.mockReset();
     eftLogsFns.reset.mockReset();
     eftLogsFns.setIncludedVersions.mockReset();
+    eftLogsFns.setAccount.mockReset();
+    eftLogsState.selection = ref(createEftLogImportSelection());
+    eftLogsFns.setSelection.mockReset().mockImplementation((selection: EftLogImportSelection) => {
+      eftLogsState.selection.value = selection;
+    });
     tarkovStoreState.setTarkovUid.mockClear();
     tarkovStoreState.setTarkovUid.mockImplementation((uid: number | null) => {
       tarkovStoreState.tarkovUid = uid;
@@ -231,7 +281,7 @@ describe('DataManagementCard', () => {
     backupState.exportError.value = null;
     backupState.importError.value = null;
     backupState.importPreview.value = null;
-    backupState.importState.value = 'idle';
+    backupState.importState = ref('idle');
     tarkovDevState.importError.value = null;
     tarkovDevState.importErrorCode.value = null;
     tarkovDevState.importErrorMeta.value = null;
@@ -239,7 +289,10 @@ describe('DataManagementCard', () => {
     tarkovDevState.previewData.value = null;
     eftLogsState.importError.value = null;
     eftLogsState.importState.value = 'idle';
-    eftLogsState.previewData.value = null;
+    eftLogsState.isImporting = ref(false);
+    eftLogsState.isParsing = ref(false);
+    eftLogsState.parseProgress = ref({ bytesRead: 0, totalBytes: 0 });
+    eftLogsState.previewData = ref(null);
     tarkovStoreState.currentMode = 'pvp';
     tarkovStoreState.tarkovUid = null;
     tarkovDevFns.setError.mockImplementation((message: string) => {
@@ -248,9 +301,13 @@ describe('DataManagementCard', () => {
       tarkovDevState.previewData.value = null;
     });
   });
-  const createWrapper = (props: { view?: 'all' | 'imports' | 'backup' } = {}) =>
+  const createWrapper = (
+    props: { view?: 'all' | 'imports' | 'backup' } = {},
+    options: { attachTo?: HTMLElement } = {}
+  ) =>
     mount(DataManagementCard, {
       props,
+      attachTo: options.attachTo,
       global: {
         mocks: {
           $t: (key: string) => key,
@@ -281,14 +338,244 @@ describe('DataManagementCard', () => {
           },
           UCheckbox: {
             template:
-              '<input type="checkbox" :checked="modelValue" @change="$emit(\'update:model-value\', $event.target.checked)" />',
+              '<input type="checkbox" :aria-label="label" :disabled="disabled" :checked="modelValue" @change="$emit(\'update:model-value\', $event.target.checked)" />',
             props: ['disabled', 'label', 'modelValue'],
             emits: ['update:model-value'],
+          },
+          URadioGroup: {
+            template:
+              '<div role="radiogroup" :aria-label="legend"><button v-for="item in items" :key="item.value" type="button" class="account-option" :data-selected="item.value === modelValue" @click="$emit(\'update:modelValue\', item.value)">{{ item.label }}</button></div>',
+            props: ['disabled', 'items', 'legend', 'modelValue'],
+            emits: ['update:modelValue'],
           },
           USeparator: true,
         },
       },
     });
+  it('updates preview totals and confirmation when modes, states, and reset history are excluded', async () => {
+    const timestamp = new Date(Date.parse(ACTIVE_SEASON.startsOn) + 86400000)
+      .toISOString()
+      .replace('T', ' ')
+      .replace('Z', '');
+    const events = (['pvp', 'pve', 'seasonal', 'unknown'] as const).map((mode) => ({
+      mode,
+      status: 'completed' as const,
+      questId: '61604635c725987e815b1a46',
+      eventKey: mode,
+      timestamp,
+    }));
+    eftLogsState.importState.value = 'preview';
+    eftLogsState.previewData.value = { events };
+    eftLogsState.selection.value = createEftLogImportSelection(events);
+    const wrapper = createWrapper({ view: 'imports' });
+    const vm = asVm<{ eftLogsCompletedCount: number }>(wrapper.vm);
+    expect(vm.eftLogsCompletedCount).toBe(3);
+    const controls = wrapper.findComponent({ name: 'EftLogImportControls' });
+    await controls.find('input[aria-label="common.pvp (1)"]').setValue(false);
+    await controls.find('input[aria-label="common.seasonal_pvp (1)"]').setValue(false);
+    expect(vm.eftLogsCompletedCount).toBe(1);
+    expect(eftLogsState.selection.value.modes).not.toContain('unknown');
+    expect(wrapper.find('game-mode-toggle-stub').exists()).toBe(false);
+    await controls.find('input[type="datetime-local"]').setValue('2099-01-01T00:00:00');
+    expect(vm.eftLogsCompletedCount).toBe(0);
+    const confirm = findButtonByText(wrapper, 'common.confirm_import')!;
+    expect(confirm.attributes('disabled')).toBeDefined();
+    await controls.find('input[type="datetime-local"]').setValue('');
+    expect(vm.eftLogsCompletedCount).toBe(1);
+    await controls.find('input[aria-label="settings.log_import.states.completed"]').setValue(false);
+    expect(vm.eftLogsCompletedCount).toBe(0);
+    expect(confirm.attributes('disabled')).toBeDefined();
+    expect(eftLogsFns.confirmImport).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+  it('does not let a hidden invalid cutoff disable an otherwise valid mode selection', () => {
+    const events = [
+      {
+        mode: 'pve' as const,
+        status: 'completed' as const,
+        questId: '61604635c725987e815b1a46',
+        eventKey: 'pve',
+        timestamp: null,
+      },
+    ];
+    eftLogsState.importState.value = 'preview';
+    eftLogsState.previewData.value = { events };
+    eftLogsState.selection.value = {
+      ...createEftLogImportSelection(events),
+      modes: ['pve'],
+      since: { pvp: NaN },
+    };
+    const wrapper = createWrapper({ view: 'imports' });
+    expect(
+      findButtonByText(wrapper, 'common.confirm_import')!.attributes('disabled')
+    ).toBeUndefined();
+    wrapper.unmount();
+  });
+  it('requires an explicit unidentified destination instead of inheriting the active mode', async () => {
+    const questId = '61604635c725987e815b1a46';
+    const events = [
+      {
+        mode: 'unknown' as const,
+        status: 'completed' as const,
+        questId,
+        eventKey: 'unknown',
+        timestamp: null,
+      },
+    ];
+    eftLogsState.importState.value = 'preview';
+    eftLogsState.previewData = ref({
+      events,
+      matchedTaskIdsByMode: { unknown: [questId] },
+      matchedStartedTaskIdsByMode: { unknown: [] },
+    });
+    eftLogsState.selection.value = createEftLogImportSelection(events);
+    const wrapper = createWrapper({ view: 'imports' });
+    const confirm = findButtonByText(wrapper, 'common.confirm_import')!;
+    expect(confirm.attributes('disabled')).toBeDefined();
+    expect(wrapper.text()).toContain('settings.log_import.errors.choose_unknown_mode');
+    await wrapper.findComponent({ name: 'GameModeToggle' }).vm.$emit('update:modelValue', 'pvp');
+    await wrapper.vm.$nextTick();
+    expect(confirm.attributes('disabled')).toBeUndefined();
+    eftLogsState.selection.value = { ...eftLogsState.selection.value, modes: ['pve', 'unknown'] };
+    await wrapper.vm.$nextTick();
+    expect(confirm.attributes('disabled')).toBeDefined();
+    expect(wrapper.findComponent({ name: 'GameModeToggle' }).props('disabledModes')).toContain(
+      'pvp'
+    );
+    eftLogsState.selection.value = createEftLogImportSelection(events);
+    eftLogsState.previewData.value = {
+      ...eftLogsState.previewData.value,
+      selectedAccount: 'other-account',
+    };
+    await wrapper.vm.$nextTick();
+    expect(confirm.attributes('disabled')).toBeDefined();
+    wrapper.unmount();
+  });
+  it('keeps a selected invalid cutoff editable after a version removes that mode history', async () => {
+    const questId = '61604635c725987e815b1a46';
+    const events = (['pvp', 'pve'] as const).map((mode) => ({
+      mode,
+      status: 'completed' as const,
+      questId,
+      eventKey: mode,
+      timestamp: null,
+    }));
+    eftLogsState.importState.value = 'preview';
+    eftLogsState.previewData = ref({ events });
+    eftLogsState.selection.value = { ...createEftLogImportSelection(events), since: { pvp: NaN } };
+    const wrapper = createWrapper({ view: 'imports' });
+    eftLogsState.previewData.value = { events: [events[1]] };
+    await wrapper.vm.$nextTick();
+    const cutoff = wrapper.find('input[id$="-pvp"]');
+    expect(cutoff.exists()).toBe(true);
+    await cutoff.setValue('');
+    expect(
+      findButtonByText(wrapper, 'common.confirm_import')!.attributes('disabled')
+    ).toBeUndefined();
+    wrapper.unmount();
+  });
+  it('locks every data-selection control while progress is being applied', async () => {
+    const events = [
+      {
+        mode: 'pve' as const,
+        status: 'started' as const,
+        questId: '61604635c725987e815b1a46',
+        eventKey: 'start',
+        timestamp: null,
+      },
+    ];
+    eftLogsState.importState.value = 'preview';
+    eftLogsState.previewData.value = { events };
+    eftLogsState.selection.value = createEftLogImportSelection(events);
+    eftLogsState.isImporting.value = true;
+    const wrapper = createWrapper({ view: 'imports' });
+    const inputs = wrapper.findComponent({ name: 'EftLogImportControls' }).findAll('input');
+    expect(inputs.length).toBeGreaterThan(0);
+    expect(inputs.every((input) => input.attributes('disabled') !== undefined)).toBe(true);
+    wrapper.unmount();
+  });
+  it('keeps a live region mounted and shows cancellable folder-read progress', async () => {
+    const wrapper = createWrapper({ view: 'imports' });
+    const liveRegion = wrapper.find('output');
+    expect(liveRegion.exists()).toBe(true);
+    eftLogsState.isParsing.value = true;
+    eftLogsState.parseProgress.value = { bytesRead: 0, totalBytes: 0 };
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('progress').attributes()).toMatchObject({ value: '0', max: '1' });
+    eftLogsState.parseProgress.value = { bytesRead: 50, totalBytes: 100 };
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('output').element).toBe(liveRegion.element);
+    expect(liveRegion.text()).toContain('settings.log_import.reading_logs');
+    expect(wrapper.find('progress').attributes()).toMatchObject({ value: '50', max: '100' });
+    expect(
+      findButtonByText(wrapper, 'settings.data_management.import_eft_logs_folder_button')
+    ).toBeUndefined();
+    await findButtonByText(wrapper, 'common.cancel')!.trigger('click');
+    expect(eftLogsFns.reset).toHaveBeenCalledOnce();
+    wrapper.unmount();
+  });
+  it('announces reading status without putting progress or controls in the live region', async () => {
+    const wrapper = createWrapper({ view: 'imports' });
+    eftLogsState.isParsing.value = true;
+    eftLogsState.parseProgress.value = { bytesRead: 25, totalBytes: 100 };
+    await wrapper.vm.$nextTick();
+    // <output> is an implicit polite status region, so no explicit role/aria-live is needed.
+    const liveRegion = wrapper.find('output');
+    expect(liveRegion.text()).toContain('settings.log_import.reading_logs');
+    // Progress updates and the Cancel control must not be re-announced on every slice.
+    expect(liveRegion.find('progress').exists()).toBe(false);
+    expect(liveRegion.find('button').exists()).toBe(false);
+    expect(wrapper.find('progress').exists()).toBe(true);
+    expect(findButtonByText(wrapper, 'common.cancel')).toBeTruthy();
+    wrapper.unmount();
+  });
+  it('keeps the backup reading announcement mounted and separates it from cancellation controls', async () => {
+    const wrapper = createWrapper({ view: 'backup' });
+    const live = wrapper.find('[data-testid="backup-reading-status"]');
+    expect(live.exists()).toBe(true);
+    backupState.importState.value = 'parsing';
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('[data-testid="backup-reading-status"]').element).toBe(live.element);
+    expect(live.text()).toContain('settings.data_management.reading_backup');
+    expect(live.find('button').exists()).toBe(false);
+    expect(findButtonByText(wrapper, 'common.cancel')).toBeTruthy();
+    wrapper.unmount();
+  });
+  it('returns focus to the backup picker after cancelling background parsing', async () => {
+    backupState.importState.value = 'parsing';
+    const wrapper = createWrapper({ view: 'backup' }, { attachTo: document.body });
+    const cancel = findButtonByText(wrapper, 'common.cancel')!;
+    (cancel.element as HTMLButtonElement).focus();
+    expect(document.activeElement).toBe(cancel.element);
+    backupFns.resetImport.mockImplementation(() => {
+      backupState.importState.value = 'idle';
+    });
+    await cancel.trigger('click');
+    await wrapper.vm.$nextTick();
+    const picker = findButtonByText(wrapper, 'settings.data_management.import_backup_button')!;
+    expect(document.activeElement).toBe(picker.element);
+    wrapper.unmount();
+  });
+  it('returns focus to the folder picker after cancelling a folder read', async () => {
+    const wrapper = createWrapper({ view: 'imports' }, { attachTo: document.body });
+    eftLogsState.isParsing.value = true;
+    await wrapper.vm.$nextTick();
+    const cancelButton = findButtonByText(wrapper, 'common.cancel')!;
+    (cancelButton.element as HTMLButtonElement).focus();
+    expect(document.activeElement).toBe(cancelButton.element);
+    eftLogsFns.reset.mockImplementation(() => {
+      eftLogsState.isParsing.value = false;
+    });
+    await cancelButton.trigger('click');
+    await wrapper.vm.$nextTick();
+    const picker = findButtonByText(
+      wrapper,
+      'settings.data_management.import_eft_logs_folder_button'
+    );
+    expect(picker).toBeTruthy();
+    expect(document.activeElement).toBe(picker!.element);
+    wrapper.unmount();
+  });
   it('limits the imports view to profile and log import actions', () => {
     const wrapper = createWrapper({ view: 'imports' });
     expect(findButtonByText(wrapper, 'settings.tarkov_dev_import.fetch_profile')).toBeTruthy();
@@ -809,6 +1096,69 @@ describe('DataManagementCard', () => {
       })
     );
   });
+  it('shows the multi-account notice and switches the previewed account', async () => {
+    eftLogsState.importState.value = 'preview';
+    eftLogsState.previewData.value = {
+      availableAccounts: [
+        { id: '2222222222', sessionCount: 3, lastSeen: Date.parse('2026-02-21T10:00:00Z') },
+        { id: '1111111111', sessionCount: 2, lastSeen: Date.parse('2026-02-20T10:00:00Z') },
+      ],
+      availableVersions: ['1.2.0.0.47888'],
+      chatMessageCount: 2,
+      completionEventCount: 1,
+      dedupedCompletionEventCount: 1,
+      dedupedStartedEventCount: 0,
+      filesParsed: 1,
+      hasMultipleAccounts: true,
+      includedVersions: ['1.2.0.0.47888'],
+      matchedStartedTaskIds: [],
+      matchedStartedTaskIdsByMode: { pve: [], pvp: [], unknown: [] },
+      matchedTaskIds: ['61604635c725987e815b1a46'],
+      matchedTaskIdsByMode: { pve: [], pvp: ['61604635c725987e815b1a46'], unknown: [] },
+      questIds: ['61604635c725987e815b1a46'],
+      scannedEntries: 20,
+      selectedAccount: '2222222222',
+      sourceFileName: 'Logs.zip',
+      startedEventCount: 0,
+      startedQuestIds: [],
+      unmatchedQuestIds: [],
+      unmatchedStartedQuestIds: [],
+      versionSessionCounts: { '1.2.0.0.47888': 5 },
+    };
+    const wrapper = createWrapper();
+    expect(wrapper.text()).toContain('settings.log_import.multiple_accounts_title');
+    expect(wrapper.find('[role="radiogroup"]').attributes('aria-label')).toBe(
+      'settings.log_import.account_filter_label'
+    );
+    const options = wrapper.findAll('.account-option');
+    expect(options).toHaveLength(2);
+    expect(options.map((o) => o.attributes('data-selected'))).toEqual(['true', 'false']);
+    expect(wrapper.text()).not.toContain('2222222222');
+    expect(wrapper.text()).not.toContain('1111111111');
+    await options[1]!.trigger('click');
+    expect(eftLogsFns.setAccount).toHaveBeenCalledWith('1111111111');
+    wrapper.unmount();
+  });
+  it('hides the account selector when at most one account is available', () => {
+    eftLogsState.importState.value = 'preview';
+    eftLogsState.previewData.value = {
+      availableAccounts: [{ id: '1111111111', sessionCount: 1, lastSeen: null }],
+      hasMultipleAccounts: false,
+      matchedStartedTaskIdsByMode: { pve: [], pvp: [], unknown: [] },
+      matchedTaskIds: [],
+      matchedTaskIdsByMode: { pve: [], pvp: [], unknown: [] },
+      questIds: [],
+      selectedAccount: '1111111111',
+      sourceFileName: 'Logs.zip',
+      startedQuestIds: [],
+      unmatchedQuestIds: [],
+      unmatchedStartedQuestIds: [],
+    };
+    const wrapper = createWrapper();
+    expect(wrapper.find('.account-option').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('settings.log_import.multiple_accounts_title');
+    wrapper.unmount();
+  });
   it('hides EFT mode toggle when all matched events are auto-detected', () => {
     eftLogsState.importState.value = 'preview';
     eftLogsState.previewData.value = {
@@ -831,9 +1181,9 @@ describe('DataManagementCard', () => {
     };
     const wrapper = createWrapper();
     expect(wrapper.find('game-mode-toggle-stub').exists()).toBe(false);
-    expect(wrapper.text()).toContain('settings.log_import.mode_summary_pvp');
+    expect(wrapper.text()).toContain('common.pvp');
   });
-  it('shows EFT mode toggle when unknown-mode events are present', () => {
+  it('shows EFT mode toggle and disables every mode while import is applying', async () => {
     eftLogsState.importState.value = 'preview';
     eftLogsState.previewData.value = {
       chatMessageCount: 2,
@@ -855,11 +1205,61 @@ describe('DataManagementCard', () => {
     };
     const wrapper = createWrapper();
     expect(wrapper.find('game-mode-toggle-stub').exists()).toBe(true);
+    const toggle = wrapper.findComponent({ name: 'GameModeToggle' });
+    expect(toggle.props('disabledModes')).toEqual([]);
+    eftLogsState.isImporting.value = true;
+    await wrapper.vm.$nextTick();
+    expect(toggle.props('disabledModes')).toEqual(['pvp', 'pve', 'seasonal']);
     expect(wrapper.text()).toContain(
       'An Apple a Day Keeps the Doctor Away (61604635c725987e815b1a46)'
     );
     expect(wrapper.text()).toContain('Shortage (5ac2426c86f774138762edfe)');
   });
+  it.each(['before-season', 'missing-date'])(
+    'blocks invalid Seasonal preview dates (%s) before confirmation',
+    async (dateCase) => {
+      const questId = '61604635c725987e815b1a46';
+      const oldDate = new Date(Date.parse(ACTIVE_SEASON.startsOn) - 86400000)
+        .toISOString()
+        .replace('T', ' ')
+        .replace('Z', '');
+      const parsed = parseEftLogsForQuestImport(
+        [
+          {
+            name: 'notifications.log',
+            text: `${oldDate}|Info|notifications|Got notification | ChatMessageReceived\n${JSON.stringify({ eventId: 'old', message: { type: 12, templateId: questId } })}\n`,
+          },
+        ],
+        [questId],
+        { taskIdsByMode: { pvp: [questId], pve: [questId], seasonal: [questId] } }
+      );
+      if (dateCase === 'missing-date') parsed.events[0]!.timestamp = null;
+      eftLogsState.importState.value = 'preview';
+      eftLogsState.previewData.value = {
+        ...parsed,
+        scannedEntries: 1,
+        sourceFileName: 'notifications.log',
+      };
+      tarkovStoreState.currentMode = 'seasonal';
+      const wrapper = createWrapper();
+      await wrapper
+        .findComponent({ name: 'GameModeToggle' })
+        .vm.$emit('update:modelValue', 'seasonal');
+      await wrapper.vm.$nextTick();
+      const vm = asVm<{ eftLogsCompletedCount: number }>(wrapper.vm);
+      expect(vm.eftLogsCompletedCount).toBe(0);
+      expect(wrapper.text()).toContain('settings.log_import.errors.outside_active_season');
+      const confirm = wrapper
+        .findAll('button')
+        .find((button) => button.text().includes('common.confirm_import'))!;
+      expect(confirm.attributes('disabled')).toBeDefined();
+      await wrapper.findComponent({ name: 'GameModeToggle' }).vm.$emit('update:modelValue', 'pvp');
+      await wrapper.vm.$nextTick();
+      expect(vm.eftLogsCompletedCount).toBe(1);
+      expect(wrapper.text()).not.toContain('settings.log_import.errors.outside_active_season');
+      expect(confirm.attributes('disabled')).toBeUndefined();
+    }
+  );
   it('excludes completed tasks from EFT active task count', () => {
     eftLogsState.importState.value = 'preview';
     eftLogsState.previewData.value = {
@@ -884,8 +1284,99 @@ describe('DataManagementCard', () => {
       unmatchedQuestIds: [],
       unmatchedStartedQuestIds: [],
     };
+    eftLogsState.previewData.value.events = [
+      {
+        eventKey: 'complete',
+        questId: '61604635c725987e815b1a46',
+        mode: 'pvp',
+        status: 'completed',
+        timestamp: '2026-08-29 10:00:00.000',
+      },
+      {
+        eventKey: 'start',
+        questId: '61604635c725987e815b1a46',
+        mode: 'pvp',
+        status: 'started',
+        timestamp: '2026-08-29 09:00:00.000',
+      },
+      {
+        eventKey: 'active',
+        questId: '5ac2426c86f774138762edfe',
+        mode: 'pvp',
+        status: 'started',
+        timestamp: '2026-08-29 09:00:00.000',
+      },
+    ];
     const wrapper = createWrapper();
     expect(asVm<{ eftLogsCompletedCount: number }>(wrapper.vm).eftLogsCompletedCount).toBe(1);
     expect(asVm<{ eftLogsActiveCount: number }>(wrapper.vm).eftLogsActiveCount).toBe(1);
+  });
+  it('routes archive copy selection into the existing preview', async () => {
+    backupState.recoveryArchiveEntries.value = [
+      { kind: 'original', index: 0 },
+      { kind: 'older', index: 1 },
+    ];
+    const wrapper = createWrapper({ view: 'backup' });
+    await wrapper.get('[data-testid="recovery-archive-entry-1"]').trigger('click');
+    expect(backupFns.reviewRecoveryArchiveEntry).toHaveBeenCalledWith(1);
+  });
+  it('offers export and cleanup when uncaptured older edits fill recovery', async () => {
+    backupState.legacyProgressRecoveryOverflow.value = true;
+    const wrapper = createWrapper({ view: 'backup' });
+    expect(wrapper.text()).toContain('settings.data_management.older_tab_recovery_full');
+    await wrapper.get('[data-testid="older-tab-cleanup"]').trigger('click');
+    await wrapper.get('[data-testid="older-tab-cleanup-confirm"]').trigger('click');
+    expect(backupFns.exportDeviceProgressRecovery).toHaveBeenCalledWith();
+    expect(backupFns.confirmRecoveryArchiveSaved).not.toHaveBeenCalled();
+    await wrapper.get('[data-testid="older-tab-cleanup-saved-confirm"]').trigger('click');
+    expect(backupFns.confirmRecoveryArchiveSaved).toHaveBeenCalledOnce();
+  });
+  it('requires confirmation before exporting and clearing older copies', async () => {
+    backupState.legacyProgressRecoveryCount.value = 2;
+    const wrapper = createWrapper({ view: 'backup' });
+    await wrapper.get('[data-testid="older-tab-cleanup"]').trigger('click');
+    expect(backupFns.exportDeviceProgressRecovery).not.toHaveBeenCalled();
+    await wrapper.get('[data-testid="older-tab-cleanup-confirm"]').trigger('click');
+    expect(backupFns.exportDeviceProgressRecovery).toHaveBeenCalledWith();
+    expect(backupFns.confirmRecoveryArchiveSaved).not.toHaveBeenCalled();
+    await wrapper.get('[data-testid="older-tab-cleanup-saved-confirm"]').trigger('click');
+    expect(backupFns.confirmRecoveryArchiveSaved).toHaveBeenCalledOnce();
+  });
+  it('asks for a new recovery archive after the account changes', async () => {
+    backupState.legacyProgressRecoveryOverflow.value = true;
+    backupFns.confirmRecoveryArchiveSaved.mockRejectedValueOnce(
+      new Error('settings.data_management.recovery_owner_changed')
+    );
+    const wrapper = createWrapper({ view: 'backup' });
+    await wrapper.get('[data-testid="older-tab-cleanup"]').trigger('click');
+    await wrapper.get('[data-testid="older-tab-cleanup-confirm"]').trigger('click');
+    await wrapper.get('[data-testid="older-tab-cleanup-saved-confirm"]').trigger('click');
+    expect(toastAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({ description: 'settings.data_management.recovery_owner_changed' })
+    );
+  });
+  it('keeps saved-file confirmation and reports a failed native cleanup', async () => {
+    backupState.legacyProgressRecoveryCount.value = 1;
+    backupFns.confirmRecoveryArchiveSaved.mockRejectedValueOnce(new Error('cleanup failed'));
+    const wrapper = createWrapper({ view: 'backup' });
+    await wrapper.get('[data-testid="older-tab-cleanup"]').trigger('click');
+    await wrapper.get('[data-testid="older-tab-cleanup-confirm"]').trigger('click');
+    await wrapper.get('[data-testid="older-tab-cleanup-saved-confirm"]').trigger('click');
+    expect(toastAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        color: 'error',
+        description: 'settings.data_management.recovery_cleanup_failed',
+      })
+    );
+    expect(wrapper.find('[data-testid="older-tab-cleanup-saved-confirm"]').exists()).toBe(true);
+  });
+  it('keeps cleanup confirmation and shows failure when export or clearing fails', async () => {
+    backupState.legacyProgressRecoveryCount.value = 1;
+    backupFns.exportDeviceProgressRecovery.mockRejectedValueOnce(new Error('export failed'));
+    const wrapper = createWrapper({ view: 'backup' });
+    await wrapper.get('[data-testid="older-tab-cleanup"]').trigger('click');
+    await wrapper.get('[data-testid="older-tab-cleanup-confirm"]').trigger('click');
+    expect(toastAddMock).toHaveBeenCalledWith(expect.objectContaining({ color: 'error' }));
+    expect(wrapper.find('[data-testid="older-tab-cleanup-confirm"]').exists()).toBe(true);
   });
 });

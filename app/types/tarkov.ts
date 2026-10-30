@@ -87,24 +87,91 @@ export interface SkillRequirement {
   level: number;
   skill?: Skill;
 }
+export type RequirementComparison = '>=' | '>' | '<=' | '<' | '=' | '==' | '!=';
+export type NormalizedTraderRequirement =
+  | {
+      id: string;
+      requirementType: 'level' | 'reputation';
+      compareMethod: RequirementComparison;
+      value: number;
+      trader: { id: string; name: string };
+    }
+  | {
+      id: string;
+      requirementType: 'unknown';
+      reason: 'shape' | 'type' | 'comparison' | 'value' | 'trader';
+    };
 export interface TraderRequirement {
   id: string;
   trader: { id: string; name: string };
   value: number;
   requirementType?: 'level' | 'reputation';
-  compareMethod?: '>=' | '<' | '<=' | '>';
+  compareMethod?: RequirementComparison;
 }
+/**
+ * A task's declared prestige gate. Adapted upstream references carry `id`; overlay-injected tasks
+ * keep the declared reference verbatim, which names a level instead. Readers must not assume `id`.
+ */
+export interface TaskPrestigeReference {
+  id?: string;
+  name?: string;
+  prestigeLevel?: number;
+}
+/**
+ * A gate the source declared but that could not be interpreted. Absence of an optional gate is
+ * never a diagnostic, so these values keep a malformed explicit gate distinguishable from no gate.
+ */
+export type TaskRequirementDiagnostic = 'prestige_reference' | 'task_requirement';
+/**
+ * Best-effort counter derivation attached server-side from the overlay's progressionCounters
+ * registry. `distinctTaskCompletions`: the number of completed tasks in `taskIds`.
+ * `taskGroupCompletions`: the number of settled `groups`.
+ */
+export type TaskCounterDerivation =
+  | { type: 'distinctTaskCompletions'; taskIds: string[] }
+  | { type: 'taskGroupCompletions'; groups: TaskCounterGroup[] };
+/**
+ * Tasks the game credits as one: a list counts once every member is completed, `anyOf` once any
+ * member is (faction variants a player can only ever complete one of).
+ */
+export type TaskCounterGroup = string[] | { anyOf: string[] };
+export type TaskProgressionPool = {
+  traderId: string;
+  loyaltyLevel: number;
+  verification: 'verified' | 'unresolved';
+  coverage: 'complete' | 'partial';
+  derivation: TaskCounterDerivation;
+};
+export type TaskOtherRequirement =
+  | {
+      type: 'globalVariable';
+      id: string;
+      variableId: string;
+      compareMethod: RequirementComparison;
+      value: number;
+      counter?: TaskCounterDerivation;
+      taskPool?: TaskProgressionPool;
+    }
+  | { type: 'dialogue'; id: string; traders: string[] }
+  /** Overlay story gate: met only when the player completed that storyline objective. */
+  | {
+      type: 'storyObjective';
+      id: string;
+      storyChapter: { id: string; name?: string };
+      objective: { id: string; name?: string };
+    }
+  /** Unsupported or malformed gate; `upstreamType` keeps the original upstream discriminator. */
+  | { type: 'unknown'; upstreamType?: string };
 export interface TaskTraderLevelRequirement {
   id: string;
   trader: { id: string; name: string };
   level: number;
   requirementType?: 'level' | 'reputation';
-  compareMethod?: '>=' | '<' | '<=' | '>';
-}
-export interface TraderLevelRequirementWithMet extends TaskTraderLevelRequirement {
-  met: boolean;
+  compareMethod?: RequirementComparison;
 }
 export interface Craft {
+  taskUnlock?: { id: string; name?: string } | null;
+  unlockState?: 'unknown' | 'task';
   id: string;
   duration: number;
   requiredItems: ItemRequirement[];
@@ -224,6 +291,8 @@ export interface RequiredKeyGroup {
   optional?: boolean;
   anyOf?: boolean;
 }
+/** The client's `tierAccessory`: 0 is "Essential Tasks", 1-4 are "Loyalty Level 1-4". */
+export type TraderTaskGroup = 0 | 1 | 2 | 3 | 4;
 export interface Task {
   id: string;
   tarkovDataId?: number;
@@ -235,9 +304,19 @@ export interface Task {
   trader?: { id: string; name?: string; normalizedName?: string; imageLink?: string };
   objectives?: TaskObjective[];
   taskRequirements?: TaskRequirement[];
+  otherRequirements?: TaskOtherRequirement[];
+  storyUnlocks?: Array<{ id: string; name: string }>;
+  /** In-game trader task-list group from the overlay; absent when unknown. Never a gate. */
+  traderTaskGroup?: TraderTaskGroup;
   minPlayerLevel?: number;
-  requiredPrestige?: { id: string };
+  requiredPrestige?: TaskPrestigeReference;
+  /**
+   * Declared gates dropped because they could not be interpreted. The evaluator turns each one
+   * into an unknown blocker so a malformed gate cannot pass as a genuinely absent optional gate.
+   */
+  requirementDiagnostics?: TaskRequirementDiagnostic[];
   failedRequirements?: TaskRequirement[];
+  normalizedTraderRequirements?: NormalizedTraderRequirement[];
   traderLevelRequirements?: TaskTraderLevelRequirement[];
   traderRequirements?: TraderRequirement[];
   factionName?: string;
@@ -286,6 +365,8 @@ export interface MapExtract {
   top?: number;
   /** Bottom boundary for multi-floor extracts */
   bottom?: number;
+  /** i18n key for tracker-supplied extracts, which have no upstream localized name */
+  nameKey?: string;
 }
 export interface MapSvgConfig {
   file: string;
@@ -294,7 +375,9 @@ export interface MapSvgConfig {
   coordinateRotation: number;
   transform?: [number, number, number, number];
   bounds: [[number, number], [number, number]];
+  /** Separate bounds for SVG overlay (if different from marker bounds) */
   svgBounds?: [[number, number], [number, number]];
+  /** Whether lower floors should remain visible when a higher floor is selected */
   stackFloors?: boolean;
   minZoom?: number;
   maxZoom?: number;
@@ -307,6 +390,10 @@ export interface MapTileConfig {
   bounds: [[number, number], [number, number]];
   minZoom?: number;
   maxZoom?: number;
+  tileSize?: number;
+  floors?: string[];
+  defaultFloor?: string;
+  floorTilePaths?: Record<string, string>;
 }
 export interface TarkovMap {
   id: string;
@@ -345,8 +432,35 @@ export interface PlayerLevel {
   exp: number; // Cumulative XP required to reach this level (transformed from API)
   levelBadgeImageLink: string;
 }
+export interface SeasonalPerk {
+  id: string;
+  type: string;
+  name: string;
+  description: string;
+  points: number | null;
+  mutuallyExclusiveSeasonalPerkIds?: string[];
+  effects: Array<{
+    effectId: string;
+    itemFilter?: {
+      allowedItems: string[];
+      excludedItems: string[];
+      allowedCategories: string[];
+      excludedCategories: string[];
+    };
+    [key: string]: unknown;
+  }>;
+}
+export interface PrestigeStoryRequirement {
+  type: 'storyChapterStatus' | 'storyObjectiveStatus';
+  storyChapter: string;
+  objective?: string;
+  name: string;
+  status: string[];
+  unresolved?: boolean;
+}
 // Prestige System Types
 export interface PrestigeLevel {
+  storyRequirements?: PrestigeStoryRequirement[];
   id: string;
   level: number; // 0-6
   name?: string;
@@ -360,13 +474,54 @@ export interface PrestigeLevel {
 export interface TarkovPrestigeQueryResult {
   prestige: PrestigeLevel[];
 }
+/** Explicit unlock placement supplied by the overlay, never inferred from objective wording. */
+export interface StoryObjectiveUnlock {
+  type: 'achievement' | 'barter' | 'map' | 'quest' | 'trader' | 'other';
+  id?: string;
+  name: string;
+  note?: string;
+}
 export interface StoryObjective {
   id: string;
+  /** Producer-declared tutorial baseline, shared by all modes and never persisted on render. */
+  completionPolicy?: 'tutorial';
   order: number;
   type: 'main' | 'optional';
   description: string;
   notes?: string | null;
   mutuallyExclusiveWith?: string[];
+  /**
+   * Client sub-quest the objective belongs to. Overlay releases before v1.93 omit it on curated
+   * chapters, so treat it as optional and never key persisted progress on it.
+   */
+  sourceQuestId?: string;
+  /** Raw optional layout parent in the same chapter/subquest; never a completion prerequisite. */
+  parentObjectiveId?: string;
+  /** `client/ending_list` id of the branch this objective belongs to, when the overlay tags one. */
+  endingId?: string;
+  unlocks?: StoryObjectiveUnlock[];
+}
+/**
+ * Ending branch a chapter can resolve into, restated by the overlay so the branch set is visible
+ * without scanning objectives. `objectiveCount` is 0 when the pinned capture holds no
+ * objective-level evidence for the branch, which is not proof that the branch has no objectives.
+ */
+export interface StoryChapterEnding {
+  id: string;
+  systemName: string;
+  gateQuestId: string;
+  objectiveCount: number;
+  resolvedInReference: boolean;
+}
+/**
+ * How much of a chapter the overlay's pinned client capture resolved. `partial` means the objective
+ * list is a projection of that capture, so a missing objective is not evidence that none exists.
+ */
+export interface StoryReferenceCoverage {
+  referencedSubquests: number;
+  resolvedSubquests: number;
+  missingObjectiveTexts?: number;
+  partial: boolean;
 }
 export interface StoryRewards {
   description: string;
@@ -381,10 +536,20 @@ export interface StoryChapter {
   chapterRequirements?: Array<{ id: string; name: string }>;
   mapUnlocks?: Array<{ id: string; name: string }>;
   traderUnlocks?: Array<{ id: string; name: string }>;
+  questUnlocks?: Array<{ id: string; name: string }>;
   description?: string | null;
   notes?: string | null;
   objectives?: { [objectiveId: string]: StoryObjective };
   rewards?: StoryRewards | null;
+  /** Story quest the chapter maps to; source traceability only. */
+  chapterQuestId?: string;
+  referenceCoverage?: StoryReferenceCoverage;
+  endings?: StoryChapterEnding[];
+  /**
+   * Unordered pairs of sub-quest IDs that cannot both be *completed*. Partial objective progress on
+   * both quests stays legal, so these must never be expanded into objective exclusions.
+   */
+  mutuallyExclusiveQuestPairs?: Array<[string, string]>;
 }
 export interface MemberProfile {
   displayName: string | null;
@@ -451,6 +616,12 @@ export interface NeededItemTaskObjective extends NeededItemBase {
    * as `objectiveCompletions`, while `id` stays the progress key.
    */
   sourceObjectiveId?: string;
+  /**
+   * Set by Needed Items when the user hid the task but a teammate still needs
+   * the objective: the card shows only teammates' needs and adds nothing to
+   * the user's own counts or Smart Fill targets.
+   */
+  hiddenForSelf?: boolean;
 }
 export interface NeededItemHideoutModule extends NeededItemBase {
   needType: 'hideoutModule';
@@ -512,6 +683,7 @@ export interface StaticMapData {
     unavailable?: boolean;
     svg?: MapSvgConfig;
     tile?: MapTileConfig;
+    extractsAdd?: MapExtract[];
   };
 }
 // Store Types
@@ -532,8 +704,10 @@ export interface SystemGetters extends _GettersTree<SystemState> {
   isAdmin: (state: SystemState) => boolean;
 }
 export interface TeamState extends StateTree {
+  id?: string | null;
   owner?: string | null;
   joinCode?: string | null;
+  ownerOnlyExpiresAt?: string | null;
   members?: string[];
   memberProfiles?: Record<string, MemberProfile>;
 }

@@ -33,9 +33,17 @@ const waitForWatchCallback = async () => {
   await Promise.resolve();
   await Promise.resolve();
 };
+const idleSaveStatus = () => ({
+  state: 'idle' as const,
+  failure: null,
+  retryAttempt: 0,
+  nextRetryAt: null,
+});
 const createSyncController = () => ({
   isSyncing: ref(false),
   isPaused: ref(false),
+  saveStatus: ref(idleSaveStatus()),
+  retryNow: vi.fn().mockResolvedValue(true),
   cleanup: vi.fn(),
   pause: vi.fn(),
   resume: vi.fn(),
@@ -85,6 +93,8 @@ describe('preferences sync plugin', () => {
     vi.mocked(useSupabaseSync).mockReturnValue({
       isSyncing: ref(false),
       isPaused: ref(false),
+      saveStatus: ref(idleSaveStatus()),
+      retryNow: vi.fn().mockResolvedValue(true),
       cleanup: vi.fn(),
       pause: vi.fn(),
       resume: vi.fn(),
@@ -133,6 +143,8 @@ describe('preferences sync plugin', () => {
     vi.mocked(useSupabaseSync).mockReturnValue({
       isSyncing: ref(false),
       isPaused: ref(false),
+      saveStatus: ref(idleSaveStatus()),
+      retryNow: vi.fn().mockResolvedValue(true),
       cleanup: vi.fn(),
       pause: vi.fn(),
       resume: vi.fn(),
@@ -207,6 +219,8 @@ describe('preferences sync plugin', () => {
     vi.mocked(useSupabaseSync).mockReturnValue({
       isSyncing: ref(false),
       isPaused: ref(false),
+      saveStatus: ref(idleSaveStatus()),
+      retryNow: vi.fn().mockResolvedValue(true),
       cleanup,
       pause: vi.fn(),
       resume: vi.fn(),
@@ -220,6 +234,7 @@ describe('preferences sync plugin', () => {
       $state: {
         localeOverride: 'de',
         profileSharePvePublic: true,
+        useAutomaticLevelCalculation: true,
         profileSharePvpPublic: true,
       },
       localeOverride: 'de',
@@ -257,10 +272,12 @@ describe('preferences sync plugin', () => {
     expect(useSupabaseSync).toHaveBeenCalledTimes(1);
     expect(cleanup).not.toHaveBeenCalled();
   });
-  it('omits legacy profile sharing columns from the preferences sync payload', async () => {
+  it('omits retired automatic-level and legacy profile sharing columns from the preferences sync payload', async () => {
     vi.mocked(useSupabaseSync).mockReturnValue({
       isSyncing: ref(false),
       isPaused: ref(false),
+      saveStatus: ref(idleSaveStatus()),
+      retryNow: vi.fn().mockResolvedValue(true),
       cleanup: vi.fn(),
       pause: vi.fn(),
       resume: vi.fn(),
@@ -268,8 +285,17 @@ describe('preferences sync plugin', () => {
     });
     const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: { code: 'PGRST116' } });
     const preferencesStore = createPreferencesStore({
+      useAutomaticLevelCalculation: true,
+      hideoutSortReadyFirst: true,
+      hideoutCollapseCompleted: true,
+      taskCardDensity: 'comfortable',
+      showTaskIds: true,
+      showNotRequiredLabels: true,
+      enableHolidayEffects: true,
+      neededitemsStyle: 'legacy',
       profileSharePvpPublic: true,
       profileSharePvePublic: true,
+      hiddenTaskIds: ['task-1', 'task-1', ''],
     });
     vi.mocked(usePreferencesStore).mockReturnValue(preferencesStore as never);
     const from = vi.fn(() => ({
@@ -287,15 +313,49 @@ describe('preferences sync plugin', () => {
       transform: (state: Record<string, unknown>) => Record<string, unknown>;
     };
     const payload = syncOptions.transform(preferencesStore.$state);
+    expect(payload).not.toHaveProperty('use_automatic_level_calculation');
+    for (const column of [
+      'hideout_sort_ready_first',
+      'hideout_collapse_completed',
+      'task_card_density',
+      'show_task_ids',
+      'show_not_required_labels',
+      'enable_holiday_effects',
+      'neededitems_style',
+    ])
+      expect(payload).not.toHaveProperty(column);
     expect(payload).not.toHaveProperty('profile_share_pvp_public');
     expect(payload).not.toHaveProperty('profile_share_pve_public');
+    expect(payload.hidden_task_ids).toEqual(['task-1']);
     expect(payload.user_id).toBe('user-1');
+  });
+  it('hydrates a select-star row that omits retired preference columns', async () => {
+    vi.mocked(useSupabaseSync).mockReturnValue(createSyncController());
+    const preferencesStore = createPreferencesStore({ streamerMode: false, localeOverride: 'en' });
+    preferencesStore.resetToDefaults.mockImplementation(() => {});
+    vi.mocked(usePreferencesStore).mockReturnValue(preferencesStore as never);
+    const maybeSingle = vi.fn().mockResolvedValue({
+      data: { user_id: 'user-1', streamer_mode: true, locale_override: 'de' },
+      error: null,
+    });
+    const select = vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle })) }));
+    const from = vi.fn(() => ({ select }));
+    const plugin = (await import('@/plugins/zz.preferences-sync.client')).default as (
+      app: unknown
+    ) => unknown;
+    plugin({ $pinia: {}, $supabase: { client: { from }, user: { id: 'user-1', loggedIn: true } } });
+    await waitForWatchCallback();
+    expect(select).toHaveBeenCalledWith('*');
+    expect(preferencesStore.$state).toEqual({ streamerMode: true, localeOverride: 'de' });
+    expect(useSupabaseSync).toHaveBeenCalledTimes(1);
   });
   it('prefers the preserved scoped snapshot over guest preferences after logout', async () => {
     const cleanup = vi.fn();
     vi.mocked(useSupabaseSync).mockReturnValue({
       isSyncing: ref(false),
       isPaused: ref(false),
+      saveStatus: ref(idleSaveStatus()),
+      retryNow: vi.fn().mockResolvedValue(true),
       cleanup,
       pause: vi.fn(),
       resume: vi.fn(),

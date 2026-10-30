@@ -3,7 +3,7 @@ import { getValidatedLanguage } from '~/server/utils/language-helpers';
 import { applyOverlay } from '~/server/utils/overlay';
 import { CACHE_TTL_EXTENDED, validateGameMode } from '~/server/utils/tarkov-cache-config';
 import { createTarkovJsonItemsFetcher } from '~/server/utils/tarkov-json';
-const ITEMS_CACHE_VERSION = 'json-v1';
+const ITEMS_CACHE_VERSION = 'json-v2';
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);
   const bypassCache = shouldBypassCache(event);
@@ -17,5 +17,6 @@ export default defineEventHandler(async (event) => {
   };
   return await edgeCache(event, cacheKey, fetcher, CACHE_TTL_EXTENDED, {
     cacheKeyPrefix: 'tarkov',
+    response: true,
   });
 });

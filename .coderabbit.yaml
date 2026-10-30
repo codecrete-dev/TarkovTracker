@@ -1,14 +1,25 @@
 language: en-US
+knowledge_base:
+  code_guidelines:
+    filePatterns:
+      - 'docs/code-review.md'
 reviews:
   auto_review:
     enabled: true
-    auto_incremental_review: true
+    # Disable automatic per-push reviews; request follow-up reviews explicitly.
+    auto_incremental_review: false
     ignore_title_keywords:
       - 'Crowdin'
   path_filters:
+    - '!app/locales/cs.json'
     - '!app/locales/de.json'
     - '!app/locales/es.json'
     - '!app/locales/fr.json'
+    - '!app/locales/it.json'
+    - '!app/locales/ja.json'
+    - '!app/locales/ko.json'
+    - '!app/locales/pl.json'
+    - '!app/locales/pt.json'
     - '!app/locales/ru.json'
     - '!app/locales/uk.json'
     - '!app/locales/zh.json'

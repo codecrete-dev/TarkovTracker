@@ -5,12 +5,25 @@ export interface PromiseStore {
   readonly itemsFullPromise: Promise<void> | null;
   readonly itemsLitePromise: Promise<void> | null;
   readonly mapSpawnsPromise: Promise<void> | null;
-  readonly objectiveModeCountDifferencesPromise: Promise<void> | null;
+  readonly objectiveModeCountDifferencesPromise: Promise<'stale' | undefined> | null;
   readonly taskObjectivesPromise: Promise<void> | null;
   readonly taskRewardsPromise: Promise<void> | null;
   readonly prestigePromise: Promise<void> | null;
   readonly editionsPromise: Promise<void> | null;
+  readonly editionsRequestVersion: number;
+  readonly editionsScope: string;
+  readonly editionsSettledScope: string;
+  /** Mode/language scopes whose cached catalog was already revalidated this session. */
+  readonly editionsRevalidatedScopes: Set<string>;
+  /** Language-independent objective counts per API game mode, shared across callers. */
+  readonly modeObjectiveCounts: Map<string, Promise<Record<string, number>>>;
+  /** Bumped whenever the task catalog is replaced, so count diffs can detect a stale base. */
+  readonly taskCatalogEpoch: number;
+  readonly taskRewardsRequestVersion: number;
+  readonly taskCoreRefreshes: Set<symbol>;
   readonly initPromise: Promise<void> | null;
+  readonly initScope: string;
+  readonly initVersion: number;
   readonly isInitializing: boolean;
 }
 export type PromiseKey = {
@@ -52,7 +65,17 @@ export function getPromiseStore(storeInstance: object): MutablePromiseStore {
       taskRewardsPromise: null,
       prestigePromise: null,
       editionsPromise: null,
+      editionsRequestVersion: 0,
+      editionsScope: '',
+      editionsSettledScope: '',
+      editionsRevalidatedScopes: new Set(),
+      modeObjectiveCounts: new Map(),
+      taskCatalogEpoch: 0,
+      taskRewardsRequestVersion: 0,
+      taskCoreRefreshes: new Set(),
       initPromise: null,
+      initScope: '',
+      initVersion: 0,
       isInitializing: false,
     });
   }

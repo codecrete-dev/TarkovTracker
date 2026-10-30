@@ -4,19 +4,18 @@
  */
 import { getErrorStatus } from '@/utils/errors';
 import { logger } from '@/utils/logger';
-import { shouldFallbackForUnavailableTokenFunction } from '@/utils/tokenFunctionFallback';
+import { refreshSupabaseSession } from '@/utils/supabaseAuth';
 import type { PurgeCacheResponse } from '@/types/edge';
 import type { MemberProfile } from '@/types/tarkov';
 import type {
   CreateTeamResponse,
+  DisbandTeamResponse,
   JoinTeamResponse,
   KickMemberResponse,
   LeaveTeamResponse,
 } from '@/types/team';
 import type { GameMode } from '@/utils/constants';
 const TEAM_ID_REGEX = /^[a-zA-Z0-9-]{1,64}$/;
-const isAuthOrMembershipStatus = (status: number | null): boolean =>
-  status === 401 || status === 403;
 const assertValidTeamId = (teamId: string) => {
   if (!TEAM_ID_REGEX.test(teamId)) {
     throw new Error('Invalid team id');
@@ -71,16 +70,19 @@ const normalizeFunctionError = async <TError>(
 export const useEdgeFunctions = () => {
   const { $supabase } = useNuxtApp();
   const getAuthToken = async () => {
-    await $supabase.ready();
-    const { data, error } = await $supabase.client.auth.getSession();
-    if (error) throw error;
-    const token = data.session?.access_token;
+    const readySession = await $supabase.ready();
+    const token = readySession?.access_token;
     if (token) {
       return token;
     }
-    const { data: refreshData, error: refreshError } = await $supabase.client.auth.refreshSession();
-    if (refreshError) throw refreshError;
-    const refreshedToken = refreshData.session?.access_token;
+    const { data, error } = await $supabase.client.auth.getSession();
+    if (error) throw error;
+    const sessionToken = data.session?.access_token;
+    if (sessionToken) {
+      return sessionToken;
+    }
+    const refreshedSession = await refreshSupabaseSession($supabase.client);
+    const refreshedToken = refreshedSession?.access_token;
     if (refreshedToken) {
       return refreshedToken;
     }
@@ -101,9 +103,8 @@ export const useEdgeFunctions = () => {
     }
     if (getErrorStatus(error) === 401) {
       try {
-        const { data: refreshData, error: refreshError } =
-          await $supabase.client.auth.refreshSession();
-        if (!refreshError && refreshData.session?.access_token) {
+        const refreshedSession = await refreshSupabaseSession($supabase.client);
+        if (refreshedSession?.access_token) {
           ({ data, error } = await $supabase.client.functions.invoke<T>(fnName, {
             body,
             method,
@@ -152,43 +153,18 @@ export const useEdgeFunctions = () => {
       const result = await callTeamMembersApi(token);
       return result;
     } catch (error) {
-      let latestError = error;
-      let status = getErrorStatus(latestError);
-      if (status === 401) {
-        try {
-          const { data, error: refreshError } = await $supabase.client.auth.refreshSession();
-          const refreshedToken = data?.session?.access_token;
-          if (!refreshError && refreshedToken) {
-            try {
-              return await callTeamMembersApi(refreshedToken);
-            } catch (retryError) {
-              latestError = retryError;
-              status = getErrorStatus(retryError);
-            }
-          }
-        } catch (refreshSessionError) {
+      if (getErrorStatus(error) !== 401) throw error;
+      const refreshedSession = await refreshSupabaseSession($supabase.client).catch(
+        (refreshSessionError: unknown) => {
           logger.debug('[EdgeFunctions] Session refresh failed during team member fetch:', {
             refreshSessionError,
           });
+          return null;
         }
-      }
-      if (isAuthOrMembershipStatus(status)) {
-        logger.debug(
-          '[EdgeFunctions] /api/team/members auth/membership error, skipping fallback:',
-          {
-            status,
-          }
-        );
-        throw latestError;
-      }
-      logger.warn(
-        '[EdgeFunctions] /api/team/members failed, falling back to team-members:',
-        latestError
       );
-      const fallback = await callSupabaseFunction<{ members: string[] }>('team-members', {
-        teamId,
-      });
-      return { members: fallback?.members || [], profiles: {} };
+      const refreshedToken = refreshedSession?.access_token;
+      if (!refreshedToken) throw error;
+      return await callTeamMembersApi(refreshedToken);
     }
   };
   /**
@@ -234,6 +210,10 @@ export const useEdgeFunctions = () => {
     assertValidTeamId(teamId);
     return await callSupabaseFunction<LeaveTeamResponse>('team-leave', { teamId });
   };
+  const disbandTeam = async (teamId: string): Promise<DisbandTeamResponse> => {
+    assertValidTeamId(teamId);
+    return await callSupabaseFunction<DisbandTeamResponse>('team-disband', { teamId });
+  };
   /**
    * Kick a member from a team (owner only)
    * @param teamId The ID of the team
@@ -255,41 +235,6 @@ export const useEdgeFunctions = () => {
     );
   };
   /**
-   * Revoke an API token
-   * @param tokenId The ID of the token to revoke
-   */
-  const revokeToken = async (tokenId: string) => {
-    try {
-      return await callSupabaseFunction<{ success?: boolean }>(
-        'token-revoke',
-        { tokenId },
-        'DELETE'
-      );
-    } catch (error) {
-      if (!shouldFallbackForUnavailableTokenFunction(error)) {
-        throw error;
-      }
-      logger.warn(
-        '[EdgeFunctions] token-revoke unavailable, falling back to direct delete:',
-        error
-      );
-      try {
-        const { error: deleteError } = await $supabase.client
-          .from('api_tokens')
-          .delete()
-          .eq('token_id', tokenId);
-        if (deleteError) throw deleteError;
-        return { success: true } as const;
-      } catch (innerError) {
-        logger.error(
-          '[EdgeFunctions] Token revocation failed after direct-delete fallback:',
-          innerError
-        );
-        throw innerError;
-      }
-    }
-  };
-  /**
    * Purge Cloudflare cache (admin only)
    * @param purgeType Type of cache purge: 'all' for entire zone, 'tarkov-data' for game data only
    */
@@ -305,11 +250,11 @@ export const useEdgeFunctions = () => {
     createTeam,
     joinTeam,
     leaveTeam,
+    disbandTeam,
     kickTeamMember,
     getTeamMembers,
     // API token management
     createToken,
-    revokeToken,
     // Admin functions
     purgeCache,
   };

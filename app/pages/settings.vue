@@ -2,22 +2,13 @@
   <div class="px-3 py-6 sm:px-6">
     <div class="mx-auto max-w-350">
       <div class="mx-auto max-w-290 space-y-4 lg:space-y-0">
-        <div class="flex items-center justify-between pb-4">
-          <div>
-            <h1 class="text-surface-100 text-xl font-bold">
-              {{ $t('common.settings', 'Settings') }}
-            </h1>
-            <p class="text-surface-400 mt-1 text-sm">
-              {{
-                $t(
-                  'settings.page_description',
-                  'Manage your account, game progression, and application preferences.'
-                )
-              }}
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          :title="$t('common.settings')"
+          :description="$t('settings.page_description')"
+          class="pb-4"
+        />
         <UTabs
+          id="settings-tabs"
           :items="settingsTabItems"
           :model-value="activeTab"
           :content="false"
@@ -53,7 +44,7 @@
                       class="focus-visible:ring-primary-500/60 flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
                       :class="
                         activeTab === item.value
-                          ? 'bg-surface-800 text-white shadow-sm ring-1 ring-white/10'
+                          ? 'bg-surface-800 light:text-surface-50 light:ring-surface-600/40 text-white shadow-sm ring-1 ring-white/10'
                           : 'text-surface-300 hover:bg-surface-800/80 hover:text-surface-100'
                       "
                       :aria-current="activeTab === item.value ? 'page' : undefined"
@@ -68,16 +59,17 @@
             </div>
           </aside>
           <div class="min-w-0">
+            <!-- Mobile offsets protect the tab strip during Nuxt's own panel hash scrolling. -->
             <section
               v-if="visitedTabs.progression"
               v-show="activeTab === 'progression'"
               id="progression"
-              class="scroll-mt-24 space-y-4"
+              class="scroll-mt-40 space-y-4 lg:scroll-mt-24"
               role="tabpanel"
               :aria-label="$t('settings.tabs.progression')"
             >
               <DisplayNameCard />
-              <ExperienceCard />
+              <PlayerLevelCard />
               <SkillsCard />
               <ResetProgressCard />
             </section>
@@ -85,7 +77,7 @@
               v-if="visitedTabs.prestige && showPrestigeTab"
               v-show="activeTab === 'prestige'"
               id="prestige"
-              class="scroll-mt-24 space-y-4"
+              class="scroll-mt-40 space-y-4 lg:scroll-mt-24"
               role="tabpanel"
               :aria-label="$t('common.prestige')"
             >
@@ -95,10 +87,11 @@
               v-if="visitedTabs.preferences"
               v-show="activeTab === 'preferences'"
               id="preferences"
-              class="scroll-mt-24 space-y-4"
+              class="scroll-mt-40 space-y-4 lg:scroll-mt-24"
               role="tabpanel"
               :aria-label="$t('common.preferences')"
             >
+              <AppearanceCard />
               <GeneralPreferencesCard />
               <TaskDisplayCard />
               <MapSettingsCard />
@@ -110,12 +103,13 @@
               v-if="visitedTabs.account"
               v-show="activeTab === 'account'"
               id="account"
-              class="scroll-mt-24 space-y-4"
+              class="scroll-mt-40 space-y-4 lg:scroll-mt-24"
               role="tabpanel"
               :aria-label="$t('common.account')"
             >
               <ProfileSharingCard />
               <DiscordLinkCard />
+              <DeviceDataCard />
               <AccountDeletionCard />
               <div v-if="isAdmin" class="flex justify-center pt-4">
                 <NuxtLink
@@ -131,7 +125,7 @@
               v-if="visitedTabs.imports"
               v-show="activeTab === 'imports'"
               id="imports"
-              class="scroll-mt-24 space-y-4"
+              class="scroll-mt-40 space-y-4 lg:scroll-mt-24"
               role="tabpanel"
               :aria-label="$t('settings.tabs.imports')"
             >
@@ -141,7 +135,7 @@
               v-if="visitedTabs['backup-restore']"
               v-show="activeTab === 'backup-restore'"
               id="backup-restore"
-              class="scroll-mt-24 space-y-4"
+              class="scroll-mt-40 space-y-4 lg:scroll-mt-24"
               role="tabpanel"
               :aria-label="$t('common.backup_restore')"
             >
@@ -152,7 +146,7 @@
               v-if="visitedTabs.api"
               v-show="activeTab === 'api'"
               id="api"
-              class="scroll-mt-24 space-y-4"
+              class="scroll-mt-40 space-y-4 lg:scroll-mt-24"
               role="tabpanel"
               :aria-label="$t('common.api')"
             >
@@ -162,7 +156,7 @@
               v-if="visitedTabs['streamer-tools']"
               v-show="activeTab === 'streamer-tools'"
               id="streamer-tools"
-              class="scroll-mt-24 space-y-4"
+              class="scroll-mt-40 space-y-4 lg:scroll-mt-24"
               role="tabpanel"
               :aria-label="$t('common.streamer_tools')"
             >
@@ -175,16 +169,18 @@
   </div>
 </template>
 <script setup lang="ts">
+  import PageHeader from '@/components/ui/PageHeader.vue';
   import AccountDeletionCard from '@/features/settings/AccountDeletionCard.vue';
   import ApiTokensCard from '@/features/settings/ApiTokensCard.vue';
   import DataManagementCard from '@/features/settings/DataManagementCard.vue';
   import DebugStateCard from '@/features/settings/DebugStateCard.vue';
+  import DeviceDataCard from '@/features/settings/DeviceDataCard.vue';
   import DiscordLinkCard from '@/features/settings/DiscordLinkCard.vue';
   import DisplayNameCard from '@/features/settings/DisplayNameCard.vue';
-  import ExperienceCard from '@/features/settings/ExperienceCard.vue';
   import GeneralPreferencesCard from '@/features/settings/GeneralPreferencesCard.vue';
   import KeybindsCard from '@/features/settings/KeybindsCard.vue';
   import MapSettingsCard from '@/features/settings/MapSettingsCard.vue';
+  import PlayerLevelCard from '@/features/settings/PlayerLevelCard.vue';
   import PrestigeCard from '@/features/settings/PrestigeCard.vue';
   import ProfileSharingCard from '@/features/settings/ProfileSharingCard.vue';
   import ResetProgressCard from '@/features/settings/ResetProgressCard.vue';
@@ -267,16 +263,6 @@
     '#settings-skills': 'skills',
   };
   const legacyAccountHashes = new Set(['#settings-account']);
-  const settingsSeoKeys: Record<SettingsTabId, string> = {
-    progression: 'progression',
-    prestige: 'prestige',
-    preferences: 'preferences',
-    account: 'account',
-    imports: 'imports',
-    'backup-restore': 'backup_restore',
-    api: 'api',
-    'streamer-tools': 'streamer_tools',
-  };
   const dataManagementSession = useDataManagementSession();
   const isSettingsTabId = (value: unknown): value is SettingsTabId => {
     return typeof value === 'string' && settingsTabIds.includes(value as SettingsTabId);
@@ -306,18 +292,6 @@
     return canonicalizeTab(resolved);
   };
   const activeTab = ref<SettingsTabId>(resolveTabFromRoute(route.path, route.hash));
-  const settingsSeo = computed(() => {
-    const seoKey = settingsSeoKeys[activeTab.value];
-    return {
-      title: t(`settings.tab_seo.${seoKey}.title`),
-      description: t(`settings.tab_seo.${seoKey}.description`),
-    };
-  });
-  useSeoMeta({
-    title: computed(() => settingsSeo.value.title),
-    description: computed(() => settingsSeo.value.description),
-    robots: 'noindex, nofollow',
-  });
   const settingsTabLabels = computed<Record<SettingsTabId, string>>(() => ({
     progression: t('settings.tabs.progression'),
     prestige: t('common.prestige'),
@@ -378,26 +352,53 @@
     list: 'bg-surface-900 flex w-full gap-1 overflow-x-auto rounded-xl border border-white/10 p-2 shadow-sm',
     indicator: 'hidden',
     trigger:
-      'text-surface-300 data-[state=active]:bg-surface-800 data-[state=active]:text-white flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors',
+      'text-surface-300 data-[state=active]:bg-surface-800 data-[state=active]:text-white light:data-[state=active]:text-surface-50 flex shrink-0 scroll-mx-2 scroll-mt-24 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors',
     leadingIcon: 'h-4 w-4',
   };
+  const resolveScrollTarget = (targetId: string): Element | null => {
+    if (isSettingsTabId(targetId)) {
+      const mobileTab = document.querySelector('#settings-tabs [role="tab"][data-state="active"]');
+      // Keep the mobile navigation above the panel visible below the fixed app bar.
+      if (mobileTab?.getClientRects().length) {
+        return mobileTab;
+      }
+    }
+    return document.getElementById(targetId);
+  };
+  const scrollTarget = (element: Element, hash: string) => {
+    const isTab = element.getAttribute('role') === 'tab';
+    const options: ScrollIntoViewOptions = {
+      // Settle horizontal tab movement before Nuxt's subsequent panel scroll.
+      behavior: isTab ? 'instant' : 'smooth',
+      block: 'start',
+      inline: 'nearest',
+    };
+    element.scrollIntoView(options);
+    if (!isTab) {
+      return;
+    }
+    // An instant scroll issued while an earlier smooth panel scroll is still animating does not
+    // fully cancel it in Chromium: the stale animation applies one more frame and leaves the tab
+    // strip under the app bar. Re-assert the position once that frame has run.
+    requestAnimationFrame(() => {
+      if (hash === route.hash && element.isConnected) {
+        element.scrollIntoView(options);
+      }
+    });
+  };
   const scrollToHashTarget = async (hash: string) => {
-    if (!import.meta.client || !hash) {
+    if (!import.meta.client) {
       return;
     }
     await nextTick();
-    const targetId = hashTargetIds[hash] ?? (hash.startsWith('#') ? hash.slice(1) : hash);
-    if (!targetId) {
+    if (hash !== route.hash) {
       return;
     }
-    const targetElement = document.getElementById(targetId);
-    if (!targetElement || typeof targetElement.scrollIntoView !== 'function') {
-      return;
+    const targetId = hashTargetIds[hash] ?? hash.replace(/^#/, '');
+    const targetElement = resolveScrollTarget(targetId);
+    if (targetElement) {
+      scrollTarget(targetElement, hash);
     }
-    targetElement.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    });
   };
   const hiddenPrestigeTarget = (
     path: string,
@@ -414,19 +415,34 @@
     }
     return null;
   };
+  // Hash of the latest tab-initiated navigation that has not settled yet.
+  let pendingTabHash: string | null = null;
+  const replaceTabHash = async (hash: string) => {
+    pendingTabHash = hash;
+    try {
+      await router.replace({
+        hash,
+        query: route.query,
+      });
+    } finally {
+      if (pendingTabHash === hash) {
+        pendingTabHash = null;
+      }
+    }
+  };
   const onTabChange = (value: string | number) => {
     if (!isSettingsTabId(value)) {
       return;
     }
     activeTab.value = value;
     const nextHash = settingsTabHashes[value];
-    if (route.hash === nextHash) {
+    // An earlier tab's replace can still be in flight and would land after this selection,
+    // so only skip when the route already matches and nothing is pending. Replacing with the
+    // current hash supersedes (cancels) the in-flight navigation.
+    if (route.hash === nextHash && pendingTabHash === null) {
       return;
     }
-    void router.replace({
-      hash: nextHash,
-      query: route.query,
-    });
+    void replaceTabHash(nextHash);
   };
   watch(
     showPrestigeTab,

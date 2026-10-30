@@ -1,0 +1,62 @@
+<template>
+  <UContainer class="px-4 py-6 sm:px-6">
+    <div class="mx-auto flex w-full max-w-6xl flex-col gap-10">
+      <PageHeader :title="t('page.about.title')" :description="t('page.about.intro')" />
+      <section
+        v-if="coreMembers.length || supportMembers.length"
+        id="team"
+        aria-labelledby="about-team-heading"
+      >
+        <h2 id="about-team-heading" class="text-surface-50 text-xl font-semibold">
+          {{ t('common.team') }}
+        </h2>
+        <p class="text-surface-400 mt-2 max-w-2xl text-sm leading-relaxed">
+          {{ t('page.about.team.summary') }}
+        </p>
+        <div class="mt-6 flex flex-col gap-8">
+          <AboutMembersGroup
+            v-if="coreMembers.length"
+            label-key="page.about.team.core_heading"
+            :members="coreMembers"
+          />
+          <AboutMembersGroup
+            v-if="supportMembers.length"
+            label-key="page.about.team.support_heading"
+            :members="supportMembers"
+          />
+        </div>
+      </section>
+      <section v-if="partnerMembers.length" id="partners" aria-labelledby="about-partners-heading">
+        <h2 id="about-partners-heading" class="text-surface-50 text-xl font-semibold">
+          {{ t('page.about.partners.heading') }}
+        </h2>
+        <p class="text-surface-400 mt-2 max-w-2xl text-sm leading-relaxed">
+          {{ t('page.about.partners.summary') }}
+        </p>
+        <ul class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <AboutMemberCard v-for="member in partnerMembers" :key="member.id" :member="member" />
+        </ul>
+      </section>
+      <section id="help" aria-labelledby="about-help-heading">
+        <h2 id="about-help-heading" class="text-surface-50 text-xl font-semibold">
+          {{ t('page.about.help.heading') }}
+        </h2>
+        <p class="text-surface-400 mt-2 max-w-2xl text-sm leading-relaxed">
+          {{ t('page.about.help.routing') }}
+        </p>
+        <AboutHelpLinks class="mt-4" />
+      </section>
+    </div>
+  </UContainer>
+</template>
+<script setup lang="ts">
+  import PageHeader from '@/components/ui/PageHeader.vue';
+  import AboutHelpLinks from '@/features/about/AboutHelpLinks.vue';
+  import AboutMemberCard from '@/features/about/AboutMemberCard.vue';
+  import AboutMembersGroup from '@/features/about/AboutMembersGroup.vue';
+  import { membersByGroup } from '@/features/about/teamMembers';
+  const { t } = useI18n({ useScope: 'global' });
+  const coreMembers = computed(() => membersByGroup('core'));
+  const supportMembers = computed(() => membersByGroup('support'));
+  const partnerMembers = computed(() => membersByGroup('partner'));
+</script>

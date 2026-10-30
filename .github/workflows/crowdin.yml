@@ -1,0 +1,141 @@
+name: Crowdin Sync
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'app/locales/en.json'
+      - '.github/crowdin.yml'
+      - '.github/workflows/crowdin.yml'
+      - 'scripts/ci/crowdin-pr.sh'
+      - 'scripts/ci/github-ci-gate.sh'
+      - 'scripts/ci/enqueue-pr*.mjs'
+      - 'scripts/ci/queue-configuration.mjs'
+      - 'scripts/ci/queue-submitter.mjs'
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+permissions:
+  actions: write
+  checks: read
+  contents: write
+  pull-requests: write
+# Pushes only upload English sources; the weekly schedule and manual dispatch open the locale PR.
+# All triggers share the same Crowdin project and localization branch.
+concurrency:
+  group: crowdin-sync
+  cancel-in-progress: false
+env:
+  REVIEW_ADMISSION_APP_ID: ${{ vars.REVIEW_ADMISSION_APP_ID }}
+  REVIEW_ADMISSION_BOT_ID: ${{ vars.REVIEW_ADMISSION_BOT_ID }}
+  REVIEW_ADMISSION_INSTALLATION_ID: ${{ vars.REVIEW_ADMISSION_INSTALLATION_ID }}
+jobs:
+  sync:
+    if: github.repository == 'tarkovtracker-org/TarkovTracker' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    # Main-only environment holding the Queue Submitter App key; only the merge step reads it.
+    environment:
+      name: merge-queue
+      deployment: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Preserve trusted merge gate
+        run: cp scripts/ci/crowdin-pr.sh scripts/ci/github-ci-gate.sh scripts/ci/review-admission*.mjs scripts/ci/enqueue-pr*.mjs scripts/ci/queue-configuration.mjs scripts/ci/queue-submitter.mjs "$RUNNER_TEMP/"
+      - name: Synchronize Crowdin translations
+        id: crowdin
+        uses: crowdin/github-action@9c23991700c0ec5256fd41089b9d9d7d540e424e # v3.3.0
+        with:
+          config: '.github/crowdin.yml'
+          upload_sources: true
+          upload_translations: false
+          download_translations: ${{ github.event_name != 'push' }}
+          crowdin_branch_name: main
+          localization_branch_name: locales
+          create_pull_request: ${{ github.event_name != 'push' }}
+          pull_request_base_branch_name: main
+          pull_request_title: 'chore(i18n): update translations from Crowdin'
+          pull_request_body: 'Automated translation updates from Crowdin.'
+          commit_message: 'chore(i18n): update translations from Crowdin'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
+          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+      - name: Resolve Crowdin PR
+        id: resolve-pr
+        if: github.event_name != 'push'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTION_PR: ${{ steps.crowdin.outputs.pull_request_number }}
+        run: |
+          pr="$ACTION_PR"
+          if [ -z "$pr" ]; then
+            pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --head locales --base main --state open --json number --jq '.[0].number // empty')"
+          fi
+          if [ -n "$pr" ]; then
+            echo "pr_number=$pr" >> "$GITHUB_OUTPUT"
+            echo "Found open Crowdin PR #$pr"
+          else
+            echo "No open Crowdin PR to auto-merge."
+          fi
+      - name: Update translation branch from main
+        if: steps.resolve-pr.outputs.pr_number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.resolve-pr.outputs.pr_number }}
+        run: bash "$RUNNER_TEMP/crowdin-pr.sh" update
+      - name: Prepare immutable translation checkout
+        id: candidate
+        if: steps.resolve-pr.outputs.pr_number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.resolve-pr.outputs.pr_number }}
+        run: bash "$RUNNER_TEMP/crowdin-pr.sh" prepare
+      - uses: ./.github/actions/setup-project
+        if: steps.resolve-pr.outputs.pr_number != ''
+      - name: Validate translations
+        if: steps.resolve-pr.outputs.pr_number != ''
+        run: |
+          pnpm run format:check
+          pnpm run i18n:check
+          pnpm run systems:check
+      - name: Record validated Crowdin provenance
+        if: steps.resolve-pr.outputs.pr_number != ''
+        env:
+          PR_NUMBER: ${{ steps.resolve-pr.outputs.pr_number }}
+          HEAD_SHA: ${{ steps.candidate.outputs.head_sha }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/crowdin-validated"
+          jq -n --arg repo "$GITHUB_REPOSITORY" --arg head "$HEAD_SHA" \
+            --argjson number "$PR_NUMBER" --argjson run "$GITHUB_RUN_ID" \
+            --argjson attempt "$GITHUB_RUN_ATTEMPT" \
+            '{schema: 1, repository: $repo, number: $number, headSha: $head,
+              runId: $run, runAttempt: $attempt, validation: "format,i18n,systems"}' \
+            > "$RUNNER_TEMP/crowdin-validated/$HEAD_SHA.json"
+      - name: Upload validated Crowdin provenance
+        if: steps.resolve-pr.outputs.pr_number != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: crowdin-validated-${{ steps.resolve-pr.outputs.pr_number }}-${{ steps.candidate.outputs.head_sha }}
+          path: ${{ runner.temp }}/crowdin-validated/${{ steps.candidate.outputs.head_sha }}.json
+          if-no-files-found: error
+          retention-days: 30
+          overwrite: true
+      - name: Merge validated translations
+        if: steps.resolve-pr.outputs.pr_number != ''
+        env:
+          # Explicit dispatch starts CI; project checks receive no write token.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.resolve-pr.outputs.pr_number }}
+          HEAD_SHA: ${{ steps.candidate.outputs.head_sha }}
+          BASE_SHA: ${{ steps.candidate.outputs.base_sha }}
+          # Queue Submitter App: a job-token queue entry would start no merge_group CI.
+          QUEUE_SUBMITTER_APP_ID: ${{ vars.QUEUE_SUBMITTER_APP_ID }}
+          QUEUE_SUBMITTER_PRIVATE_KEY: ${{ secrets.QUEUE_SUBMITTER_PRIVATE_KEY }}
+          QUEUE_SUBMITTER_REQUIRED: 'true'
+        run: bash "$RUNNER_TEMP/crowdin-pr.sh" merge

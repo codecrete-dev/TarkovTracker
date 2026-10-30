@@ -1,0 +1,1416 @@
+import { mkdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { verifiedFormatterChange } from '../ci/formatter-validation.mjs';
+import { classifyPaths } from '../ci/validation-plan.mjs';
+import { extractZip } from './archive.mjs';
+import {
+  ciResultCheck,
+  downloadArtifact,
+  findLatestPullRun,
+  findPreviewArtifact,
+  findPullForHead,
+  getPull,
+  getRun,
+  isCiRun,
+  latestStatus,
+  listPullPaths,
+  allStatuses,
+  publishStatus,
+  requestPreviewDispatch,
+} from './github-api.mjs';
+import { digestDirectory, manifestShapeErrors } from './manifest.mjs';
+import {
+  QueueValidationError,
+  queueRevision,
+  requireQueueCi,
+  queueRequiresPreview,
+} from './merge-queue.mjs';
+import { findQueueReuse } from './queue-reuse.mjs';
+import {
+  MANIFEST_FILE,
+  PREVIEW_PROFILE_VERSION,
+  PRODUCTION_BRANCH,
+  previewAppUrl,
+  previewBranchName,
+} from './profile.mjs';
+import { assertReadinessCi, readinessEligible } from './ready-policy.mjs';
+import { previewBindingError, samePreviewAuthorization } from './binding-policy.mjs';
+import { readPreviewRequest, previewGrant } from './request-authorization.mjs';
+// Trusted preview controller. Everything here loads from the default branch and treats candidate
+// artifacts, workflow payloads, and manifests as claims to verify against live GitHub state.
+export const ENVIRONMENTS = { internal: 'preview', fork: 'preview-fork' };
+const SHA_PATTERN = /^[0-9a-f]{40}$/;
+// "Test merge not ready" and unfinished CI Result reasons start with these prefixes so the hourly
+// fallback can re-evaluate them; other pending reasons are left alone.
+const MERGE_PENDING = 'GitHub has not finished computing';
+const CI_RESULT_PENDING = 'CI Result is still running';
+const CI_RESULT_MISSING = 'Waiting for CI Result on this revision';
+// Freshness errors that a newer event (a push, close, draft or CI rerun) already reports on, or
+// that take the PR out of main's required checks.
+const PULL_NOT_READY = 'pull request is not open and ready';
+const PULL_RETARGETED = 'pull request no longer targets main';
+const PULL_HEAD_MOVED = 'pull request head moved';
+const RUN_ATTEMPT_SUPERSEDED = 'CI run attempt superseded';
+const RUN_HEAD_CHANGED = 'CI run head changed';
+const OWNED_STALENESS = [
+  PULL_NOT_READY,
+  PULL_RETARGETED,
+  PULL_HEAD_MOVED,
+  RUN_ATTEMPT_SUPERSEDED,
+  RUN_HEAD_CHANGED,
+];
+// When main really moved under a PR candidate, no PR event follows and the run's artifact can never
+// match the new test merge, so that result is final. With main unchanged, the test merge is only
+// briefly unavailable, so the result stays pending under a prefix the hourly fallback re-plans.
+const BASE_MOVED =
+  'Main moved during the preview deploy; push a new commit or rebase to rebuild on current main.';
+const MERGE_RETRY = `${MERGE_PENDING} the PR test merge; retry after it is ready.`;
+class Outcome extends Error {
+  constructor(action, state, description) {
+    super(description);
+    this.action = action;
+    this.state = state;
+  }
+}
+const ignore = (reason) => new Outcome('ignore', null, reason);
+const pending = (reason) => new Outcome('wait', 'pending', reason);
+const failure = (reason) => new Outcome('fail', 'failure', reason);
+export function successMarker(digest) {
+  return `[preview ${digest.slice(0, 12)} v${PREVIEW_PROFILE_VERSION}]`;
+}
+function repoName(context) {
+  return `${context.repo.owner}/${context.repo.repo}`;
+}
+/** The first pull request number of a run, or the pull request number itself, or null. */
+function pullRequestNumber(pull) {
+  return pull?.number ?? null;
+}
+function optional(value, key) {
+  return value?.[key] ?? null;
+}
+function firstRunId(candidate, run) {
+  if (run?.id !== undefined) return run.id;
+  return optional(candidate, 'runId');
+}
+function attemptOf(run) {
+  return optional(run, 'run_attempt');
+}
+function orNa(value) {
+  return value ?? 'n/a';
+}
+function runUrl(context) {
+  return `${context.serverUrl}/${repoName(context)}/actions/runs/${context.runId}`;
+}
+/* ------------------------------------------------------------------------------------------ */
+/* Candidate resolution                                                                        */
+/* ------------------------------------------------------------------------------------------ */
+function firstNumber(value) {
+  return value?.[0]?.number ?? null;
+}
+function candidateFromRun(run, context) {
+  if (!isCiRun(run)) throw ignore('Not a pull request or dispatched CI run.');
+  if (run.head_branch === PRODUCTION_BRANCH) throw ignore('Production branch runs never deploy.');
+  return {
+    runId: run.id,
+    runEvent: run.event,
+    headSha: run.head_sha,
+    headBranch: run.head_branch,
+    headRepo: run.head_repository?.full_name,
+    baseBranch: PRODUCTION_BRANCH,
+    pullRequest: firstNumber(run.pull_requests),
+    repositoryId: context.payload.repository.id,
+  };
+}
+function candidateFromPullEvent(context) {
+  const pull = context.payload.pull_request;
+  if (pull.base.ref !== PRODUCTION_BRANCH) throw ignore('Only pull requests into main deploy.');
+  if (context.payload.action === 'closed') throw ignore('Closed pull request.');
+  return {
+    runId: null,
+    runEvent: 'pull_request',
+    headSha: pull.head.sha,
+    headBranch: pull.head.ref,
+    headRepo: pull.head.repo?.full_name,
+    baseBranch: PRODUCTION_BRANCH,
+    pullRequest: pull.number,
+    repositoryId: context.payload.repository.id,
+  };
+}
+function requestedRunId(inputs) {
+  const runId = Number(inputs?.run_id);
+  return Number.isInteger(runId) && runId > 0 ? runId : null;
+}
+function queueScope(value) {
+  if ([true, 'true'].includes(value)) return true;
+  if ([undefined, false, 'false', ''].includes(value)) return false;
+  throw failure('Preview queue profile input is invalid.');
+}
+function requireQueueScope(value, event) {
+  if (queueScope(value) !== (event === 'merge_group'))
+    throw failure('Preview queue profile does not match the authenticated CI event.');
+}
+async function candidateFromDispatch(github, context, inputs) {
+  if (context.ref !== `refs/heads/${PRODUCTION_BRANCH}`)
+    throw ignore('Manual reruns must dispatch from the default branch.');
+  const runId = requestedRunId(inputs);
+  if (!runId) throw failure('A numeric CI run id is required.');
+  const run = await getRun(github, context.repo, runId);
+  requireQueueScope(inputs?.queue, run.event);
+  return candidateFromRun(run, context);
+}
+async function resolveCandidate({ github, context, inputs }) {
+  if (context.eventName === 'workflow_run')
+    return candidateFromRun(context.payload.workflow_run, context);
+  if (context.eventName === 'pull_request_target') return candidateFromPullEvent(context);
+  if (context.eventName === 'workflow_dispatch')
+    return candidateFromDispatch(github, context, inputs);
+  throw ignore(`Unsupported event ${context.eventName}.`);
+}
+/* ------------------------------------------------------------------------------------------ */
+/* Live state                                                                                  */
+/* ------------------------------------------------------------------------------------------ */
+async function findCandidatePull(github, context, candidate) {
+  if (candidate.runEvent === 'merge_group') return null;
+  return candidate.pullRequest
+    ? await getPull(github, context.repo, candidate.pullRequest)
+    : await findPullForHead(github, context.repo, candidate);
+}
+function assertCandidatePull(pull, candidate) {
+  if (!pull && candidate.runEvent === 'pull_request')
+    throw ignore('No open pull request currently points at the validated head.');
+}
+async function resolvePull(github, context, candidate) {
+  const pull = await findCandidatePull(github, context, candidate);
+  assertCandidatePull(pull, candidate);
+  return needsMergeRetry(pull) ? waitForMerge(github, context, candidate, pull) : pull;
+}
+function needsMergeRetry(pull) {
+  return pull && pull.state === 'open' && !SHA_PATTERN.test(String(pull.merge_commit_sha));
+}
+function pullRevisionChanged(current, candidate) {
+  return current.head.sha !== candidate.headSha || current.base.ref !== PRODUCTION_BRANCH;
+}
+async function waitForMerge(github, context, candidate, pull) {
+  // GitHub briefly returns a null test merge after a PR is opened or synchronized. Retry
+  // before verifying; artifact claims bind to the test merge even though the status targets the head.
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    const current = await getPull(github, context.repo, pull.number);
+    if (pullRevisionChanged(current, candidate)) return current;
+    if (SHA_PATTERN.test(String(current.merge_commit_sha))) return current;
+  }
+  return pull;
+}
+function assertPullState(pull) {
+  if (pull.state !== 'open') throw ignore('Pull request is no longer open.');
+  if (pull.base.ref !== PRODUCTION_BRANCH) throw ignore('Pull request no longer targets main.');
+}
+function assertPullRevision(pull, candidate) {
+  if (pull.head.sha !== candidate.headSha)
+    throw ignore(`Pull request head moved to ${pull.head.sha}; this revision is obsolete.`);
+}
+function checkPullFreshness(pull, candidate) {
+  if (!pull) return;
+  assertPullState(pull);
+  assertPullRevision(pull, candidate);
+}
+function isFork(pull, candidate, context) {
+  if (pull) return pull.head.repo?.full_name !== repoName(context);
+  return candidate.headRepo !== repoName(context);
+}
+async function runById(github, context, candidate) {
+  const run = await getRun(github, context.repo, candidate.runId);
+  if (!isCiRun(run) || run.head_sha !== candidate.headSha)
+    throw failure('CI run identity does not match the candidate revision.');
+  return run;
+}
+function sameCandidateBranch(run, candidate) {
+  return [
+    run.head_repository?.full_name === candidate.headRepo,
+    run.head_branch === candidate.headBranch,
+  ].every(Boolean);
+}
+function assertLatestPullRun(candidate, latest) {
+  if (!latest) throw pending('Waiting for CI to start for this revision.');
+  if (candidate.runId && candidate.runId !== latest.id) {
+    throw ignore('A newer CI run superseded this preview state event.');
+  }
+}
+async function resolvePullRun(github, context, candidate) {
+  const latest = await findLatestPullRun(github, context.repo, candidate.headSha, (run) =>
+    sameCandidateBranch(run, candidate)
+  );
+  assertLatestPullRun(candidate, latest);
+  return candidate.runId ? runById(github, context, candidate) : latest;
+}
+async function resolveRun(github, context, candidate) {
+  if (candidate.runEvent === 'pull_request') return resolvePullRun(github, context, candidate);
+  return runById(github, context, candidate);
+}
+function assertRunRepository(run, candidate) {
+  if (run.head_repository?.full_name !== candidate.headRepo)
+    throw failure('CI run repository does not match the candidate.');
+}
+function checkRunState(run, candidate) {
+  assertRunRepository(run, candidate);
+  if (run.status !== 'completed') throw pending('Validation is running.');
+  if (run.conclusion !== 'success') throw failure(`CI concluded ${run.conclusion}.`);
+}
+async function ciEvidence(github, context, candidate) {
+  if (['pull_request', 'merge_group'].includes(candidate.runEvent))
+    return ciResultCheck(github, context.repo, candidate.headSha);
+  return latestStatus(github, context.repo, candidate.headSha, 'CI Result');
+}
+function evidenceState(evidence) {
+  return evidence.conclusion ?? evidence.state;
+}
+function assertEvidenceComplete(state) {
+  if (state == null || state === 'pending') throw pending(`${CI_RESULT_PENDING}.`);
+  if (state !== 'success') throw failure(`CI Result concluded ${state}.`);
+}
+async function checkCiResult(github, context, candidate) {
+  const evidence = await ciEvidence(github, context, candidate);
+  if (!evidence) throw pending(`${CI_RESULT_MISSING}.`);
+  assertEvidenceComplete(evidenceState(evidence));
+}
+// This runs only after the CI run itself completed successfully, so its `CI Result` job has
+// finished too; a missing or unfinished check run is a stale checks-API read (#1336). The CI
+// completion event is the only trigger a merge-group entry gets (no hourly fallback), so that
+// event re-reads briefly before publishing pending.
+const CI_RESULT_REREAD_DELAYS_MS = [3000, 6000, 12000];
+const defaultSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+function staleCiResult(error) {
+  if (!(error instanceof Outcome) || error.action !== 'wait') return false;
+  return [CI_RESULT_PENDING, CI_RESULT_MISSING].some((reason) => error.message.startsWith(reason));
+}
+function rereadDelays(context, candidate) {
+  if (context.eventName !== 'workflow_run') return [];
+  return ['pull_request', 'merge_group'].includes(candidate.runEvent)
+    ? CI_RESULT_REREAD_DELAYS_MS
+    : [];
+}
+async function settledCiResult(github, context, candidate, sleep) {
+  for (const delay of rereadDelays(context, candidate)) {
+    const error = await checkCiResult(github, context, candidate).then(
+      () => null,
+      (e) => e
+    );
+    if (!error) return;
+    if (!staleCiResult(error)) throw error;
+    await sleep(delay);
+  }
+  await checkCiResult(github, context, candidate);
+}
+async function requiresPreview(github, context, pull) {
+  if (!pull) return true;
+  const paths = await listPullPaths(github, context.repo, pull.number);
+  const formatterOnly = await verifiedFormatterChange(
+    github,
+    context.repo,
+    pull.base.sha,
+    pull.head.sha,
+    paths
+  );
+  return classifyPaths(paths, { formatterOnly }).previewRequired;
+}
+/* ------------------------------------------------------------------------------------------ */
+/* Artifact verification                                                                       */
+/* ------------------------------------------------------------------------------------------ */
+function manifestPreviewBranch(candidate, pull) {
+  return previewBranchName({
+    pullRequest: candidate.runEvent === 'pull_request' ? pullRequestNumber(pull) : null,
+    branch: candidate.headBranch,
+  });
+}
+function claimSha(candidate, pull) {
+  if (candidate.runEvent !== 'pull_request' || !pull) return null;
+  return pull.base.sha;
+}
+/** Tree of the commit GitHub triggered the run for; binds push and dispatched branch builds. */
+function runTreeSha(run) {
+  const tree = run.head_commit?.tree_id;
+  return SHA_PATTERN.test(String(tree)) ? tree : null;
+}
+function dispatchMergePrerequisite(pull, run) {
+  if (!SHA_PATTERN.test(String(pull.merge_commit_sha))) return MERGE_RETRY;
+  if (!runTreeSha(run)) return 'Dispatched CI run has no verifiable Git tree.';
+  return null;
+}
+async function currentPullBaseMismatch(github, context, pull) {
+  if (!SHA_PATTERN.test(String(pull.merge_commit_sha))) return MERGE_RETRY;
+  const { data: main } = await github.rest.git.getRef({
+    ...context.repo,
+    ref: `heads/${PRODUCTION_BRANCH}`,
+  });
+  if (pull.base.sha === main.object.sha) return null;
+  // REST can retain the PR's original base snapshot after main advances. A current test merge
+  // is stronger integration proof; artifact/run base claims remain bound to that snapshot.
+  const merge = await commitShape(github, context, pull.merge_commit_sha);
+  return representsPull(merge, pull, main.object.sha)
+    ? null
+    : 'PR base is no longer current main; rerun PR CI before requesting a preview.';
+}
+async function dispatchMergeMismatch(github, context, pull, run) {
+  const prerequisite = dispatchMergePrerequisite(pull, run);
+  if (prerequisite) return prerequisite;
+  const merge = await currentTestMerge(github, context, pull);
+  if (!merge)
+    return 'PR base is no longer current main or test-merge parents are invalid; rerun PR CI before requesting a preview.';
+  return merge.tree === runTreeSha(run)
+    ? null
+    : 'Dispatched branch build differs from the PR test merge; request a preview from PR CI.';
+}
+/* GitHub can regenerate a PR's test-merge commit (observed when a merge is attempted) with the
+   same parents and tree but a new SHA. A test merge is identified by that content, not its SHA. */
+function shapeOf(data) {
+  return { tree: data.tree?.sha, parents: (data.parents ?? []).map((parent) => parent.sha) };
+}
+function missingCommit(error) {
+  return [404, 422].includes(error.status);
+}
+async function commitShape(github, context, sha) {
+  try {
+    const { data } = await github.rest.git.getCommit({ ...context.repo, commit_sha: sha });
+    return shapeOf(data);
+  } catch (error) {
+    if (missingCommit(error)) return null;
+    throw error;
+  }
+}
+function representsPull(shape, pull, baseSha) {
+  const parents = shape?.parents ?? [];
+  return [
+    parents.length === 2,
+    parents[0] === baseSha,
+    parents[1] === pull.head.sha,
+    SHA_PATTERN.test(String(shape?.tree)),
+    SHA_PATTERN.test(String(baseSha)),
+  ].every(Boolean);
+}
+/** Trust the live main ref and GitHub's current PR merge, never the PR's stale base snapshot. */
+async function currentTestMerge(github, context, pull) {
+  const { data: main } = await github.rest.git.getRef({
+    ...context.repo,
+    ref: `heads/${PRODUCTION_BRANCH}`,
+  });
+  const merge = await commitShape(github, context, pull.merge_commit_sha);
+  return representsPull(merge, pull, main.object.sha) ? merge : null;
+}
+function comparableMerges(pull, sha) {
+  return [sha, pull.merge_commit_sha].every((value) => SHA_PATTERN.test(String(value)));
+}
+function sameMergeContent(claimed, current, pull) {
+  if (!claimed || !current) return false;
+  return [
+    representsPull(claimed, pull, current.parents[0]),
+    representsPull(current, pull, current.parents[0]),
+    claimed.tree === current.tree,
+  ].every(Boolean);
+}
+/** True when `sha` is the PR's current test merge or a regenerated equivalent of it. */
+async function equivalentTestMerge(github, context, pull, sha) {
+  if (!comparableMerges(pull, sha)) return false;
+  const current = await currentTestMerge(github, context, pull);
+  if (!current) return false;
+  const claimed = sha === pull.merge_commit_sha ? current : await commitShape(github, context, sha);
+  return sameMergeContent(claimed, current, pull);
+}
+async function requireDispatchMergeProof(github, context, candidate, pull, run) {
+  if (!pull || candidate.runEvent !== 'workflow_dispatch') return;
+  const mismatch = await dispatchMergeMismatch(github, context, pull, run);
+  if (mismatch) throw pending(mismatch);
+}
+function claimCheckedOutSha(candidate, pull) {
+  return candidate.runEvent === 'pull_request' && pull ? pull.merge_commit_sha : candidate.headSha;
+}
+function expectedManifest(context, candidate, pull, run) {
+  const previewBranch = manifestPreviewBranch(candidate, pull);
+  return {
+    repository: repoName(context),
+    pullRequest: candidate.runEvent === 'pull_request' ? pullRequestNumber(pull) : null,
+    headSha: candidate.headSha,
+    baseSha: candidate.queueBaseSha ?? claimSha(candidate, pull),
+    checkedOutSha: claimCheckedOutSha(candidate, pull),
+    treeSha: candidate.queueTreeSha ?? runTreeSha(run),
+    runId: run.id,
+    runAttempt: run.run_attempt,
+    previewBranch,
+    appUrl: previewAppUrl(previewBranch),
+  };
+}
+function claimErrors(manifest, expected) {
+  return Object.entries(expected)
+    .filter(([key, value]) => manifest[key] !== value)
+    .map(([key, value]) => {
+      const recovery =
+        key === 'runAttempt' ? '. Push a new commit to rebuild the preview artifact.' : '';
+      return `${key}: manifest ${String(manifest[key])}, expected ${String(value)}${recovery}`;
+    });
+}
+/** Compare every manifest claim with live GitHub state and the recomputed content digest. */
+export function verifyManifest(manifest, expected, digest) {
+  const errors = manifestShapeErrors(manifest);
+  if (errors.length) return errors;
+  if (!SHA_PATTERN.test(String(expected.checkedOutSha)))
+    return [`${MERGE_PENDING} the test merge for this revision.`];
+  const mismatches = claimErrors(manifest, expected);
+  if (manifest.digest !== digest) mismatches.push('digest: build output does not match manifest');
+  return mismatches;
+}
+async function fetchArtifact(github, context, run, destination) {
+  const artifact = await findPreviewArtifact(github, context.repo, run.id);
+  if (!artifact) throw failure('Preview artifact is missing or expired; rerun CI to rebuild it.');
+  mkdirSync(destination, { recursive: true });
+  extractZip(await downloadArtifact(github, context.repo, artifact.id), destination);
+  return artifact;
+}
+function readManifest(destination) {
+  try {
+    return JSON.parse(readFileSync(join(destination, MANIFEST_FILE), 'utf8'));
+  } catch {
+    throw failure('Preview artifact has no readable manifest.');
+  }
+}
+function bindsTestMerge(candidate, pull) {
+  return [
+    candidate.runEvent === 'pull_request',
+    SHA_PATTERN.test(String(pull?.merge_commit_sha)),
+  ].every(Boolean);
+}
+/** pull_request CI checks out the test merge, so its build tree is the merge tree, not the head's.
+   Equivalent regenerated merges share that tree, so the current merge's tree binds both. */
+async function testMergeTreeSha(github, context, pull) {
+  const shape = await currentTestMerge(github, context, pull);
+  return shape?.tree ?? null;
+}
+async function mergeBoundExpectation({ github, context, candidate, pull, manifest, expected }) {
+  if (!bindsTestMerge(candidate, pull)) return expected;
+  const equivalent = await equivalentTestMerge(github, context, pull, manifest.checkedOutSha);
+  return {
+    ...expected,
+    checkedOutSha: equivalent ? manifest.checkedOutSha : expected.checkedOutSha,
+    treeSha: await testMergeTreeSha(github, context, pull),
+  };
+}
+async function verifiedArtifact({ github, context, candidate, pull, run, destination }) {
+  const artifact = await fetchArtifact(github, context, run, destination);
+  const manifest = readManifest(destination);
+  const expected = await mergeBoundExpectation({
+    github,
+    context,
+    candidate,
+    pull,
+    manifest,
+    expected: expectedManifest(context, candidate, pull, run),
+  });
+  const errors = verifyManifest(manifest, expected, digestDirectory(destination));
+  if (errors.length === 1 && errors[0].startsWith(MERGE_PENDING)) throw pending(errors[0]);
+  if (errors.length) throw failure(`Preview artifact verification failed: ${errors.join('; ')}`);
+  return { artifact, manifest };
+}
+/* ------------------------------------------------------------------------------------------ */
+/* Decisions                                                                                   */
+/* ------------------------------------------------------------------------------------------ */
+function previousRunId(context, status) {
+  const prefix = `${context.serverUrl}/${repoName(context)}/actions/runs/`;
+  const target = status.target_url ?? '';
+  if (!target.startsWith(prefix)) return null;
+  const id = target.slice(prefix.length);
+  return /^[1-9][0-9]*$/.test(id) ? Number(id) : null;
+}
+function trustedPreviousRun(context, run) {
+  const repository = repoName(context);
+  return [
+    run.path === '.github/workflows/preview.yml',
+    run.event === 'workflow_dispatch',
+    run.head_branch === PRODUCTION_BRANCH,
+    run.head_repository?.full_name === repository,
+    run.repository?.full_name === repository,
+    run.status === 'completed',
+    run.conclusion === 'success',
+  ].every(Boolean);
+}
+async function successfulResultJob(github, context, runId) {
+  const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+    ...context.repo,
+    run_id: runId,
+    per_page: 100,
+  });
+  return jobs.some((job) => job.name === 'Publish preview result' && job.conclusion === 'success');
+}
+async function retainedDeployment(github, context, runId, sha) {
+  const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+    ...context.repo,
+    run_id: runId,
+    per_page: 100,
+  });
+  return artifacts.some(
+    (artifact) => artifact.name === `preview-deployment-${sha}` && !artifact.expired
+  );
+}
+async function previousRun(github, context, runId) {
+  try {
+    return await getRun(github, context.repo, runId);
+  } catch (error) {
+    if (error.status === 404) return null;
+    throw error;
+  }
+}
+async function validatedPreviousRun(github, context, status) {
+  const runId = previousRunId(context, status);
+  if (!runId) return null;
+  const run = await previousRun(github, context, runId);
+  if (!run) return null;
+  if (!trustedPreviousRun(context, run)) return null;
+  return runId;
+}
+async function authenticatedPreviousSuccess(github, context, status, sha) {
+  const runId = await validatedPreviousRun(github, context, status);
+  if (!runId) return false;
+  if (!(await successfulResultJob(github, context, runId))) return false;
+  return retainedDeployment(github, context, runId, sha);
+}
+function matchesSuccessMarker(status, marker) {
+  return status.state === 'success' && status.description?.includes(marker);
+}
+async function previousSuccess(github, context, headSha, digest) {
+  const statuses = await allStatuses(github, context.repo, headSha, 'Preview Result');
+  const marker = successMarker(digest);
+  for (const status of statuses.toSorted((left, right) => right.id - left.id)) {
+    if (!matchesSuccessMarker(status, marker)) continue;
+    if (await authenticatedPreviousSuccess(github, context, status, headSha)) return status;
+  }
+  return null;
+}
+function decisionBaseSha(candidate, pull) {
+  if (candidate?.queueBaseSha) return candidate.queueBaseSha;
+  return optional(pull?.base, 'sha');
+}
+function decisionIdentity({ candidate, pull }) {
+  return {
+    pullRequest: pullRequestNumber(pull),
+    headSha: optional(candidate, 'headSha'),
+    headBranch: optional(candidate, 'headBranch'),
+    headRepo: optional(candidate, 'headRepo'),
+    mergeSha: optional(pull, 'merge_commit_sha'),
+    baseSha: decisionBaseSha(candidate, pull),
+  };
+}
+function decisionRun({ candidate, run }) {
+  return {
+    runId: firstRunId(candidate, run),
+    runAttempt: attemptOf(run),
+    runCompletedAt: optional(run, 'updated_at'),
+  };
+}
+/** Rebuild the phase-1 candidate for phase-2 re-verification; runEvent picks the claim shape. */
+function decisionRunEvent(candidate, pull) {
+  if (candidate?.runEvent === 'merge_group') return 'merge_group';
+  const pr = [
+    Boolean(candidate),
+    optional(candidate, 'runEvent') === 'pull_request',
+    Boolean(pull),
+  ].every(Boolean);
+  return pr ? 'pull_request' : 'workflow_dispatch';
+}
+function decisionBase({ candidate, pull, run, fork }) {
+  return {
+    ...decisionIdentity({ candidate, pull }),
+    fork: Boolean(fork),
+    runEvent: decisionRunEvent(candidate, pull),
+    ...decisionRun({ candidate, run }),
+  };
+}
+// `state` is filled progressively so an interim outcome (pending/failure) still knows which
+// revision to report on.
+async function evaluate({ github, context, inputs, workspace, sleep }, state) {
+  assertInputAuthorization(inputs);
+  state.candidate = await resolveCandidate({ github, context, inputs });
+  state.pull = await resolvePull(github, context, state.candidate);
+  checkPullFreshness(state.pull, state.candidate);
+  state.fork = isFork(state.pull, state.candidate, context);
+  if (state.pull?.draft) return { ...decisionBase(state), ...draftDecision() };
+  state.run = await resolveRun(github, context, state.candidate);
+  assertSelectedAttempt(state.run, inputs);
+  checkRunState(state.run, state.candidate);
+  await settledCiResult(github, context, state.candidate, sleep);
+  if (state.candidate.runEvent === 'merge_group') {
+    return evaluateQueue({ github, context, state, workspace });
+  }
+  return evaluatePull({ github, context, inputs, workspace }, state);
+}
+async function evaluatePull({ github, context, inputs, workspace }, state) {
+  await requireDispatchMergeProof(github, context, state.candidate, state.pull, state.run);
+  if (!(await requiresPreview(github, context, state.pull)))
+    return { ...decisionBase(state), ...notApplicable() };
+  state.previewRequest = await readPreviewRequest(
+    github,
+    context.repo,
+    pullRequestNumber(state.pull),
+    requestBinding(inputs)
+  );
+  requireRequestedCommand(inputs, state.previewRequest);
+  state.previewAuthorization = commandAuthorization(
+    context,
+    inputs,
+    state.fork,
+    state.previewRequest
+  );
+  await authorizeReadiness(github, context, inputs, state);
+  return deployDecision({ github, context, state, workspace });
+}
+async function queueProof(proof) {
+  try {
+    return await proof();
+  } catch (error) {
+    if (error instanceof QueueValidationError) throw failure(error.message);
+    throw error;
+  }
+}
+async function evaluateQueue({ github, context, state, workspace }) {
+  const revision = await queueProof(() => queueRevision(github, context, state.candidate));
+  state.candidate.queueBaseSha = revision.baseSha;
+  state.candidate.queueTreeSha = revision.treeSha;
+  await queueProof(() => requireQueueCi(github, context, state.run));
+  // Lookup outages propagate like other queue API outages; only absent proof falls through.
+  const reuse = await findQueueReuse({ github, context, candidate: state.candidate });
+  if (reuse.reused) return queueReuseDecision(github, context, state, reuse);
+  const previewRequired = await queueProof(() =>
+    queueRequiresPreview(github, context, state.candidate, revision)
+  );
+  if (!previewRequired) return queueDocumentationDecision(github, context, state);
+  await requireQueueBuild(github, context, state.run, reuse);
+  state.previewAuthorization = 'queue';
+  return deployDecision({ github, context, state, workspace });
+}
+/** Queue CI that reused PR validation built no artifact; if the proof lapsed, say so plainly. */
+async function requireQueueBuild(github, context, run, reuse) {
+  if (await findPreviewArtifact(github, context.repo, run.id)) return;
+  throw failure(
+    `Queue CI built no preview and PR validation is no longer reusable (${reuse.reason}); re-enqueue to validate in full.`
+  );
+}
+/** The queue tree is identical to a deployed and smoke-tested PR tree; publish without a rebuild. */
+async function queueReuseDecision(github, context, state, reuse) {
+  const decision = {
+    ...decisionBase(state),
+    action: 'skip',
+    state: 'success',
+    description: `Reused PR #${reuse.pullRequest} preview of identical tree ${reuse.treeSha.slice(0, 12)}.`,
+    reuseTargetUrl: `${context.serverUrl}/${repoName(context)}/actions/runs/${reuse.previewRunId}`,
+  };
+  const errors = await freshnessErrors(github, context, decision);
+  if (errors.length) throw ignore(`Reused queue candidate is obsolete: ${errors.join('; ')}`);
+  return decision;
+}
+async function queueDocumentationDecision(github, context, state) {
+  const decision = { ...decisionBase(state), ...notApplicable() };
+  const errors = await freshnessErrors(github, context, decision);
+  if (errors.length)
+    throw ignore(`Non-deployable queue candidate is obsolete: ${errors.join('; ')}`);
+  return decision;
+}
+function requestBinding(inputs) {
+  return Number(inputs?.request_comment_id) || null;
+}
+function assertControlBindingInputs(inputs) {
+  if (
+    [optional(inputs, 'request_control_run_id'), !optional(inputs, 'request_comment_id')].every(
+      Boolean
+    )
+  )
+    throw ignore('Preview control binding requires its official comment ID.');
+}
+function assertInputAuthorization(inputs) {
+  assertControlBindingInputs(inputs);
+  if (inputs?.authorization && inputs.authorization !== 'readiness')
+    throw ignore('Unknown preview authorization provenance.');
+}
+function assertSelectedAttempt(run, inputs) {
+  if (inputs?.ci_attempt && String(run.run_attempt) !== inputs.ci_attempt)
+    throw ignore('CI run attempt superseded this request.');
+}
+async function authorizeReadiness(github, context, inputs, state) {
+  if (!readinessRequested(context, inputs, state)) return;
+  assertReadinessAttempt(context, inputs);
+  await requireReadiness(github, context, state);
+  state.previewAuthorization = 'readiness';
+}
+function assertReadinessAttempt(context, inputs) {
+  if ([context.eventName === 'workflow_dispatch', !inputs?.ci_attempt].every(Boolean))
+    throw ignore('Readiness dispatch requires an exact CI attempt.');
+}
+function readinessRequested(context, inputs, state) {
+  if (optional(inputs, 'authorization') === 'readiness') return true;
+  if (context.eventName === 'workflow_dispatch') return false;
+  return [
+    state.candidate.runEvent === 'pull_request',
+    !state.previewRequest,
+    readinessEvent(context),
+    readinessEligible(state.pull, context.repo, state.previewRequest),
+  ].every(Boolean);
+}
+function readinessEvent(context) {
+  return (
+    context.previewReconciliation === true ||
+    context.eventName === 'workflow_run' ||
+    ['ready_for_review', 'reopened', 'auto_merge_enabled'].includes(context.payload.action)
+  );
+}
+async function requireReadiness(github, context, state) {
+  if (!readinessEligible(state.pull, context.repo, state.previewRequest))
+    throw ignore('Automatic readiness authorization is paused or revoked.');
+  try {
+    assertReadinessCi(state.run, state.pull);
+  } catch (error) {
+    throw pending(error.message);
+  }
+  await requireReadinessCiJob(github, context, state.run);
+  const mismatch = await currentPullBaseMismatch(github, context, state.pull);
+  if (mismatch) throw pending(mismatch);
+}
+async function requireReadinessCiJob(github, context, run) {
+  const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRunAttempt, {
+    ...context.repo,
+    run_id: run.id,
+    attempt_number: run.run_attempt,
+    per_page: 100,
+  });
+  const results = jobs.filter((job) => job.name === 'CI Result');
+  if (results.length !== 1 || !readinessCiJobMatches(results[0], run))
+    throw pending('Waiting for successful CI Result from the selected CI attempt.');
+}
+function readinessCiJobMatches(job, run) {
+  return [
+    job.run_id === run.id,
+    job.run_attempt === run.run_attempt,
+    job.head_sha === run.head_sha,
+    job.status === 'completed',
+    job.conclusion === 'success',
+  ].every(Boolean);
+}
+function requireRequestedCommand(inputs, request) {
+  const error = previewBindingError(inputs, request);
+  if (error) throw failure(error);
+}
+function draftDecision() {
+  return {
+    action: 'skip',
+    state: 'pending',
+    description: 'Draft pull request: previews pause until ready with successful current CI.',
+  };
+}
+function notApplicable() {
+  return {
+    action: 'skip',
+    state: 'success',
+    description: 'Not applicable: no deployable changes with successful CI.',
+  };
+}
+function deploymentDecision(common, earlier, manifest, requiresApproval, headSha) {
+  if (earlier) {
+    return {
+      ...common,
+      action: 'reuse',
+      state: 'success',
+      description: `Preview already deployed for this revision ${successMarker(manifest.digest)}`,
+      reuseTargetUrl: earlier.target_url,
+    };
+  }
+  return {
+    ...common,
+    action: 'deploy',
+    state: 'pending',
+    description: requiresApproval
+      ? `Fork preview awaits maintainer approval for ${headSha.slice(0, 12)}.`
+      : 'Deploying the validated preview.',
+  };
+}
+function enabledRequest(request) {
+  return request?.enabled ? request : null;
+}
+/**
+ * Deploy authorization sources, tracked explicitly so phase 2 knows what to re-verify:
+ *
+ * - `request`: the dispatch carried `request_comment_id` and planning verified it against the
+ *   PR's live preview request (automatic command dispatches and reruns of a queued request).
+ *   Phase 2 re-verifies the same binding before upload.
+ * - `standing`: a fork candidate rides the PR's current opt-in into the protected `preview`
+ *   environment without an explicit binding. Phase 2 re-verifies the opt-in too.
+ * - `readiness`: a ready, same-repository ordinary PR after current successful PR CI. Its
+ *   dispatch carries explicit provenance and the CI attempt; phase 2 repeats readiness, stop,
+ *   current main and exact CI checks. It cannot become an independent dispatch after a stop.
+ * - `dispatch`: no command authorization - a same-repo trusted default-branch workflow dispatch
+ *   (manual or automation-owned) or a fork awaiting manual approval. A later stop cannot revoke
+ *   these; revision, CI, artifact and freshness checks still apply.
+ */
+const COMMAND_AUTHORIZATIONS = ['request', 'standing'];
+/**
+ * - `request`: the dispatch carried `request_comment_id` and planning verified it against the
+ *   PR's live preview request, or an automatic event will bind its follow-up dispatch to the
+ *   live opt-in. Phase 2 re-verifies the same binding before upload.
+ * - `standing`: a fork candidate rides the PR's current opt-in into the protected `preview`
+ *   environment without an explicit binding. Phase 2 re-verifies the opt-in too.
+ * - `dispatch`: no command authorization — a same-repo trusted default-branch workflow dispatch
+ *   (manual or automation-owned) or a fork awaiting manual approval. A later stop cannot revoke
+ *   these; revision, CI, artifact and freshness checks still apply.
+ */
+function commandAuthorization(context, inputs, fork, request) {
+  if (optional(inputs, 'request_comment_id')) return 'request';
+  if (!request?.enabled) return 'dispatch';
+  return unboundCommandAuthorization(context, fork);
+}
+/**
+ * Without a command bound to the run itself: trusted default-branch dispatches deploy as their
+ * own authority, forks ride the current opt-in (`standing`) or wait for manual approval.
+ */
+function unboundCommandAuthorization(context, fork) {
+  if (context.eventName !== 'workflow_dispatch') return 'request';
+  return fork ? 'standing' : 'dispatch';
+}
+function deploymentEnvironment(fork, request) {
+  return fork && !request ? ENVIRONMENTS.fork : ENVIRONMENTS.internal;
+}
+async function deployDecision({ github, context, state, workspace }) {
+  const { candidate, pull, run, fork } = state;
+  const destination = join(workspace, 'plan-artifact');
+  const { artifact, manifest } = await verifiedArtifact({
+    github,
+    context,
+    candidate,
+    pull,
+    run,
+    destination,
+  });
+  const commandBound = COMMAND_AUTHORIZATIONS.includes(state.previewAuthorization);
+  const previewRequest = commandBound ? enabledRequest(previewGrant(state.previewRequest)) : null;
+  const common = {
+    ...decisionBase(state),
+    artifactId: artifact.id,
+    artifactExpiresAt: artifact.expires_at,
+    digest: manifest.digest,
+    previewBranch: manifest.previewBranch,
+    appUrl: manifest.appUrl,
+    previewRequest,
+    previewAuthorization: state.previewAuthorization,
+    environment: deploymentEnvironment(fork, previewRequest),
+  };
+  const earlier = await previousSuccess(github, context, candidate.headSha, manifest.digest);
+  return deploymentDecision(
+    common,
+    earlier,
+    manifest,
+    common.environment === ENVIRONMENTS.fork,
+    candidate.headSha
+  );
+}
+function outcomeDecision(error, state) {
+  if (!(error instanceof Outcome)) throw error;
+  return {
+    ...decisionBase(state),
+    action: error.action,
+    state: error.state,
+    description: error.message,
+  };
+}
+/* ------------------------------------------------------------------------------------------ */
+/* Public phases                                                                               */
+/* ------------------------------------------------------------------------------------------ */
+function statusTargetUrl(context, decision) {
+  return decision.reuseTargetUrl ?? runUrl(context);
+}
+async function publishDecision(github, context, decision) {
+  if (!decision.state || !decision.headSha) return false;
+  // Always report on the validated head. GitHub regenerates the test-merge commit when a merge is
+  // attempted, dropping any status on it; strict ruleset freshness binds the head to current main.
+  await publishStatus(github, context.repo, {
+    sha: decision.headSha,
+    state: decision.state,
+    description: decision.description,
+    targetUrl: statusTargetUrl(context, decision),
+  });
+  return true;
+}
+function awaitExplicitPreview(decision) {
+  return {
+    ...decision,
+    action: 'wait',
+    state: 'pending',
+    description: `Preview pending: ${decision.headSha.slice(0, 12)}. Comment /preview to enable automatic previews for this PR.`,
+  };
+}
+function isAutomaticDeploy(context, decision) {
+  return context.eventName !== 'workflow_dispatch' && decision.action === 'deploy';
+}
+/**
+ * Enabling auto-merge is the maintainer's merge-intent signal (GitHub restricts it to users with
+ * write access). Only pull-request CI candidates qualify; release and Crowdin automation dispatch
+ * their own previews. The upload itself still happens only in the dispatched run.
+ */
+function isMergeRequestEvent(context) {
+  return context.eventName === 'workflow_run' || context.payload.action === 'auto_merge_enabled';
+}
+function hasMergeIntent(context, state) {
+  return [
+    optional(state.candidate, 'runEvent') === 'pull_request',
+    Boolean(state.pull?.auto_merge),
+    state.pull?.user?.id !== 49699333, // Dependabot owns its request through its merge workflow.
+    isMergeRequestEvent(context),
+  ].every(Boolean);
+}
+function hasPreviewIntent(context, state) {
+  // Dependabot's dedicated workflow is the sole automatic request owner.
+  if (optional(optional(state.pull, 'user'), 'id') === 49699333) return false;
+  if (['readiness', 'queue'].includes(state.previewAuthorization)) return true;
+  if (!state.previewRequest) return hasMergeIntent(context, state);
+  return [
+    state.previewRequest.enabled,
+    optional(state.candidate, 'runEvent') === 'pull_request',
+    isPreviewRefreshEvent(context),
+  ].every(Boolean);
+}
+function isPreviewRefreshEvent(context) {
+  return (
+    context.previewReconciliation === true ||
+    context.eventName === 'workflow_run' ||
+    ['ready_for_review', 'reopened'].includes(context.payload.action)
+  );
+}
+function requestedPreview(decision) {
+  return {
+    ...decision,
+    action: 'request',
+    state: 'pending',
+    description: `Preview enabled: requested for ${decision.headSha.slice(0, 12)} (run_id=${decision.runId}).`,
+  };
+}
+/** Automatic events never upload: they either request a trusted dispatch or wait for one. */
+function deferAutomaticPreview(context, state, decision) {
+  if (!isAutomaticDeploy(context, decision)) return decision;
+  return hasPreviewIntent(context, state)
+    ? requestedPreview(decision)
+    : awaitExplicitPreview(decision);
+}
+/** Publish the interim status first so the dispatched run's newer statuses always supersede it. */
+async function publishAndRequest(github, context, core, decision) {
+  decision.statusPublished = await publishPlannedDecision(github, context, core, decision);
+  if (decision.action !== 'request') return decision;
+  try {
+    await requestPreviewDispatch(github, context.repo, decision);
+    return decision;
+  } catch (error) {
+    core.warning(`Automatic preview request failed: ${error.message}`);
+    const manual = awaitExplicitPreview(decision);
+    await publishDecision(github, context, manual);
+    return manual;
+  }
+}
+async function publishPlannedDecision(github, context, core, decision) {
+  if (decision.action === 'ignore') return false;
+  if (decision.pullRequest && !decision.mergeSha)
+    core.warning('PR test merge is not ready; Preview Result stays pending until a later refresh.');
+  return publishDecision(github, context, decision);
+}
+/** Phase 1: resolve the candidate, verify evidence, publish the interim status, emit the plan. */
+export async function planPreview({
+  github,
+  context,
+  core,
+  inputs,
+  workspace,
+  sleep = defaultSleep,
+}) {
+  const state = {};
+  let decision;
+  try {
+    decision = await evaluate({ github, context, inputs, workspace, sleep }, state);
+  } catch (error) {
+    decision = outcomeDecision(error, state);
+  }
+  decision = deferAutomaticPreview(context, state, decision);
+  decision = await publishAndRequest(github, context, core, decision);
+  core.info(`${decision.action}: ${decision.description}`);
+  return decision;
+}
+function refreshContext(context, pull) {
+  // `repo` must be re-added explicitly: actions/github-script exposes it through a Proxy, and an
+  // object spread drops computed properties, leaving `owner`/`repo` empty in every API call inside
+  // the refreshed plan (the finalization-shadow handoff hit the same trap).
+  return {
+    repo: context.repo,
+    serverUrl: context.serverUrl,
+    runId: context.runId,
+    // Trusted fallback source, separate from ordinary synchronize events that still wait for CI.
+    previewReconciliation: true,
+    eventName: 'pull_request_target',
+    payload: { ...context.payload, action: 'synchronize', pull_request: pull },
+  };
+}
+function awaitingRetry(status) {
+  const description = String(status.description);
+  return (
+    status.state === 'pending' &&
+    [MERGE_PENDING, CI_RESULT_PENDING, CI_RESULT_MISSING].some((prefix) =>
+      description.startsWith(prefix)
+    )
+  );
+}
+/** Refresh a head with no result, or one left pending on a test merge or CI Result read. */
+async function needsPreviewRefresh(github, context, pull) {
+  if (!SHA_PATTERN.test(String(pull.merge_commit_sha))) return false;
+  const statuses = await allStatuses(github, context.repo, pull.head.sha, 'Preview Result');
+  const latest = statuses.toSorted((left, right) => right.id - left.id)[0];
+  return !latest || awaitingRetry(latest);
+}
+async function refreshMissingPull(github, context, core, workspace, item) {
+  const pull = await getPull(github, context.repo, item.number);
+  if (!(await needsPreviewRefresh(github, context, pull))) return;
+  const current = refreshContext(context, pull);
+  try {
+    await planPreview({
+      github,
+      context: current,
+      core,
+      workspace: join(workspace, `pr-${pull.number}`),
+    });
+  } catch (error) {
+    await publishControllerFailure({ github, context: current, core });
+    throw error;
+  }
+}
+/** Hourly fallback for a test merge that became available after the last PR/CI event. */
+export async function reconcileMissingPreviewStatuses({ github, context, core, workspace }) {
+  const pulls = await github.paginate(github.rest.pulls.list, {
+    ...context.repo,
+    state: 'open',
+    base: PRODUCTION_BRANCH,
+    per_page: 100,
+  });
+  const errors = [];
+  for (const pull of pulls) {
+    try {
+      await refreshMissingPull(github, context, core, workspace, pull);
+    } catch (error) {
+      errors.push(`#${pull.number}: ${error.message}`);
+    }
+  }
+  if (errors.length) throw new Error(`Preview reconciliation failed: ${errors.join('; ')}`);
+}
+function pullReadinessError(pull) {
+  if (pull.state !== 'open' || pull.draft) return PULL_NOT_READY;
+  if (pull.base.ref !== PRODUCTION_BRANCH) return PULL_RETARGETED;
+  return null;
+}
+async function pullFreshnessErrors(github, context, decision) {
+  const pull = await getPull(github, context.repo, decision.pullRequest);
+  const headMoved = pull.head.sha !== decision.headSha ? PULL_HEAD_MOVED : null;
+  const mergeChanged = (await equivalentTestMerge(github, context, pull, decision.mergeSha))
+    ? null
+    : 'test merge changed';
+  return [pullReadinessError(pull), headMoved, mergeChanged].filter(Boolean);
+}
+function runFreshnessErrors(run, decision) {
+  const errors = [];
+  if (run.run_attempt !== decision.runAttempt) errors.push(RUN_ATTEMPT_SUPERSEDED);
+  if (run.head_sha !== decision.headSha) errors.push(RUN_HEAD_CHANGED);
+  return errors;
+}
+async function freshnessErrors(github, context, decision) {
+  const pullErrors = decision.pullRequest
+    ? await pullFreshnessErrors(github, context, decision)
+    : [];
+  const run = await getRun(github, context.repo, decision.runId);
+  const queueErrors = await queueFreshness(github, context, decision, run);
+  const mismatch = await dispatchFreshnessMismatch(github, context, decision, run);
+  return [
+    ...pullErrors,
+    ...queueErrors,
+    ...runFreshnessErrors(run, decision),
+    ...(mismatch ? [mismatch] : []),
+  ];
+}
+async function checkQueueFreshness(github, context, decision, run) {
+  const candidate = candidateFromDecision(decision);
+  const revision = await queueRevision(github, context, candidate);
+  if (revision.baseSha !== decision.baseSha) return ['Queue base changed.'];
+  checkRunState(run, candidate);
+  await requireQueueCi(github, context, run);
+  return [];
+}
+async function queueFreshness(github, context, decision, run) {
+  if (decision.runEvent !== 'merge_group') return [];
+  try {
+    return await checkQueueFreshness(github, context, decision, run);
+  } catch (error) {
+    if (error instanceof QueueValidationError) return [error.message];
+    throw error;
+  }
+}
+async function dispatchFreshnessMismatch(github, context, decision, run) {
+  if (!decision.pullRequest || decision.runEvent !== 'workflow_dispatch') return null;
+  const pull = await getPull(github, context.repo, decision.pullRequest);
+  return dispatchMergeMismatch(github, context, pull, run);
+}
+function candidateFromDecision(decision) {
+  return {
+    runId: decision.runId,
+    runEvent: decision.runEvent,
+    headSha: decision.headSha,
+    headBranch: decision.headBranch,
+    headRepo: decision.headRepo,
+    baseBranch: PRODUCTION_BRANCH,
+    pullRequest: decision.pullRequest,
+    queueBaseSha: decision.runEvent === 'merge_group' ? decision.baseSha : null,
+  };
+}
+function assertDeployablePlan(decision) {
+  if (decision.action !== 'deploy') throw new Error('Deployment was not planned.');
+  if (
+    decision.previewBranch === PRODUCTION_BRANCH ||
+    !decision.previewBranch?.startsWith('preview-')
+  )
+    throw new Error('Refusing to deploy to a non-preview branch.');
+}
+function usesCommandApproval(decision) {
+  // The tracked source decides; the fork/preview coherence clause fails closed on a mutated
+  // decision that routes a fork through the protected `preview` environment without command auth.
+  return (
+    COMMAND_AUTHORIZATIONS.includes(decision.previewAuthorization) ||
+    (decision.fork && decision.environment === ENVIRONMENTS.internal)
+  );
+}
+async function verifyPreviewRequest(github, context, decision) {
+  if (decision.previewAuthorization === 'readiness') {
+    return verifyReadinessRequest(github, context, decision);
+  }
+  if (!usesCommandApproval(decision)) return;
+  return verifyCommandRequest(github, context, decision);
+}
+async function verifyCommandRequest(github, context, decision) {
+  const request = await readPreviewRequest(
+    github,
+    context.repo,
+    decision.pullRequest,
+    decision.previewRequest?.commentId
+  );
+  if (!samePreviewAuthorization(request, decision.previewRequest))
+    throw new Error('Preview request was revoked or superseded; request again.');
+}
+async function verifyReadinessRequest(github, context, decision) {
+  const pull = await getPull(github, context.repo, decision.pullRequest);
+  if (pull.head.sha !== decision.headSha || pull.base.sha !== decision.baseSha)
+    throw new Error('Readiness candidate head or base changed.');
+  const request = await readPreviewRequest(github, context.repo, decision.pullRequest);
+  const run = await getRun(github, context.repo, decision.runId);
+  await requireReadiness(github, context, { pull, previewRequest: request, run });
+  const candidate = candidateFromDecision(decision);
+  checkRunState(run, candidate);
+  await resolvePullRun(github, context, candidate);
+  await checkCiResult(github, context, candidate);
+}
+async function requireFreshDecision(github, context, decision) {
+  const errors = await freshnessErrors(github, context, decision);
+  if (errors.length) throw new Error(`Candidate is obsolete: ${errors.join('; ')}`);
+}
+/** Phase 2: immediately before upload, repeat freshness checks and re-verify the artifact. */
+export async function verifyForDeploy({ github, context, core, decision, destination, queue }) {
+  assertDeployablePlan(decision);
+  await requireFreshDecision(github, context, decision);
+  const candidate = candidateFromDecision(decision);
+  const pull = decision.pullRequest
+    ? await getPull(github, context.repo, decision.pullRequest)
+    : null;
+  const run = await getRun(github, context.repo, decision.runId);
+  requireQueueScope(queue, run.event);
+  if (candidate.runEvent === 'merge_group') {
+    const revision = await queueRevision(github, context, candidate);
+    candidate.queueTreeSha = revision.treeSha;
+  }
+  const { manifest } = await verifiedArtifact({
+    github,
+    context,
+    candidate,
+    pull,
+    run,
+    destination,
+  });
+  if (manifest.digest !== decision.digest)
+    throw new Error('Artifact digest changed since planning.');
+  await requireFreshDecision(github, context, decision);
+  await verifyPreviewRequest(github, context, decision);
+  core.info(`Verified artifact ${manifest.digest} for ${manifest.headSha}.`);
+  return manifest;
+}
+function terminalResult(decision, outcomes) {
+  if (outcomes.deploy !== 'success') return failure(`Preview deployment ${outcomes.deploy}.`);
+  if (outcomes.smoke !== 'success') return failure(`Preview smoke tests ${outcomes.smoke}.`);
+  return new Outcome('publish', 'success', `Preview deployed ${successMarker(decision.digest)}`);
+}
+function elapsedMinutes(since) {
+  const started = since ? Date.parse(since) : Number.NaN;
+  return Number.isNaN(started) ? 'n/a' : ((Date.now() - started) / 60000).toFixed(1);
+}
+function publishedLabel(published, result) {
+  return published ? String(result.state) : 'not published (obsolete candidate)';
+}
+function pullLabel(pullRequest) {
+  return pullRequest ? `#${pullRequest}` : 'branch dispatch';
+}
+function deploymentLabel(evidence) {
+  return orNa(optional(evidence, 'url'));
+}
+function summaryRows(decision, result, published, evidence) {
+  return [
+    ['Action', orNa(decision.action)],
+    ['Published', publishedLabel(published, result)],
+    ['Revision', orNa(decision.headSha)],
+    ['Pull request', pullLabel(decision.pullRequest)],
+    ['Digest', orNa(decision.digest)],
+    ['Deployment', deploymentLabel(evidence)],
+    ['Validation to preview (minutes)', elapsedMinutes(decision.runCompletedAt)],
+    ['Detail', result.message],
+  ];
+}
+function summarize(core, decision, result, published, evidence) {
+  core.summary
+    .addHeading('Preview Result', 2)
+    .addTable(summaryRows(decision, result, published, evidence));
+  return core.summary.write();
+}
+async function publishOutcome(github, context, decision, result) {
+  const published = await publishDecision(github, context, {
+    ...decision,
+    state: result.state,
+    description: result.message,
+  });
+  return published ? result : null;
+}
+async function publishTerminal(github, context, core, decision, result) {
+  const stale = result.state === 'success' ? await freshnessErrors(github, context, decision) : [];
+  if (stale.length) return publishLateStaleness(github, context, core, decision, stale);
+  return publishOutcome(github, context, decision, result);
+}
+/**
+ * Success is never published for an obsolete candidate. When a newer event owns the head, publish
+ * nothing; otherwise end or re-arm this run's pending result instead of leaving it stuck (#1357).
+ */
+async function publishLateStaleness(github, context, core, decision, stale) {
+  core.warning(`Not publishing success for an obsolete candidate: ${stale.join('; ')}`);
+  if (!(await reportsLateStaleness(github, context, decision, stale))) return null;
+  const outcome = (await mainMovedSinceUpload(github, context, decision))
+    ? failure(BASE_MOVED)
+    : pending(MERGE_RETRY);
+  return publishOutcome(github, context, decision, outcome);
+}
+function unownedStaleness(decision, stale) {
+  return [
+    Boolean(decision.pullRequest),
+    decision.runEvent !== 'merge_group',
+    !stale.some((error) => OWNED_STALENESS.includes(error)),
+  ].every(Boolean);
+}
+async function reportsLateStaleness(github, context, decision, stale) {
+  if (!unownedStaleness(decision, stale)) return false;
+  return ownsLatestResult(github, context, decision.headSha);
+}
+/** True while this run's own interim status is still the head's newest `Preview Result`. */
+async function ownsLatestResult(github, context, headSha) {
+  const statuses = await allStatuses(github, context.repo, headSha, 'Preview Result');
+  const latest = statuses.toSorted((left, right) => right.id - left.id)[0];
+  return latest?.target_url === runUrl(context);
+}
+/**
+ * The pre-upload freshness check proved that the planned test merge's first parent was live main,
+ * so a different live main now is a real base movement, not a briefly missing test merge.
+ */
+async function mainMovedSinceUpload(github, context, decision) {
+  const merge = await commitShape(github, context, decision.mergeSha);
+  const uploadedMain = merge?.parents[0];
+  if (!SHA_PATTERN.test(String(uploadedMain))) return false;
+  return uploadedMain !== (await liveMainSha(github, context));
+}
+async function liveMainSha(github, context) {
+  const { data } = await github.rest.git.getRef({
+    ...context.repo,
+    ref: `heads/${PRODUCTION_BRANCH}`,
+  });
+  return data.object.sha;
+}
+/** Phase 3: publish the authoritative result only for a still-current candidate. */
+export async function publishResult({ github, context, core, decision, outcomes, evidence }) {
+  if (decision.action !== 'deploy') {
+    const planned = new Outcome(decision.action, decision.state, decision.description);
+    await summarize(core, decision, planned, decision.statusPublished, evidence);
+    return decision.state;
+  }
+  const result = terminalResult(decision, outcomes);
+  const published = await publishTerminal(github, context, core, decision, result);
+  await reportTerminal(core, decision, published ?? result, Boolean(published), evidence);
+  return published ? published.state : 'obsolete';
+}
+async function reportTerminal(core, decision, reported, published, evidence) {
+  await summarize(core, decision, reported, published, evidence);
+  if (reported.state === 'failure') core.setFailed(reported.message);
+}
+function unchangedFailureEvent(context, pull) {
+  if (context.eventName !== 'pull_request_target') return true;
+  const event = context.payload.pull_request;
+  const sameBase = event.base.sha === pull.base.sha;
+  const eventMerge = event.merge_commit_sha;
+  return (
+    sameBase && (!SHA_PATTERN.test(String(eventMerge)) || eventMerge === pull.merge_commit_sha)
+  );
+}
+function sameFailureSnapshot(snapshot, pull) {
+  return [
+    snapshot.number === pull.number,
+    snapshot.head?.sha === pull.head.sha,
+    snapshot.base?.sha === pull.base.sha,
+  ].every(Boolean);
+}
+function currentFailureRun(candidate, pull, run) {
+  if (!pull || candidate.runEvent !== 'pull_request') return true;
+  const snapshots = run.pull_requests ?? [];
+  // Fork runs may omit PR/base snapshots. An old run with the same head cannot be attributed
+  // to today's test merge, so leave its required status pending instead of failing the wrong SHA.
+  return snapshots.some((snapshot) => sameFailureSnapshot(snapshot, pull));
+}
+async function liveFailureIdentity(github, context, inputs) {
+  const candidate = await resolveCandidate({ github, context, inputs });
+  const pull = await resolvePull(github, context, candidate);
+  checkPullFreshness(pull, candidate);
+  if (pull && !unchangedFailureEvent(context, pull)) return null;
+  const run = await resolveRun(github, context, candidate);
+  if (!currentFailureRun(candidate, pull, run)) return null;
+  await requireDispatchMergeProof(github, context, candidate, pull, run);
+  return decisionBase({ candidate, pull });
+}
+async function failureIdentity(github, context, core, inputs, decision) {
+  if (decision?.headSha) return decision;
+  try {
+    return await liveFailureIdentity(github, context, inputs);
+  } catch (error) {
+    core.warning(`Could not identify a current candidate for failure reporting: ${error.message}`);
+    return null;
+  }
+}
+/** Re-identify the live candidate after a controller crash; never fail a stale PR revision. */
+export async function publishControllerFailure({ github, context, core, inputs, decision }) {
+  const identity = await failureIdentity(github, context, core, inputs, decision);
+  if (!identity) return;
+  const published = await publishDecision(github, context, {
+    ...identity,
+    state: 'failure',
+    description: 'Preview controller failed; inspect the workflow run.',
+  });
+  if (!published) core.warning('No failure status was published.');
+}
+/** Explicit wake-up after an accepted persistent control intent. Inputs locate a PR, never authorize it. */
+export async function reconcilePreviewRequest({ github, context, core, workspace, number }) {
+  if (context.ref !== `refs/heads/${PRODUCTION_BRANCH}`)
+    throw new Error('Preview reconciliation requires trusted main.');
+  if (![Number.isSafeInteger(number), number > 0].every(Boolean))
+    throw new Error('Expected a positive PR number.');
+  const pull = await getPull(github, context.repo, number);
+  return planPreview({ github, context: refreshContext(context, pull), core, workspace });
+}

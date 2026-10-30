@@ -368,14 +368,12 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
-[functions.team-members]
-verify_jwt = false
-
 [functions.team-join]
 verify_jwt = false
 
 [functions.team-create]
 verify_jwt = false
+import_map = "./functions/deno.json"
 
 [functions.team-kick]
 verify_jwt = false
@@ -383,16 +381,13 @@ verify_jwt = false
 [functions.team-leave]
 verify_jwt = false
 
+[functions.team-disband]
+verify_jwt = false
+
 [functions.token-create]
 verify_jwt = false
 
-[functions.token-revoke]
-verify_jwt = false
-
 [functions.account-delete]
-verify_jwt = false
-
-[functions.account-delete-reconcile]
 verify_jwt = false
 
 [functions.admin-cache-purge]

@@ -1,0 +1,30 @@
+import { fileURLToPath } from 'node:url';
+import { defineConfig } from '@playwright/test';
+// Browser smoke tests for an Actions-owned Cloudflare Pages preview. They run without Cloudflare
+// deployment credentials against the unique deployment URL supplied by the controller.
+// Optional dedicated Access credentials are scoped by access.mjs, never global headers. Filenames use
+// `.smoke.mjs` so Vitest's default `*.{test,spec}.*` discovery never picks them up.
+export default defineConfig({
+  testDir: '.',
+  testMatch: /.*\.smoke\.mjs$/,
+  // Files may overlap; tests within each file retain their existing order and serial groups.
+  fullyParallel: false,
+  workers: 2,
+  globalSetup: fileURLToPath(new URL('./setup.mjs', import.meta.url)),
+  retries: 0,
+  timeout: 120_000,
+  expect: { timeout: 30_000 },
+  reporter: [
+    ['list'],
+    ['html', { open: 'never', outputFolder: process.env.SMOKE_REPORT_DIR || 'smoke-report' }],
+    ['json', { outputFile: `${process.env.SMOKE_REPORT_DIR || 'smoke-report'}/results.json` }],
+  ],
+  use: {
+    baseURL: process.env.PREVIEW_URL,
+    // Traces can contain Access session cookies; never retain them with Access enabled.
+    trace: process.env.PREVIEW_ACCESS_CLIENT_ID ? 'off' : 'retain-on-failure',
+    screenshot: 'only-on-failure',
+    ignoreHTTPSErrors: false,
+  },
+  projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
+});

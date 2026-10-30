@@ -1,6 +1,7 @@
 export type ContentSecurityPolicyOptions = {
   allowUnsafeInlineScripts?: boolean;
   clientLogSinkUrl?: string;
+  progressDiagnosticSinkUrl?: string;
   clarityInstrumentationKey?: string;
   gaMeasurementId?: string;
   supabaseUrl?: string;
@@ -61,7 +62,7 @@ const getFontSrcSources = (): string[] => {
 const getOverlayScriptSrcSources = (options: ContentSecurityPolicyOptions = {}): string[] => {
   return getUniqueSources([options.allowUnsafeInlineScripts ? "'unsafe-inline'" : "'none'"]);
 };
-export const getScriptSrcSources = (options: ContentSecurityPolicyOptions = {}): string[] => {
+const getScriptSrcSources = (options: ContentSecurityPolicyOptions = {}): string[] => {
   const hasGoogleAnalytics = hasConfiguredValue(options.gaMeasurementId);
   const hasMicrosoftClarity = hasConfiguredValue(options.clarityInstrumentationKey);
   return getUniqueSources([
@@ -93,6 +94,7 @@ export const getConnectSrcSources = (options: ContentSecurityPolicyOptions = {})
     'https://*.supabase.co',
     'wss://*.supabase.co',
     getCspOrigin(options.clientLogSinkUrl),
+    getCspOrigin(options.progressDiagnosticSinkUrl),
     getCspOrigin(options.supabaseUrl),
     getWebSocketCspOrigin(options.supabaseUrl),
   ]);
@@ -113,7 +115,7 @@ export const getImgSrcSources = (options: ContentSecurityPolicyOptions = {}): st
     'https://assets.tarkov.dev',
   ]);
 };
-export const getFrameSrcSources = (options: ContentSecurityPolicyOptions = {}): string[] => {
+const getFrameSrcSources = (options: ContentSecurityPolicyOptions = {}): string[] => {
   return getUniqueSources([
     "'self'",
     'https://player.twitch.tv',
@@ -132,6 +134,7 @@ export const buildContentSecurityPolicy = (options: ContentSecurityPolicyOptions
     `connect-src ${getConnectSrcSources(options).join(' ')}`,
     `img-src ${getImgSrcSources(options).join(' ')}`,
     `frame-src ${getFrameSrcSources(options).join(' ')}`,
+    "frame-ancestors 'self'",
     `style-src ${getStyleSrcSources().join(' ')}`,
     `font-src ${getFontSrcSources().join(' ')}`,
   ].join('; ');

@@ -1,0 +1,2789 @@
+{
+  "admin": {
+    "verifying_access": "管理者アクセスを確認中...",
+    "error_title": "接続エラー",
+    "load_error_description": "管理者データの読み込みに失敗しました。更新するかサポートにお問い合わせください。参考： {reference}",
+    "no_reference": "N/A",
+    "error": {
+      "cache_purge_failed": "キャッシュを消去できませんでした。もう一度やり直してください。",
+      "invalid_purge_type": "有効なキャッシュパージタイプを選択してください。",
+      "method_not_allowed": "このリクエスト方法はサポートされていません。",
+      "admin_privileges_required": "この操作を実行する権限がありません。",
+      "authentication_required": "続行するにはサインインする必要があります。",
+      "invalid_channel": "正しいTwitchチャンネル名を入力してください。",
+      "invalid_display_name": "有効な表示名を入力してください。",
+      "invalid_enabled_flag": "有効な値が無効です。",
+      "invalid_request_body": "リクエストボディが無効です。",
+      "invalid_target_user_id": "有効なユーザー ID を入力してください。",
+      "invalid_tier": "有効なサポーターティアーを選択してください。",
+      "service_config_missing": "管理者サービスが設定されていません。",
+      "supabase_request_failed": "管理者サービスはリクエストを完了できませんでした。",
+      "supporter_update_failed": "サポーターアクセスを更新できませんでした。",
+      "twitch_config_update_failed": "Twitch の設定を更新できませんでした。"
+    },
+    "access_warning_title": "管理者アクセス",
+    "access_warning_description": "ここで実行されたアクションはすべてのユーザーに影響します。 {user} としてログインしました。",
+    "cache_management_title": "キャッシュ管理",
+    "last_purge_description": "最後のパージ: {type}: {timestamp}",
+    "tarkov_data_cache_label": "Tarkovデータキャッシュ",
+    "tarkov_data_cache_description": "キャッシュされたゲームデータ（タスク、ハイドアウト、アイテム）を消去します。ユーザーはtarkov.dev APIから新しいデータを取得します。",
+    "purge_game_data_button": "ゲームデータの消去",
+    "full_cache_purge_label": "完全なキャッシュの消去",
+    "full_cache_purge_description": "静的アセットを含むすべてのキャッシュされたコンテンツをクリアします。オリジンに対する負荷を軽減します。",
+    "purge_everything_button": "すべてを消去",
+    "cache_behavior_title": "キャッシュの動作",
+    "cache_info_description": "パージ後、次のユーザーリクエストはtarkov.devから新しいフェッチをトリガーします。この新しいデータはすべてのユーザーにキャッシュされます。",
+    "confirm_full_cache_purge_title": "キャッシュの完全なパージを確認",
+    "confirm_full_cache_purge_description": "これにより、静的アセット、フォント、JavaScriptバンドルを含むCloudflareからキャッシュされたすべてのコンテンツが消去されます。これにより、すべてのユーザーの読み込み時間が一時的に増加する可能性があります。",
+    "confirm_purge_button": "パージを確定",
+    "all_cache_label": "全てのキャッシュ",
+    "tarkov_data_label": "Tarkovデータ",
+    "unauthorized_title": "未認証",
+    "admin_privileges_required": "管理者権限がこのアクションに必要です。",
+    "cache_purged_title": "キャッシュを削除しました",
+    "tarkov_cache_purged_description": "Tarkovデータキャッシュがクリアされました。ユーザーは新しいデータを受け取ります。",
+    "full_cache_purged_title": "完全なキャッシュを削除",
+    "full_cache_purged_description": "キャッシュされたすべてのコンテンツはCloudflareから削除されました。",
+    "purge_failed_title": "パージに失敗しました",
+    "purge_failed_description": "キャッシュの消去に失敗しました",
+    "audit_log_title": "管理者監査ログ",
+    "refresh_button": "更新",
+    "audit_log_login_required": "権限がありません: 続行するにはログインしてください。",
+    "audit_log_admin_required": "権限がありません: 監査ログを表示するために必要な管理者権限です。",
+    "audit_log_table_not_found": "監査ログテーブルが見つかりません。",
+    "audit_log_table_not_found_description": "SQLマイグレーションを実行し、admin_audit_logを作成します。",
+    "audit_log_fetch_failed": "監査ログの取得に失敗しました",
+    "no_actions_recorded": "管理者アクションは記録されていません",
+    "audit_log_by": "by",
+    "supporter_override_title": "サポーターアクセス",
+    "supporter_override_description": "Stripeの支払いを作成せずに本番テストのサポーター状態を設定します。",
+    "supporter_target_user_label": "ユーザーID",
+    "supporter_target_user_placeholder": "Supabaseの認証ユーザーUUID",
+    "supporter_tier_label": "ティアー",
+    "supporter_override_saved_title": "サポーターアクセスが更新されました",
+    "supporter_override_enabled_description": "{tier} サポーターのアクセスを有効にしました。",
+    "supporter_override_disabled_description": "アクティブなサポーターアクセスを無効にしました。",
+    "twitch_config_title": "Twitch配信",
+    "twitch_config_description": "サイトの隅に表示するTwitchチャンネルを設定します。変更は5分以内に閲覧者へ反映されます。",
+    "twitch_channel_label": "チャンネル",
+    "twitch_channel_placeholder": "Twitchチャンネル名",
+    "twitch_display_name_label": "表示名",
+    "twitch_display_name_placeholder": "チャンネル表示名",
+    "twitch_config_saved_title": "Twitch の設定が更新されました",
+    "twitch_config_saved_description": "プロモーション対象の配信は、現在{channel}です。",
+    "twitch_config_saved_with_warning_title": "Twitch の設定を保存しました",
+    "twitch_config_saved_with_warning_description": "設定は保存されましたが、キャッシュされているユーザーには、以前の値が表示される場合があります。",
+    "twitch_config_load_failed_title": "Twitch 設定が利用できません",
+    "twitch_config_load_failed_description": "Twitch の設定を読み込めませんでした。"
+  },
+  "alerts": {
+    "no_map_data": "この選択に利用できるマップデータはありません。"
+  },
+  "app_bar": {
+    "error_loading": "Tarkovデータの読み込みエラー",
+    "loading": "Tarkovデータを読み込み中",
+    "logout_failed": "ログアウトできません。もう一度やり直してください。",
+    "logout_unreachable": "サーバーに接続できませんでした。ログインしています。 このデバイスでのみサインアウトできます。 サーバーには伝えられないため、セッションが期限切れになるまで、または別のデバイスからサインアウトするまで、セッションはアクティブになります。",
+    "logout_this_device": "この端末でのみサインアウトする",
+    "logout_this_device_done": "このデバイスでのみサインアウトします。サーバー上のセッションは、有効期限が切れるか、別のデバイスからサインアウトするまで有効です。",
+    "logout_local_only": "このデバイスでサインアウトしました。サーバーに接続できなかったため、他のセッションでもサインインできます。",
+    "hidden_label": "非表示",
+    "user_label": "ユーザー",
+    "user_avatar_alt": "ユーザーのアバター",
+    "supporter_badge_aria": "サポーターのサブスクリプション（{tier}）を管理する",
+    "help_community_aria": "ヘルプ＆コミュニティ",
+    "keyboard_shortcuts": "キーボード ショートカット",
+    "report_problem": "問題を報告",
+    "login_aria": "アカウントにログイン",
+    "switch_to_light_theme": "ライトテーマに切り替える",
+    "switch_to_dark_theme": "ダークテーマに切り替える"
+  },
+  "progress_save_status": {
+    "live_updates_delayed_label": "Live updates delayed",
+    "live_updates_delayed_description": "Updates from other devices may take longer to appear. Saving your edits is handled separately. We’ll check for updates and reconnect automatically when this tab is online and active.",
+    "indicator_aria": "進行状況の保存状態: {status}",
+    "cloud_pending_label": "進行状況をクラウドに保存しています",
+    "cloud_retrying_label": "クラウドセーブ再試行中",
+    "cloud_failed_label": "クラウドの保存に失敗しました",
+    "local_failed_label": "進行状況はこのブラウザに保存されていません",
+    "cloud_pending_description": "最新の進捗状況の変更はまだクラウドに保存されていません。",
+    "cloud_retrying_description": "最新の進捗状況をクラウドに保存できませんでした。別の試行が自動的に実行される間、追跡を続けることができます。",
+    "cloud_failed_description": "クラウドに最新の進行状況の変更を保存する自動試行は停止しました。 変更はまだ保存されるのを待っており、いつでも追跡して再試行することができます。",
+    "local_failed_description": "最新の進捗状況をこのブラウザに保存できませんでした。 追跡を続けることはできますが、再読み込み、このタブを閉じたり、サインアウトしたりすると、他の場所で保存されていない変更が失われる可能性があります。",
+    "local_saved_note": "これらの変更はこのブラウザに保存されます。",
+    "cloud_also_pending_note": "クラウドにも保存されていません。コピーを保存するために進行状況をエクスポートしてください。",
+    "retry_scheduled": "{attempt} の {total} の自動再試行が予定されています。",
+    "cloud_payload_too_large_description": "Your cloud save is too large. Changes remain pending, and you can keep tracking. Automatic retries are paused. Export a backup and contact support for help.",
+    "cause_payload_too_large": "Cause: your progress exceeds the cloud save size limit.",
+    "cause_offline": "原因: このデバイスはオフラインのようです。",
+    "cause_rate_limited": "原因: クラウドサービスは一時的に保存を制限しています。",
+    "cause_auth": "原因: サインインセッションが確認できませんでした。",
+    "cause_quota": "原因: このブラウザの TarkovTracker のストレージ容量がいっぱいです。",
+    "cause_unavailable": "原因: このブラウザはプライバシー設定などによりサイトのストレージをブロックしています。",
+    "cause_unknown": "この失敗の原因は不明である。",
+    "quota_guidance": "このサイトのデータを消去するか、または再読み込みすると、これらの変更の唯一のコピーが削除される可能性があります。データを削除する前に進行状況をエクスポートしてください。",
+    "retry_button": "クラウドセーブを再試行する",
+    "retry_succeeded": "進捗状況の変更はクラウドに保存されました。",
+    "retry_failed": "クラウドセーブは成功しませんでした。変更が保存されるのを待っています。",
+    "export_button": "進行状況をエクスポート",
+    "export_hint": "保存に失敗した場合でも、現在の進行状況をバックアップファイルとしてエクスポートします。"
+  },
+  "older_tab_recovery_notice": {
+    "title": "Edits from older tabs were kept",
+    "description": "Changes made in a tab running an older version of TarkovTracker were kept as recovery copies. They have not replaced your progress.",
+    "overflow_description": "Some changes made in a tab running an older version of TarkovTracker could not be kept. Keep that tab open and export the available recovery copies.",
+    "review_link": "Review in {section}"
+  },
+  "sign_out_confirm": {
+    "title": "保存されていない変更でサインアウトしますか？",
+    "risk": "最新の進捗状況の変更は、このブラウザまたはクラウドに保存されません。今すぐサインアウトすると、それらは失われます。",
+    "options": "サインインを続けて保存を再試行するか、現在の進行状況をエクスポートしてから決めることができます。",
+    "stay_signed_in": "サインインを続ける",
+    "discard_and_sign_out": "サインアウトして変更を破棄する",
+    "retry_succeeded": "変更内容はクラウドに保存されました。安全にサインアウトできます。"
+  },
+  "omnibar": {
+    "aria_label": "グローバル検索",
+    "placeholder": "タスク、必要アイテム、ハイドアウトなどを検索…",
+    "no_results": "\"{query}\"の検索結果が見つかりません",
+    "group_tasks": "タスク / クエスト",
+    "group_hideout": "ハイドアウト施設"
+  },
+  "activity_log": {
+    "unread_indicator": "未読のアクティビティがあります",
+    "mark_read": "既読にする",
+    "empty": "記録されたアクティビティはまだありません。",
+    "badge_api": "API 同期",
+    "api_synced": "API進行状況を同期しました",
+    "more_count": "あと＋{count}",
+    "entry": {
+      "completed": "完了したタスク: {name}",
+      "uncompleted": "未完了のタスク: {name}",
+      "failed": "失敗したタスク: {name}",
+      "reset_failed": "失敗したタスクをリセット: {name}",
+      "available": "アンロックされたタスク: {name}"
+    }
+  },
+  "promoted_stream": {
+    "close": "配信を閉じる",
+    "expand": "配信を開く",
+    "open_channel": "Twitchチャンネルへ移動",
+    "player_title": "{streamer} Twitch 配信",
+    "region_label": "{streamer} の配信を宣伝しました",
+    "reopen": "配信を再開する",
+    "shrink": "配信を閉じる",
+    "title": "{streamer} のライブ"
+  },
+  "buttons": {},
+  "errors": {
+    "generic_fallback": "予期せぬエラーが発生しました。もう一度お試しください。",
+    "chunk_load_blocked": "必要なアプリファイルを読み込むことができませんでした。再試行してください。もし改善しない場合、あなたのISPや地域がアクセスをブロックしている可能性があります。",
+    "network_access_denied": "必要なネットワーク要求がブロックされました。再試行してください。失敗し続ける場合は、VPNまたはCloudflare WARPをお試しください。"
+  },
+  "error": {
+    "return_home": "ホームに戻る",
+    "show_details": "詳細を表示",
+    "hide_details": "詳細を非表示",
+    "technical_details": "技術的な詳細",
+    "copy_details": "詳細をコピー",
+    "copy_success": "コピーしました",
+    "status_prefix": "エラー",
+    "page_not_found_description": "お探しのページは存在しません。",
+    "access_blocked": "アクセスが制限されています",
+    "service_unavailable": "サービスが利用できません",
+    "something_went_wrong": "何らかのエラーが発生しました",
+    "unexpected_description": "リクエストの処理中に予期しないエラーが発生しました。",
+    "invalid_host_hint": "このプレビューホストは API ホスト検証によってブロックされます。プレビューホスト名を API_ALLOWED_HOSTS に追加するか、CF_PAGES_URL から派生します。",
+    "supabase_config_hint": "このデプロイメントには、公開のSupabase設定がありません。プレビュー用にSUPABASE_URLとSUPABASE_ANON_KEYを設定するか、プレビュービルドがオフラインモードで実行されるようにしてください。",
+    "request_blocked_hint": "このページの表示に必要なリクエストがブロックされました。技術的な詳細を開き、問題を報告するときに失敗するリクエスト URL を含めてください。"
+  },
+  "toast": {
+    "hideout_updated": {
+      "title": "ハイドアウト更新",
+      "description": "前提条件を満たさなくなった {count} 個のステーションのアップグレードを削除しました。"
+    },
+    "api_updated": {
+      "title": "API から更新",
+      "description_fallback": "API経由で進捗が更新されました。",
+      "label": {
+        "single": "タスクが更新されました",
+        "plural": "タスクが更新されました"
+      },
+      "state": {
+        "active": "アクティブ",
+        "completed": "完了",
+        "failed": "失敗",
+        "uncompleted": "未完了"
+      },
+      "more": ", あと{count}個"
+    },
+    "local_ignored": {
+      "title": "ローカルブラウザの進行状況をスキップしました",
+      "other_account": "このブラウザは別のアカウントからの進行状況を保存しているため、クラウドの進行状況を上書きしないようにスキップされました。",
+      "unsaved": "このタブでは、メモリ内に一時的な進行状況は残っていましたが、ブラウザに保存されたコピーは存在しなかったため（通常、リフレッシュやクラッシュの後など）、クラウド上の進行状況が保持されました。",
+      "guest": "このブラウザには、ログイン前のゲストモードでの進捗情報がまだ残っていたため、クラウド上の進捗情報が保持されました。"
+    },
+    "progress_merged": {
+      "title": "クラウドの進捗が同期されました",
+      "description": "別のタブ/デバイスと {count}個 のローカル差分が同期されました。"
+    },
+    "tarkov_uid_conflict": {
+      "title": "Tarkovプロファイルがリンクされていません",
+      "description": "Tarkov UID {uid} は既に別の TarkovTracker アカウントにリンクされているため、このアカウントにリンクされていません。 進行状況はまだ保存されています。他のアカウントからリンクを解除するか、独自のプロフィールをインポートしてください。"
+    },
+    "load_failed": {
+      "title": "進捗状況を読み込めません",
+      "description": "アカウントデータの読み込み中に問題が発生しました。ページを更新するか、サポートにお問い合わせください。"
+    },
+    "count_edit_updated": {
+      "title": "下書きが更新されました",
+      "description": "進行中の値を {value}に更新しました。"
+    },
+    "clipboard_copied": {
+      "title": "コピーしました!",
+      "description": "{value}"
+    },
+    "clipboard_error": {
+      "title": "コピーに失敗しました",
+      "description": "\"{value}\" をクリップボードにコピーできません。"
+    },
+    "action_undone": {
+      "title": "アクションを取り消しました: {description} "
+    },
+    "action_undo_failed": {
+      "title": "アクションの取り消しに失敗しました: {description}"
+    }
+  },
+  "common": {
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "click": "クリック",
+    "previous": "前へ",
+    "next": "次へ",
+    "finish": "完了",
+    "back_to_top": "トップに戻る",
+    "refresh_button": "再試行",
+    "opens_in_new_tab": "新しいタブで開く",
+    "available": "利用可能",
+    "enabled": "有効",
+    "disabled": "無効",
+    "update_failed": "更新に失敗しました",
+    "tasks": "タスク",
+    "level": "Level",
+    "locked": "ロック中",
+    "all": "すべて",
+    "completed": "完了済",
+    "status_completed": "完了済み",
+    "hideout": "Hideout",
+    "unknown": "Unknown",
+    "failed": "失敗",
+    "status_failed": "失敗",
+    "complete": "完了",
+    "pvp": "PvP",
+    "pve": "PvE",
+    "seasonal_pvp": "シーズンPvP",
+    "pvp_description": "プレイヤー対プレイヤー（スタンダード）",
+    "pve_description": "プレイヤー対環境（Co-op）",
+    "seasonal_pvp_description": "シーズン {season}",
+    "retry": "リトライ",
+    "open_tasks": "タスクを開く",
+    "view_on_tarkov_dev": "Tarkov.dev で表示",
+    "reset": "リセット",
+    "scav": "Scav",
+    "apply": "適用",
+    "more": "もっと見る",
+    "needed_items": "必須アイテム",
+    "task": "タスク",
+    "lightkeeper": "ライトキーパー",
+    "kappa": "Kappa",
+    "storyline": "ストーリー",
+    "mark_complete": "完了にする",
+    "maps": "マップ",
+    "clear_search": "検索をクリア",
+    "settings": "設定",
+    "about": "About",
+    "credits": "クレジット",
+    "support": "サポート",
+    "privacy_policy": "プライバシーポリシー",
+    "terms_of_service": "利用規約",
+    "streamer_tools": "ストリーマーツール",
+    "prestige": "プレステージ",
+    "backup_restore": "バックアップ & 復元",
+    "confirm_import": "インポートを確認",
+    "admin_panel": "管理パネル",
+    "supporter": "サポーター",
+    "timmy": "Timmy",
+    "chad": "Chad",
+    "activity_log": "アクティビティログ",
+    "manual": "マニュアル",
+    "page_not_found": "ページが見つかりません",
+    "open_hideout": "ハイドアウトを開く",
+    "zoom_speed": "ズーム速度",
+    "pan_speed": "パン速度",
+    "zone_opacity": "ゾーンの不透明度",
+    "default": "デフォルト",
+    "compact": "コンパクト",
+    "pmc_spawn": "PMC スポーン",
+    "pmc_extract": "PMC脱出",
+    "scav_extract": "SCAV脱出",
+    "dashboard": "ダッシュボード",
+    "objectives": "目標",
+    "kappa_tasks": "Kappaタスク",
+    "getting_started": "はじめに",
+    "progress": "進捗状況",
+    "blocked": "ブロックしました",
+    "optional": "任意",
+    "lv": "Lv",
+    "kappa_lightkeeper": "Kappa & Lightkeeper",
+    "list": "一覧",
+    "traders": "トレーダー",
+    "clear_focus": "フォーカスを解除",
+    "lvl_level": "Lvl {level}",
+    "impact": "他のタスクに影響",
+    "appearance": "外観",
+    "requires": "必要条件",
+    "view_on_wiki": "Wikiで見る",
+    "item": "アイテム",
+    "reset_failed": "リセット失敗",
+    "was_status": "was {status}",
+    "fail": "失敗",
+    "accept": "承認",
+    "ready_to_hand_over": "引き渡す準備完了",
+    "objective": "目標",
+    "maxed": "最大",
+    "found_in_raid_required": "FiR必須",
+    "fir": "FIR",
+    "priority": "優先度",
+    "team": "チーム",
+    "show": "表示",
+    "hide": "非表示",
+    "login": "ログイン",
+    "overview": "概要",
+    "api_documentation": "APIドキュメント",
+    "api": "API",
+    "game_settings": "ゲーム設定",
+    "custom_scale": "カスタムスケール",
+    "self_contained": "自己完結型",
+    "progress_track": "進捗の追跡",
+    "account": "アカウント",
+    "preferences": "環境設定",
+    "game_edition": "ゲームエディション",
+    "reset_pvp_data": "PvPデータをリセット",
+    "reset_pve_data": "PvEデータをリセット",
+    "reset_seasonal_data": "シーズンPvPデータをリセット",
+    "reset_all_data": "すべてのデータをリセット",
+    "import_failed": "インポートに失敗しました",
+    "delete_archived_run": "アーカイブされたランを削除",
+    "validation_error": "検証エラー",
+    "got_it": "了解"
+  },
+  "filter_menu": {
+    "button": "Filters",
+    "button_active": "Filters, {count} active",
+    "active_label": "Filtered by",
+    "remove_filter": "Remove filter: {name}",
+    "clear_all": "Clear all",
+    "clear_filters": "フィルターをクリア",
+    "sort_ascending": "Ascending",
+    "sort_descending": "Descending"
+  },
+  "page_help": {
+    "button": "ヘルプ",
+    "launcher": {
+      "title": "ヘルプと新規登録",
+      "summary": "このページまたは完全なセットアップパスのクイックガイドを選択します。",
+      "page_guide": "このページのガイド",
+      "page_guide_unavailable": "ここにはまだページガイドはありません。代わりに新規ユーザーの新規登録を使用してください。",
+      "onboarding": "新規ユーザーの新規登録",
+      "onboarding_description": "インポートを開始し、基本を終了し、タスクを確認します。",
+      "keyboard_shortcuts_error": "キーボードショートカットを開けませんでした。もう一度やり直してください。"
+    },
+    "onboarding": {
+      "title": "はじめに",
+      "summary": "新規ユーザーや復帰ユーザーには、まずこちらからご覧になることをお勧めします。アクションボタンを使用して、実際のページへ移動してください。",
+      "actions": {
+        "account": "アカウントを開く",
+        "login": "サインイン"
+      },
+      "steps": {
+        "import": {
+          "title": "最初に進捗をインポートする",
+          "description": "手動での設定を行う前に、インポート機能を利用してください。インポート機能を使えば、トラッカーの大部分を最短で実用可能な状態にすることができます。",
+          "bullets": {
+            "one": "Tarkov.devのプロフィールをお持ちの場合は、まずそれをインポートしてください。そうすれば、通常、アカウントの基本情報や追跡されている進捗状況のほとんどが入力されます。",
+            "two": "次に、EFTのログをインポートします。これにより、手動でのクリックをほとんど行わずに、クエストやその他の進行状況を遡って反映させることができます。",
+            "three": "両方のインポートが問題なく完了すれば、手動でのセットアップは、すべてを手作業で再構築するのではなく、簡単な確認作業で済むようになります。"
+          },
+          "actions": {
+            "open": "インポートを開く"
+          }
+        },
+        "profile": {
+          "title": "基本をマスターする",
+          "description": "インポートが完了したら、プロフィールの空欄を埋め、進捗状況をアカウントに同期するかどうかを決定してください。",
+          "bullets": {
+            "one": "ゲームモード、エディション、レベル、陣営、表示名を設定し、フィルターやアンロック条件が実際のアカウントと一致するようにしてください。",
+            "two": "ログインすると、チーム機能、API を利用した機能、クラウドストレージが利用可能になり、デバイス間で進捗状況を管理しやすくなります。",
+            "three": "まだログインする準備ができていない場合でも、まずはローカルで進捗を記録し、後でその進捗をアカウントに紐付けることができます。"
+          },
+          "actions": {
+            "settings": "設定を開く"
+          }
+        },
+        "tasks": {
+          "title": "タスクのサニティーチェック",
+          "description": "最後の重要なクリーンアップ手順は、タスクの可用性の確認です。これが正確に把握できれば、サイトの他の部分の信頼性も大幅に向上します。",
+          "bullets": {
+            "one": "タスクページで、各トレーダーについて、現在ゲーム内で受けられるタスクにチェックを入れてください。そうすることで、古いタスクを手作業で一つずつこなすよりも、はるかに早く前提条件となるタスクの連鎖を埋めることができます。",
+            "two": "何かおかしいと感じた場合は、トラッカーをめちゃくちゃにするのではなく、タスクカードメニューを使ってデータの問題を報告してください。",
+            "three": "この手順が完了したら、対応しているページでアプリバーのヘルプボタンをクリックして、ページガイドまたはこの新規登録フローを再度開いてください。"
+          }
+        }
+      }
+    },
+    "dashboard": {
+      "title": "ダッシュボードガイド",
+      "summary": "ダッシュボードを活用して、次に取るべき最適なアクションを見極め、進捗状況を確認し、対応が必要なページにすぐにアクセスしましょう。",
+      "hint": "ダッシュボードに何が表示されているか、次にどこをクリックすればよいかを簡単に把握しましょう。",
+      "sections": {
+        "focus": {
+          "title": "次に取るべき最善の策",
+          "description": "一番上のカードには、現在のフィルタと追跡された進捗状況に基づいて、最も明確で目に見える直近の進捗状況が表示されます。",
+          "bullet_one": "タスクリスト全体を閲覧する代わりに、1つの強力な推奨事項を得たい場合にこれを使用してください。",
+          "bullet_two": "何かおかしいと感じたら、まずタスクのフィルターを確認してください。非表示のタスクがあると、おすすめの内容が変わる可能性があります。"
+        },
+        "progress": {
+          "title": "進捗カード",
+          "description": "進捗カードは、現在の合計値がすでに反映された状態で、タスクや必要なアイテムに素早くアクセスできる近道です。",
+          "bullet_one": "タスクカードと目標カードはタスク一覧に移動します。",
+          "bullet_two": "アイテムカードをクリックすると、タスクやハイドアウトに対応する「必要なアイテム」画面に直接移動します。"
+        },
+        "review": {
+          "title": "より長期的なレビュー",
+          "description": "「トレーダー」と「マイルストーン」のセクションは、単に次のアクションを確認するためではなく、より広範な進捗状況を確認するためのものです。",
+          "bullet_one": "トレーダーカードを利用して、どのクエストラインにまだ最も多くの作業が残っているかを確認しましょう。",
+          "bullet_two": "マイルストーンを活用して、Kappa、Lightkeeper、および全体的な進捗状況を一目で確認しましょう。"
+        }
+      },
+      "actions": {
+        "needed_items": "必要なアイテムを開く"
+      }
+    },
+    "tasks": {
+      "title": "タスクガイド",
+      "summary": "「タスク」ページを使って、利用可能な作業を閲覧したり、表示を切り替えたり、リストを絞り込んで、自分が集中したい作業だけを表示させることができます。",
+      "hint": "タスクビューやフィルター、そして重要な設定がどこにあるのかについて、簡単に説明します。",
+      "sections": {
+        "views": {
+          "title": "表示方法の選択",
+          "description": "一番上の行では、タスクのグループ化方法を変更でき、リスト、トレーダー、マップ、またはグラフごとに閲覧することができます。",
+          "bullet_one": "リスト表示は、通常の進捗確認や素早い検索に最適です。",
+          "bullet_two": "確認したい視点がすでに決まっている場合は、トレーダービュー、マップビュー、グラフビューの方が使い勝手が良くなります。"
+        },
+        "filters": {
+          "title": "リストを絞り込む",
+          "description": "ステータスフィルターを使えば、ページを離れることなく、現在利用可能なもの、ロックされているもの、完了したもの、または失敗したものに絞り込むことができます。",
+          "bullet_one": "検索機能はタスク名全体を対象としており、リストが多すぎて見渡せないときに役立ちます。",
+          "bullet_two": "カウントが予想より少ないように見える場合、通常はステータスまたはチームメイトのフィルターのいずれかが結果を非表示にしていることが原因です。"
+        },
+        "settings": {
+          "title": "行動の調整",
+          "description": "歯車アイコンをクリックすると、セッションをまたいでタスクリストの動作を変更する表示およびフィルタリングの設定が表示されます。",
+          "bullet_one": "デフォルトのフィルター、チームの表示設定、またはマップの動作を変更したい場合は、設定を使用してください。",
+          "bullet_two": "ページに違和感がある場合は、データが欠落していると決めつける前に、まず設定を確認してみてください。"
+        }
+      },
+      "actions": {
+        "needed_items": "タスクアイテム"
+      }
+    },
+    "needed_items": {
+      "title": "必須アイテムガイド",
+      "summary": "「必須アイテム」を使って、タスクとハイドアウトの素材を組み合わせ、その後、まだ必要としているアイテムだけにリストを絞り込みます。",
+      "hint": "タブ、表示モード、および歯車アイコンの背後にあるフィルターについて、簡単に説明します。",
+      "sections": {
+        "scopes": {
+          "title": "スコープの選択",
+          "description": "上部のタブでは、すべてのアイテム、タスクのみ、ハイドアウトのみ、完了済みを切り替えることができます。",
+          "bullet_one": "タスクを進行中で、ハイドアウトの素材が混ざらないようにしたい場合にのみ、「タスクのみ」を使用してください。",
+          "bullet_two": "まだ達成できていないことではなく、すでに達成したことを確認したい場合は、「完了済み」を使用してください。"
+        },
+        "views": {
+          "title": "レイアウトの変更",
+          "description": "リスト表示、グリッド表示、および複合表示は、いずれも同じデータを表示しますが、それぞれ異なる閲覧スタイルに合わせて最適化されています。",
+          "bullet_one": "リスト表示は、件数や名前をざっと確認するのに最も速いです。",
+          "bullet_two": "合計値を個々のソースよりも重視する場合、結合ビューでは重複する項目がまとめて表示されます。"
+        },
+        "filters": {
+          "title": "リストの絞り込み",
+          "description": "設定ドロワーでは、所有アイテムの表示設定、FIRルール、チームの要求、およびその他の影響の大きいフィルタを管理できます。",
+          "bullet_one": "アイテムが予期せず消えてしまう場合は、たいてい設定ドロワーが原因です。",
+          "bullet_two": "影響度が最も高い項目を最初に表示したい場合は、優先度順に並べ替えるのが最適です。"
+        }
+      }
+    },
+    "hideout": {
+      "title": "ハイドアウト ガイド",
+      "summary": "「ハイドアウト」ページを使って、どの施設が利用可能か、何がブロックされているか、そして今後のアップグレードに向けてまだ必要な素材が何かを確認してください。",
+      "hint": "ハイドアウトのステータスや利用可能条件、関連アイテムの入手場所について、簡単に説明します。",
+      "sections": {
+        "statuses": {
+          "title": "ステータスを確認する",
+          "description": "主なフィルターでは、ステーションを「すべて」、「利用可能」、「ロック」、「最大強化済み」に分類するため、適切なステージに集中することができます。",
+          "bullet_one": "「利用可能」を使えば、今すぐ何を作れるかを最も手っ取り早く確認できます。",
+          "bullet_two": "「ロック」は、まだ満たされていない要件を把握したい場合に役立ちます。"
+        },
+        "requirements": {
+          "title": "コントロールブロッカー",
+          "description": "設定メニューでは、施設、スキル、トレーダーの要件を設定できるため、施設の必要条件の厳密さを調整できます。",
+          "bullet_one": "現時点で完全に構築可能なアップグレードのみを表示したい場合は、要件フィルターを有効にしてください。",
+          "bullet_two": "今後予定されている事項をより広い視野で把握したい場合は、これらの機能をオフにしてください。"
+        },
+        "materials": {
+          "title": "素材に従う",
+          "description": "各施設カードには、次のアップグレードに必要なアイテムや前提条件が表示されており、より広範なアイテムのワークフローへのリンクも掲載されています。",
+          "bullet_one": "ページを離れることなくアップグレードの詳細を確認したい場合は、施設カードをご利用ください。",
+          "bullet_two": "ハイドアウトの進行状況に関する、全ステーションを網羅した買い物リストが必要な場合は、必要な項目へジャンプしてください。"
+        }
+      },
+      "actions": {
+        "needed_items": "ハイドアウトのアイテム"
+      }
+    }
+  },
+  "maps": {
+    "tooltip_density": "ツールチップ",
+    "map_settings": "マップ設定",
+    "not_available_title": "マップは利用できません",
+    "not_available_description": "{mapName} のインタラクティブマップはまだ利用できません。互換性のあるマップが作成されるのを待っています。",
+    "placeholder": "この場所",
+    "floors": "階",
+    "extract_names": {
+      "scav_underboat_hideout": "着陸ステージの下で隠す"
+    },
+    "factions": {
+      "pmc": "PMC"
+    },
+    "layers": {
+      "pmc_spawns": "PMCスポーン"
+    },
+    "legend": {
+      "regular": "レギュラー",
+      "pinned": "ピン留め",
+      "shared_extract": "共通脱出 (どちらの陣営でも)",
+      "coop_extract": "Co-op脱出 (PMC + Scav)"
+    },
+    "tooltips": {
+      "zoom_in": "ズームイン",
+      "zoom_out": "ズームアウト",
+      "reset_view": "表示をリセット",
+      "open_fullscreen": "全画面でマップを開く",
+      "exit_fullscreen": "全画面を終了",
+      "drag_to_resize": "ドラッグしてマップのサイズを変更",
+      "switch_floor": "階層を切り替える (Ctrl + スクロール)"
+    },
+    "help": {
+      "title": "マップの操作",
+      "groups": {
+        "navigate": "ナビゲート",
+        "floors": "階層",
+        "interact": "インタラクト",
+        "view": "ビュー"
+      },
+      "pan": "{keys} またはドラッグしてパン",
+      "zoom": "{keys} でズーム",
+      "reset": "{key} で表示をリセット",
+      "cycle_floors": "{keys} で階層を切り替える",
+      "floor_panel": "または、フロアパネルを利用します。",
+      "click_at_cursor": "{key} でクリックします",
+      "click_marker": "詳細はマーカーをクリックします。",
+      "fullscreen": "全画面ボタンを押すことで全画面になります。",
+      "resize": "マップの下部にあるバーでマップのサイズを変更できます。"
+    },
+    "hint": {
+      "title": "クイックマップコントロール",
+      "summary": "ドラッグでパン",
+      "summary_multi_floor": "ドラッグしてパン · Shift キーを押しながらスクロールしてズーム",
+      "all_controls": "すべてのコントロール"
+    },
+    "aria": {
+      "tooltip_density": "ツールチップの密度"
+    },
+    "tooltip": {
+      "go_to": "目標に移動",
+      "go_to_in_task_list": "タスクリストの目標に移動",
+      "complete": "目標を達成する",
+      "uncomplete": "目標を未達成にする",
+      "objective_unavailable": "目標は利用できません。",
+      "stacked_objectives": "ここで {count} の目標を達成しました"
+    }
+  },
+  "page": {
+    "dashboard": {
+      "changelog": {
+        "title": "新着情報",
+        "loading": "アップデートを読み込んでいます...",
+        "error": "アップデートを読み込めませんでした。",
+        "empty": "まだアップデートはありません。",
+        "view_all": "すべて表示",
+        "unread": "New updates"
+      },
+      "up_next": {
+        "title": "次に取るべき最善の策",
+        "blocked_title": "Closest unlocks",
+        "view_all": "View all tasks",
+        "filtered_badge": "Filtered",
+        "left_one": "1 left",
+        "left_other": "{count} left",
+        "turn_in": "Turn in",
+        "hidden_one": "1 available task is hidden by your filters",
+        "hidden_other": "{count} available tasks are hidden by your filters",
+        "complete": "Every visible task is done.",
+        "none_ready": "Nothing is close to unlocking yet. Check the task list for what's still gated.",
+        "reason": {
+          "unlock_trader": "Unlocks {trader}",
+          "opens_one": "Opens 1 task",
+          "opens_other": "Opens {count} tasks",
+          "lightkeeper": "ライトキーパー",
+          "kappa": "Kappa",
+          "almost_done": "Almost done",
+          "in_progress": "In progress",
+          "ready": "準備完了"
+        }
+      },
+      "progress": {
+        "hideout_items": "ハイドアウトアイテム",
+        "filtered_status_active": "タスクの設定でフィルター",
+        "filtered_warning_tooltip": "これらの統計情報は、タスクフィルタの設定(Kappa、Lightkeeper、非特別なタスク)に従います。",
+        "view_full_progress": "View full progress"
+      },
+      "traders": {
+        "title": "トレーダーの進捗状況",
+        "view_tasks": "{name} のタスクを表示",
+        "tasks": "タスク",
+        "loyalty_level": "ロイヤリティレベル",
+        "reputation": "評判",
+        "reputation_input_label": "評判入力",
+        "set_loyalty_level": "ロイヤルティレベル {level}に設定",
+        "rep_progress_label": "→ LL{level}",
+        "scav_karma": "Scav カルマ",
+        "sort": {
+          "aria_label": "トレーダーのソート",
+          "direction_aria_label": "並び順を切り替え"
+        },
+        "unlock_via_task": "Unlocks after task",
+        "unlock_via_storyline": "Unlocks in Storyline: {chapter}"
+      },
+      "support_banner": {
+        "new_title": "Keep TarkovTracker free for everyone",
+        "new_body": "Supporting is never required, but it's what keeps the project running and updated with no paywalls or ads for anyone.",
+        "new_cta": "TarkovTracker をサポート",
+        "returning_title": "Thanks for supporting TarkovTracker before",
+        "returning_body": "Support is always optional. It's what keeps the tracker running, updated, and free of paywalls and ads for everyone.",
+        "returning_cta": "Support again"
+      }
+    },
+    "changelog": {
+      "title": "更新履歴",
+      "description": "最新の更新とTarkovTrackerの変更を表示します。",
+      "loading": "更新履歴を読み込み中...",
+      "error": "更新履歴の読み込みに失敗しました",
+      "empty": "まだ更新履歴がありません。",
+      "load_more": "更に表示",
+      "types": {
+        "added": "追加",
+        "fixed": "修正",
+        "improved": "改善",
+        "updated": "更新",
+        "changed": "変更"
+      }
+    },
+    "storyline": {
+      "subtitle": "Tarkovのストーリーチャプターの進行状況を確認できます。",
+      "chapters_complete": "チャプター完了",
+      "chapter_nav_label": "Story chapters",
+      "chapter_eyebrow": "Chapter",
+      "wip_title": "開発中",
+      "completed_during_tutorial": "Completed during tutorial",
+      "wip_badge": "WIP",
+      "wip_description": "この機能は現在、開発が進められている段階です。データの整理を進めていくにつれ、コンテンツや機能は徐々に拡充・改善されていきます。ご理解のほど、よろしくお願いいたします。",
+      "no_data": "ストーリーラインチャプターのデータがありません。",
+      "mark_incomplete": "未完了にする",
+      "endings": "エンディング",
+      "ending_progress": "目標の進捗: {completed}/{total}",
+      "ending_evidence_pending": "このエンディングに対応する目標はまだありません。",
+      "partial_data": "部分データ",
+      "partial_data_hint": "この章の上流ストーリーデータは不完全なので、記載されている以上に多くの目標が存在する可能性があります。",
+      "quest_route_exclusive": "一方のルートを完了すると、もう一方には進めなくなります。",
+      "quest_route_known_steps_done": "判明している目標はすべて完了",
+      "quest_route_evidence_pending": "進行手順はまだ登録されていません。",
+      "quest_route_conflict": "複数のルートが完了済みと表示されていますが、ゲーム内で実際に可能なのは1つだけです。",
+      "quest_route_progress": "{completed}/{total} 手順",
+      "quest_route_unnamed": "Route {index}",
+      "stale_progress_one": "保存済みの目標マーク1件が現在のストーリーデータと一致しません。再確認が必要です。",
+      "stale_progress_other": "保存済みの目標マーク{count}件が現在のストーリーデータと一致しません。再確認が必要です。",
+      "route_choice": "ルート選択",
+      "route_chosen": "ルート選択済み",
+      "route_blocks": "進行を妨げる目標：{objectives}",
+      "route_blocked_by": "進行を妨げている目標：{objectives}",
+      "route_decision": "選択 {index}",
+      "route_choose_one": "一つ選択",
+      "route_optional_steps": "オプションの手順",
+      "route_selected_hint": "このルートはアクティブです。",
+      "route_switch_hint": "ルートを切り替えるには、最初に選択したルートのチェックを外します。",
+      "route_unlocks_chapter": "チャプターロック解除",
+      "route_unlocks_estimated": "推定時間",
+      "route_unlock_map": "マップ: {name}",
+      "route_unlock_trader": "トレーダー: {name}",
+      "route_unlock_reward": "報酬: {name}",
+      "timeline_objective": "目標",
+      "timeline_unlocks": "Unlocks"
+    },
+    "kappa": {
+      "subtitle": "KappaコンテナとLightkeeperクエストに向けて進捗状況を追跡します。",
+      "row": {
+        "level_met_aria": "必要なレベル {required}、あなたはレベル {current}",
+        "level_unmet_aria": "レベル {required}が必要です。あなたはレベル {current}です",
+        "level_title": "必要なレベル {required} （あなたは {current}です）",
+        "level_summary": "Lv. {required} (あなたは {current})",
+        "trader_level": "{trader} Lv{level}",
+        "action_uncomplete": "未完了にする",
+        "action_reset_failed": "失敗したタスクをリセット",
+        "locked_by": "必須: {task}"
+      },
+      "empty": "このリストのタスクはまだありません。",
+      "summary": {
+        "complete": "完了",
+        "final_goal": "最終Kappa目標"
+      },
+      "trader_selector": {
+        "label": "トレーダーを選択"
+      },
+      "trader": {
+        "other": "その他"
+      }
+    },
+    "supporter": {
+      "title": "TarkovTracker をサポート",
+      "subtitle": "このサイトの運営を継続するためにご協力をお願いします。皆様からのご寄付はすべて、ホスティング費用、開発費、そしてサイトの維持費に直接充てられます。",
+      "billing_monthly": "月払い",
+      "billing_6month": "半年払い",
+      "billing_yearly": "年払い",
+      "most_popular": "一番人気",
+      "tier_cta": "サブスクライブ",
+      "tier_login_cta": "ログインして購読する",
+      "tier_change_cta": "請求ポータルでのプラン変更",
+      "current_tier_badge": "現在のティア",
+      "tier_scav_name": "Scav",
+      "tier_scav_tagline": "ただ何とかやっていこうとしているだけ",
+      "tier_timmy_name": "Timmy",
+      "tier_timmy_tagline": "基本を学ぶ",
+      "tier_chad_name": "Chad",
+      "tier_chad_tagline": "真のベテランサポーター",
+      "perk_badge": "サポーターバッジ",
+      "perk_discord": "Discordのサポーターロール (アカウントをリンクしてサーバーに参加)",
+      "perk_tier_role": "Discord の {tier} Tier ロール",
+      "perk_priority_support": "優先サポート",
+      "perk_feature_voting": "機能の優先投票権",
+      "one_time_title": "1回限りの寄付",
+      "one_time_subtitle": "購読はご遠慮されたいですか？その場合は、{min}からの1回限りの寄付をお送りください。",
+      "one_time_cover_fees": "Stripe手数料を自分持ちにする",
+      "one_time_fee_amount": "手数料は{fees}",
+      "one_time_amount_field_label": "寄付金額",
+      "one_time_min_error": "最低{min}",
+      "one_time_invalid_error": "有効な金額を入力してください",
+      "one_time_max_error": "最大 {max}",
+      "one_time_give_cta": "{total} を寄付する",
+      "one_time_login_cta": "ログインして寄付する",
+      "one_time_net_note": "手数料を差し引いた後、{net}が当方に振り込まれます",
+      "one_time_perks_heading": "サポーター特典を含む",
+      "one_time_fee_transparency": "Stripe手数料(2.9%+$0.30)が支払い前に表示されます。",
+      "perk_api_rate_limit": "APIの1日あたりの読み取りおよび書き込みクォータの引き上げ\n",
+      "perk_subscription_retention": "対象となるサブスクリプションがアクティブである間、定期的な非アクティブなクリーンアップから除外します",
+      "perk_one_time_retention": "対象となるサポートがある1年間の非アクティブウィンドウ",
+      "billing_summary": "サブスクリプションは選択された間隔で自動的に更新されます。いつでも更新をキャンセルできます。一回限りのコントリビューションは更新されません。",
+      "policies_title": "一目でのサポート",
+      "terms_summary": "この無料プロジェクトを支援してください。Perksは変更される場合があり、保証されません。支払いは通常返金不可で、適用される法律に従って行われます。",
+      "payment_terms_link": "支払、キャンセル、返金条件",
+      "retention_summary": "Qualifiingサポートはルーチンの非アクティブウィンドウを拡張します。アクティブな対象サブスクリプションは除外されます。 返金とチャージバックは、資格に影響を与えます. これは、他のアカウントの削除からのストレージや保護の保証ではありません.",
+      "retention_terms_link": "フルアカウントの保持条件",
+      "privacy_summary": "Stripeは支払いを処理します。サポートを管理するために限られた支払いとサポーターの記録を保持します。当社のプライバシーポリシーは、データの使用、保持、およびお客様の権利について説明しています。",
+      "login_required_warning": "サポーター特典を受け取るにはログインが必要です。",
+      "price_to_us": "私たちに",
+      "price_per_month_suffix": "/月",
+      "price_stripe_fees": "Stripe手数料",
+      "billed_every_label": "{label}ごとに請求",
+      "savings_note": "月々の支払額と比べて、{amount}の節約になります",
+      "kofi_deprecation_title": "Ko-fi (バックアップオプション)",
+      "kofi_deprecation_detail": "上記の定期購読および1回限りの寄付は、現在Stripeを通じて行われています。これにより手数料が削減され、皆様からのご支援のより多くの部分が直接私たちに届くようになります。Ko-fiは、1回限りのチップのみのバックアップ手段として引き続き利用可能です。",
+      "checkout_error_title": "支払いに失敗しました",
+      "checkout_error_generic": "決済を開始できませんでした。しばらくしてからもう一度お試しください。",
+      "manage_subscription_cta": "サブスクリプションを管理",
+      "upgrade_cta": "ティアを選択",
+      "portal_error_title": "請求ポータルを開けませんでした",
+      "portal_error_generic": "請求ポータルを開けませんでした。もう一度やり直してください。",
+      "status_active_subscription": "有効なサブスクリプション",
+      "status_active_one_time": "アクティブなサポーター",
+      "status_past_due": "支払期限超過",
+      "status_cancelled": "サブスクリプションをキャンセルしました",
+      "status_expired": "サブスクリプションの有効期限が切れました",
+      "status_inactive": "非アクティブサポーター",
+      "status_summary_inactive": "サポート期間が終了しました。特典を更新するには、以下のプランからお選びください。",
+      "status_summary_renews": "{date}に自動更新されます。プランの変更や解約はいつでも可能です。",
+      "status_summary_cancelled_until": "{date}までは引き続きアクセス可能です。それ以降は利用できなくなります。",
+      "status_summary_subscription": "サービスをご利用いただきありがとうございます。請求管理はいつでも行えます。",
+      "status_summary_one_time": "今回のご寄付、ありがとうございました。",
+      "status_summary_one_time_until": "特典の有効期限は{date}までです。",
+      "thanks_subscription_title": "ようこそ！",
+      "thanks_subscription_description": "ご登録の有効化処理が行われています。まもなく、ご利用プランのバッジが表示されます。",
+      "thanks_one_time_title": "ご支援ありがとうございます!",
+      "thanks_one_time_description": "ご寄付は正常に処理されました。ご寄付が口座に反映されるまで、少し時間がかかる場合があります。",
+      "one_time_amount_label": "1回あたりの寄付額(USD)",
+      "billing_6month_interval": "6ヶ月",
+      "billing_yearly_interval": "年"
+    },
+    "tasks": {
+      "status_tabs_label": "Task status",
+      "primary_views": {
+        "aria_label": "Task views",
+        "graph": "グラフ",
+        "needs_wider_screen": "(needs a wider screen)"
+      },
+      "graph": {
+        "focus_mode_active": "{taskName} の依存関係チェーンを表示中",
+        "isolate_chain": "チェーンを分離する",
+        "show_context": "コンテキストを表示",
+        "no_tasks": "このトレーダーにタスクが見つかりません。",
+        "narrow_title": "Graph needs a wider screen",
+        "narrow_description": "The task graph opens in windows at least {width} pixels wide. Widen the window, or browse the same trader's tasks in the Traders view.",
+        "narrow_traders_link": "Open Traders view",
+        "legend": "凡例",
+        "flow_start": "開始（前提なし）",
+        "flow_end": "終了 (後続なし)",
+        "flow_direction": "タスクの流れは上から下へ",
+        "keyboard_controls_title": "キーボード操作",
+        "keyboard_pan": "パン",
+        "keyboard_zoom": "ズーム",
+        "keyboard_reset": "表示をリセット",
+        "alpha_notice": "グラフビューはアルファ版です。改善を進めるにつれ、レイアウトや機能は頻繁に変更される可能性があります。",
+        "resize_handle": "グラフの高さのサイズを変更"
+      },
+      "user_views": {
+        "yourself": "自分"
+      },
+      "filters": {
+        "team_aria_label": "Show progress for {name}",
+        "whole_team": "Whole team",
+        "title": "Filter tasks",
+        "types": {
+          "title": "Task types",
+          "hint": "Show tasks that belong to any selected group.",
+          "locked_hint": "At least one task type stays selected.",
+          "regular": "レギュラー",
+          "kappa": "Kappa",
+          "lightkeeper": "ライトキーパー"
+        },
+        "narrow": {
+          "title": "Narrow down",
+          "required_keys": "Needs keys",
+          "required_keys_hint": "Only tasks that require a key.",
+          "team_shared": "Shared by whole team",
+          "team_shared_hint": "Viewing the whole team's available tasks: only tasks every teammate still needs."
+        },
+        "map": {
+          "title": "This map",
+          "global_tasks": "Show any-location tasks",
+          "global_tasks_hint": "Tasks that can be done on any map, not just this one.",
+          "hide_map_complete": "Hide finished here",
+          "hide_map_complete_hint": "Hide tasks whose objectives on this map are all done."
+        },
+        "chips": {
+          "required_keys": "Needs keys",
+          "team_shared": "Shared by whole team",
+          "global_hidden": "Any-location hidden",
+          "map_complete_hidden": "Finished here hidden"
+        }
+      },
+      "sort": {
+        "none": "デフォルト順",
+        "impact": "影響",
+        "alphabetical": "アルファベット順",
+        "level": "プレイヤーレベル",
+        "trader": "トレーダー順",
+        "teammates": "チームメイトが利用可能",
+        "xp": "XP報酬",
+        "aria_label": "タスクの並べ替え",
+        "progression": "進捗状況"
+      },
+      "settings": {
+        "title": "タスクの設定",
+        "filters_moved": "Looking for task type, key, or map filters? They're under Filters in the toolbar.",
+        "cards": {
+          "title": "Task cards",
+          "required_labels": "\"Required\" labels",
+          "required_labels_hint": "Badges for Kappa, Lightkeeper, and edition-exclusive tasks.",
+          "experience_rewards": "Experience rewards",
+          "rewards": "報酬：",
+          "rewards_hint": "The rewards section on each card.",
+          "previous_tasks": "Previous tasks",
+          "next_tasks": "Next tasks",
+          "start_collapsed": "Start cards collapsed",
+          "start_collapsed_hint": "Show only the title until you expand a card.",
+          "collapse_completed_objectives": "Collapse finished objectives",
+          "collapse_completed_objectives_hint": "On completed tasks, hide the objective list."
+        },
+        "status_tabs": {
+          "title": "Status tabs",
+          "hint": "Choose which status tabs appear in the toolbar."
+        },
+        "behavior": {
+          "title": "Behavior",
+          "impact_respects_filters": "Impact sort follows filters",
+          "impact_respects_filters_hint": "When sorting by impact, count only follow-up tasks that pass your task type and key filters.",
+          "manual_fail_actions": "Manual fail actions",
+          "manual_fail_actions_hint": "Add a button to mark tasks failed yourself."
+        },
+        "advanced": {
+          "failed_tasks_summary": "{count} failed tasks may be marked failed by mistake.",
+          "repair_failed": "失敗したタスクを修復",
+          "repair_failed_confirm": "現在の失敗条件に当てはまらない失敗フラグを解除し、失敗タスクを修復しますか？",
+          "repair_failed_done": "{count}件のタスクの失敗状態を解除しました。",
+          "repair_failed_error": "タスクの修復に失敗しました",
+          "repair_failed_action": "修復する"
+        }
+      },
+      "no_tasks_found": "タスクが見つかりません。フィルターを変更するか、レベルを更新してください。",
+      "no_tasks_found_description": "利用可能なタスクを表示するには、フィルターまたはレベル条件を変更してください。",
+      "no_search_matches": "No tasks match your search.",
+      "no_search_matches_description": "Check the spelling, try a reward item name, or change the task type and map filters.",
+      "search_scope": {
+        "all_statuses": "Searching all statuses for \"{query}\"",
+        "clear_and_return": "Clear search to return to {status}",
+        "pinned_status": "Showing {status} matches for \"{query}\""
+      },
+      "loading": "タスクを読み込み中",
+      "map": {
+        "resize_handle": "マップの高さを調整",
+        "show_map": "マップを表示",
+        "hide_map": "マップを非表示",
+        "fullscreen_label": "全画面表示",
+        "required_items": "必要なアイテム",
+        "required_keys": "必要な鍵",
+        "required_items_summary": "進行中のタスクに必要なアイテム",
+        "required_keys_summary": "進行中のタスクに必要な鍵",
+        "active_tasks_group": "進行中のタスク",
+        "time_period": {
+          "dawn": "夜明け",
+          "day": "日中",
+          "dusk": "夕暮れ",
+          "night": "夜",
+          "default": "時間"
+        },
+        "map_complete_tasks_hidden": "このマップでは{count}件のタスクが非表示になっています。",
+        "map_complete_tasks_showing": "このマップに{count}件のマップ完了タスクを表示しています。",
+        "map_complete_tasks_toggle_show": "非表示タスクを表示",
+        "map_complete_tasks_toggle_hide": "マップ完了タスクを非表示",
+        "map_hidden_hint": "マップを非表示 — クリックして表示",
+        "raid_time_tooltip": "現在のゲーム内レイド時刻",
+        "raid_plan": {
+          "title": "地図上のクエスト",
+          "summary_all": "すべての {total}を表示",
+          "summary_hidden": "{hidden} / {total} を非表示",
+          "choose_quests": "クエストを選択",
+          "show_all": "すべて表示",
+          "popover_description": "このレイドを実行していないクエストのチェックを外すと、マップからクリアされます。「オンリー」は他のすべてを隠します。",
+          "only": "のみ",
+          "show_only_named": "マップ上に {name} のみ表示",
+          "show_only_quest": "このクエストのみを地図上に表示",
+          "hide_quest": "地図から隠す",
+          "show_quest": "地図上に表示",
+          "all_hidden_hint": "このマップ上のすべてのクエストは非表示になります。すべて表示を使用して元に戻します。",
+          "hidden_section_title": "マップから隠す ({count})",
+          "hidden_section_description": "まだ追跡されていますが、地図には描かれていません。",
+          "hidden_section_expand": "隠されたクエストを表示",
+          "hidden_section_collapse": "隠されたクエストを閉じる"
+        }
+      },
+      "pinned_tasks_section": "ピン留めされたタスク",
+      "hidden_tasks": {
+        "section_title": "Hidden tasks ({count})",
+        "section_description": "Hiding never completes or fails a task, so tasks that require it stay locked.",
+        "section_expand": "Show hidden tasks",
+        "section_collapse": "Collapse hidden tasks",
+        "unhide_all": "Unhide all",
+        "hidden_toast": "{name} hidden. Your progress is unchanged; find it under Hidden tasks.",
+        "unhidden_toast": "{name} is back in your task list."
+      },
+      "focused_task_section": "フォーカスされたタスク",
+      "focused_task_description": "タスクのリンクから開いたため、次に進むべき場所が正確にわかります。",
+      "global_tasks_section": "グローバルタスク",
+      "trader_sections": {
+        "loyalty_level": "Loyalty Level {level}",
+        "essential": "Essential Tasks",
+        "essential_hint": "Not part of a loyalty level group, so they don't count toward its task unlocks.",
+        "other": "Other Tasks",
+        "other_hint": "In-game group not known yet."
+      },
+      "questcard": {
+        "pin_task": "タスクをピン留めする",
+        "unpin_task": "タスクのピン留めを解除",
+        "hide_task": "Hide task",
+        "unhide_task": "Unhide task",
+        "wiki": "Wikiページ",
+        "unlocks_next": "次にアンロック",
+        "copy_task_link": "タスクのリンクをコピー",
+        "copy_key_name": "鍵の名前をコピー",
+        "tarkov_dev_logo": "Tarkov.dev logo",
+        "view_task_on_wiki": "Wikiで {name} を表示",
+        "hand_over": "引き渡す",
+        "hand_over_fir": "レイド内で見つけたアイテムを引き渡す",
+        "decrease": "減らす",
+        "increase": "増やす",
+        "uncomplete": "未完了",
+        "not_completed": "未完了",
+        "of": "of",
+        "mark_failed": "失敗としてマーク",
+        "available_button": "利用可能としてマーク",
+        "clear_availability_confirmation": "ゲーム内空室状況の確認をクリア",
+        "uncomplete_button": "未完了としてマーク",
+        "reset_item_counts": "アイテム数をリセット",
+        "collapse_task": "タスクを折りたたむ",
+        "expand_task": "タスクを展開する",
+        "reset_item_counts_disabled_complete": "アイテム数をリセットするには、このタスクを未完了に戻してください",
+        "reset_item_counts_disabled_failed": "アイテム数をリセットするには、このタスクを受注可能に戻してください",
+        "reset_item_counts_disabled_nothing_to_reset": "リセットするアイテム数はありません",
+        "status_complete": "{name} を完了としてマークしました",
+        "status_uncomplete": "{name} を未完了としてマークしました",
+        "status_failed": "{name} を失敗としてマークしました",
+        "status_reset_failed": "{name}の失敗状態をリセットしました",
+        "status_available": "{name}の前提タスクをすべて完了済みに設定しました",
+        "undo": "元に戻す",
+        "undo_complete": "{name}を未完了に戻しました",
+        "undo_uncomplete": "{name}を完了に戻しました",
+        "undo_failed": "{name}を失敗状態から戻しました",
+        "undo_reset_failed": "{name}を失敗状態に戻しました",
+        "mark_failed_confirm": "このタスクを失敗状態にしますか？データ上の問題を修正する場合のみ使用してください。推奨されておらず、タスクチェーンの進行を妨げる可能性があります。",
+        "reset_item_counts_confirm": "このタスクのすべてのアイテム数をリセットしますか？",
+        "failed_because": "失敗理由",
+        "failed_because_status_tooltip": "{name}が{status}になったため自動的に失敗しました",
+        "failed_because_unknown": "手動で失敗にしたか、データが不足しています",
+        "blocked_because": "ブロック理由",
+        "blocked_because_status_tooltip": "永久にブロック — {name}が{status}になりました",
+        "blocked_because_unknown": "前提タスクによりブロックされています",
+        "keys_disclaimer_tooltip": "APIデータに基づく情報であり、必ずしも100%必要とは限りません。ドアがすでに解放されている場合があります。鍵を購入する前に、ゲーム内またはWikiで確認してください。",
+        "keys_disclaimer_aria": "必要な鍵に関する注意事項",
+        "keys_or": "または",
+        "equipment_disclaimer_tooltip": "この目標を完了するためにレイドへ持ち込む必要がある特殊装備",
+        "equipment_disclaimer_aria": "必要装備に関する注意事項",
+        "copy_equipment_name": "装備名をコピー",
+        "requirement_status_active": "進行中／受注済み",
+        "requirement_status_available": "受注可能",
+        "requirement_status_not_started": "未開始",
+        "requires_currently": "現在、 {status}",
+        "requires_tooltip_conflict": "{name}は現在{current}ですが、{expected}である必要があります。このタスクは永久にロックされている可能性があります",
+        "objectives_hidden": "このマップにない目標が{count}件（未完了{uncompleted}件）",
+        "needed_by": "必要なタスク: {names}",
+        "unlocks_next_tooltip": "このタスクを完了すると受注可能になるタスク数",
+        "impact_tooltip": "このタスクの完了を前提とする未完了タスク数",
+        "reward_items": "アイテム:",
+        "unlocks_purchase": "購入をアンロック:",
+        "blocked_tooltip": "他のタスクで選択した内容により、このタスクは永久にブロックされており、完了できません",
+        "edition_exclusive_tooltip": "このタスクは{editions}エディションのプレイヤーのみ利用できます",
+        "any_map": "全マップ",
+        "global_task_tooltip": "このタスクはどのマップでも完了可能です",
+        "jump_to_map": "マップへ移動",
+        "any_location_tooltip": "このクエストはどのマップでも完了可能です",
+        "click_to_edit": "クリックして編集",
+        "find": "見つける",
+        "find_and_hand_over": "見つけて引き渡す",
+        "find_and_hand_over_fir": "レイド内で発見して引き渡す",
+        "find_fir": "レイド内で見つける",
+        "items_count": "{count}個のアイテム",
+        "kappa_tooltip": "このクエストはKappaセキュアコンテナの入手に必要です",
+        "lightkeeper_tooltip": "このクエストはLightkeeperの解放に必要です",
+        "alternatives_tooltip": "このクエストには代替選択肢が{count}件あります。いずれか1つを完了すれば十分です",
+        "alternatives_badge": "代替{count}件",
+        "location_tooltip": "クエストの目標は{map}にあります",
+        "next_tasks": "次のタスク:",
+        "open_item_on_tarkov_dev": "tarkov.dev で {name} を開く",
+        "previous_tasks": "前のタスク:",
+        "progress": "進捗状況 {completed}/{total}",
+        "rewards": "報酬：",
+        "unlocks_count": "{count} アンロック"
+      },
+      "blockers": {
+        "player_level_required": "Requires player level {requirement} (you: {current}).",
+        "trader_level_required": "Requires {trader} loyalty level {requirement} (you: {current}).",
+        "trader_reputation_required": "Requires {trader} reputation {requirement} (you: {current}).",
+        "prerequisite": "次のタスクを必要なステータスにする必要があります: {tasks}",
+        "story_route": "{tasks}の必要なタスクステータスを満たすか、次のストーリーチャプターのいずれかを進行してください: {chapters}",
+        "failed_branch": "失敗したタスクが原因でブロックされています: {task}",
+        "faction": "{faction}のキャラクターが利用可能です。",
+        "trader_story_unlock": "Unlock {trader}: {objective} ({chapter})",
+        "trader_unlock": "{task}を完了して{trader}を解放する。",
+        "prestige": "プレステージ{required}が必要（現在: {current}）",
+        "global_variable_required": "Additional in-game progression required.",
+        "global_variable_unknown_required": "Additional in-game progression required. Use Mark available only if this task is available in-game.",
+        "dialogue": "ゲーム内トレーダーの会話が必要です。このタスクがゲーム内で利用可能であることを確認した後にのみ利用可能なマークを使用してください。",
+        "story_objective": "ストーリーの目標 \"{objective}\" ({chapter}) を完了します。",
+        "unknown": "条件データが利用できないか、サポートされていません。利用可能かどうか確認できません。",
+        "cycle": "前提タスクチェーンがループしています。利用可能かどうか確認できません。",
+        "complete": "このタスクは完了しています。",
+        "failed": "このタスクは失敗しています。",
+        "disabled": "このタスクは無効になっています。",
+        "task_status": "{task} ({status})",
+        "status_complete": "完了",
+        "status_failed": "失敗",
+        "status_active": "進行中または受注済み",
+        "status_unknown": "不明なステータス",
+        "status_or": " または "
+      },
+      "requirements": {
+        "title": "Requirements",
+        "met_count": "{met} of {total} met",
+        "show_more": "あと＋{count}",
+        "show_less": "表示を減らす",
+        "comparison_at_least": "{value}+",
+        "comparison_above": "above {value}",
+        "comparison_at_most": "{value} or lower",
+        "comparison_below": "below {value}",
+        "comparison_exactly": "exactly {value}",
+        "comparison_not_equal": "not {value}",
+        "player_level": "Level {requirement}",
+        "trader_level": "{trader} loyalty {requirement}",
+        "trader_reputation": "{trader} reputation {requirement}",
+        "task": "{action} {task}",
+        "you": "you: {value}",
+        "story_alternative": "Or progress a story chapter: {chapters}",
+        "met": "Met",
+        "unmet": "Not met",
+        "dialogue": "Trader conversation",
+        "story_objective": "Story objective: {objective} ({chapter})",
+        "global_variable": "Additional in-game progression required",
+        "named_pool_one": "Complete {requirement} LL{level} task for {trader}",
+        "named_pool_other": "Complete {requirement} LL{level} tasks for {trader}",
+        "task_pool_one": "Complete {requirement} task from the required pool",
+        "task_pool_other": "Complete {requirement} tasks from the required pool",
+        "task_count_at_least": "at least {value}",
+        "task_count_above": "more than {value}",
+        "task_count_at_most": "at most {value}",
+        "task_count_below": "fewer than {value}",
+        "task_count_exactly": "exactly {value}",
+        "task_count_not_equal": "a number other than {value}",
+        "pool_tracked": "{value} tracked",
+        "pool_account": "{value} in game",
+        "pool_unverified": "Progress unverified",
+        "pool_show_tasks": "Show tasks",
+        "pool_hide_tasks": "Hide tasks",
+        "pool_tasks": "Tasks that count",
+        "pool_candidates": "Candidate tasks",
+        "pool_explanation": "Only tasks in this pool count. Reaching the trader loyalty level is a separate requirement.",
+        "pool_candidate_explanation": "This requirement belongs to the trader's LL task pool. The tasks below are possible contributors.",
+        "pool_caveat": "The counting rules for this pool are unverified. These tasks may contribute; their completions cannot confirm this requirement.",
+        "pool_confirmation_hint": "If this task is already available in-game, use Mark available. This does not complete any pool tasks.",
+        "pool_confirmed": "Confirmed in game",
+        "pool_any_of": "Any one task counts once",
+        "pool_credit_earned": "1 credit earned",
+        "pool_all_of": "Complete all tasks in this group for one credit",
+        "pool_current_task": "This task",
+        "pool_status_available": "利用可能",
+        "pool_status_locked": "ロック中",
+        "pool_status_completed": "完了済",
+        "pool_status_failed": "失敗",
+        "pool_status_unavailable": "Unavailable"
+      }
+    },
+    "hideout": {
+      "status_tabs_label": "Station status",
+      "loading": "ハイドアウトデータを読み込み中",
+      "station_link_label": "{name} へ移動",
+      "no_stations_found": "施設が見つかりません。フィルターを変更してください。",
+      "prereq_filters": {
+        "title": "利用条件",
+        "station_levels": "施設レベル条件",
+        "skill_levels": "スキルレベル条件",
+        "trader_loyalty": "トレーダー信頼度条件",
+        "confirm_title": "利用条件を有効にしますか？",
+        "confirm_description": "{requirement}を有効にすると、前提条件を満たさなくなったハイドアウトのアップグレードが表示されなくなる場合があります。",
+        "confirm_confirm": "有効化"
+      },
+      "stationcard": {
+        "level": "建設可能 | レベル{count} | レベル{count}",
+        "level_not_ready": "建設準備ができていません",
+        "next_level": "次のレベルの必要条件",
+        "max_level": "施設の最大レベルに到達済み",
+        "upgrade_unavailable": "アップグレードは利用できません",
+        "prerequisites": "前提条件",
+        "requirements": {
+          "station": "{stationname} レベル {level}",
+          "skill": "{skillname} レベル {level}",
+          "trader": "{tradername} LL{loyaltylevel}"
+        },
+        "game_edition_description": "スタッシュの初期レベルは、所有しているゲームエディションによって決まります。Trackerの設定で変更できます。",
+        "settings_button": "設定を開く",
+        "upgrade_button": "建設 | レベル{level}を建設 | レベル{level}にアップグレード",
+        "downgrade_button": "施設を撤去 | レベル{level}にダウングレード | レベル{level}にダウングレード",
+        "status_upgraded": "{name}をレベル{level}にアップグレードしました",
+        "status_downgraded": "{name}をレベル{level}からダウングレードしました",
+        "requirement": {
+          "mark_complete": "完了にする（{count}）",
+          "mark_incomplete": "未完了にする",
+          "set_custom_amount": "カスタム数量を設定:"
+        }
+      },
+      "settings": {
+        "title": "Hideout settings",
+        "requirements_help": "These options decide how strict the hideout page is when it marks stations as available or locked."
+      }
+    },
+    "needed_items": {
+      "filter_tabs_label": "Needed item filters",
+      "loading": "タスクとハイドアウトのデータを読み込み中",
+      "items_count": "{count} item | {count} items",
+      "unique_items_count": "{unique} unique ({total} total)",
+      "empty": "検索条件に一致するアイテムはありませんでした。",
+      "error": "必要なアイテムを読み込めません。",
+      "filters": {
+        "title": "Filter items",
+        "found_in_raid": {
+          "title": "Found in raid",
+          "hint": "Show only items that need to be found in raid, or only the ones that don't.",
+          "non_fir": "Non-FIR"
+        },
+        "hide": {
+          "title": "非表示",
+          "owned": "Items I already have",
+          "owned_hint": "Hide needs you already have enough of.",
+          "team": "Teammates' needs",
+          "team_hint": "Show only what you need, not what your team needs.",
+          "special_equipment": "Non-FIR special equipment",
+          "special_equipment_hint": "Hide placeable task gear such as MS2000 Markers and Wi-Fi Cameras."
+        },
+        "tasks": {
+          "title": "タスク",
+          "kappa_only": "Kappa tasks only",
+          "kappa_only_hint": "Show only task items needed for the Kappa container.",
+          "kappa_only_disabled": "Kappa applies to task items, so it is off on the Hideout tab."
+        },
+        "chips": {
+          "fir": "FIR only",
+          "non_fir": "Non-FIR only",
+          "hide_owned": "Owned hidden",
+          "hide_team": "Team needs hidden",
+          "hide_special_equipment": "Special equipment hidden",
+          "kappa_only": "Kappa only"
+        }
+      },
+      "sort": {
+        "label": "並び替え",
+        "name": "名前",
+        "category": "カテゴリー",
+        "count": "個数"
+      },
+      "view": {
+        "list": "リスト表示",
+        "grid": "グリッド表示",
+        "combined": "結合表示"
+      },
+      "teammates_needed": "チームメイトはこれを必要としています"
+    },
+    "settings": {
+      "card": {
+        "apitokens": {
+          "title": "APIトークン",
+          "new_token_expand": "トークンを作成する",
+          "submit_new_token": "トークン作成",
+          "open_api_documentation": "APIドキュメントを開く",
+          "create_token_success": "新しいAPIトークンを作成しました。",
+          "create_token_error": "新しいAPIトークンを作成できませんでした。",
+          "load_tokens_error": "APIトークンの読み込みに失敗しました。",
+          "copy_failed": "トークンをコピーできませんでした。",
+          "copy_token": "トークンをコピー",
+          "edit_name": "トークン名を編集",
+          "edit_name_aria": "{name}のトークン名を編集",
+          "save_name": "トークン名を保存",
+          "cancel_name_edit": "トークン名の編集をキャンセル",
+          "name_updated": "トークン名を更新しました",
+          "name_update_error": "トークン名の更新に失敗しました。もう一度やり直してください。",
+          "token_created": "トークンが作成されました",
+          "token_created_description": "このトークンを今すぐコピーして保存してください。再度表示することはできません。",
+          "token_created_close": "完了",
+          "token_copied": "トークンがクリップボードにコピーされました",
+          "hide_token": "トークンを非表示にする",
+          "token_revoked": "トークンが取り消されました",
+          "token_revoke_error": "トークンの取り消しに失敗しました。もう一度お試しください。",
+          "no_tokens": "TarkovTracker API トークンがありません。",
+          "not_logged_in": "APIトークンを作成するにはログインする必要があります。",
+          "default_note": "タイトルなしのトークン",
+          "show_token": "トークンを表示",
+          "token_value_hidden": "サーバー設定によりトークンの値は非表示です",
+          "token_value_missing": "トークンの値が利用できません",
+          "token_value_unavailable": "トークンの値が表示できません",
+          "token_value_unavailable_desc": "現在のAPIでは、既存のトークンのトークン値は公開されていません。",
+          "token_cap_reached": "トークンの上限に達しました",
+          "token_cap_reached_desc": "最大3つのアクティブなAPIトークンを持つことができます。新しいトークンを作成するには、既存のトークンを削除してください。",
+          "revoke_button": "取り消す",
+          "report": {
+            "load_failed": "APIトークンの読み込みに失敗しました",
+            "create_failed": "APIトークンの作成に失敗しました",
+            "rename_failed": "APIトークンの名前の変更に失敗しました",
+            "revoke_failed": "APIトークンの取り消しに失敗しました"
+          },
+          "list": {
+            "created": "作成日時",
+            "last_used_tooltip": "最終使用日: {value}",
+            "never": "未使用",
+            "usage_count": "{count}回使用",
+            "revoked": "取り消し済み"
+          },
+          "form": {
+            "gamemode_title": "ゲームモード",
+            "permissions_title": "権限",
+            "note_label": "ラベルまたはノート",
+            "note_placeholder": "例: ストリーマー用オーバーレイ、クランBot、個人用アプリ"
+          }
+        }
+      }
+    },
+    "team": {
+      "expiry": {
+        "policy": "Teams with only their owner are automatically disbanded after seven consecutive days, even if the owner is active. A member joining cancels the countdown; becoming solo again starts a fresh seven days. Your personal progress is kept.",
+        "title": "Your team has only you",
+        "warning": "This team will be automatically disbanded on or after {deadline} if you remain its only member. Invite someone to cancel the countdown. Account activity does not extend it. Your personal progress is kept."
+      },
+      "page_description": "チームメンバーを招待し、表示するチームの進行状況を選択して、一緒に進捗を管理できます。",
+      "invite": {
+        "title": "招待リンク",
+        "subtitle": "信頼できるチームメイトとチームを共有しましょう。",
+        "link_label": "チーム招待URL",
+        "helper": "このリンクを持っている人は誰でもチームに参加できます。",
+        "show": "リンクを表示",
+        "hide": "リンクを隠す",
+        "copy": "リンクをコピー",
+        "copied": "コピーしました!"
+      },
+      "members": {
+        "title": "メンバー ({count})",
+        "no_members": "このチームにはまだメンバーがいません。招待リンクを共有してチームメンバーを追加してください。",
+        "alone": "ここにはまだメンバーがいません。招待リンクを共有してチームメンバーを追加してください。",
+        "copy_invite": "招待リンクをコピー"
+      },
+      "visibility": {
+        "title": "表示の設定",
+        "description": "トラッカーに表示されるチームメイトの進捗状況を制御します。",
+        "items_section": "アイテム",
+        "show_tasks": "チームメンバーのタスクを表示",
+        "show_items": "チームメンバーに必要なアイテムを表示",
+        "show_non_fir": "FIR不要の必要アイテムを表示",
+        "show_hideout": "ハイドアウトで必要なアイテムを表示",
+        "show_maps": "チームメンバーのマップ目標を表示"
+      },
+      "danger_zone": {
+        "title": "デンジャーゾーン",
+        "disband_description": "チームを解散すると、すべてのメンバーがチームが削除されます。この操作は取り消せません。",
+        "leave_description": "チームを退出すると、このチームから自分が削除されます。自分の進行状況はアカウントに残ります。",
+        "disband": "チームを解散",
+        "leave": "チームから脱退",
+        "confirm_disband_title": "チームを解散しますか？",
+        "confirm_disband_description": "チームとメンバー全員の所属情報が削除されます。この操作は取り消せません。",
+        "confirm_leave_title": "チームを離れますか？",
+        "confirm_leave_description": "このチームを退出し、メンバーとの進行状況の共有を停止します。",
+        "confirm_disband": "はい、チームを解散します。",
+        "confirm_leave": "はい、チームを脱退します",
+        "disband_success": "チームの解散に成功しました。",
+        "disband_error": "チームの解散に失敗しました。",
+        "action_error": "チームのメンバー情報を更新できません。"
+      },
+      "card": {
+        "manageteam": {
+          "membercard": {
+            "this_is_you": "（これはあなた）",
+            "owner": "オーナー",
+            "taskscomplete": "{completed}/{total} タスク完了",
+            "kick_success": "チームメイトは正常にキックされました。",
+            "kick_error": "チームメイトのキック中にエラーが発生しました。",
+            "level_badge_alt": "レベル {level} バッジ",
+            "hide_progress": "{name}の進捗状況を非表示にする",
+            "show_progress": "{name}の進捗状況を自分に表示",
+            "enable_team_tasks": "個別のメンバーを変更する前に、チームメンバーのタスクを表示する",
+            "remove_member": "{name}をチームから除外する"
+          }
+        },
+        "myteam": {
+          "create_new_team": "新しいチームを作成",
+          "create_team_success": "新しいチームを作成しました。",
+          "create_team_error": "新しいチームの作成に失敗しました。",
+          "create_team_error_ui_update": "チーム情報が更新されませんでした。ページを再読み込みしてチームを確認するか、もう一度お試しください。",
+          "leave_team_success": "チームから脱退しました。",
+          "leave_team_error": "チームを脱退できませんでした。",
+          "already_in_team": "すでに{mode}チームに所属しています。まず現在のチームを退出してください。",
+          "no_team": "現在チームに所属していません。",
+          "login_required": "チームの作成や招待リンクの管理には、ログインが必要です。",
+          "user_not_authenticated": "ユーザーが認証されていません。"
+        },
+        "teaminvite": {
+          "description": "TarkovTrackerのチームに招待されています。",
+          "decline": "拒否"
+        }
+      }
+    },
+    "credits": {
+      "sections": {
+        "original_creator": "初代作者",
+        "beta_testers": "Nuxt - クローズドベータテスター",
+        "contributors": "オープンソースコントリビューター"
+      },
+      "notes": {
+        "alphabetical": "アルファベット順に掲載しています。掲載順は貢献度を表すものではありません。",
+        "contributors": "GitHubのコントリビューターは貢献数順に並んでいます。ボットアカウントは除外しています。"
+      },
+      "contributors": {
+        "loading": "コントリビューターを読み込み中...",
+        "error": "現在、コントリビューターを読み込めません。",
+        "empty": "コントリビューターが見つかりませんでした。",
+        "contributions": "{count} コントリビューション | {count} コントリビューション",
+        "total": "{count} コントリビューター | {count} コントリビューター"
+      },
+      "team_link": "TarkovTrackerチームが運営しています。メンバーは「概要」ページでご紹介しています。"
+    },
+    "about": {
+      "title": "TarkovTrackerについて",
+      "intro": "TarkovTrackerは、Escape from Tarkovのための無料のオープンソース進行状況トラッカーです。クエストやストーリーラインの進行状況、ハイドアウトのアップグレード、必要アイテムをひとつにまとめて管理でき、コミュニティが管理するゲームデータで常に最新の状態を保ちます。このプロジェクトは、少人数のボランティアチームが、オープンソース貢献者の協力を得て運営しています。",
+      "team": {
+        "summary": "TarkovTracker.orgは、少人数のボランティアチームが運営しています。以下のメンバーが、サイトの運営を支え、Discordコミュニティをサポートしています。",
+        "core_heading": "コアチーム",
+        "support_heading": "Discordサポート"
+      },
+      "partners": {
+        "heading": "パートナー＆エコシステム",
+        "summary": "TarkovTrackerは、コミュニティによるプロジェクトの上に成り立っています。下記のメンテナーが、トラッカーが頼っている独立したツールやデータソースを運営しています。"
+      },
+      "help": {
+        "heading": "困ったときは",
+        "routing": "迅速な回答をご希望の場合は、メンバーへのDMではなく、Discordのチャンネルごとのサポートフローをご利用ください。再現できるバグや機能の提案はGitHubで、セキュリティ報告は非公開のセキュリティポリシーに従ってご連絡ください。",
+        "discord": "Discordでのコミュニティサポート",
+        "github_issues": "GitHubでバグ報告・機能リクエスト",
+        "security": "セキュリティ上の問題を報告(非公開)",
+        "credits_link": "ベータテスターとオープンソースコントリビューター — クレジットをご覧ください"
+      },
+      "github_profile": "GitHub プロフィール",
+      "roles": {
+        "core_owner": "コアオーナー・メンテナー・開発者",
+        "discord_owner_developer": "Discordサーバーオーナー、TrackerBot開発者・メンテナー",
+        "core_support": "コアサポートスタッフ",
+        "discord_support": "Discord全般のサポート",
+        "tarkov_dev_maintainer": "Tarkov.devのメンテナー",
+        "ratscanner_maintainer": "RatScannerのオーナー・メンテナー"
+      },
+      "projects": {
+        "tarkov_dev": "Tarkov.dev",
+        "ratscanner": "RatScanner"
+      }
+    },
+    "login": {
+      "subtitle": "サインインしてアカウントにアクセス",
+      "continue_twitch": "Twitchでサインイン",
+      "continue_discord": "Discordでサインイン",
+      "continue_google": "Googleでサインイン",
+      "continue_github": "GitHubでサインイン",
+      "popup_blocked_title": "ポップアップがブロックされました",
+      "popup_blocked_description": "ブラウザがサインイン用のウィンドウをブロックしました。ページを移動しています...",
+      "authenticating": "認証中...",
+      "authenticating_description": "サインインを完了するまで、しばらくお待ちください。",
+      "error_title": "サインインに失敗しました",
+      "error_description": "認証がキャンセルされたか、失敗しました。もう一度お試しください。",
+      "success_title": "サインインしました",
+      "success_description": "{provider}でサインインしました。",
+      "login_options": "ログインオプション"
+    },
+    "profile": {
+      "shared_player": "共有したプレイヤー",
+      "shared_view": "共有されたビュー",
+      "loading_shared_profile": "共有プロフィールを読み込み中...",
+      "loading_data": "進捗状況のメタデータを読み込み中...",
+      "shared_private": "この共有プロフィールは非公開です。",
+      "shared_not_found": "共有プロフィールは見つかりませんでした。",
+      "shared_unavailable": "現在、共有プロフィールを利用できません。",
+      "shared_load_failed": "共有プロフィールの読み込みに失敗しました。",
+      "shared_mode_notice": "このモードの共有された進捗状況を表示しています。",
+      "share_private_intro": "このモードは非公開です。このリンクを公開するには",
+      "account_settings_link": "アカウント設定",
+      "share_private_outro": "で共有を有効にしてください。",
+      "share_public_enabled": "このモードは公開されています。リンクを知っている人なら誰でも閲覧できます。",
+      "share_private_enabled": "このモードは非公開です。",
+      "mode_toggle_label": "プロフィールモードを選択",
+      "copy_snapshot": "スナップショットをコピー",
+      "view_tasks": "タスクを開く",
+      "story_no_tasks": "タスクのメタデータを待って、進捗状況を作成しています。",
+      "story_start": "{mode}プロフィールはまだ始まったばかりです。",
+      "story_complete": "メインタスクのストーリーラインが完了しました。",
+      "story_late": "ワイプ終盤の進捗状況に入りました。",
+      "story_mid": "ワイプ中盤に向けて勢いがついてきています。",
+      "story_early": "序盤の進捗状況は順調に進んでいます。",
+      "story_paragraph_empty": "{name}は、{mode}でタイムスタンプ付きの進捗状況をまだ記録していません。",
+      "story_paragraph": "{name}は、{mode}で約{active_days}日間活動しており、最初の記録から最新の記録までの期間は{journey_days}日です。",
+      "next_milestone_done": "すべてのタスク完了マイルストーンに到達しました。",
+      "next_milestone_value": "タスク完了{milestone}%に到達するまで、残り{remaining}%です。",
+      "no_date": "データはまだありません",
+      "level_meta": "{mode}プロフィールのレベルと現在の陣営({faction})",
+      "tasks_meta": "残り{remaining}件、失敗した分岐{failed}件",
+      "objectives_meta": "追跡中の目標全体の達成率は{completion_pct}%",
+      "hideout_meta": "完了したハイドアウトアイテムのチェックポイント{completed_parts}件",
+      "achievement_mainline": "メインラインのタスク進捗状況",
+      "achievement_objectives": "目標の完了状況",
+      "no_storyline": "このプロフィールにはストーリーデータがありません。",
+      "storyline_auto_start": "自動スタート",
+      "storyline_discovered": "発見済み",
+      "storyline_objectives_main": "メイン目標",
+      "storyline_objectives_optional": "任意目標",
+      "no_hideout": "このプロフィールにはハイドアウトデータがありません。",
+      "hideout_item_fallback": "ハイドアウトアイテム",
+      "hideout_module_fallback": "ハイドアウトアップグレード",
+      "level_prefix": "Lv.",
+      "no_tasks": "このプロフィールで利用できるタスクはありません。",
+      "no_objectives": "目標なし",
+      "activity_timeline": "アクティビティタイムライン",
+      "timeline_subtitle": "最近の進捗状況を時系列で表示",
+      "timeline_task": "タスク完了",
+      "timeline_failed": "タスク分岐失敗",
+      "timeline_hideout": "ハイドアウト設備の建設完了",
+      "timeline_hideout_item": "ハイドアウト素材の納品",
+      "started": "開始",
+      "latest_activity": "最新の活動",
+      "recent_momentum": "過去7日間の進捗状況",
+      "recent_momentum_value": "{count}件のタスクを完了",
+      "no_timeline": "このモードでは、まだ活動履歴がありません。",
+      "progress_overview": "進捗状況の概要",
+      "progress_overview_subtitle": "プレイ状況の概要とペース",
+      "next_milestone": "次のマイルストーン",
+      "total_actions": "記録されたアクション",
+      "total_actions_value": "{count}件の目標・アイテムの進行を記録しました",
+      "achievements": "アチーブメント",
+      "achievements_subtitle": "主要な進行チェックポイント",
+      "kappa_projection": "Kappaタイムライン",
+      "kappa_projection_subtitle": "達成までの所要時間 / 予測時間",
+      "kappa_unknown": "Kappaタイムラインを表示できません",
+      "kappa_unknown_detail": "このプロファイルではKappa関連タスクが検出されませんでした",
+      "kappa_done": "このモードでKappa達成済み",
+      "kappa_done_detail": "約 {days} 日間で {total} 個のKappaタスクを完了しました。",
+      "kappa_done_detail_simple": "このプロフィールではすべてのKappaタスクが完了しています。",
+      "kappa_insufficient": "Kappa ETAの算出にはより多くの履歴が必要です",
+      "kappa_insufficient_detail": "タイムスタンプが記録されたタスクをさらに完了すると、ETAを算出できます。",
+      "kappa_pace_unavailable": "完了時期を推定するには、進捗ペースのデータが不足しています。",
+      "kappa_projected_headline": "Kappaの推定完了日は約{days_remaining}日後です。",
+      "kappa_projected_detail": "{sample_days}日間に記録された{sample_count}件のタスク完了に基づいています。",
+      "kappa_floor_note": "連続する前提条件{critical_path_floor}件とレベルゲートを考慮し、推定値を持ち上げています。",
+      "confidence_high": "信頼度：高",
+      "confidence_medium": "信頼度：中",
+      "confidence_low": "信頼度：低",
+      "estimated_finish": "推定完了日",
+      "kappa_remaining": "残り{count}件"
+    },
+    "not_found": {
+      "not_found_description": "申し訳ありません。そのページは見つかりませんでした！"
+    },
+    "terms_of_service": {
+      "table_of_contents": "目次",
+      "index_button": "索引"
+    },
+    "resources": {
+      "title": "リソースとガイド",
+      "subtitle": "TarkovTrackerを最大限活用するためのコンパニオンアプリ、コミュニティツール、開発者向けリソース、ガイドを探します。",
+      "search_placeholder": "ツールとガイドを検索...",
+      "clear_filters": "フィルターをクリア",
+      "no_results": "検索条件に一致するリソースはありません。",
+      "results_count": "{count}件のリソースが見つかりました",
+      "results_count_one": "1件のリソースが見つかりました",
+      "filter_label": "カテゴリでリソースを絞り込む",
+      "more_actions": "その他の操作",
+      "suggest_title": "便利なTarkovリソースSurely know",
+      "suggest_description": "このページへの掲載を提案するコミュニティツールやガイド isnt",
+      "suggest_cta": "リソースを提案",
+      "migration_banner": {
+        "cta": "移行ガイドを読む",
+        "chip": "From .io?"
+      },
+      "categories": {
+        "tarkovtracker_guides": "TarkovTracker.orgガイド",
+        "companion_apps": "コンパニオンアプリ",
+        "data_and_apis": "データ＆開発者ツール",
+        "calculators_and_reference": "計算ツール＆リファレンス"
+      },
+      "category_badges": {
+        "tarkovtracker_guides": "公式ガイド",
+        "companion_apps": "デスクトップアプリ",
+        "data_and_apis": "データプラットフォーム",
+        "calculators_and_reference": "リファレンス"
+      },
+      "actions": {
+        "setup_guide": "セットアップガイド",
+        "read_guide": "ガイドを読む",
+        "open_calculator": "計算ツールを開く",
+        "view_changes": "変更を表示",
+        "open_tool": "ツールを開く",
+        "download_release": "最新リリースをダウンロード"
+      },
+      "back_to_hub": "リソースに戻る",
+      "breadcrumb": "パンくずリスト",
+      "guide_label": "ガイド",
+      "on_this_page": "このページの内容",
+      "compatibility_label": "互換性",
+      "guide_not_found": "ガイドが見つかりません。お探しのリソースには、まだガイドがない可能性があります。",
+      "meta": {
+        "official_guide": "公式ガイド",
+        "maintained_by_team": "TarkovTracker.orgチームが管理",
+        "windows": "Windows",
+        "setup_time": "5分でセットアップ",
+        "community_data": "コミュニティ運営",
+        "web_tool": "Webツール",
+        "companion_app": "コンパニオンアプリ"
+      },
+      "link_types": {
+        "website": "Websitesを開く",
+        "project_website": "プロジェクトのdivisionサイト",
+        "github": "ソースを表示",
+        "discord": "コミュニティサポート",
+        "download": "ダウンロード"
+      },
+      "guide_sections": {
+        "video_walkthrough": "動画ガイド",
+        "troubleshooting": "トラブルシューティング",
+        "tips": "ヒント＆コツ",
+        "faq": "よくある質問"
+      },
+      "items": {
+        "tarkovtracker_org_vs_io": {
+          "name": "TarkovTracker.orgとTarkovTracker.ioの比較",
+          "description": "どちらのTarkovTrackerサイトを使うべきですか。TarkovTracker.orgと元の.ioサイトとの関係や、進行状況の移行方法についても説明します。"
+        },
+        "tarkovdev": {
+          "name": "Tarkov.dev",
+          "description": "プレイヤーと開発者向けに、アイテム、クエスト、トレーダー、市場のコミュニティ管理データ。"
+        },
+        "tarkovmonitor": {
+          "name": "TarkovMonitor",
+          "description": "ライブのレイドデータを読み取り、対応する進捗をTarkovTrackerに自動同期します。"
+        },
+        "ratscanner": {
+          "name": "RatScanner",
+          "description": "ゲーム内のアイテムツールチップをスキャンして、市場価値、バCommunitiesでの使用目的、クエストとの関連性を確認できます。"
+        },
+        "cultistcircle": {
+          "name": "CultistCircle",
+          "description": "提供したアイテムから得られる可能性のあるCultist Circleの報酬を計算します。"
+        },
+        "tarkovchanges": {
+          "name": "Tarkovの変更",
+          "description": "Tarkovのアップデートごとのアイテム、クエスト、ゲームプレイ変更を確認できます。"
+        }
+      },
+      "guides": {
+        "tarkovtracker_org_vs_io": {
+          "overview": "TarkovTrackerには2つのドメインがあります。TarkovTracker.ioは、TarkovTrackerプロジェクトの創設者が作成した最初の侵入Ebene域名で、元のコードベースをホストしています。TarkovTracker.orgは、元プロジェクトに長く貢献し、かつ保守担当者を務めていた人物が率いる後継プロジェクトです。同じGNU GPLv3ライセンスに基づく無料・オープンソースのフォークとして、活発に保守されています。このガイドでは、両者の違いと、TarkovTracker.orgで進行状況を再構築するためにサポートされている方法を説明します。",
+          "step_1_title": "TarkovTracker.orgアカウントを作成するか、ログインしてください",
+          "step_1_desc": "TarkovTracker.orgアカウントを作成するか、現在のワイプの進行状況xor管理したいアカウントでログインしてください。",
+          "step_2_title": "Tarkov.devのプロフィールメタデータをインポート",
+          "step_2_desc": "設定を開き、インポートを選択して、Tarkov.devのプロフィールインポート機能を使って、レベル、ファクション、スキルなど、対応しているプロフィール情報を復元します。",
+          "step_3_title": "EFTゲームログをインポート",
+          "step_3_desc": "同じインポートタブでEFTのログフォルダーを選択し、ローカルログに残っているクエストの開始・完了イベントを復元します。",
+          "step_4_title": "クエストとハイドアウトの進行状況を確認",
+          "step_4_desc": "クエストリストとハイドアウトを確認し、Tarkov.devと利用可能なゲームログでは復元できなかった進行状況を手動で復元してください。",
+          "step_5_title": "対応するコンパニオンツールを接続",
+          "step_5_desc": "TarkovMonitorに新しいTarkovTracker.org用の読み書き権限付きAPIトークンを設定し、今後サポートされる進行状況の更新が.orgアカウントへ送信されるようにします。",
+          "faq_1_q": "TarkovTracker.ioとTarkovTracker.orgの違いは何ですか？",
+          "faq_1_a": "TarkovTracker.ioは元の侵入Ebene名です。比較的安定していますが、既知の問題があり、現在は保守されていません。最後のデプロイは2024年8月で、活発な開発やサポートは行われていません。TarkovTracker.orgは活発に保守されているフォークで、定期的な更新、EFT 0.15以降のゲーム変更への対応、新機能の追加を行っています。活発に開発しているため、バグやダウンタイムが発生することがあります。こうした問題の発生を最小限に抑えるよう努めていますが、データ損失の可能性を完全には排除できません。",
+          "faq_2_q": "どちらのサイトを使うべきですか？",
+          "faq_2_a": "TarkovTracker.orgを使用してください。現在の『Escape from Tarkov』コンテンツに対する更新、バグ修正、サポートが提供されるのは、このバージョンだけです。新規アカウントは常にTarkovTracker.orgで作成してください。",
+          "faq_3_q": ".ioから.orgへ進行状況を移行するには？",
+          "faq_3_a": "TarkovTracker.orgでは、現時点では.ioトークンを直接インポートする機能はありません。.orgアカウントを作成またはログインし、設定にあるサポート対象のTarkov.devプロフィールおよびEFTゲームログのインポートを使用してください。.ioに保存された情報がすべてこれらのソースに含まれるとは限らないため、クエストとハイドアウトの進行状況を手動で確認してください。2つのサイト間で進行状況は同期されません。",
+          "faq_4_q": "TarkovTracker.orgチームはTarkovTracker.ioを運営していますか？",
+          "faq_4_a": "いいえ。.ioドメインとそのデプロイは元プロジェクトの創設者が所有し、管理しています。当チームにアクセスする権限がないため、.io上の内容を修正、更新、サポートすることはできません。"
+        },
+        "tarkovdev": {
+          "overview": "Tarkov.devはコミュニティのデータエコシステムの基盤です。アイテム、クエスト、トレーダー、隠れ家のステーションなどを含むオープンソースのデータセットを維持しており、json.tarkov.devの無料静的JSONエンドポイントからすべてにアクセスできます。TarkovTracker自体もこれらのエンドポイントを使用し、最新のゲームデータを保持在います。ツールの開発、ガイドの作成、アイテム統計の確認などを行う場合、Tarkov.devが信頼できる情報源です。",
+          "step_1_title": "Webサイトを見る",
+          "step_1_desc": "tarkov.devにアクセスして、アイテムの検索、クエスト要件の確認、トレーダー在庫の閲覧、隠れ家のステーション情報の探索を、広告のない-clean interfaceで行えます。",
+          "step_2_title": "JSON APIを使う",
+          "step_2_desc": "開発者の場合、HTTPクライアントをjson.tarkov.devに接続してください。エンドポイントカタログはjson.tarkov.dev/endpointsにあります。APIは無料で、読み取りクエリに認証は不要で、ローカルにキャッシュできる静的JSONファイルを返します。",
+          "step_3_title": "コミュニティに参加",
+          "step_3_desc": "Hideout Discordは、データ貢献者、ツール開発者、バグ報告のハブです。古いデータを見つけたり、貢献したりしたい場合は、ここが活动现场です。",
+          "tip_1": "JSONエンドポイントにレート制限はありません。本番アプリでは、冗長なリクエストを避けるためにクライアント側でレスポンスをキャッシュしてください。",
+          "tip_2": "Tarkov.devのデータはワイプシーズン中に頻繁に更新されます。不自然に聞こえる場合は、最新のデータセットで既に修正されている可能性があります。",
+          "faq_1_q": "Tarkov.dev APIは無料で利用できますか？",
+          "faq_1_a": "はい。JSONエンドポイントは読み取りクエリに完全に無料です。標準的な利用にAPIキーや認証は不要です。",
+          "faq_2_q": "データはどのくらいの頻度で更新されますか？",
+          "faq_2_a": "データはコミュニティ貢献者が管理し、ゲーム内で変更が発見されるたびに更新されます。アクティブなワイプ期间中は、1日に複数回更新される場合があります。"
+        },
+        "tarkovmonitor": {
+          "overview": "TarkovMonitorはThe Hideoutチームによるデスクトップアプリで、『Escape from Tarkov』のログファイルを監視し、TarkovTrackerの完了済みクエストを自動的に記録できます。音声通知、ローカル統計、任意のTarkov.dev Webサイト連携にも対応しています。",
+          "compatibility": "TarkovMonitorは新しいゲームログを監視できるよう、プレイ中は実行したままにしてください。ゲームメモリを読み取ることはありません。",
+          "step_1_title": "TarkovMonitorをダウンロード",
+          "step_1_desc": "公式GitHub Releasesページから、Windows向けの最新ZIPリリースをダウンロードしてください。",
+          "step_2_title": "展開して起動",
+          "step_2_desc": "アーカイブを永続的なフォルダーに展開してから、TarkovMonitor.exeを実行してください。ZIPファイル内から直接実行しないでください。",
+          "step_3_title": "TarkovTrackerアカウントに接続",
+          "step_3_desc": "TarkovMonitorの設定でTarkovTracker連携セクションを開きます。TarkovTrackerの設定で読み取り・書き込み可能なAPIトークンを作成し、TarkovMonitorに貼り付けてください。",
+          "step_4_title": "TarkovMonitorを開いた状態でプレイ",
+          "step_4_desc": "TarkovMonitorを開いたまま通常どおりプレイしてください。ゲームが対応するクエスト完了イベントをログに書き込むと、TarkovMonitorはそのクエストをTarkovTrackerで完了にできます。",
+          "troubleshooting_1_title": "進捗が同期されません",
+          "troubleshooting_1_desc": "APIトークンが読み取り・書き込み可能で、有効期限が切れていないこと、TarkovMonitorの最新バージョンが実行されていることを確認してください。",
+          "troubleshooting_2_title": "以前の進捗がありません",
+          "troubleshooting_2_desc": "初回セットアップで「過去のログを読み取る」を使用し、正しいワイプとプロフィールの区切り点を選択してください。",
+          "troubleshooting_3_title": "ゲームモードが間違って表示されます",
+          "troubleshooting_3_desc": "TarkovTrackerのゲームモード設定を、プレイ中のモード（PvPまたはPvE）に合わせてください。",
+          "tip_1": "TarkovTrackerの設定で読み取り・書き込み可能なAPIトークンを作成してください。読み取り専用トークンでは進捗を更新できません。",
+          "tip_2": "通常監視では、TarkovMonitorの実行中に書き込まれた新しいログのみを処理します。",
+          "faq_1_q": "TarkovMonitorは安全に使用できますか？",
+          "faq_1_a": "TarkovMonitorは、『Escape from Tarkov』がローカルに書き込むログファイルを監視します。ゲームメモリを読み取ることはなく、レイド中はログが更新されません。第三者ツールには常に一定のリスクが伴うため、自己判断で使用してください。",
+          "faq_2_q": "TarkovMonitorはPvEモードで動作しますか？",
+          "faq_2_a": "はい。PvPとPvEの両方に対応しています。TarkovTrackerのゲームモード設定を、プレイ中のモードに合わせてください。",
+          "faq_3_q": "TarkovTrackerを使用するにはTarkovMonitorが必要ですか？",
+          "faq_3_a": "いいえ。TarkovTrackerは手動入力でも完全に利用できます。TarkovMonitorは、対応する進捗の更新を自動化するだけです。"
+        },
+        "ratscanner": {
+          "overview": "RatScannerはオープンソースのデスクトップツールで、『Escape from Tarkov』のアイテム connoeniLtdスクリーンショットから識別し、オーバーレイにアイテムデータを表示します。外部で動作し、ゲームメモリにはアクセスしません。",
+          "compatibility": "ボーダーレスまたはウィンドウモードを使用してください。排他的フルスクリーンではオーバーレイが表示されないことがあります。",
+          "step_1_title": "最新ZIPをダウンロード",
+          "step_1_desc": "公式GitHub ReleasesページからRatScanner.zipをダウンロードしてください。プロジェクトサイトは最新リリースより遅れている場合があります。",
+          "step_2_title": "展開して起動",
+          "step_2_desc": "ZIPを永続的なフォルダーに展開してから、RatScanner.exeを実行してください。アーカイブ内から直接起動しないでください。",
+          "step_3_title": "オーバーレイを設定",
+          "step_3_desc": "オーバーレイに表示するアイテム情報を選択し、不透明度とスキャンのホットキーを設定します。",
+          "step_4_title": "アイテムをスキャン",
+          "step_4_desc": "名前スキャン：アイテムのinged表示画面を開いて虫眼鏡をクリックします。アイコンスキャン：設定したモディファイ aftermarketキーを押しながらアイテムを左クリックします。RatScannerがアイテムを撮影し、そのデータを表示します。",
+          "troubleshooting_1_title": "RatScannerが起動しません",
+          "troubleshooting_1_desc": "まずリリースフォルダーをすべて展開し、そのフォルダー内の実行ファイルを起動してください。Windowsまたはウイルス対策ソフトがブロックした場合は、公式リポジトリからダウンロードしたファイルであることを確認してください。",
+          "troubleshooting_2_title": "アイテムが検出されません",
+          "troubleshooting_2_desc": "アイテムの検査UIが完全に表示されていることを確認し、虫眼鏡からの名前スキャン、または設定したモディファイアーキーを使用したアイコンスキャンを試してください。",
+          "troubleshooting_3_title": "オーバーレイが表示されません",
+          "troubleshooting_3_desc": "Tarkovをボーダーレスまたはウィンドウモードに切换切换してください。排他的フルスクリーンではオーバーレイが非表示になることがよくあります。",
+          "troubleshooting_4_title": "価格が古い可能性があります",
+          "troubleshooting_4_desc": "RatScannerは市場データを第三者ソースから取得するため、ライブのフリーマーケット価格に遅れる場合があります。",
+          "tip_1": "設定で表示されるアイテム情報を選択し、オーバーレイの不透明度を調整します。",
+          "tip_2": "表示された市場価格は、ゲームや市場のリアルタイム変更に遅れる場合があります。",
+          "faq_1_q": "RatScannerを使うとBANされますか？",
+          "faq_1_a": "RatScannerはスクリーンキャプチャでアイテムのツールチップを読み取り、ゲームクライアントを変更したりゲームサーバーと通信したりはしません。Battlestate Gamesの第三者ツールに対する方針は変更される可能性があるため、自己責任で使用してください。",
+          "faq_2_q": "RatScannerはフリーマーケットで動作しますか？",
+          "faq_2_a": "はい。現在のフリーマーケット価格を表示し、フリーマーケット価格とトレーダー価値の比較に役立ちます。",
+          "faq_3_q": "RatScannerはTarkovTrackerに必要なアイテムを表示できますか？",
+          "faq_3_a": "データプロバイダーからの一般的なアイテム情報は表示できます。個人のTarkovTrackerの進捗に基づく要件については、「必要なアイテム」ページをご利用ください。",
+          "faq_4_q": "RatScannerはTarkovTracker.orgで動作しますか？",
+          "faq_4_a": "はい。RatScannerをインストールし、設定のTarkovTrackerセクションを開いて、tarkovtracker.org APIトークンを入力する前に、TarkovTrackerのバックエンドを.ioから.orgに切り替えました。TarkovTracker.orgチームも現在はRatScannerの保守を支援しているため、.orgとの連携とデフォルト設定は今後のリリースで引き続き改善されます。"
+        },
+        "cultistcircle": {
+          "overview": "CultistCircleは、『Escape from Tarkov』のCultist Circle機能向けの無料コミュニティ製計算ツールです。ゲーム内で実際に試すことなく、レシピ、つまり提供できるアイテムと交換で得られるアイテムを検索できます。単独のコミュニティ開発者が開発したもので、Circleでの取引を効率的に計画するための便利なリファレンスです。",
+          "step_1_title": "WebサイトdooVisit",
+          "step_1_desc": "cultistcircle.comにアクセスして計算ツールを利用してください。アカウント登録やダウンロードは不要で、ブラウザー内だけで動作します。",
+          "step_2_title": "レシピを検索",
+          "step_2_desc": "検索またはブラウズ機能 사용하여、入力アイテムや出力結果からレシピを探します。計算ツールには、各組み合わせの取引比率と可能な結果が表示されます。",
+          "tip_1": "レアアイテムを犠牲にする前に計算ツールを確認してください。取引によっては 他より大幅に良い価値比率のものはifaceあります。",
+          "tip_2": "レシピデータがゲームパッチに遅れている場合があります。レシピが見つからない、または正しくない場合は、サイトが更新されるのを待って確認してください。",
+          "faq_1_q": "CultistCircleは無料で使用できますか？",
+          "faq_1_a": "はい、CultistCircleは完全無料です。アカウントは不要で、ブラウザー内で動作します。",
+          "faq_2_q": "CultistCircleはTarkovTrackerと提携していますか？",
+          "faq_2_a": "いいえ。CultistCircleは、1人のコミュニティ開発者が運営する独立プロジェクトです。ここには便利なコミュニティリソースとして掲載されています。"
+        }
+      },
+      "video": {
+        "walkthrough_title": "{name}の動画ガイド",
+        "caption": "コミュニティによる動画ガイドです。手順は文章版ガイドと一部異なる場合があります。",
+        "play": "動画を再生：{title}"
+      },
+      "official_guide_label": "TarkovTracker.orgガイド"
+    },
+    "account_retention": {
+      "scope": "これらのルールは、TarkovTracker が動作している間の定期的なアカウント削除に適用されます。 アカウントがいつ削除予定日ではなく、クリーンアップの対象になるかを定義します。",
+      "standard": "サポート対象外:アカウントのアクティビティが記録されていない場合、6ヶ月連続でアカウントが削除されることがあります。",
+      "previous_supporter": "前回のサポーター: 1回限りのコントリビューションまたは以前のサブスクリプションを含む、予選コントリビューションが記録されたアカウント 最後に記録されたアカウント活動と最新の投稿記録から1年後に削除の対象になる可能性があります。",
+      "active_subscriber": "アクティブな対象サブスクリプション:アカウントが使用されていなくても、サポーターサブスクリプションがアクティブなままである間、アカウントは定期的な非アクティブな削除から除外されます。",
+      "subscription_end": "有料サブスクリプションへのアクセスを継続しながら、更新をキャンセルしても、この免除は終了しません。 サブスクリプションへのアクセスが終了すると、弊社が付与する請求猶予期間を含みます。 アカウントは、最後の記録されたアクティビティの後半および最新のサブスクリプションアクセス期間の終了後 1 年以内に非アクティブ削除の対象となります。",
+      "activity": "サインイン、認証済みサイトまたはAPIの使用、および保存されたアカウントデータの変更の利用可能な記録を使用して非アクティビティを評価します。 サインインせずに公開プロフィールを表示することは、そのアカウントのアクティビティとはみなされません。",
+      "exceptions": "完全に返金された貢献はサポーターの保持には適格ではありません; その他の有効な貢献はまだ資格があります。 チャージバックは、以前の貢献からの利益を含むすべてのサポーターの利益とサポーター保持履歴をすぐに削除します。 チャージバックを持つアカウントは、標準的な6ヶ月の非アクティブルールに従います。これらの保護は、定期的な非アクティブクリーンアップにのみ適用されます。 これらは、お客様の要求、不正行為またはセキュリティ上の理由、法律によって要求される削除、本サービスの中止時の削除を防止するものではありません。",
+      "no_guarantee": "TarkovTrackerをサポートすることで、永続的なストレージ、バックアップサービス、または保証された可用性またはリカバリを購入することはありません。 データは、障害、セキュリティインシデント、または第三者の停止によって失われることがあり、サービスが中断またはシャットダウンされることがあります。 保持ポリシーは、データが特定の期間利用可能であることを保証するものではありません。",
+      "backup": "設定から進捗状況をエクスポートし、バックアップを保持します。 データが失われたり削除されたりすると、エクスポートとリカバリは利用できなくなる可能性があります。",
+      "rights": "本ポリシーのいかなる条項も、合法的に除外または制限されることができない権利または救済策を除外または制限するものではありません。",
+      "notice": "可能な場合には、通常の非活動削除前に影響を受けるユーザーに通知するための合理的な努力をします。 本ポリシーの重要な変更は、本サービス規約および適用法に従って通知されます。",
+      "terms_summary": "アクティブな加入者に対する免除や以前の支援者に対する1年間の窓口を含む、7.3章のアカウント保持規則に従うルーチンのクリーンアップ。",
+      "perk_summary": "1回限りの投稿者と以前の購読者を含む、第7.3節のアカウント保持規則における定期的な活動不能削除からの保護",
+      "liability": "データの損失またはプライバシー関連のインシデントに対する責任の除外または制限は、適用される法律で許可されている範囲にのみ適用されます。 本ポリシーのいかなる条項も、合法的に除外または制限されることができない権利または救済策を除外または制限するものではありません。",
+      "liability_label": "法律で許可されている制限:"
+    }
+  },
+  "footer": {
+    "call_to_action": {
+      "discord": "Discord",
+      "github": "GitHub"
+    },
+    "analytics_preferences": "アナリティクス設定",
+    "game_attribution": "『Escape from Tarkov』および関連するゲームコンテンツ・資料は、Battlestate Games Limitedとそのライセンサーの商標および著作権で保護されています。無断転載を禁じます。TarkovTrackerは非公式のファンプロジェクトであり、Battlestate Gamesとは提携または承認の関係にありません。",
+    "tagline": "『Escape from Tarkov』のクエスト、ハイドアウトのアップグレード、必要アイテムを1か所で追跡できます。",
+    "version_release_link": "GitHubでバージョン{version}のリリースノートを表示する",
+    "build_commit_link": "GitHub でビルド コミット {commit} を表示",
+    "sections": {
+      "explore": "探索",
+      "project": "プロジェクト",
+      "legal": "法的情報"
+    },
+    "links": {
+      "org_vs_io": ".org と .io"
+    }
+  },
+  "navigation_drawer": {
+    "main_navigation": "メインナビゲーション",
+    "close_menu": "メニューを閉じる",
+    "toggle": "ナビゲーションドロワーの開閉",
+    "brand_name": "TarkovTracker.org",
+    "login": "ログイン",
+    "logout": "ログアウト",
+    "resources": "リソース",
+    "profile": "プロフィール",
+    "section_navigation": "ナビゲーション",
+    "account_menu": "アカウントメニュー",
+    "level_display_editable": "レベル{level}。クリックまたはEnterキーを押して編集",
+    "increment_level": "レベルを上げる",
+    "decrement_level": "レベルを下げる",
+    "level_input": "Current level, {min} to {max}"
+  },
+  "profile": {
+    "season_short": "S{season}"
+  },
+  "streamer_tools": {
+    "subtitle": "OBS、Streamlabs Desktop、XSplit、vMix向けのブラウザソースリンクを生成し、リアルタイムのKappa進捗を表示します。",
+    "manage_sharing": "共有を管理",
+    "login_required": "ログインして、パーソナライズされた配信者用オーバーレイのリンクを生成してください。",
+    "mode_private": "このゲームモードは非公開です。ブラウザソース-links-Polynomial，正式にはブラウザソースリンクが機能するには、公開共有を有効にしてください。",
+    "open_account_settings": "アカウント設定を開く",
+    "content_title": "コンテンツ",
+    "mode_label": "ゲームモード",
+    "metric_label": "ウィジェット",
+    "platform_obs": "OBS Studio / Streamlabs Desktop",
+    "platform_xsplit": "XSplit / vMix",
+    "customize_options": "オーバーレイ設定をカスタマイズ",
+    "reset_defaults": "初期設定に戻す",
+    "layout_label": "レイアウト",
+    "accent_label": "アクセント",
+    "text_size": "文字サイズ",
+    "align_label": "配置",
+    "refresh_label": "更新間隔",
+    "background_label": "背景",
+    "custom_background": "カスタム背景",
+    "background_color": "色",
+    "background_opacity": "不透明度",
+    "background_transparent": "透明",
+    "background_custom": "カスタムカラー",
+    "show_percent": "パーセントを表示",
+    "show_remaining": "残り数を表示",
+    "custom_label": "カスタムラベル",
+    "custom_label_placeholder": "オーバーレイの任意タイトル",
+    "your_overlay_title": "あなたのオーバーレイ",
+    "preview": "プレビュー",
+    "preview_title": "配信者向けオーバーレイのプレビュー",
+    "browser_source_url": "ブラウザソースURL",
+    "copy_link": "リンクをコピー",
+    "open_overlay": "オーバーレイを開く",
+    "open_json": "JSONを開く",
+    "setup_title": "プラットフォーム設定",
+    "setup_subtitle": "OBSおよび主要な配信ツールに対応するためのブラウザソース設定です。",
+    "preview_dim_self": "ウィジェットのみ",
+    "preview_help_self": "ウィジェットをネイティブサイズで表示します。OBSやStreamlabsのシーン内でこのソースをドラッグして任意の位置に置けます。",
+    "preview_help_canvas": "全画面ブラウザソース内でオーバーレイがどのように見えるかを表示します。チェック柄は透明性を表しており、配信には表示されません。",
+    "setup_mode_canvas": "シーンキャンバスモード — フル解像度ソース",
+    "setup_mode_canvas_desc": "ブラウザソースが配信キャンバス全体を埋めます。ウィジェットは、上記の配置設定に基づいて自動的に配置されます。ソースの寸法を配信解像度に合わせてください。",
+    "setup_mode_self_contained": "セルフコンテインドモード — ウィジェットサイズのソース",
+    "setup_mode_self_contained_desc": "ブラウザソースはウィジェットのみを出力します。シーン内でソースをドラッグして、位置とサイズを調整してください。",
+    "obs_step_1": "シーン内で「ソース」の下の＋をクリックし、「ブラウザ」を選択します。",
+    "obs_step_2": "上記のブラウザソースURLをURLフィールドに貼り付けます。",
+    "obs_step_3_prefix": "幅と高さを",
+    "obs_step_3_canvas_note": "（配信解像度と一致する必要があります）。",
+    "obs_step_3_self_note": "（レイアウトに合う任意のサイズでも可）。",
+    "obs_step_4_canvas": "「編集 > 変換 > 画面中央」（またはCtrl+D）を使用して、ソースをシーンの中央に配置します。",
+    "obs_step_4_self": "シーンプレビューでソースを目的の位置までドラッグします。",
+    "obs_step_5": "推奨：「表示されていないときにソースを停止」と「シーンがアクティブになったらブラウザを更新」にチェックを入れます。",
+    "xsplit_step_1": "「Webpage / Browser」入力ソースを追加します。",
+    "xsplit_step_2": "上記のブラウザソースURLを貼り付けます。",
+    "xsplit_step_4": "ソースのプロパティで透明性が有効になっていることを確認します。",
+    "setup_scaling_warning_title": "OBSでソースのリサイズを避ける",
+    "setup_scaling_warning": "OBSでソースハンドルを引き伸ばすと、画像が歪んで強くぼやけます。ウィジェットのサイズを変更するには、このページの「解像度」「文字サイズ」「カスタムスケール」設定を使用してください。オーバーレイはネイティブ品質で再描画されます。",
+    "setup_transparency_note": "オーバーレイの背景はデフォルトで透明です。カスタムCSSや色キーフィルターは必要ありません。OBSとStreamlabsは透明なブラウザソースにネイティブ対応しています。",
+    "interval_60s": "60秒ごと",
+    "interval_120s": "2分ごと",
+    "interval_300s": "5分ごと",
+    "interval_600s": "10分ごと",
+    "metric_tasks_desc": "完了済みのKappa必須タスクと、残りのKappa必須タスク。",
+    "metric_items_desc": "収集済みのKappaタスクアイテムと、残りのアイテム。",
+    "metric_items": "Kappaアイテム",
+    "metric_summary_desc": "タスクとアイテムを表示する1つのオーバーレイウィジェット。",
+    "metric_summary": "統合サマリー",
+    "layout_card": "フルカード",
+    "layout_minimal": "ミニマルピル",
+    "layout_text": "テキストのみ",
+    "accent_kappa": "赤",
+    "accent_info": "シアン",
+    "accent_success": "緑",
+    "accent_warning": "オレンジ",
+    "accent_custom": "カスタム",
+    "custom_accent": "カスタムアクセント",
+    "size_sm": "小",
+    "size_md": "中",
+    "size_lg": "大",
+    "align_top_left": "左上",
+    "align_top_center": "上中央",
+    "align_top_right": "右上",
+    "align_center_left": "中央左",
+    "align_center": "中央",
+    "align_center_right": "中央右",
+    "align_bottom_left": "左下",
+    "align_bottom_center": "下中央",
+    "align_bottom_right": "右下",
+    "copy_success": "オーバーレイURLをコピーしました",
+    "copy_failed": "オーバーレイURLをコピーできませんでした",
+    "settings_reset": "配信者設定をリセットしました",
+    "resolution_label": "解像度",
+    "resolution_1080": "1080p",
+    "resolution_1440": "1440p",
+    "container_label": "コンテナ",
+    "container_canvas": "シーンキャンバス",
+    "self_contained_hint": "ウィジェットの境界範囲のみを出力します。オーバーレイの配置を変更する代わりに、OBSまたはStreamlabs内でブラウザソースを移動してください。",
+    "custom_scale_percent": "スケール",
+    "font_label": "フォント",
+    "show_title": "タイトルを表示",
+    "colors_label": "カラー",
+    "colors_text": "テキスト",
+    "colors_card": "カード",
+    "colors_border": "罫線",
+    "text_color": "文字色",
+    "card_color": "カードの色",
+    "card_opacity": "カードの不透明度",
+    "border_color": "罫線の色",
+    "border_opacity": "罫線の不透明度",
+    "track_opacity": "進捗バーの不透明度"
+  },
+  "settings": {
+    "locale": "言語",
+    "locale_loading": "Loading language and game data…",
+    "locale_failed": "Language could not be loaded. Please try again.",
+    "locale_cooldown": "Wait {seconds}s before loading another language. Cached languages are available now.",
+    "page_description": "アカウント、ゲーム進行状況、アプリの環境設定を管理します。",
+    "tabs": {
+      "progression": "進捗",
+      "imports": "インポート"
+    },
+    "tab_groups": {
+      "game_progress": "ゲーム進行状況",
+      "app": "アプリ",
+      "data": "データ",
+      "account": "アカウント",
+      "tools_integrations": "ツールと連携"
+    },
+    "account": {
+      "begin_deletion": "アカウント削除を開始"
+    },
+    "debug_state": {
+      "title": "デバッグ状態",
+      "description": "バグ報告用に現在のトラッカー状態をJSONスナップショットとして取得します。ゲームモード、レベル、タスク完了状態、前提条件チェーンが含まれます。",
+      "copy_button": "デバッグ状態をコピー"
+    },
+    "general": {
+      "title": "一般設定",
+      "privacy_mode": "プライバシーモード",
+      "privacy_mode_hint": "配信中に機密情報を非表示にします。"
+    },
+    "appearance": {
+      "theme": "テーマ",
+      "theme_hint": "ダークインターフェースとライトインターフェースから選択できます。この選択は端末に保存されます。",
+      "theme_dark": "ダーク",
+      "theme_light": "ライト"
+    },
+    "interface": {
+      "tasks": {
+        "title": "タスクカード",
+        "show_required": "必須ラベルを表示",
+        "show_xp": "XP報酬を表示",
+        "show_next": "次のクエストを表示",
+        "show_prev": "前のクエストを表示",
+        "collapse_by_default": "デフォルトでタスクを折りたたむ",
+        "hide_rewards": "報酬を非表示",
+        "require_trader_levels": "タスクの表示にトレーダーの忠誠度レベルと評価を必須にする",
+        "flags_section": "クエスト表示",
+        "availability_section": "クエストの利用可否",
+        "view_defaults_section": "既定の表示"
+      },
+      "maps": {
+        "show_extracts": "脱出ポイントをデフォルトで表示",
+        "zoom_speed": "ズーム速度",
+        "pan_speed": "パン速度",
+        "zone_opacity": "ゾーンの不透明度",
+        "colors": {
+          "title": "マップの色",
+          "description": "読みやすさとアクセシビリティを向上させるマーカーの色を設定します。",
+          "self_objective": "自分の目標",
+          "pinned_objective": "ピン留めしたクエスト",
+          "team_objective": "チームの目標",
+          "selected": "固定した目標",
+          "shared_extract": "共有脱出ポイント",
+          "coop_extract": "協力脱出ポイント"
+        }
+      },
+      "links": {
+        "antifandom": "antifandom.comを使用",
+        "antifandom_hint": "Fandomのコミュニティ運営による広告の少ないミラーサイトantifandom.comで、fandom.comの代わりにWikiリンクを開きます。"
+      }
+    },
+    "game_profile": {
+      "game_edition_with_value": "{edition}エディション"
+    },
+    "profile_sharing": {
+      "title": "プロフィール共有",
+      "description": "共有リンクから閲覧できるゲームモードプロフィールを制御します。",
+      "public": "公開",
+      "private": "非公開",
+      "toggle_label": "{mode}プロフィールの共有を切り替える",
+      "copy_link": "{mode}プロフィールのリンクをコピー",
+      "load_failed": "共有設定を読み込めませんでした。",
+      "save_failed": "共有設定を更新できませんでした。",
+      "login_required": "ログインして、プロフィール共有の公開範囲を管理してください。"
+    },
+    "game_settings": {
+      "switch_mode_failed": "ゲームモードを切り替えられませんでした。もう一度お試しください",
+      "switch_mode_fetch_failed": "ゲームモードは切り替わりましたが、データを更新できませんでした。もう一度お試しください"
+    },
+    "data_management": {
+      "reading_backup": "Reading backup…",
+      "reset_pvp_confirmation": "PvPの進捗をリセットしてもよろしいですか？",
+      "reset_pvp_warning": "タスク、隠れ家、レベルを含むすべてのPvP進捗が完全に削除されます。PvEデータには影響しません。",
+      "reset_pve_confirmation": "PvEの進捗をリセットしてもよろしいですか？",
+      "reset_pve_warning": "タスク、隠れ家、レベルを含むすべてのPvE進捗が完全に削除されます。PvPデータには影響しません。",
+      "reset_seasonal_confirmation": "シーズンPvPの進行状況をリセットしてもよろしいですか？",
+      "reset_seasonal_warning": "この操作により、現在のシーズンにおけるすべてのシーズンPvP進行状況が完全に削除されます。永続モードのPvPおよびPvEデータには影響されません。",
+      "reset_all_confirmation": "すべての進捗をリセットしてもよろしいですか？",
+      "reset_all_warning": "PvP、PvE、シーズナルPvPモードのすべての進捗が完全に削除されます。この操作は元に戻せません！",
+      "prestige_mode_warning": "現在の{mode}ランはアーカイブされ、次のプライドレベルに向けて進行状況がリセットされます。その他のモードには影響しません。",
+      "reset_confirm": "データをリセット",
+      "export_description": "PvP、PvE、シーズナルPvPモードの進捗データのバックアップをダウンロードします。",
+      "export_button": "進捗バックアップをエクスポート",
+      "debug_export_button": "デバッグスナップショットをエクスポート",
+      "debug_export_description": "サインインの問題をデバッグするための、機密情報を除いたアカウントスナップショットをダウンロードします。認証トークン、メールアドレス、プロフィール画像は含まれません。",
+      "import_backup_button": "TarkovTrackerのバックアップをインポート",
+      "import_eft_logs_folder_button": "EFTログフォルダーをインポート",
+      "recommended_badge": "推奨",
+      "active_flow_blocked_title": "まず現在のデータ処理を完了してください",
+      "active_flow_blocked_description": "別のインポートまたはバックアップを開始する前に、{flow}を完了またはキャンセルしてください。",
+      "flow_data": "現在のデータ処理",
+      "flow_tarkov_dev": "Tarkov.devプロファイルのインポート",
+      "flow_eft_logs": "EFTログのインポート",
+      "flow_backup": "バックアップの復元",
+      "tarkov_dev_section_description": "レベル、ファクション、スキルを含むプロフィールメタデータをインポートします",
+      "eft_logs_section_title": "EFTゲームログのインポート",
+      "eft_logs_section_description": "ゲームログファイルから検出されたクエスト進捗をインポートします",
+      "backup_restore_section_description": "バックアップをエクスポートするか、以前エクスポートしたファイルから復元します",
+      "debug_section_title": "デバッグスナップショット",
+      "import_backup_title": "バックアップから復元",
+      "import_backup_description": "TarkovTrackerのバックアップファイルから進捗を復元します",
+      "import_preview_exported_at": "エクスポート済み",
+      "import_preview_pvp_level": "PvPレベル",
+      "import_preview_pvp_tasks": "PvPタスク",
+      "import_preview_pve_level": "PvEレベル",
+      "import_preview_pve_tasks": "PvEタスク",
+      "import_preview_seasonal_level": "シーズンPvPレベル",
+      "import_preview_seasonal_tasks": "シーズンPvPクエスト",
+      "import_target_label": "インポート先",
+      "import_target_pvp": "PvPのみ",
+      "import_target_pve": "PvEのみ",
+      "import_target_all": "すべて",
+      "import_success_title": "バックアップをインポートしました",
+      "import_success_description": "進捗データを正常に復元しました。",
+      "import_error_title": "バックアップのインポートに失敗しました",
+      "import_error_description": "バックアップをインポートできませんでした。もう一度お試しください。",
+      "export_error_title": "エクスポートに失敗しました",
+      "debug_export_error_title": "デバッグデータのエクスポートに失敗しました",
+      "reset_title": "進捗をリセット",
+      "danger_zone_title": "危険ゾーン",
+      "danger_zone_hint": "すべての進行状況をリセットすると、PvP、PvEおよびシーズンPvPのデータが完全に削除されます。この操作は元に戻せません。",
+      "prestige_history_title": "プレステージ履歴",
+      "prestige_history_loading": "プレステージ履歴を読み込んでいます...",
+      "prestige_history_empty": "アーカイブされたプレステージランはまだありません。",
+      "prestige_history_load_error": "プレステージ履歴の読み込みに失敗しました。",
+      "prestige_history_select": "ランを選択",
+      "prestige_history_option": "P{from} → P{to} • {when}",
+      "prestige_history_unknown_date": "日付不明",
+      "prestige_history_completed_tasks": "完了したタスク",
+      "prestige_history_failed_tasks": "失敗したタスク",
+      "prestige_history_completed_objectives": "完了した目標",
+      "prestige_history_completed_hideout_modules": "隠れ家モジュール",
+      "prestige_history_completed_story_chapters": "ストーリー章",
+      "prestige_history_duration": "ランの所要時間",
+      "prestige_history_days_value": "{days}日",
+      "prestige_history_compare_title": "前回のランとの比較",
+      "prestige_history_compare_subtitle": "現在のプレステージ{from}とプレステージ{to}の比較",
+      "empty_device_archive": "This recovery archive contains no progress or recovery copies.",
+      "invalid_device_archive": "This recovery archive is invalid or uses an unsupported version. No progress was imported.",
+      "import_owner_changed": "Your signed-in account changed. Review the backup again before importing.",
+      "older_tab_recovery_full": "Some older tab edits could not be retained. Export available recovery copies for this account, then clear exported copies to make room. Keep older tabs open until their edits have been recovered.",
+      "review_older_edit": "Review older edit {index}",
+      "older_tab_recovery_available": "Edits from older tabs are available for recovery ({count}). They have not replaced your locally saved progress.",
+      "export_device_recovery": "Export locally saved device data and recovery copies",
+      "clear_older_copies": "Clear older tab recovery copies",
+      "clear_older_copies_confirmation": "Download a recovery archive and make sure the file is saved before confirming cleanup. Only the exported older tab copies will be cleared. Your locally saved progress and original device data will stay available.",
+      "saved_recovery_archive_confirmation": "I saved the file. Clear exported older copies",
+      "recovery_export_failed": "Unable to export recovery copies. Try again. Your copies are still available.",
+      "recovery_cleanup_failed": "Unable to clear exported recovery copies. Try again using your saved archive.",
+      "recovery_owner_changed": "Your signed-in account changed. Download the recovery archive again before clearing copies.",
+      "recovery_archive_download_required": "Download a recovery archive before clearing copies.",
+      "older_edit_unavailable": "This older edit is no longer available.",
+      "older_edit_read_failed": "Unable to read this older edit. Try again.",
+      "recovery_archive_too_large": "This recovery archive is too large to preview (maximum 128 MiB).",
+      "recovery_archive_select_entry": "Choose which archived copy to preview. Import only after reviewing it.",
+      "recovery_archive_current": "Locally saved progress",
+      "recovery_archive_original": "Original device data",
+      "recovery_archive_older": "Older edit {index}",
+      "export_and_clear_older_copies": "Export and clear older copies"
+    },
+    "prestige_pvp": {
+      "success_title": "{mode}プレステージ完了",
+      "success_description": "{mode}プロフィールはレベル{level}までプレステージされました。",
+      "error_title": "プライドに失敗しました",
+      "error_description": "{mode}プロフィールをプレステージできませんでした。もう一度お試しください。"
+    },
+    "reset_pvp": {
+      "success_title": "PvPデータをリセットしました",
+      "success_description": "PvPの進捗を正常にリセットしました。",
+      "error_description": "PvPデータをリセットできませんでした。もう一度お試しください。"
+    },
+    "reset_pve": {
+      "success_title": "PvEデータをリセットしました",
+      "success_description": "PvEの進捗を正常にリセットしました。",
+      "error_description": "PvEデータをリセットできませんでした。もう一度お試しください。"
+    },
+    "reset_seasonal": {
+      "success_title": "シーズンPvPデータをリセットしました",
+      "success_description": "現在の赛季の進行状況が正常にリセットされました。",
+      "error_description": "シーズンPvPデータをリセットできませんでした。もう一度お試しください。"
+    },
+    "reset_all": {
+      "success_title": "すべてのデータをリセットしました",
+      "success_description": "すべての進捗を正常にリセットしました。",
+      "error_description": "データをリセットできませんでした。もう一度お試しください。"
+    },
+    "account_data": {
+      "title": "アカウントとデータ管理",
+      "account_info_title": "アカウント情報",
+      "username_label": "ユーザー名",
+      "email_label": "メールアドレス",
+      "auth_method_label": "認証方法",
+      "auth_methods_label": "認証方法",
+      "member_since_label": "登録日",
+      "account_id_label": "アカウントID",
+      "account_deletion_title": "アカウント削除",
+      "login_required_delete": "アカウントを削除するにはログインしてください",
+      "show_username": "ユーザー名を表示",
+      "hide_username": "ユーザー名を非表示",
+      "show_email": "メールアドレスを表示",
+      "hide_email": "メールアドレスを非表示",
+      "show_account_id": "アカウントIDを表示",
+      "hide_account_id": "アカウントIDを非表示",
+      "copy_account_id": "アカウントIDをコピー",
+      "copy_failed": "アカウントIDをコピーできませんでした",
+      "account_id_copied": "アカウントIDをコピーしました",
+      "confirm_delete_title": "アカウント削除の確認",
+      "confirm_delete_sr_only": "この操作は取り消せず、続行するには確認フレーズを入力する必要があります。",
+      "irreversible_title": "この操作は取り消せません！",
+      "irreversible_description": "すべてのデータが完全に削除され、復元できません。",
+      "what_deleted_title": "削除されるもの",
+      "delete_item_progress": "進捗追跡データ",
+      "delete_item_teams": "チームメンバーシップと所有しているチーム",
+      "delete_item_tokens": "APIトークンと設定",
+      "delete_item_personal": "すべての個人情報",
+      "not_affect_tarkov": "『Escape from Tarkov』のアカウントには影響せず、TarkovTrackerのデータのみに影響します。",
+      "team_transfer_title": "チーム所有権の移譲",
+      "team_transfer_description": "チームが1つでもあれば、各チームの最も古く加入したメンバーへ所有権が自動的に移譲されます。他のメンバーがいないチームは削除されます。",
+      "security_confirmation_title": "セキュリティ確認",
+      "security_confirmation_description": "アカウントを削除するには、下の確認フレーズを正確に入力する必要があります。この操作は恒久的で元に戻せません。",
+      "confirm_phrase_value": "アカウントを削除する",
+      "confirm_phrase_label": "確認するには「{phrase}」と入力してください：",
+      "confirm_phrase_error": "正確に「{phrase}」と入力してください",
+      "delete_forever": "アカウントを完全に削除",
+      "delete_success_title": "アカウントを削除しました",
+      "delete_success_sr_only": "アカウントの削除が完了しました。ダッシュボードにリダイレクトされます。",
+      "delete_success_cleanup_failed_sr_only": "アカウントが削除されましたが、一部のデータはこの端末に残っています。クリーンアップを再試行するか、ここに残っているデータを続行することができます。",
+      "delete_success_description": "アカウントと関連付けられているすべてのデータが完全に削除されました。",
+      "other_session_deleted_description": "この削除を開始したアカウントは削除されました。現在のアカウントはまだサインインしており、変更されていません。",
+      "cleanup_pending": "一部のデータ消去は進行中です。まもなく完了します。",
+      "device_cleanup_failed": "削除されたアカウントデータはこのデバイス上に残ります。クリーンアップを再試行するか、データをここに残します。",
+      "session_end_failed": "このブラウザはまだ削除されたアカウントにサインインしています。ダッシュボードへ移動を選択して、再度ログアウトを試してください。",
+      "retry_device_cleanup": "デバイスのクリーンアップを再試行する",
+      "continue_with_device_data_remaining": "残りのデータで続ける",
+      "redirect_message": "TarkovTrackerをご利用いただきありがとうございます。ダッシュボードにリダイレクトされます。",
+      "go_to_dashboard": "ダッシュボードに移動",
+      "session_changed": "サインインしたアカウントが変更されました。このセッションではこれ以上の操作は行われません。"
+    },
+    "discord_link": {
+      "title": "Discordアカウント",
+      "description": "Discordアカウントをリンクすると、Linkedロールが付与され、サポーター特典が同期されます。",
+      "link_account": "Discordアカウントをリンク",
+      "login_to_link": "ログインしてDiscordアカウントをリンク",
+      "linked_as": "{username}としてリンク済み",
+      "sync_roles": "Discordロールを同期",
+      "error_title": "Discordリンクを利用できません",
+      "not_in_guild_title": "Discordサーバーに参加",
+      "not_in_guild": "アカウントはリンク済みですが、ロールを同期するには、TarkovTrackerのDiscordサーバーに参加する必要があります。",
+      "load_error": "Discordアカウントのリンクを読み込めませんでした。",
+      "link_error": "Discordアカウントのリンクを開始できませんでした。もう一度お試しください。",
+      "unlink_account": "Discordアカウントのリンクを解除",
+      "unlink_requires_login": "唯一のサインインIDのリンクを解除する前に、別のログイン方法を追加してください。",
+      "unlink_error": "Discordアカウントのリンクを解除できませんでした。リンクは有効なままです。",
+      "sync_error": "アカウントはリンク済みですが、Discordロールを同期できませんでした。しばらくしてからもう一度お試しください。"
+    },
+    "prestige": {
+      "persistent_mode_unsupported_title": "プレステージを利用できません",
+      "seasonal_mode_unsupported": "シーズンPvPではプライドを利用できません。",
+      "current_level": "現在のプレステージレベル",
+      "set_current": "現在のプレステージを設定",
+      "set_current_hint": "ゲーム内ですでにプレステージしており、トラッカーを合わせるだけの場合に使用してください。進捗のリセットや履歴の作成は行いません。",
+      "confirm_word": "プレステージ",
+      "confirm_instruction": "プレステージを確認するには「{word}」と入力してください：",
+      "login_required": "{mode}プロフィールをプレステージするにはログインしてください。",
+      "max_reached": "最大プレステージレベルに到達しました。",
+      "lowering_warning": "トラッカーのプレステージを{current}から{next}に下げても、公開範囲のみが変わります。アーカイブ済みランの再構築や進捗のリセットは行いません。",
+      "requirements_title": "次のプレステージの要件",
+      "requirements_description": "トラッカーは次の実際のプレステージ「プレステージ{level}」を確認します。",
+      "requirements_empty": "このプレステージレベルに追加のトラッカー要件はありません。",
+      "archive_title": "ランをアーカイブして次のプレステージを開始",
+      "archive_description_mode": "これから実際にプライドを行う場合のみこれを実行してください。現在の{mode}ランはアーカイブされ、次のプライドレベルに向けて進行状況がリセットされます。",
+      "archive_cta": "ランをアーカイブしてプレステージ{level}を開始",
+      "archive_cta_disabled": "プレステージを利用できません",
+      "archive_dialog_title_mode": "現在の{mode}ランをアーカイブ",
+      "archive_sync_hint": "既存のゲーム内プレステージにトラッカーを合わせるだけの場合は、上の「現在のプレステージを設定」を使用してください。",
+      "archive_soft_gate_unmet": "追跡中の要件{count}件が未達です。トラッカーにはコンテキストが欠けている場合でも、続行できます。",
+      "archive_soft_gate_manual": "要件{count}件は引き続きゲーム内で手動確認が必要です。",
+      "archived_runs_description": "ここに表示されるのは、トラッカーで実際にアーカイブされた{mode}ランのみです。後から現在のプレステージを設定しても、履歴項目は作成されません。",
+      "delete_history_cta": "選択したランを削除",
+      "delete_history_warning": "削除されるのはアーカイブ済みの履歴項目のみです。現在の{mode}進捗の復元やリセットは行いません。",
+      "delete_history_selected_label": "選択したラン",
+      "delete_history_success_title": "アーカイブ済みランを削除しました",
+      "delete_history_success_description": "選択したプレステージ履歴を削除しました。",
+      "delete_history_error_title": "削除に失敗しました",
+      "delete_history_error_description": "アーカイブ済みプレステージランを削除できませんでした。もう一度お試しください。",
+      "sync_success_title": "プレステージを更新しました",
+      "sync_success_description": "トラッカーのプレステージを{level}に設定しました。現在の進捗は保持されています。",
+      "sync_error_title": "プライドの更新に失敗しました",
+      "sync_error_description": "トラッカーのプレステージを更新できませんでした。もう一度お試しください。",
+      "requirement_source": {
+        "tarkov_dev": "Tarkov.dev",
+        "overlay": "オーバーレイ",
+        "wiki": "Wiki"
+      },
+      "requirement_source_tooltip": "出典：{source}",
+      "requirement_state": {
+        "incomplete": "未完了",
+        "manual": "手動確認"
+      },
+      "requirement_progress": "{current} / {required}",
+      "summary": {
+        "ready": "準備完了",
+        "not_ready": "警告",
+        "manual_check": "手動確認",
+        "max": "最大プレステージ"
+      },
+      "summary_description_ready": "追跡中のすべての要件を満たしています。",
+      "summary_description_unmet": "追跡中の要件{count}件がトラッカー上で未完了です。",
+      "summary_description_manual": "要件{count}件は引き続きゲーム内での手動確認が必要です。"
+    },
+    "display_name": {
+      "explanation": "表示名はチームメンバーとナビゲーションに表示されます。ゲームモード（PvP、PvE、シーズナルPvP）ごとに別の表示名があり、現在有効なモードのパネルが強調されます。",
+      "label": "表示名",
+      "placeholder": "表示名を入力してください...",
+      "save": "保存",
+      "empty_error": "表示名を空欄にはできません",
+      "max_error": "表示名は{max}文字以内で入力してください",
+      "saved_title": "表示名を保存しました",
+      "saved_description": "{mode}の表示名が更新されました",
+      "save_failed_title": "保存に失敗しました",
+      "save_failed_description": "表示名を保存できませんでした。もう一度お試しください。",
+      "active_mode": "有効",
+      "game_edition_hint": "利用可能なコンテンツに合わせて追跡できるよう、お持ちのゲーム版を選択してください。"
+    },
+    "player_level": {
+      "title": "Current Level",
+      "label": "Current level",
+      "description": "Your current {mode} level. Completing tasks does not change it; the drawer shows the same value.",
+      "range_hint": "Enter a whole number from {min} to {max}.",
+      "range_hint_fallback": "Enter a whole number from {min} to {max}. Using the default range until level data loads.",
+      "saved_title": "Level Updated",
+      "saved_description": "Your {mode} level is now {level}.",
+      "errors": {
+        "required": "Enter a level from {min} to {max}.",
+        "whole_number": "Level must be a whole number.",
+        "out_of_range": "Level must be between {min} and {max}."
+      }
+    },
+    "skills": {
+      "title": "スキル管理",
+      "explanation": "クエスト報酬は自動計算されます。合計スキルレベルを入力してオフセットを調整してください。",
+      "no_skills": "ゲームデータにスキルが見つかりませんでした。",
+      "show_all": "すべて表示",
+      "show_less": "表示を減らす",
+      "quest": "クエスト：",
+      "offset": "オフセット：",
+      "req_count": "必要：",
+      "reward_count": "報酬：",
+      "limit_exceeded": "上限を超過",
+      "max_level": "最大スキルレベルは51です。",
+      "valid_range": "有効な範囲：0～51",
+      "sort": {
+        "ingame": "ゲーム内"
+      },
+      "quest_tooltip": "完了したクエストの報酬によって自動付与されるスキルレベルです。",
+      "offset_tooltip": "クエスト報酬のレベルに加えて適用する手動調整値です。正の値は、クエスト報酬で得られるレベルより高いレベルまでそのスキルを育成したことを示します。",
+      "collapsed_hint": "{total}個中{shown}個のスキルを表示しています。すべて表示すると、すべてのスキルを確認できます。"
+    },
+    "keybinds": {
+      "title": "キーボードショートカット",
+      "omnibar_label": "グローバル検索（Omnibar）",
+      "omnibar_description": "このショートカットを押すと、グローバル検索パレットが開きます。",
+      "undo_label": "最後の操作を元に戻す",
+      "undo_description": "このショートカットを押すと、直近の進捗変更を元に戻せます。",
+      "record_placeholder": "記録するにはクリック...",
+      "recording": "キーの組み合わせを押してください...",
+      "listening": "入力待ち…",
+      "reset_aria": "既定値にリセット",
+      "conflict_omnibar": "ショートカットが元に戻す操作のキー割り当てと競合しています。",
+      "conflict_undo": "ショートカットが検索操作のキー割り当てと競合しています。",
+      "conflict_rejected": "{action}で既に使用されています。別の組み合わせを押してください。",
+      "warn_system_omnibar": "警告：ブラウザやOSのシステムショートカット（例：Ctrl+T、Ctrl+W、Alt+Tab）と競合する可能性があります。",
+      "warn_system_undo": "警告：ブラウザやOSのシステムショートカット（例：Ctrl+W、Ctrl+T、Alt+Tab）と競合する可能性があります。"
+    },
+    "danger_zone": {
+      "confirm_instruction": "すべてのデータをリセットするには、{word}と入力してください：",
+      "confirm_word": "削除"
+    },
+    "log_import": {
+      "reading_logs": "ログを読み込み、プレビューを準備しています…",
+      "large_folder_hint": "大きなフォルダーはローカルで分割処理して読み込まれます。このページを開いたままにしてください。ログの読み込み中はキャンセルできます。",
+      "upload_hint": "『Escape from Tarkov』のLogsフォルダー、またはセッションフォルダーを選択して、クエストの開始、完了、失敗をインポートします。",
+      "deleted_logs_hint": "古いログセッションが削除済みの場合、インポートできません。",
+      "deleted_logs_hint_tooltip": "ログのインポートでは、現在のLogsフォルダーに残っているクエストイベントのみを読み取ります。",
+      "logs_folder_required": "復元するLogsフォルダーまたはキャラクター履歴からセッションフォルダーを選択してください。",
+      "default_path_label": "既定のパスの例：",
+      "default_path_value": "C:\\Battlestate Games\\Escape from Tarkov\\Logs",
+      "find_in_launcher_hint": "見つかりませんか？ BSG Launcher -> ゲーム設定 -> ログを開き、そのパスをコピーしてください。",
+      "avoid_session_folder_label": "セッションフォルダーの例：",
+      "session_folder_example_path": "C:\\Battlestate Games\\Escape from Tarkov\\Logs\\log_2026.02.19_13-14-36_1.0.2.0.43037",
+      "account_filter_label": "アカウント",
+      "account_filter_tooltip": "Logs are grouped by the EFT account recorded at login. When only one account is identified, sessions without a recorded account are included with it and may belong to another account, so check your selected sessions. Each import writes into this tracker's progress.",
+      "account_label": "Account …{suffix}",
+      "account_unidentified": "Sessions without a recorded account",
+      "multiple_accounts_title": "Logs from multiple accounts detected",
+      "multiple_accounts_description": "Only the selected option's sessions (one account, or sessions without a recorded account) are imported, into this tracker's progress. The most recently played account is selected by default. Importing a second account here would add its quests on top of the first.",
+      "version_filter_label": "ログバージョンを含める",
+      "version_filter_hint": "デフォルトでは最新のメジャーバージョンが選択されます。復元するキャラクターとワイプのログのみを含めてください。",
+      "version_filter_tooltip": "バージョンはアカウント変更、ワイプ、プレステージのリセットを識別できません。インポート前に適切なセッションフォルダーを選択してください。シーズナルイベントは、アクティブなシーズン期間内である必要があります。",
+      "mode_filter_label": "Include game modes",
+      "mode_filter_hint": "Unchecked modes are left untouched. Unidentified-mode events are excluded by default when known modes are detected; include them only if you know where they belong.",
+      "unidentified_mode": "Unidentified mode",
+      "state_filter_label": "Include quest states",
+      "state_filter_hint": "Only each quest's latest recorded state is considered. Excluding a state does not restore an older one. Completed tasks also restore objectives and can imply prerequisites, level/trader minimums, and story gates.",
+      "states": {
+        "completed": "完了済",
+        "started": "Started / active",
+        "failed": "失敗"
+      },
+      "history_filter_label": "Wipe / prestige history",
+      "history_filter_hint": "Logs do not provide a verified self-prestige/reset event. If you know when this character reset, enter an import start time for that mode (your local time). Older events and undated events are excluded, including old notifications replayed later. Leave blank to include all selected history. This does not clear saved progress or change prestige.",
+      "import_since": "{mode}: import events at or after",
+      "selection_summary": "Selected quest states ({count}): {modes}",
+      "no_modes": "no modes",
+      "version_unknown": "不明なバージョン",
+      "source_file": "選択ファイル",
+      "selected_files": "選択されたファイル",
+      "selected_files_count": "{count}個のファイルを選択中",
+      "logs_scanned": "解析したログファイル",
+      "logs_scanned_tooltip": "バージョンフィルターを適用した後に解析した通知ログファイルの数。",
+      "entries_scanned": "スキャンしたアーカイブ項目",
+      "entries_scanned_tooltip": "EFTログの検索中にスキャンした、選択ファイルまたはアーカイブ項目全体の数。",
+      "chat_messages": "チャットメッセージ",
+      "chat_messages_tooltip": "含まれた通知ログから読み取ったチャット通知ペイロードの数。",
+      "completion_events": "クエスト完了イベント",
+      "completion_events_tooltip": "重複するログ行を除いた後の、固有のクエスト完了イベント数。",
+      "started_events": "クエスト開始イベント",
+      "started_events_tooltip": "重複するログ行を除いた後の、固有のクエスト開始イベント数。",
+      "matched_tasks": "一致したタスク",
+      "matched_tasks_tooltip": "現在のTarkovTracker'sデータセット内のタスクに一致する、固有の完了クエストIDの数。",
+      "matched_started_tasks": "一致したアクティブタスク",
+      "matched_started_tasks_tooltip": "完了済みとしてカウントされたタスクを除き、現在のタスクに一致する、固有の開始クエストIDの数。",
+      "detected_mode": "検出されたモード",
+      "detected_mode_tooltip": "セッションモードの宣言、およびゲートウェイまたは通知接続から検出されます。PvP、PvE、シーズナルPvPに対応しています。判別できないイベントには保存先が必要です。",
+      "unknown_mode_events": "モード不明のイベント",
+      "unknown_mode_events_tooltip": "gameモードを示す明確で先行する信号がないクエスト状態。",
+      "unknown_mode_event_details": "モード不明のイベント詳細",
+      "unknown_completion_events": "完了したタスク（モード不明）",
+      "unknown_started_events": "開始したタスク（モード不明）",
+      "import_unknown_to_mode": "モード不明イベントのインポート先",
+      "import_unknown_to_mode_hint": "判明しているPvP、PvE、シーズナルのイベントは自動的に振り分けられます。判別できないイベントの保存先だけを選択してください。シーズナルは、アクティブなシーズン内の日付が必要です。",
+      "auto_mode_hint": "判明しているモードは自動的に振り分けられます。ログは記録されたクエスト状態を復元できますが、欠落した履歴、アイテムの受け渡し、XP、スキル、隠れ家の進捗を再構築することはできません。",
+      "success_title": "EFTログをインポートしました",
+      "success_description": "ゲームログから、完了済み{complete_count}件、アクティブ{active_count}件、失敗{failed_count}件のクエスト状態を処理しました。既存の完了済みタスクは保持されます。",
+      "error_title": "EFTログのインポートに失敗しました",
+      "cleared_logs_toast_title": "古いログが削除された可能性があります",
+      "cleared_logs_toast_description": "ログのインポートでは、Logsフォルダーに残っているクエスト履歴のみを読み取れます。削除済みセッションは復元できません。",
+      "errors": {
+        "choose_unknown_mode": "Choose an included destination mode for unidentified events.",
+        "invalid_archive": "ZIPアーカイブが不完全であるか、不正なログエントリが含まれています。進行状況はインポートされていません。",
+        "budget_exceeded": "選択されたログは安全なインポート予算を超えています。最近のセッション数を減らすか、関連するログファイルのみを抽出してください。進行状況はインポートされませんでした。",
+        "record_too_large": "{path}内の個々のログレコードが、安全に解析できるサイズを超えています。進行状況はインポートされていません。このログ形式について報告してください。",
+        "apply_import_failed": "インポートを完了できませんでした。一部の進捗はすでにインポートされている可能性があります。同じログをもう一度選択して再試行してください。完了済みの進捗は保持されます。",
+        "no_files_selected": "ファイルが選択されていません。",
+        "no_matching_tasks_found": "クエストイベントは見つかりましたが、現在のTarkovTrackerのタスクに一致するものはありませんでした。",
+        "no_notification_logs_found": "選択したファイル内に通知ログが見つかりませんでした。",
+        "no_quest_events_found": "選択したログ内にクエストの開始、完了、または失敗イベントが見つかりませんでした。",
+        "parse_failed": "EFTログの解析に失敗しました。",
+        "task_metadata_not_loaded": "タスクメタデータがまだ読み込まれていません。再読み込みして、もう一度お試しください。",
+        "invalid_mode": "有効なインポート先のゲームモードを選択してください。",
+        "invalid_date": "Enter a valid import start time or clear it to include all selected history.",
+        "empty_selection": "No matching quest states remain in this selection. Include a game mode and quest state, or adjust the history cutoff.",
+        "outside_active_season": "これらのログには、現在のシーズン外または有効な日付がないイベントが含まれています。シーズンPvPにインポートする前に、現在のcjulienのセッションを選択してください。"
+      },
+      "failed_tasks": "一致した失敗クエスト：{count}件",
+      "unknown_failed_events": "失敗クエスト（不明なモード）",
+      "skipped_malformed": {
+        "single": "不正な通知を{count}件スキップしました。",
+        "plural": "不正な通知を{count}件スキップしました。"
+      },
+      "skipped_seasonal": {
+        "single": "現在のシーズン外または有効な日付がないシーズンイベントを{count}件スキップしました。",
+        "plural": "現在のシーズン外または有効な日付がないシーズンイベントを{count}件スキップしました。"
+      }
+    },
+    "tarkov_dev_import": {
+      "title": "Tarkov.devプロフィールのインポート",
+      "profile_url_label": "Tarkov.devのプロフィールURL",
+      "profile_url_placeholder": "https://tarkov.dev/players/regular/8560316",
+      "profile_url_hint": "{link}でプロフィールを見つけ、該当するPvPまたはPvEプロフィールを開いて、そのページのURLをここに貼り付けてください。",
+      "profile_url_hint_link": "tarkov.dev/players",
+      "profile_url_refresh_hint": "Tarkov.devでは、プロフィールページを開くとプロフィールのJSONが更新されます。",
+      "fetch_profile": "プロフィールを取得",
+      "nickname": "ニックネーム",
+      "faction": "ファクション",
+      "skills_count": "{count}件のスキルを検出",
+      "last_refreshed": "Tarkov.devのデータを更新しました",
+      "last_refreshed_unknown": "Unknown",
+      "data_age_warning": "このTarkov.devスナップショットは{days}日前のものです。その後プレイした場合は、Tarkov.devでプロフィールを開いて更新してから、インポートする前に再度取得してください。",
+      "cooldown_hint": "最近インポート済みです。約{minutes}分後にこのプロフィールを再インポートできます。",
+      "turnstile_hint": "プロフィールを取得するには、下の本人確認を完了してください。",
+      "skills_details_toggle": "スキル値を表示",
+      "skills_details_skill": "スキル",
+      "edition_guess": "検出されたエディション",
+      "import_to_mode": "インポート先モード",
+      "import_target_notice": "このデータは{mode}プロフィールにインポートされます。",
+      "success_title": "プロフィールをインポートしました",
+      "success_description": "Tarkov.devのプロフィールを正常にインポートしました。",
+      "linked_uid": "Tarkov UID",
+      "refetch_hint": "最初にTarkov.devでプロフィールを開いて更新し、その後ここで再取得してください。",
+      "refetch_mode_label": "再取得するプロフィール",
+      "refetch_mode_arena": "アリーナ",
+      "refetch_mode_arena_unavailable": "アリーナのインポートは近日公開予定です。",
+      "refetch_profile": "プロフィールを再取得",
+      "unlink_profile": "連携解除",
+      "errors": {
+        "unexpected_profile_flow": "Tarkov.devのプロフィールの取得中に問題が発生しました。もう一度お試しください。",
+        "cooldown_active": "このプロフィールは最近インポート済みです。約{minutes}分後に再インポートできます。",
+        "profile_stale": "このプロフィールがTarkov.devで最後に更新されたのは{days}日前です。古すぎてインポートできません。Tarkov.devでプロフィールページを開き、読み込みを完了してから再取得してください。",
+        "profile_not_generated": "Tarkov.devには、このプロフィールのスナップショットがまだありません。Tarkov.devでプロフィールページを一度開き、読み込みを完了してから再取得してください。",
+        "rate_limited": "インポート試行回数が多すぎます。約{minutes}分待ってから、もう一度お試しください。",
+        "verification_failed": "本人確認に失敗しました。ページを再読み込みして、もう一度お試しください。",
+        "fetch_failed": "Tarkov.devのプロフィールを取得できません。Tarkov.devでプロフィールを開いてから、もう一度お試しください。",
+        "level_thresholds_unavailable": "Unable to load player level data. No progress was imported. Check your connection and try again.",
+        "tarkov_uid_conflict": "この Tarkovプロファイルはすでに別のTarkovTracker アカウントにリンクされているため、ここにリンクされていません。 インポートされた進行状況は保存されました。他のアカウントからリンクを解除し、再度インポートしてください。",
+        "save_failed": "プロファイルはこのデバイスでインポートされましたが、まだアカウントに保存できませんでした。 接続を確認してください。同期されるまでインポートはこのデバイスのままです。"
+      }
+    },
+    "device_data": {
+      "title": "このデバイス上のデータ",
+      "description": "サインアウトすると、このアカウントの進行状況がこのブラウザに保存されます。 クラウドに到達していない変更はサインイン時に同期することができます リセットまたは季節ロールオーバーによって変位された進行状況は、エクスポートのために別々に保持されます。 このデバイスのデータを削除すると、このアカウントの進行状況、リカバリコピー、および設定がブラウザから削除され、サインアウトします。",
+      "cloud_unaffected": "クラウドの進行状況は削除されていません。このデバイス上の他のアカウントのデータは影響を受けません。",
+      "superseded_available": "{count} 進捗状況のリセットまたは季節のロールオーバーからの変更は、エクスポートのみここで保持されます。これらは自動的に復元または同期されません。",
+      "superseded_export": "エクスポートが進行状況に取って代わっています",
+      "superseded_export_error": "進行状況をエクスポートできませんでした",
+      "remove_button": "この端末からこのアカウントのデータを削除します",
+      "confirm_title": "このアカウントのデータをこのデバイスから削除しますか？",
+      "confirm_description": "このアカウントの進行状況、リカバリコピー、優先される進行状況エクスポート、および設定はこのブラウザから削除され、サインアウトされます。 クラウドの進行状況は、再度ログインすると利用可能です。",
+      "pending_warning": "いくつかの進捗状況の変更はまだクラウドに保存されていません。 この端末のデータを削除すると永久に破棄されます。保存したい場合は、まず進捗状況をエクスポートしてください。",
+      "confirm_button": "データを削除してサインアウト",
+      "removed": "このアカウントのデータはこのデバイスから削除されました。",
+      "remove_error": "一部のアカウントデータをこのデバイスから削除できませんでした。ここで別のアカウントを使用する前にもう一度お試しください。",
+      "remove_incomplete": "削除したアカウントの一部のデータはこのデバイス上にあります。ここで別のアカウントを使用する前にもう一度お試しください。",
+      "retry_removal": "もう一度削除してください",
+      "revocation_unavailable": "サーバーに接続できませんでした。ログインしています。 このデバイスでサインアウトしてデータを削除することができます。 サーバーには伝えられないため、セッションが期限切れになるまで、または別のデバイスからサインアウトするまで、セッションはアクティブになります。",
+      "confirm_device_only_button": "この端末でのみサインアウトしてデータを削除する"
+    }
+  },
+  "hideout": {
+    "collapse": "折りたたむ",
+    "expand": "展開"
+  },
+  "tasks": {
+    "view": {
+      "map": "マップ"
+    }
+  },
+  "quest": {
+    "view_on_dev": "Tarkov.devで{name}を表示"
+  },
+  "needed_items": {
+    "total": "合計：",
+    "progress_format": "{current}/{total}",
+    "non": "Non",
+    "non_fir": "Non-FIR",
+    "task_kappa_req": "Kappa必須",
+    "collected_items": "獲得済みアイテム",
+    "smart_fill": "スマート補充",
+    "unknown_task": "不明なタスク",
+    "unknown_station": "不明なステーション",
+    "needed": "必要",
+    "view_details_for": "{name}の詳細を表示",
+    "locked_before": "{count}より前",
+    "switch_to_expanded": "展開表示に切り替え",
+    "switch_to_compact": "コンパクト表示に切り替え",
+    "collected": "獲得済み",
+    "mark_collected": "獲得済みとしてマーク",
+    "handed_over": "引き渡し済み",
+    "craft": {
+      "craftable": "Craftable",
+      "available": "Craftable now",
+      "unavailable": "Craftable (station level too low)",
+      "source": "{station} {level} (you: {current})",
+      "more": " +{count} more",
+      "title": "{status}: {sources}{more}"
+    },
+    "aria": {
+      "enter_count": "アイテム数を入力",
+      "decrease_count": "数を減らす",
+      "increase_count": "数を増やす",
+      "click_to_enter_value": "クリックして値を入力",
+      "mark_as_complete": "100％完了としてマーク",
+      "mark_as_incomplete": "未完了としてマーク",
+      "decrease_fir": "FIRの数を減らす",
+      "increase_fir": "FIRの数を増やす",
+      "decrease_non_fir": "Non-FIRの数を減らす",
+      "increase_non_fir": "Non-FIRの数を増やす",
+      "decrease_objective_count": "{task_name}の目標数を減らす",
+      "increase_objective_count": "{task_name}の目標数を増やす",
+      "decrease_hideout_count": "{station_name}の隠れ家進行度を減らす",
+      "increase_hideout_count": "{station_name}の隠れ家進行度を増やす"
+    },
+    "any_of_items": "これらの{count}個のうちいずれか1つで要件を満たします",
+    "any_of_items_short": "{count}個のうちいずれか",
+    "view_accepted_items": "受理済みのアイテム{count}個をすべて表示",
+    "not_collected": "未獲得",
+    "hidden_for_you": "Hidden for you",
+    "hidden_for_you_hint": "You hid this task. It stays listed because teammates still need this item: {teammates}",
+    "click_to_collect": "クリックして獲得",
+    "click_to_uncollect": "クリックして獲得を解除",
+    "modal": {
+      "smart_fill_error": "スマート補充を適用できません",
+      "reset_error": "アイテムの進捗をリセットできません",
+      "unknown_error": "予期しないエラーが発生しました"
+    }
+  },
+  "skills": {
+    "req": "必要",
+    "required_for": "必要なアイテム：{items}",
+    "required_levels": "必要レベル：{items}",
+    "elite_level": "ELITEレベル"
+  },
+  "game_settings": {
+    "select_game_mode_label": "ゲームモードを選択",
+    "select_faction_label": "ファクションを選択",
+    "season_ends_in": "シーズン{season}の終了まで{days}日{hours}時間{minutes}分",
+    "season_ended": "シーズン{season}は終了しました"
+  },
+  "oauth": {
+    "consent": {
+      "authorize": "アプリケーションを承認",
+      "loading": "読み込み中...",
+      "error": "{error}",
+      "unknown": "不明なアプリケーション",
+      "requesting_access": "は、TarkovTrackerアカウントへのアクセスを要求しています。",
+      "requested_permissions": "要求された権限：",
+      "redirect_to": "リダイレクト先：",
+      "approve": "許可",
+      "deny": "拒否"
+    }
+  },
+  "tarkov_access": {
+    "title": "ブラウザを確認する",
+    "checking": "サイトへのアクセスを確認中…",
+    "description": "このサイトは過度の自動化リクエストから保護されています。以下のセキュリティチェックを完了して、Tarkovゲームデータをロードしてください。",
+    "retry": "再試行",
+    "dismiss": "今はしない",
+    "dismissed_notice": "セキュリティチェックを完了するまでゲームデータは一時停止されます。",
+    "verify_now": "今すぐ確認",
+    "verification_failed_retry": "セキュリティチェックが完了していません。もう一度やり直してください。",
+    "verifying": "ブラウザを検証中…",
+    "widget_hint": "続行するにはチェックを完了してください。",
+    "failed": "Tarkovデータの読み込みは現在利用できません。もう一度やり直すことができます。",
+    "blocked": "Tarkovデータへのアクセスは現在ブロックされています。再試行するか、後で再度お試しください。",
+    "rate_limited": "短時間でチェックが多すぎます。しばらく待ってから、もう一度やり直してください。",
+    "widget_unavailable": "セキュリティーチェックを読み込めませんでした。もう一度やり直してください。"
+  },
+  "analytics_consent": {
+    "eyebrow": "アナリティクス",
+    "title": "Tarkov Trackerを改善Heritage",
+    "title_answered": "Tarkov Trackerの改善にご協力ください",
+    "description": "利用アナリティクスを許可'What works",
+    "accepted": "このブラウザで利用アナリティクスを有効にすることで、Tarkov Trackerの改善にご協力いただいています。",
+    "declined": "このブラウザでは利用アナリティクスが無効です。",
+    "badge_default_off": "デフォルトで無効",
+    "badge_usage_stats": "利用統計",
+    "badge_analytics_only": "アナリティクスのみ",
+    "status_enabled": "アナリティクスの状態：有効",
+    "status_disabled": "アナリティクスの状態：無効",
+    "change_anytime": "フッターからいつでも変更できます。",
+    "review_details": "プライバシーポリシーの詳細を確認",
+    "allow": "改善に協力する",
+    "decline": "アナリティクスを無効のままにする"
+  },
+  "prestige": {
+    "no_prestige": "プレステージなし",
+    "prestige_n": "プレステージ{n}"
+  },
+  "generic": {},
+  "seo": {
+    "site_name": "TarkovTracker",
+    "application_description": "Escape from Tarkovのタスク、隠れ家のアップグレード、Kappa要件、ストーリークエスト、必要アイテムを、PvP・PvE・シーズナルモードごとに管理できます。",
+    "routes": {
+      "home": {
+        "title": "Escape from Tarkovの進捗トラッカー · TarkovTracker.org",
+        "description": "Escape from Tarkovのタスク、隠れ家のアップグレード、Kappa要件、ストーリークエスト、必要アイテムを、PvP・PvE・シーズナルモードごとに管理できます。",
+        "heading": "Escape from Tarkovの進捗トラッカー"
+      },
+      "tasks": {
+        "title": "Tarkovのクエストトラッカー · TarkovTracker.org",
+        "description": "Tarkovのクエスト、目標、報酬、前提条件を、PvP・PvE・シーズナルモードごとに管理できます。"
+      },
+      "tasks_traders": {
+        "title": "Tarkov Quests by Trader · TarkovTracker.org",
+        "description": "Work through each trader's Tarkov quests and see how many are left."
+      },
+      "tasks_maps": {
+        "title": "Tarkov Quest Map View · TarkovTracker.org",
+        "description": "See your open Tarkov quest objectives on each map to plan your next raid."
+      },
+      "tasks_graph": {
+        "title": "Tarkov Quest Graph · TarkovTracker.org",
+        "description": "Explore how each trader's Tarkov quests unlock one another."
+      },
+      "hideout": {
+        "title": "Tarkovの隠れ家トラッカー · TarkovTracker.org",
+        "description": "隠れ家のアップグレードを計画し、モジュールの要件と建設進捗を管理します。"
+      },
+      "needed_items": {
+        "title": "タarkov 必要アイテムトラッカー · TarkovTracker.org",
+        "description": "クエストと隠れ家のアップグレードにまだ必要なアイテムを一覧で確認できます。"
+      },
+      "kappa": {
+        "title": "Kappa & Lightkeeperトラッカー · TarkovTracker.org",
+        "description": "KappaとLightkeeperのクエスト要件と残りの進捗を追跡できます。"
+      },
+      "storyline": {
+        "title": "タimov ストーリーライントラッカー · TarkovTracker.org",
+        "description": "『エスケープ フロム タarkov』のストーリークエストを進め、自分の進捗を追跡できます。"
+      },
+      "resources": {
+        "title": "『エスケープ フロム タarkov』のツールとガイド",
+        "description": "TarkovTracker、TarkovMonitor、RatScanner、Tarkov.dev向けのコミュニティツールとガイドをご覧ください。"
+      },
+      "about": {
+        "title": "TarkovTrackerについて",
+        "description": "『エスケープ フロム タarkov』の進捗を追跡するコミュニティプロジェクトTarkovTrackerについて Alternate。"
+      },
+      "credits": {
+        "title": "TarkovTracker クレジット",
+        "description": "TarkovTrackerを支えるコントリビューターとコミュニティプロジェクト Predicate。"
+      },
+      "changelog": {
+        "title": "TarkovTracker 変更履歴",
+        "description": "TarkovTrackerの最新リリースや改善点、修正点について Alternate。"
+      },
+      "supporter": {
+        "title": "TarkovTracker.orgを支援する",
+        "description": "サーバー運営と開発の費用をご支援ください。サポーターのティアや貢献方法についても Alternate。"
+      },
+      "privacy": {
+        "title": "TarkovTracker プライバシーポリシー",
+        "description": "TarkovTrackerがアカウント情報と進捗データをどのように扱うか確認できます。"
+      },
+      "terms_of_service": {
+        "title": "TarkovTracker 利用規約",
+        "description": "TarkovTrackerの利用を定める利用規約を確認できます。"
+      },
+      "tarkovtracker_org_vs_io": {
+        "title": "TarkovTracker.orgとTarkovTracker.ioのガイド",
+        "description": "TarkovTracker.orgとTarkovTracker.ioの違いや使い始めの方法について Alternate。"
+      },
+      "tarkovmonitor": {
+        "title": "TarkovMonitor セットアップガイド",
+        "description": "TarkovMonitorをインストールしてTarkovTrackerに接続し、レイドとクエストの進捗を同期できます。"
+      },
+      "ratscanner": {
+        "title": "RatScanner セットアップガイド",
+        "description": "RatScannerをインストールし、アイテムのスキャン結果をTarkovTrackerの進捗データに連携できます。"
+      },
+      "tarkovdev": {
+        "title": "Tarkov.dev データガイド",
+        "description": "Tarkov.devのJSONデータフィードが『エスケープ フロム タarkov』のツールや進捗追跡をどうサポートしているか確認できます。"
+      },
+      "cultistcircle": {
+        "title": "カルティストサークルの計算ツールガイド",
+        "description": "カルティストサークルの計算ツールで犠牲のレシピや報酬を調べる方法を Alternate。"
+      },
+      "settings": {
+        "title": "設定 · TarkovTracker.org",
+        "description": "TarkovTrackerの各種設定、インポート、バックアップ、連携を管理できます。"
+      },
+      "progression": {
+        "title": "進捗設定 · TarkovTracker.org",
+        "description": "TarkovTrackerのレベル、スキル、進捗設定を管理できます。"
+      },
+      "prestige": {
+        "title": "プレステージ設定 · TarkovTracker.org",
+        "description": "TarkovTrackerのプレステージ進行状況を管理できます。"
+      },
+      "preferences": {
+        "title": "環境設定 · TarkovTracker.org",
+        "description": "TarkovTrackerの言語、外観、追跡設定をカスタマイズできます。"
+      },
+      "account": {
+        "title": "アカウント · TarkovTracker.org",
+        "description": "TarkovTrackerのアカウントと接続済みサービスを管理できます。"
+      },
+      "team": {
+        "title": "チーム · TarkovTracker.org",
+        "description": "TarkovTrackerのチームと共有された進捗を管理できます。"
+      },
+      "admin": {
+        "title": "管理 · TarkovTracker.org",
+        "description": "TarkovTrackerの管理コントロール。"
+      },
+      "profile": {
+        "title": "プレイヤープロフィール · TarkovTracker.org",
+        "description": "TarkovTrackerのプレイヤープロフィールと共有進捗を表示できます。"
+      },
+      "login": {
+        "title": "ログイン · TarkovTracker.org",
+        "description": "TarkovTrackerにログインすると、進捗を同期し、チームで共同作業を行えます。"
+      },
+      "auth_callback": {
+        "title": "ログインコールバック · TarkovTracker.org",
+        "description": "TarkovTrackerへのログインを完了してください。"
+      },
+      "oauth_consent": {
+        "title": "アプリケーションを承認 · TarkovTracker.org",
+        "description": "TarkovTrackerアカウントへのアクセスを求めるアプリケーションのリクエストを確認してください。"
+      },
+      "not_found": {
+        "title": "ページが見つかりません",
+        "description": "指定されたTarkovTrackerのページが見つかりませんでした。"
+      }
+    }
+  }
+}

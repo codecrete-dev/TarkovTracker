@@ -1,0 +1,231 @@
+import { ARTIFACT_NAME, CI_WORKFLOW_PATH, PRODUCTION_BRANCH, STATUS_CONTEXT } from './profile.mjs';
+import { previewGrant } from './request-authorization.mjs';
+// GitHub Actions app id: only check runs and statuses created by Actions count as CI evidence.
+const ACTIONS_APP_ID = 15368;
+const CI_WORKFLOW_FILE = 'ci.yml';
+const PREVIEW_WORKFLOW_FILE = 'preview.yml';
+/** Live pull request state; the controller never trusts payload snapshots for freshness checks. */
+export async function getPull(github, repo, number) {
+  const { data } = await github.rest.pulls.get({ ...repo, pull_number: number });
+  return data;
+}
+function matchesCandidate(pull, candidate) {
+  const checks = [
+    pull.state === 'open',
+    pull.base.ref === candidate.baseBranch,
+    pull.head.sha === candidate.headSha,
+    pull.head.repo?.full_name === candidate.headRepo,
+  ];
+  return checks.every(Boolean);
+}
+function isForkCandidate(repo, candidate) {
+  return Boolean(candidate.headRepo) && candidate.headRepo !== `${repo.owner}/${repo.repo}`;
+}
+/** `owner:branch` filter for a fork candidate; null for same-repository candidates. */
+function forkHeadFilter(repo, candidate) {
+  if (!isForkCandidate(repo, candidate) || !candidate.headBranch) return null;
+  return `${candidate.headRepo.split('/')[0]}:${candidate.headBranch}`;
+}
+/**
+ * Candidate PRs for a validated head. The base repository's commit-association lookup never
+ * returns PRs for commits that exist only in a fork, and fork CI runs carry no `pull_requests`,
+ * so fork candidates are listed by their `owner:branch` head instead.
+ */
+async function listCandidatePulls(github, repo, candidate) {
+  const head = forkHeadFilter(repo, candidate);
+  if (head) {
+    return github.paginate(github.rest.pulls.list, {
+      ...repo,
+      state: 'open',
+      head,
+      base: candidate.baseBranch,
+      per_page: 100,
+    });
+  }
+  return github.paginate(github.rest.repos.listPullRequestsAssociatedWithCommit, {
+    ...repo,
+    commit_sha: candidate.headSha,
+    per_page: 100,
+  });
+}
+/** Resolve the open pull request whose current head is the validated commit, if any. */
+export async function findPullForHead(github, repo, candidate) {
+  const pulls = await listCandidatePulls(github, repo, candidate);
+  const matches = pulls.filter((pull) => matchesCandidate(pull, candidate));
+  return matches.length === 1 ? matches[0] : null;
+}
+export async function getRun(github, repo, runId) {
+  const { data } = await github.rest.actions.getWorkflowRun({ ...repo, run_id: runId });
+  return data;
+}
+/** Newest matching PR CI run for a head; callers bind it to the requested PR or branch. */
+export async function findLatestPullRun(github, repo, headSha, matches = () => true) {
+  const { data } = await github.rest.actions.listWorkflowRuns({
+    ...repo,
+    workflow_id: CI_WORKFLOW_FILE,
+    event: 'pull_request',
+    head_sha: headSha,
+    per_page: 100,
+  });
+  return (
+    data.workflow_runs.filter(matches).toSorted((left, right) => right.id - left.id)[0] ?? null
+  );
+}
+export function isCiRun(run) {
+  return (
+    run?.path === CI_WORKFLOW_PATH &&
+    ['pull_request', 'workflow_dispatch', 'merge_group'].includes(run.event)
+  );
+}
+/** Latest `CI Result` job check run from GitHub Actions on the exact head. */
+export async function ciResultCheck(github, repo, sha) {
+  const checks = await github.paginate(github.rest.checks.listForRef, {
+    ...repo,
+    ref: sha,
+    check_name: 'CI Result',
+    filter: 'latest',
+    per_page: 100,
+  });
+  return (
+    checks
+      .filter((check) => check.app?.id === ACTIONS_APP_ID && check.head_sha === sha)
+      .toSorted((left, right) => right.id - left.id)[0] ?? null
+  );
+}
+/** Latest commit status for one context on the exact head (dispatched CI reports this way). */
+export async function latestStatus(github, repo, sha, statusContext) {
+  const statuses = await github.paginate(github.rest.repos.listCommitStatusesForRef, {
+    ...repo,
+    ref: sha,
+    per_page: 100,
+  });
+  return (
+    statuses
+      .filter((status) => status.context === statusContext)
+      .toSorted((left, right) => right.id - left.id)[0] ?? null
+  );
+}
+export async function allStatuses(github, repo, sha, statusContext) {
+  const statuses = await github.paginate(github.rest.repos.listCommitStatusesForRef, {
+    ...repo,
+    ref: sha,
+    per_page: 100,
+  });
+  return statuses.filter((status) => status.context === statusContext);
+}
+export async function findPreviewArtifact(github, repo, runId) {
+  const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+    ...repo,
+    run_id: runId,
+    per_page: 100,
+  });
+  const candidates = artifacts.filter((artifact) => artifact.name === ARTIFACT_NAME);
+  if (candidates.length !== 1) return null;
+  return candidates[0].expired ? null : candidates[0];
+}
+export async function downloadArtifact(github, repo, artifactId) {
+  const { data } = await github.rest.actions.downloadArtifact({
+    ...repo,
+    artifact_id: artifactId,
+    archive_format: 'zip',
+  });
+  return Buffer.from(data);
+}
+export async function listPullPaths(github, repo, number) {
+  const files = await github.paginate(github.rest.pulls.listFiles, {
+    ...repo,
+    pull_number: number,
+    per_page: 100,
+  });
+  const paths = files.flatMap((file) => [file.filename, file.previous_filename].filter(Boolean));
+  // GitHub caps the file listing; an incomplete listing must select the conservative decision.
+  return files.length >= 3000 ? [] : paths;
+}
+function matchesPreviewRequest(run, decision) {
+  return [
+    run.path === '.github/workflows/preview.yml',
+    run.event === 'workflow_dispatch',
+    run.head_branch === PRODUCTION_BRANCH,
+    matchesRequestBinding(run, decision),
+    Date.parse(run.created_at) >= Date.parse(decision.runCompletedAt),
+    run.status !== 'completed',
+  ].every(Boolean);
+}
+function requestIdentifier(request, key) {
+  return String(request?.[key] ?? '0');
+}
+function matchesRequestBinding(run, decision) {
+  const grant = previewGrant(decision.previewRequest);
+  const binding = requestIdentifier(grant, 'commentId');
+  const control = requestIdentifier(grant, 'controlRunId');
+  if (run.display_title === `Preview CI ${decision.runId} request ${binding} control ${control}`)
+    return true;
+  return control === '0' && matchesLegacyPreviewBinding(run, decision.runId, binding);
+}
+/** Active dispatches include queued runs and fork runs awaiting environment approval. */
+async function previewRequestInFlight(github, repo, decision) {
+  const statuses = ['queued', 'in_progress', 'waiting', 'pending', 'requested'];
+  const batches = await Promise.all(
+    statuses.map((status) =>
+      github.paginate(github.rest.actions.listWorkflowRuns, {
+        ...repo,
+        workflow_id: PREVIEW_WORKFLOW_FILE,
+        event: 'workflow_dispatch',
+        branch: PRODUCTION_BRANCH,
+        status,
+        per_page: 100,
+      })
+    )
+  );
+  // Filtered GitHub searches stop at 1,000 results. Never dispatch on incomplete evidence.
+  if (batches.some((runs) => runs.length >= 1000))
+    throw new Error('Active preview lookup exceeded GitHub search limit.');
+  return batches.flat().some((run) => matchesPreviewRequest(run, decision));
+}
+/** Sequential state events must not replace an active deployment for the same CI attempt. */
+export async function requestPreviewDispatch(github, repo, decision) {
+  if (await previewRequestInFlight(github, repo, decision)) return;
+  await github.rest.actions.createWorkflowDispatch({
+    ...repo,
+    workflow_id: PREVIEW_WORKFLOW_FILE,
+    ref: PRODUCTION_BRANCH,
+    inputs: previewDispatchInputs(
+      decision.runId,
+      decision.previewRequest,
+      decision.previewAuthorization,
+      decision.runAttempt,
+      decision.runEvent
+    ),
+  });
+}
+function previewDispatchInputs(runId, request, authorization, attempt, event) {
+  const inputs = { run_id: String(runId), queue: String(event === 'merge_group') };
+  bindPreviewGrant(inputs, request);
+  if (authorization === 'readiness') inputs.authorization = 'readiness';
+  if (attempt) inputs.ci_attempt = String(attempt);
+  return inputs;
+}
+function bindPreviewGrant(inputs, request) {
+  const grant = previewGrant(request);
+  if (!grant) return;
+  inputs.request_comment_id = String(grant.commentId);
+  if (grant.controlRunId) inputs.request_control_run_id = String(grant.controlRunId);
+}
+function truncateDescription(description) {
+  return description.length > 140 ? `${description.slice(0, 137)}...` : description;
+}
+/** Publish the authoritative `Preview Result` context; callers treat a rejected write as fatal. */
+export async function publishStatus(github, repo, { sha, state, description, targetUrl }) {
+  await github.rest.repos.createCommitStatus({
+    ...repo,
+    sha,
+    context: STATUS_CONTEXT,
+    state,
+    description: truncateDescription(description),
+    target_url: targetUrl,
+  });
+}
+function matchesLegacyPreviewBinding(run, runId, binding) {
+  if (run.display_title === `Preview CI ${runId} request ${binding}`) return true;
+  return binding === '0' && run.display_title === `Preview CI ${runId}`;
+}

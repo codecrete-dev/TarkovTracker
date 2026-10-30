@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { hasProgress, mergeProgressData } from '@/stores/tarkov/progressMerge';
-import type { UserProgressData, UserState } from '@/stores/progressState';
+import {
+  hasProgress,
+  hasRetainableModeProgress,
+  mergeProgressData,
+} from '@/stores/tarkov/progressMerge';
+import type { ManualActivityEntry, UserProgressData, UserState } from '@/stores/progressState';
 const createProgressData = (
   storyChapters: UserProgressData['storyChapters']
 ): UserProgressData => ({
   level: 1,
   pmcFaction: 'USEC',
   displayName: null,
-  xpOffset: 0,
   taskObjectives: {},
   taskCompletions: {},
   hideoutParts: {},
@@ -18,6 +21,51 @@ const createProgressData = (
   progressEpoch: 0,
   skillOffsets: {},
   storyChapters,
+});
+describe('hasProgress availability confirmations', () => {
+  it('counts a confirmation-only mode as progress so it syncs and survives startup', () => {
+    const pvp = createProgressData({});
+    expect(hasProgress({ pvp })).toBe(false);
+    pvp.taskAvailability = { task: { requirements: 'sig', timestamp: 1 } };
+    expect(hasProgress({ pvp })).toBe(true);
+  });
+});
+describe('mergeProgressData availability confirmation', () => {
+  const withConfirmation = (requirements: string, timestamp: number) => {
+    const data = createProgressData({});
+    data.taskAvailability = { task: { requirements, timestamp } };
+    return data;
+  };
+  it('keeps the newest confirmation on its own clock and never resurrects a newer clear', () => {
+    const confirmed = withConfirmation('requirements', 10);
+    const cleared = withConfirmation('', 20);
+    for (const [a, b] of [
+      [confirmed, cleared],
+      [cleared, confirmed],
+    ] as const)
+      expect(mergeProgressData(a, b).taskAvailability?.task).toEqual({
+        requirements: '',
+        timestamp: 20,
+      });
+    const older = withConfirmation('', 5);
+    expect(mergeProgressData(older, confirmed).taskAvailability?.task?.requirements).toBe(
+      'requirements'
+    );
+  });
+  it('never lets a stale confirmation or clear discard another client completion', () => {
+    // Review #979: a stale client that confirms or clears later must not rewrite task status.
+    const completedElsewhere = createProgressData({});
+    completedElsewhere.taskCompletions.task = { complete: true, failed: false, timestamp: 200 };
+    const staleClient = withConfirmation('', 300);
+    for (const [a, b] of [
+      [staleClient, completedElsewhere],
+      [completedElsewhere, staleClient],
+    ] as const) {
+      const merged = mergeProgressData(a, b);
+      expect(merged.taskCompletions.task).toMatchObject({ complete: true, failed: false });
+      expect(merged.taskAvailability?.task).toEqual({ requirements: '', timestamp: 300 });
+    }
+  });
 });
 describe('mergeProgressData story chapters', () => {
   it('merges chapter objectives by key without dropping existing objective progress', () => {
@@ -179,4 +227,169 @@ describe('mergeProgressData progress epoch', () => {
       'chapter-2': { complete: true, timestamp: 2000 },
     });
   });
+});
+describe('mergeProgressData manual activity history', () => {
+  const entry = (overrides: Partial<ManualActivityEntry> = {}): ManualActivityEntry => ({
+    id: 'manual-1',
+    timestamp: 1000,
+    type: 'task',
+    action: 'complete',
+    title: 'Completed Task: Debut',
+    ...overrides,
+  });
+  const withHistory = (history: ManualActivityEntry[], progressEpoch = 0): UserProgressData => ({
+    ...createProgressData({}),
+    manualActivityHistory: history,
+    progressEpoch,
+  });
+  it('unions both sides on the equal-epoch branch, newest first', () => {
+    const merged = mergeProgressData(
+      withHistory([entry({ id: 'local-1', timestamp: 3000, title: 'Local' })]),
+      withHistory([entry({ id: 'remote-1', timestamp: 5000, title: 'Remote' })])
+    );
+    expect(merged.manualActivityHistory?.map((item) => item.id)).toEqual(['remote-1', 'local-1']);
+  });
+  it('keeps the newest entry when both sides share an id', () => {
+    const merged = mergeProgressData(
+      withHistory([entry({ id: 'shared', timestamp: 9000, title: 'Local newer' })]),
+      withHistory([entry({ id: 'shared', timestamp: 1000, title: 'Remote older' })])
+    );
+    expect(merged.manualActivityHistory).toEqual([
+      entry({ id: 'shared', timestamp: 9000, title: 'Local newer' }),
+    ]);
+  });
+  it('drops malformed entries from either side', () => {
+    const merged = mergeProgressData(
+      withHistory([
+        entry({ id: 'good', timestamp: 4000 }),
+        { id: 'bad', title: 'no type or action' } as unknown as ManualActivityEntry,
+      ]),
+      withHistory(['nonsense' as unknown as ManualActivityEntry])
+    );
+    expect(merged.manualActivityHistory?.map((item) => item.id)).toEqual(['good']);
+  });
+  it('caps the merged history at the shared limit', () => {
+    const merged = mergeProgressData(
+      withHistory(
+        Array.from({ length: 40 }, (_unused, index) =>
+          entry({ id: `local-${index}`, timestamp: 1000 + index })
+        )
+      ),
+      withHistory(
+        Array.from({ length: 40 }, (_unused, index) =>
+          entry({ id: `remote-${index}`, timestamp: 5000 + index })
+        )
+      )
+    );
+    expect(merged.manualActivityHistory).toHaveLength(50);
+    expect(merged.manualActivityHistory?.[0]?.id).toBe('remote-39');
+  });
+  it('treats a missing history as empty rather than dropping the other side', () => {
+    const merged = mergeProgressData(
+      createProgressData({}),
+      withHistory([entry({ id: 'remote' })])
+    );
+    expect(merged.manualActivityHistory?.map((item) => item.id)).toEqual(['remote']);
+  });
+  it('discards the losing side when a reset epoch wins', () => {
+    const local = withHistory([entry({ id: 'local-only', timestamp: 9000 })], 1);
+    const remote = withHistory([entry({ id: 'remote-only', timestamp: 1000 })], 2);
+    const remoteWins = mergeProgressData(local, remote);
+    expect(remoteWins.progressEpoch).toBe(2);
+    expect(remoteWins.manualActivityHistory?.map((item) => item.id)).toEqual(['remote-only']);
+    const localWins = mergeProgressData(remote, local);
+    expect(localWins.progressEpoch).toBe(2);
+    expect(localWins.manualActivityHistory?.map((item) => item.id)).toEqual(['remote-only']);
+  });
+});
+describe('manual history reconciliation regressions', () => {
+  const entry = (id: string, title = id): ManualActivityEntry => ({
+    id,
+    title,
+    timestamp: 1000,
+    type: 'task',
+    action: 'complete',
+  });
+  it('converges for equal timestamps, duplicate IDs and more than 50 entries', () => {
+    const local = {
+      ...createProgressData({}),
+      manualActivityHistory: [
+        entry('same', 'Z'),
+        ...Array.from({ length: 60 }, (_, i) => entry(`entry-${i}`)),
+      ],
+    };
+    const remote = {
+      ...createProgressData({}),
+      manualActivityHistory: [entry('same', 'A'), entry('0')],
+    };
+    const forward = mergeProgressData(local, remote).manualActivityHistory;
+    const reverse = mergeProgressData(remote, local).manualActivityHistory;
+    expect(forward).toEqual(reverse);
+    expect(forward).toHaveLength(50);
+    const duplicate = mergeProgressData(
+      { ...local, manualActivityHistory: [entry('same', 'Z')] },
+      remote
+    );
+    expect(duplicate.manualActivityHistory?.find((row) => row.id === 'same')?.title).toBe('A');
+  });
+  it('does not resurrect cleared history from a stale device, in either direction', () => {
+    const stale = { ...createProgressData({}), manualActivityHistory: [entry('old')] };
+    const cleared = {
+      ...createProgressData({}),
+      manualActivityEpoch: 1,
+      manualActivityHistory: [] as ManualActivityEntry[],
+    };
+    for (const [left, right] of [
+      [stale, cleared],
+      [cleared, stale],
+    ]) {
+      const result = mergeProgressData(left, right);
+      expect(result.manualActivityEpoch).toBe(1);
+      expect(result.manualActivityHistory).toEqual([]);
+      expect(result.progressEpoch).toBe(0);
+    }
+    cleared.manualActivityHistory = [entry('new')];
+    expect(mergeProgressData(stale, cleared).manualActivityHistory).toEqual([entry('new')]);
+  });
+  it('starts and permits synchronization for history-only state and its clear', () => {
+    const empty = createProgressData({});
+    const state = { pvp: empty, pve: empty, seasonal: empty };
+    expect(hasProgress(state)).toBe(false);
+    expect(
+      hasProgress({ ...state, pvp: { ...empty, manualActivityHistory: [entry('only')] } })
+    ).toBe(true);
+    expect(hasProgress({ ...state, pvp: { ...empty, manualActivityEpoch: 1 } })).toBe(true);
+  });
+});
+describe('hasRetainableModeProgress', () => {
+  it('ignores default progress and reset clocks but keeps any real change', () => {
+    const empty = createProgressData({});
+    expect(hasRetainableModeProgress(empty)).toBe(false);
+    expect(hasRetainableModeProgress(undefined)).toBe(false);
+    expect(hasRetainableModeProgress({ ...empty, progressEpoch: 3, manualActivityEpoch: 2 })).toBe(
+      false
+    );
+    expect(hasRetainableModeProgress({ ...empty, displayName: 'player' })).toBe(true);
+    expect(
+      hasRetainableModeProgress({ ...empty, traders: { prapor: { level: 2, reputation: 0 } } })
+    ).toBe(true);
+    expect(hasRetainableModeProgress({ ...empty, level: 2 })).toBe(true);
+  });
+});
+describe('retired XP offsets in merge paths', () => {
+  it.each(['local-only', 'remote-only', 'equal-epoch', 'newer-remote', 'newer-local'])(
+    'drops offsets from %s merges without changing saved levels',
+    (path) => {
+      const local = Object.assign(createProgressData({}), { level: 35, xpOffset: 999999 });
+      const remote = Object.assign(createProgressData({}), { level: 40, xpOffset: 888888 });
+      if (path === 'newer-remote') remote.progressEpoch = 1;
+      if (path === 'newer-local') local.progressEpoch = 1;
+      const merged = mergeProgressData(
+        path === 'remote-only' ? undefined : local,
+        path === 'local-only' ? undefined : remote
+      );
+      expect(merged).not.toHaveProperty('xpOffset');
+      expect(merged.level).toBe(['local-only', 'newer-local'].includes(path) ? 35 : 40);
+    }
+  );
 });

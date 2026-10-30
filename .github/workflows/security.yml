@@ -1,51 +1,31 @@
 name: Security
+# Reusable security gate. CI calls it for pull requests, main pushes, and explicit dispatches
+# (including Crowdin and release staging) and requires its success in `CI Result`. The weekly
+# schedule keeps the standalone audit; ordinary push and pull_request triggers were removed so the
+# scans run exactly once per revision, inside the gated CI run.
 on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    paths-ignore:
-      - 'app/locales/cs.json'
-      - 'app/locales/de.json'
-      - 'app/locales/es.json'
-      - 'app/locales/fr.json'
-      - 'app/locales/it.json'
-      - 'app/locales/ko.json'
-      - 'app/locales/pl.json'
-      - 'app/locales/pt.json'
-      - 'app/locales/ru.json'
-      - 'app/locales/uk.json'
-      - 'app/locales/zh.json'
+  workflow_call:
   schedule:
     - cron: '0 0 * * 0'
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+permissions:
+  contents: read
 jobs:
   security-scan:
     name: Security Scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Setup Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+      - uses: ./.github/actions/setup-project
         with:
-          node-version-file: .nvmrc
-      - name: Install pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@11.14.0 --activate
-      - name: Setup pnpm cache
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version-file: .nvmrc
-          cache: 'pnpm'
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+          # Audits consume the isolated manifest/lockfile below, not node_modules. The weekly
+          # outdated check retains the installed workspace; every security scan still runs.
+          install-dependencies: ${{ github.event_name == 'schedule' }}
       - name: Prepare pnpm audit workspace
         id: prepare-audit
         run: |
@@ -55,11 +35,24 @@ jobs:
           echo "audit_dir=$audit_dir" >> "$GITHUB_OUTPUT"
       - name: Audit production dependencies
         working-directory: ${{ steps.prepare-audit.outputs.audit_dir }}
-        run: pnpm audit --prod --audit-level=critical
+        # Blocking: any production advisory at any severity fails CI unless it is reviewed,
+        # unexpired, and listed in scripts/checks/audit-dependencies.mjs.
+        run: node "$GITHUB_WORKSPACE/scripts/checks/audit-dependencies.mjs"
+      - name: Check release-age exceptions
+        # Blocking: each minimumReleaseAgeExclude entry must be a vetted fix for a reviewed advisory
+        # (or a same-release companion of one); everything else waits out minimumReleaseAge.
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pnpm run audit:release-age
       - name: Audit all dependencies (informational)
         working-directory: ${{ steps.prepare-audit.outputs.audit_dir }}
-        run: pnpm audit --audit-level=high || true
+        # Advisory only: development-dependency findings are reported, never gated.
+        run: |
+          if ! pnpm audit --audit-level=high; then
+            echo "::notice title=Informational dependency audit::High-severity findings exist in development dependencies. This audit is advisory and does not gate CI."
+          fi
       - name: Check for outdated dependencies
+        if: github.event_name == 'schedule'
         run: pnpm outdated || true
       - name: Install Gitleaks CLI
         shell: bash
@@ -71,10 +64,10 @@ jobs:
           checksum_entry_path="$RUNNER_TEMP/gitleaks_checksum.txt"
           install_dir="$RUNNER_TEMP/gitleaks"
           mkdir -p "$install_dir"
-          curl -sSfL \
+          curl --proto '=https' --tlsv1.2 -sSfL \
             "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}" \
             -o "$archive_path"
-          curl -sSfL \
+          curl --proto '=https' --tlsv1.2 -sSfL \
             "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_checksums.txt" \
             -o "$checksums_path"
           awk -v archive="$archive" '$2 == archive { print }' "$checksums_path" > "$checksum_entry_path"
@@ -87,11 +80,30 @@ jobs:
           echo "$install_dir" >> "$GITHUB_PATH"
         env:
           GITLEAKS_VERSION: 8.30.1
+      - name: Verify Gitleaks detects a canary secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          b64url() { printf '%s' "$1" | base64 -w0 | tr '+/' '-_' | tr -d '='; }
+          canary_dir="$RUNNER_TEMP/gitleaks-canary"
+          mkdir -p "$canary_dir"
+          header="$(b64url '{"alg":"HS256","typ":"JWT"}')"
+          payload="$(b64url '{"iss":"supabase","ref":"canaryprojectref0000","role":"service_role","iat":1700000000,"exp":2000000000}')"
+          signature="$(head -c 32 /dev/urandom | base64 -w0 | tr '+/' '-_' | tr -d '=')"
+          printf 'SUPABASE_ANON_KEY = "%s.%s.%s"\n' "$header" "$payload" "$signature" > "$canary_dir/wrangler.toml"
+          # A distinct findings exit code keeps scan errors (exit 1) from counting as detection.
+          status=0
+          gitleaks dir "$canary_dir" --config .github/.gitleaks.toml --exit-code 42 --no-banner --redact || status=$?
+          if [ "$status" -ne 42 ]; then
+            echo "::error::Gitleaks canary exited $status, expected 42; the service-role JWT in wrangler.toml was not reported or the scan failed."
+            exit 1
+          fi
       - name: Gitleaks scan
         id: gitleaks
         continue-on-error: true
         run: |
           gitleaks git . \
+            --config .github/.gitleaks.toml \
             --exit-code 1 \
             --no-banner \
             --redact \
@@ -99,7 +111,7 @@ jobs:
             --report-path gitleaks.sarif
       - name: Upload Gitleaks report
         if: steps.gitleaks.outcome == 'failure'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: gitleaks-report
           path: gitleaks.sarif
@@ -112,19 +124,21 @@ jobs:
           exit 1
   codeql:
     name: CodeQL
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     permissions:
       security-events: write
       actions: read
       contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@8aad20d150bbac5944a9f9d289da16a4b0d87c1e
+        uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
           languages: javascript-typescript
           queries: security-extended
+      # The analysis must complete; individual alerts are triaged in code scanning, not here.
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@8aad20d150bbac5944a9f9d289da16a4b0d87c1e
+        uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2

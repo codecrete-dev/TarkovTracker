@@ -1,0 +1,212 @@
+# Stripe webhook recovery
+
+The webhook records receipt separately from processing completion. A failed claim deletion used
+to leave a receipt that every retry acknowledged as completed. Receipts now move through
+`processing`, `retryable`, `completed`, or `terminal`. Receipts created by the previous handler
+remain `legacy_unknown`; they carry no evidence that processing completed.
+
+## Effects and transaction boundaries
+
+The handler performs Stripe GET requests, supporter reads and seven supporter write paths:
+Discord identity backfill, checkout fulfillment, subscription reconciliation upsert, subscription
+expiration, async-payment failure expiration, refund/chargeback revocation, and the supporter
+updates inside the chargeback RPC. The two chargeback attribution RPCs also upsert durable
+`private.supporter_chargebacks` records. No Stripe payment mutation occurs here.
+
+Each Supabase request is a separate transaction. A request-scoped Supabase client carries
+`x-stripe-event-id` and `x-stripe-claim-token` headers through every handler database call,
+including the nested security-definer chargeback functions. Statement triggers validate the
+token and take a receipt row lock before supporter or chargeback row writes. The chargeback RPC
+also validates at entry, before taking its customer advisory lock. The lock remains held through
+the complete database transaction, including existing retention/denial triggers.
+
+A claim replacement cannot commit while an earlier fenced write holds the receipt lock. A write
+that acquired its lock before lease expiry may commit after expiry, but before replacement; an
+old holder starting another write after expiry or replacement is rejected. Completion also
+requires the current unexpired token. There is no claim deletion on failure. A five-minute lease
+provides recovery after a process crash or a failed outcome update, on the next Stripe delivery.
+There is no independent background retry worker; alert on unresolved receipts before Stripe's
+automatic retry window ends.
+
+Both headers absent means an existing non-webhook billing writer retains its current behavior.
+One header absent, an unknown event, an expired token, or a mismatched token fails closed. This
+is a fencing protocol for the webhook, not new authorization for billing tools. Browser roles
+still have no billing write or claim/completion RPC privileges; supplying headers grants none.
+The handler refuses to access its billing client outside the request context. Keeping the scoped
+client is required when adding future webhook write paths.
+
+Retries may repeat committed effects after partial progress or lost completion. One-time
+checkout fulfillment uses `fulfill_one_time_supporter(text,timestamptz,jsonb)`: it fences the
+current event, locks the user and current/incoming customers before the supporter row, and records
+the PaymentIntent ID in
+`private.stripe_one_time_payments`, and writes the entitlement in one transaction. Distinct
+payments stack even when their event timestamps match. A replay returns the current row without
+updating it, including after a later purchase or revocation. Receipt and entitlement writes roll
+back together on failure. The private payment ledger remains durable beyond event cleanup.
+
+The successful `checkout.session.completed` (paid) or `checkout.session.async_payment_succeeded`
+event's `created` timestamp decides the October 7, 2026 UTC cutoff, including late retries. Session
+creation time does not decide grandfathering. Earlier payments and existing active open-ended
+one-time rows retain unlimited access; new payments add one 30-day period per $4 (minimum one,
+maximum twelve per payment) to remaining active one-time time. During subscription access,
+one-time time is banked in `one_time_remaining` instead of counting down. Starting a subscription
+pauses the unused balance; additional payments stack onto it. Subscription end resumes the balance
+from the actual end timestamp (including delayed webhook delivery), using `one_time_expires_at`.
+The bank owns its paid tier independently of the subscription tier; unlimited grandfathered credit
+stays unlimited. Chargebacks and disqualification clear all credit; ledger-backed refunds subtract only the refunded payment's unused time. Ordinary invoice refunds preserve independently paid credit. The migration captures existing
+one-time rows lazily; it does not reconstruct credit already lost before rollout. Active/past-due
+subscriptions with current access keep their subscription fields. During deployment, credit-bearing
+webhook writes require `x-supporter-credit-version: 1`; older handlers fail for retry until the new
+handler is deployed, preventing inconsistent refund or Discord role effects. Smaller contributions preserve a higher existing active one-time tier;
+expired access restarts at the newly purchased tier. Database lookup or fulfillment errors fail the event for retry;
+there is no fallback upsert that replaces previously purchased time.
+
+Other write paths assign state or upsert unique chargeback references. Existing supporter
+optimistic comparisons, durable chargeback denial and live Stripe resource lookups remain
+responsible for current-state reconciliation. Event ID fencing does not establish global Stripe
+event ordering or serialize every subscription/refund path; do not infer exactly-once delivery.
+
+Discord is outside the database transaction. Checkout grants re-read current supporter state
+before and after applying roles. Expired replays retain only the base Supporter role; they do not
+restore the paid tier. Grants also re-read current supporter denial. Ordinary role failures are
+best effort; chargeback denial removal failures
+remain retryable. Role PUT/DELETE calls can repeat after recovery. An already-in-flight older
+Discord request can arrive after a newer one and cause role drift; set-operation idempotence does
+not prevent this ordering race. Use existing admin role reconciliation after a billing incident.
+This change does not promise transactional or exactly-once Discord delivery.
+
+## Delivery responses
+
+- `completed` and `terminal`: duplicate 200, without dispatch.
+- Current `processing`: 503; receipt existence is not success.
+- Expired `processing` or `retryable`: replace token and process again.
+- Transient processing failure: record `retryable`, return 500.
+- Permanent malformed/business input: record `terminal`, then acknowledge 200 for ops review.
+- Failed outcome persistence: return 500; recovery is available when the lease expires.
+- `legacy_unknown` or conflicting event type: 503, with an operator disposition required.
+
+Unhandled event types still complete without billing effects. Raw request text is verified before
+parsing or claiming. The existing secret and API version contract are unchanged.
+
+## Rollout and recovery
+
+1. Obtain the specific production migration and handler deployment approval. Review the added
+   `claim_stripe_event(text,text)` and `finish_stripe_event(text,uuid,text)` RPCs: security invoker,
+   empty search path, execution only for `service_role`. Private security-definer fencing helpers
+   have no direct execution grants. Existing table and chargeback RPC grants remain unchanged.
+2. Replay and test in an isolated database, then verify the target identity, migration history,
+   function definitions, trigger coverage and grants using the database migration runbook.
+3. The one-time ledger migration takes a table lock and refuses rollout if any legacy one-time
+   row has a finite expiry. Old payments have no stored PaymentIntent identity: do not infer it
+   from a timestamp or silently apply a second period. If the gate fails, stop and reconcile
+   those payments using Stripe evidence and explicit production write approval before retrying.
+   The installed migration also fences timed grants from the old webhook during the migration /
+   Edge Function deployment interval. Those writes roll back with a retryable error; redelivery
+   through the new handler commits the payment receipt and entitlement together. Trusted
+   non-webhook operations retain their existing permission and approval requirements.
+4. Merge the migration and handler together through the approved `main` change. Repository Actions
+   only validate the local database; the external Supabase GitHub integration deploys production.
+   Its [deployment workflow](https://supabase.com/docs/guides/deployment/branching) applies migrations
+   at step 5 before deploying changed Edge Functions at step 7; dependent steps skip on failure.
+   Verify the actual integration result and deployed migration/function definitions. Do not run
+   out-of-band `db push` from an unmerged branch. The previous handler can still insert receipts
+   during the deployment interval, but they become unknown; reconcile those deliveries. Deploying
+   the new handler first fails closed because the new RPCs are absent. Per-PR Supabase previews are
+   disabled in this repository; a skipped preview check does not verify a database deployment.
+5. Test signed requests in an approved isolated Stripe/Supabase environment. Local mocked-service
+   checks are not authenticated Stripe or production acceptance. Observe `in_progress`, unknown
+   receipts, processing errors and lease recovery after rollout.
+6. The existing cleanup job now deletes only completed/terminal receipts older than 30 days from
+   completion, using a partial completion-time index for resolved receipts. Unresolved receipts remain available for investigation. Alert and disposition them;
+   growth is an operational signal, not permission to replay them automatically.
+
+For each unknown historical receipt, obtain its Stripe event and delivery evidence and inspect
+current supporter/chargeback state. Record the event ID, evidence, reviewer and disposition in the
+incident record. With explicit event-specific production write/replay approval, an operator can
+mark proven completed work `completed` with a completion time, mark intentionally rejected work
+`terminal`, or change proven incomplete work to `retryable` and arrange one approved signed
+redelivery. Compare state before and after and reconcile Discord. Never mark all old receipts
+completed, replay all historical events, or delete receipts to recover. A receipt alone cannot
+prove either fulfillment or payment loss.
+
+For a newly failed event, inspect current Stripe state and partial database effects first. Stripe
+redelivery reuses the event ID; a failed outcome update recovers after expiry. Once automatic
+retries expire, arrange an individually approved redelivery/reconciliation. Do not mint credentials
+or replay production payments as a test.
+
+Retain the schema and receipts on rollback. Restoring the old handler restores its unsafe
+receipt-as-completion semantics, so prefer pausing delivery while fixing the handler and then
+performing approved redelivery. Do not drop the durable state or undo the retention change as
+routine rollback.
+
+A queue/outbox would allow acknowledgement after durable enqueue and independent processing,
+but needs another consumer, retry policy and external reconciliation protocol. It still cannot
+make an in-flight Discord call transactional. The current change keeps Stripe redelivery as the
+retry driver and adds the database fence necessary for safe lease replacement.
+
+The app checks a reactive clock every second, and on focus, pageshow and visibility changes,
+so open supporter pages and badges reflect expiry without needing a database event. Server quota
+checks remain authoritative.
+
+The credit rollout also fences event completion: `finish_stripe_event` accepts a completed
+outcome only from clients sending `x-supporter-credit-version: 1`. Older deployed handlers
+can still fail/release an event, but cannot permanently acknowledge a refund they skipped.
+Recovery tooling that completes an event must use the current header. The read-only
+`supporter_entitlements` view projects prepaid access after subscription grace expires,
+including when no further Stripe event arrives; its underlying supporter RLS still applies.
+
+The legacy production API gateway mirrors the entitlement reader from
+[TarkovTracker-API PR #4](https://github.com/tarkovtracker-org/TarkovTracker-API/pull/4)
+(commit `92f53ece02d7ab75b83d5745e60d2f113d812fdf`). It bounds paid-tier cache lifetime at
+entitlement expiry, normalizes the Supabase base URL and rejects non-HTTPS bases before sending
+service-role headers. Only a missing-view `404/PGRST205` permits the existing table read during
+schema rollout. The progress-contracts release remains v0.1.0; no pure rules changed.
+
+Only the gateway tolerates the schema being absent. The browser `useSupporter` read selects the new
+`one_time_*` columns from `supporters`, and `discord-role-sync` reads `supporter_entitlements`.
+The Supabase integration deploys changed Edge Functions only after the migration step (step 4
+above), but the Cloudflare Pages build is ordered independently of both. After merge, confirm the
+migration applied (`Supabase Preview` on the merge commit and `supabase migration list --linked`)
+before treating browser supporter-status read errors as a regression.
+
+For pre-ledger lifetime refunds, the current handler verifies all remaining valid pre-cutoff
+one-time charges and their Checkout Session tiers before reconciling the legacy bank.
+Subscription charges do not qualify. Missing history, incomplete pagination or missing checkout
+evidence causes a retry; a verified empty lifetime history clears legacy credit while preserving
+current subscription access and independently recorded prepaid days.
+
+Full refunds of finite one-time payments use the same atomic receipt ledger while credit is
+paused and after it resumes. The current unspent tail is allocated newest payment first;
+refunding a spent payment removes no other payment's days. Refunds retain the highest remaining
+paid tier, and ordinary payments added after resumption use their original finite duration when
+no paused receipt allocation exists. Partial monetary refunds keep the existing entitlement.
+Refund receipts fence later checkout delivery and replay. When running credit is exhausted,
+the handler verifies remaining Stripe contributions before clearing retained Supporter history;
+unavailable history retries, and refunded subscription invoices cannot revoke independent credit.
+
+Subscription recovery re-banks only the unused tail after read-time grace expiry, preventing previously used prepaid days from being granted again.
+
+Ordinary subscription invoice refunds and rejected new payment grants preserve independently
+paid one-time credit and retained history. The handler reads the effective entitlement before
+revocation so already used days after grace are not restored, resumes a live subscription's bank
+from revocation time, and reconciles Discord roles from the resulting entitlement. Chargeback
+and disqualification still clear all credit. Untouched pre-migration one-time rows without credit
+metadata continue through ordinary refund revocation rather than the bank refund RPC.
+
+The original pre-ledger lifetime tier is captured in `one_time_legacy_tier` before modern
+upgrades merge into the effective tier. Refunding a modern upgrade preserves that original
+lifetime grant and the highest remaining receipt tier; it does not infer its absence from
+current-customer Stripe history or fabricate a payment receipt. Already overwritten historical
+tiers cannot be reconstructed from missing provenance and keep their existing lifetime tier.
+The existing bounded verification policy still applies to refunds of pre-cutoff payments.
+Before a delayed lifetime grant discards a finite expiry, its actual unused time is allocated
+to finite receipts using the same newest-first rule as subscription pauses. Refunding the
+lifetime payment then restores only those unused days, including zero for exhausted receipts.
+
+Billing controls use the raw subscription identity and status independently of projected prepaid access. A past-due subscriber using banked days can still manage the existing subscription. If a revocation read crosses grace expiry, the write retains that original deadline; the database trigger resumes only the unused bank or clears spent credit under its row lock.
+
+Expired subscription grace changes access without clearing an active/past-due Stripe plan.
+Both metadata writes and one-time fulfillment preserve its raw type, status, tier and subscription
+ID; `supporter_entitlements` projects the running prepaid balance separately. Receipt-checked
+refunds set their validated payment identity so the legacy grant fence permits the reduction
+while still rejecting unverified grants.

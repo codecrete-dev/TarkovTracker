@@ -1,28 +1,58 @@
 // @vitest-environment happy-dom
 import { mockNuxtImport } from '@nuxt/test-utils/runtime';
+import { flushPromises } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
+import piniaPluginPersistedstate from 'pinia-plugin-persistedstate';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createApp, nextTick } from 'vue';
 import { defaultState } from '@/stores/progressState';
+import {
+  isAccountRecoveryRetentionBlocked,
+  readAccountRecoveryCopy,
+  resetAccountRecoveryRetentionBlock,
+} from '@/stores/tarkov/accountRecovery';
+import { requestDeviceDataRemoval } from '@/stores/tarkov/deviceData';
+import {
+  clearActiveProgressStorage,
+  setActiveProgressWritesBlocked,
+  progressPersistStorage,
+  progressStorageSerializer,
+  flushActiveProgressWrites,
+  parsePersistedProgressState,
+  persistActiveProgressValue,
+  getPendingProgressWritesForOwners,
+} from '@/stores/tarkov/localStorage';
+import { syncProgressState, type ProgressRpcClient } from '@/stores/tarkov/progressPersistence';
+import { listSupersededProgressCopies } from '@/stores/tarkov/supersededProgress';
 import {
   initializeTarkovSync,
   resetTarkovStoreForSessionTransition,
   resetTarkovSync,
+  preserveUnsavedSessionProgress,
   useTarkovStore,
+  hasPendingProgressHandoff,
+  settlePendingProgressHandoffs,
 } from '@/stores/useTarkov';
-import { ACTIVE_SEASON_NUMBER } from '@/utils/constants';
+import { ACTIVE_SEASON_NUMBER, GAME_MODE_VALUES, getGameModeSeasonNumber } from '@/utils/constants';
 import { STORAGE_KEYS } from '@/utils/storageKeys';
-import type { UserProgressData } from '@/stores/progressState';
+import { mergeTaskAvailability } from '@/utils/taskAvailabilityConfirmation';
+import type { UserProgressData, UserState } from '@/stores/progressState';
 import type { Task } from '@/types/tarkov';
 const {
   channel,
   cleanupSync,
+  syncInitialState,
   createRemoteRow,
+  clearUserIdFilters,
   getModeProgressCallback,
   getRealtimeCallback,
+  getUserIdFilters,
   i18nTranslate,
   loggerMock,
   metadataStoreMock,
+  resetModeFixtures,
   modeProgressResult,
+  modeProgressQuery,
   pauseSync,
   resumeSync,
   setModeProgressCallback,
@@ -31,6 +61,7 @@ const {
   showLoadFailed,
   showLocalIgnored,
   showProgressMerged,
+  select,
   single,
   supabaseContext,
   update,
@@ -41,7 +72,6 @@ const {
     level: 1,
     pmcFaction: 'USEC',
     displayName: null,
-    xpOffset: 0,
     taskObjectives: {},
     taskCompletions: {},
     hideoutParts: {},
@@ -56,6 +86,7 @@ const {
   });
   const createRemoteRow = (
     overrides: Partial<{
+      user_id: string;
       current_game_mode: string | null;
       game_edition: number | null;
       tarkov_uid: number | null;
@@ -84,10 +115,12 @@ const {
   const showLocalIgnored = vi.fn();
   const showProgressMerged = vi.fn();
   const cleanupSync = vi.fn();
+  const syncInitialState = vi.fn(async (): Promise<Record<string, unknown> | null> => ({}));
   const pauseSync = vi.fn();
   const resumeSync = vi.fn();
   const useSupabaseSyncMock = vi.fn((_options?: unknown) => ({
     cleanup: cleanupSync,
+    syncToSupabase: syncInitialState,
     pause: pauseSync,
     resume: resumeSync,
   }));
@@ -104,7 +137,7 @@ const {
   type RemoteRow = ReturnType<typeof createRemoteRow>;
   type SupabaseErrorLike = { code?: string; message: string } | null;
   type SingleResult = { data: RemoteRow | null; error: SupabaseErrorLike };
-  type RpcResult = { error: SupabaseErrorLike };
+  type RpcResult = { data?: unknown; error: SupabaseErrorLike };
   type SyncRpcArgs = {
     p_current_game_mode: string;
     p_game_edition: number;
@@ -115,11 +148,34 @@ const {
     data: createRemoteRow(),
     error: null,
   }));
+  type ModeFixtureRow = {
+    game_mode: string;
+    progress_data: unknown;
+    season_number: number;
+    updated_at?: string;
+    progress_updated_at?: string | null;
+  };
+  let fixtureModeRows: ModeFixtureRow[] = [];
+  let explicitModeRows: ModeFixtureRow[] | undefined;
   const modeProgressResult: {
-    data: Array<{ game_mode: string; progress_data: unknown; season_number: number }>;
+    data: Array<{
+      game_mode: string;
+      progress_data: unknown;
+      season_number: number;
+      updated_at?: string;
+      progress_updated_at?: string | null;
+    }>;
     error: SupabaseErrorLike;
     errorSequence?: SupabaseErrorLike[];
-  } = { data: [], error: null };
+  } = {
+    get data() {
+      return explicitModeRows ?? fixtureModeRows;
+    },
+    set data(rows) {
+      explicitModeRows = rows;
+    },
+    error: null,
+  };
   const modeProgressQuery = {
     in: vi.fn(),
     then: <TResult1 = typeof modeProgressResult, TResult2 = never>(
@@ -131,12 +187,51 @@ const {
         queued && queued.length > 0
           ? { ...modeProgressResult, data: [], error: queued.shift() ?? null }
           : modeProgressResult;
-      return Promise.resolve(value).then(onfulfilled, onrejected);
+      return Promise.resolve({
+        ...value,
+        data: value.data?.map((row) => ({
+          ...row,
+          updated_at: row.updated_at ?? row.progress_updated_at ?? undefined,
+        })),
+      }).then(onfulfilled, onrejected);
     },
   };
   modeProgressQuery.in.mockImplementation(() => modeProgressQuery);
-  const eq = vi.fn(() => ({ single }));
-  const select = vi.fn(() => ({ eq }));
+  // Records each `.eq('user_id', <id>)` filter so tests can attribute queries to
+  // the session that issued them across auth transitions.
+  const userIdFilters: string[] = [];
+  const eq = vi.fn((_column: unknown, value: unknown) => {
+    userIdFilters.push(String(value));
+    return {
+      single: async () => {
+        const result = await single();
+        // Account fixtures describe a cloud snapshot; transport their mode payloads
+        // through normalized rows unless the test explicitly supplies rows (even []).
+        fixtureModeRows = result.data
+          ? (['pvp', 'pve'] as const).flatMap((mode) => {
+              const progress = result.data?.[`${mode}_data`];
+              return progress
+                ? [
+                    {
+                      game_mode: mode,
+                      season_number: 0,
+                      progress_data: progress,
+                      progress_updated_at: result.data?.updated_at ?? null,
+                    },
+                  ]
+                : [];
+            })
+          : [];
+        return result;
+      },
+    };
+  });
+  const select = vi.fn(() => ({
+    eq,
+    abortSignal() {
+      return this;
+    },
+  }));
   const rpc = vi.fn(async (_name?: string, _args?: SyncRpcArgs): Promise<RpcResult> => ({
     error: null,
   }));
@@ -159,7 +254,15 @@ const {
   const from = vi.fn((table: string) => {
     if (table === 'user_game_mode_progress') {
       return {
-        select: vi.fn(() => ({ eq: vi.fn(() => modeProgressQuery) })),
+        select: vi.fn(() => ({
+          abortSignal() {
+            return this;
+          },
+          eq: vi.fn((_column: unknown, value: unknown) => {
+            userIdFilters.push(String(value));
+            return modeProgressQuery;
+          }),
+        })),
       };
     }
     return {
@@ -175,7 +278,10 @@ const {
       realtimeState.callback = callback;
       return channel;
     }),
-    subscribe: vi.fn(() => channel),
+    subscribe: vi.fn((callback?: (status: string, error?: Error) => void) => {
+      callback?.('SUBSCRIBED');
+      return channel;
+    }),
   };
   const i18nTranslate = vi.fn((key: string, params?: Record<string, unknown>) => {
     if (key === 'toast.api_updated.label.single') return 'Task updated';
@@ -212,13 +318,23 @@ const {
   return {
     channel,
     cleanupSync,
+    syncInitialState,
     createRemoteRow,
+    clearUserIdFilters: () => {
+      userIdFilters.length = 0;
+    },
     getModeProgressCallback: () => realtimeState.modeProgressCallback,
     getRealtimeCallback: () => realtimeState.callback,
+    getUserIdFilters: () => [...userIdFilters],
     i18nTranslate,
     loggerMock,
     metadataStoreMock,
+    resetModeFixtures: () => {
+      explicitModeRows = undefined;
+      fixtureModeRows = [];
+    },
     modeProgressResult,
+    modeProgressQuery,
     pauseSync,
     resumeSync,
     setRealtimeCallback: (callback: ((payload: { new: unknown; old: unknown }) => void) | null) => {
@@ -233,6 +349,7 @@ const {
     showLoadFailed,
     showLocalIgnored,
     showProgressMerged,
+    select,
     single,
     supabaseContext,
     update,
@@ -250,10 +367,11 @@ mockNuxtImport('useNuxtApp', () => () => ({
   $supabase: supabaseContext,
 }));
 vi.mock('@/composables/supabase/useSupabaseSync', () => ({
-  useSupabaseSync: () => useSupabaseSyncMock(),
+  useSupabaseSync: (options: unknown) => useSupabaseSyncMock(options),
 }));
 vi.mock('@/composables/useToastI18n', () => ({
   useToastI18n: () => ({
+    showTarkovUidConflict: vi.fn(),
     showApiUpdated,
     showHideoutUpdated: vi.fn(),
     showLoadFailed,
@@ -271,7 +389,6 @@ const progressWithTaskState = (taskId: string, complete: boolean): UserProgressD
   level: 1,
   pmcFaction: 'USEC',
   displayName: null,
-  xpOffset: 0,
   taskObjectives: {},
   taskCompletions: {
     [taskId]: {
@@ -293,7 +410,6 @@ const progressWithLevel = (level: number): UserProgressData => ({
   level,
   pmcFaction: 'USEC',
   displayName: null,
-  xpOffset: 0,
   taskObjectives: {},
   taskCompletions: {},
   hideoutParts: {},
@@ -362,12 +478,854 @@ const setLocalProgress = (level = 5) => {
     state.pvp.level = level;
   });
 };
+// ---------------------------------------------------------------------------
+// Stale session continuation helpers (startup account-switch reproduction)
+// ---------------------------------------------------------------------------
+type SupabaseRowResult = {
+  data: ReturnType<typeof createRemoteRow> | null;
+  error: { code?: string; message: string } | null;
+};
+type PersistedProgressEnvelope = {
+  _timestamp?: number;
+  _metadataTimestamp?: number;
+  _userId?: string | null;
+  data?: UserState;
+};
+const SESSION_BASE_MS = Date.parse('2026-02-22T00:00:00.000Z');
+const sessionClock = (offsetMs: number): string =>
+  new Date(SESSION_BASE_MS + offsetMs).toISOString();
+/** Defers one Supabase row read so it can be released after auth transitions. */
+const createDeferredRead = (): {
+  promise: Promise<SupabaseRowResult>;
+  reject: (error: unknown) => void;
+  resolve: (result: SupabaseRowResult) => void;
+} => {
+  let reject!: (error: unknown) => void;
+  let resolve!: (result: SupabaseRowResult) => void;
+  return {
+    promise: new Promise<SupabaseRowResult>((res, rej) => {
+      reject = rej;
+      resolve = res;
+    }),
+    reject: (error: unknown) => reject(error),
+    resolve: (result: SupabaseRowResult) => resolve(result),
+  };
+};
+/**
+ * Defers one normalized mode-progress read (both chained `.in` filters resolve
+ * to the same pending thenable) so it can be released after auth transitions.
+ */
+const createDeferredModeRead = (): {
+  begin: () => void;
+  release: (
+    rows: Array<{ game_mode: string; progress_data: UserProgressData; season_number: number }>,
+    error?: { code?: string; message: string } | null
+  ) => void;
+} => {
+  type DeferredModeReadResult = {
+    data: Array<{
+      game_mode: string;
+      progress_data: UserProgressData;
+      season_number: number;
+    }> | null;
+    error: { code?: string; message: string } | null;
+  };
+  let resolveRows!: (result: DeferredModeReadResult) => void;
+  const pending = new Promise<DeferredModeReadResult>((resolve) => {
+    resolveRows = resolve;
+  });
+  const deferredQuery = {
+    in: () => deferredQuery,
+    then: <TResult1 = DeferredModeReadResult, TResult2 = never>(
+      onfulfilled?: ((value: DeferredModeReadResult) => TResult1 | PromiseLike<TResult1>) | null,
+      onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
+    ) => pending.then(onfulfilled, onrejected),
+  };
+  return {
+    // The first `.in` call returns the pending thenable; the second `.in` runs
+    // on the deferred itself (chained to it), so only one once-entry is queued
+    // and no stale queue entry can leak to a later session's read.
+    begin: () => {
+      modeProgressQuery.in.mockImplementationOnce(() => deferredQuery);
+    },
+    release: (rows, error = null) => resolveRows({ data: rows, error }),
+  };
+};
+const seedOwnedEnvelope = (
+  userId: string,
+  progressOverrides: Partial<UserState>,
+  timestamp = SESSION_BASE_MS
+) => {
+  localStorage.setItem(
+    STORAGE_KEYS.progress,
+    JSON.stringify({
+      _timestamp: timestamp,
+      _userId: userId,
+      data: { ...structuredClone(defaultState), ...progressOverrides },
+    })
+  );
+};
+const readPersistedEnvelope = (): PersistedProgressEnvelope => {
+  const raw = localStorage.getItem(STORAGE_KEYS.progress);
+  expect(raw).not.toBeNull();
+  return JSON.parse(raw ?? '{}') as PersistedProgressEnvelope;
+};
+const compoundProgress = (level: number, taskId: string): UserProgressData => ({
+  ...progressWithTaskState(taskId, true),
+  level,
+});
+const modeRow = (mode: string, progress: UserProgressData) => ({
+  game_mode: mode,
+  progress_data: progress,
+  season_number: 0,
+});
+/** Models the real auth transition: the context user changes, then the app resets. */
+const switchSession = async (
+  previousUserId: string | null,
+  nextUserId: string | null,
+  reason = 'user switched'
+) => {
+  supabaseContext.user.id = nextUserId;
+  supabaseContext.user.loggedIn = nextUserId !== null;
+  await resetTarkovStoreForSessionTransition(previousUserId, reason);
+};
+/** Lets fire-and-forget realtime snapshot reads and upserts finish before observing. */
+const settleBackgroundWork = async (): Promise<void> => {
+  for (let round = 0; round < 6; round += 1) await Promise.resolve();
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+  });
+  for (let round = 0; round < 2; round += 1) await Promise.resolve();
+};
+/** Freezes every install/write boundary a stale continuation could touch. */
+const watchSessionActivity = () => ({
+  channelRemovals: supabaseContext.client.removeChannel.mock.calls.length,
+  listenerInstalls: supabaseContext.client.channel.mock.calls.length,
+  realtimeEventHandlers: channel.on.mock.calls.length,
+  realtimeJoins: channel.subscribe.mock.calls.length,
+  syncControllers: useSupabaseSyncMock.mock.calls.length,
+  upsertWrites: rpc.mock.calls.length,
+  userFilters: getUserIdFilters(),
+});
+const expectNoFollowOnSessionActivity = (
+  baseline: ReturnType<typeof watchSessionActivity>,
+  after: ReturnType<typeof watchSessionActivity>
+) => {
+  expect(after.channelRemovals).toBe(baseline.channelRemovals);
+  expect(after.listenerInstalls).toBe(baseline.listenerInstalls);
+  expect(after.realtimeEventHandlers).toBe(baseline.realtimeEventHandlers);
+  expect(after.realtimeJoins).toBe(baseline.realtimeJoins);
+  expect(after.syncControllers).toBe(baseline.syncControllers);
+  expect(after.upsertWrites).toBe(baseline.upsertWrites);
+  expect(after.userFilters).toEqual(baseline.userFilters);
+};
 describe('useTarkov sync integration', () => {
-  beforeEach(() => {
+  it('blocks active progress writes after the current owner activation fails', async () => {
+    const authority = await import('@/stores/tarkov/progressAuthority');
+    const activate = vi
+      .spyOn(authority, 'initializeProgressAuthority')
+      .mockRejectedValueOnce(new Error('IndexedDB activation unavailable'));
+    try {
+      await expect(switchSession('user-1', null, 'logout')).rejects.toThrow(
+        'IndexedDB activation unavailable'
+      );
+      const before = localStorage.getItem(STORAGE_KEYS.progress);
+      const next = JSON.stringify({
+        _userId: null,
+        _timestamp: Date.now(),
+        data: {
+          ...structuredClone(defaultState),
+          pvp: { ...defaultState.pvp, level: 42 },
+        },
+      });
+      await expect(persistActiveProgressValue(next)).resolves.toBe(false);
+      expect(localStorage.getItem(STORAGE_KEYS.progress)).toBe(before);
+    } finally {
+      activate.mockRestore();
+      setActiveProgressWritesBlocked(false);
+    }
+  });
+  it('keeps a replacement owner writable after a superseded activation fails', async () => {
+    const authority = await import('@/stores/tarkov/progressAuthority');
+    const pending = Promise.withResolvers<undefined>();
+    const activate = vi
+      .spyOn(authority, 'initializeProgressAuthority')
+      .mockImplementationOnce(() => pending.promise);
+    try {
+      const stale = switchSession('user-1', 'user-2');
+      const failed = expect(stale).rejects.toThrow('former activation failed');
+      await vi.waitFor(() => expect(activate).toHaveBeenCalledOnce());
+      await switchSession('user-2', 'user-3');
+      pending.reject(new Error('former activation failed'));
+      await failed;
+      const next = JSON.stringify({
+        _userId: 'user-3',
+        _timestamp: Date.now(),
+        data: {
+          ...structuredClone(defaultState),
+          pvp: { ...defaultState.pvp, level: 43 },
+        },
+      });
+      await expect(persistActiveProgressValue(next)).resolves.toBe(true);
+      expect(readPersistedEnvelope()._userId).toBe('user-3');
+      expect(readPersistedEnvelope().data?.pvp?.level).toBe(43);
+    } finally {
+      activate.mockRestore();
+      setActiveProgressWritesBlocked(false);
+    }
+  });
+  it('keeps a same-owner peer writable after a local session reset', async () => {
+    const { IDBFactory } = await import('fake-indexeddb');
+    const { openActiveProgressRepository } = await import('@/stores/tarkov/progressRepository');
+    const authority = await import('@/stores/tarkov/progressAuthority');
+    const db = await openActiveProgressRepository(new IDBFactory(), 'same-owner-reset');
+    const peerToken = await db.activateOwner('user-1');
+    await db.read(peerToken, null);
+    const activate = vi
+      .spyOn(authority, 'initializeProgressAuthority')
+      .mockImplementation(async (owner, renew, canContinue) => {
+        await db.activateOwner(owner, renew, canContinue);
+      });
+    try {
+      await resetTarkovStoreForSessionTransition('user-1', 'same-owner reset');
+      await expect(
+        db.mutate(peerToken, () => ({ raw: 'peer-save', result: true }))
+      ).resolves.toMatchObject({ result: true });
+    } finally {
+      activate.mockRestore();
+      db.close();
+    }
+  });
+  it('holds cloud startup when the authoritative repository is unavailable', async () => {
+    const authority = await import('@/stores/tarkov/progressAuthority');
+    const ready = vi.spyOn(authority, 'isProgressAuthorityReady').mockReturnValue(false);
+    single.mockClear();
+    rpc.mockClear();
+    channel.subscribe.mockClear();
+    try {
+      await expect(initializeTarkovSync()).rejects.toThrow('Progress authority is unavailable');
+      expect(single).not.toHaveBeenCalled();
+      expect(rpc).not.toHaveBeenCalled();
+      expect(channel.subscribe).not.toHaveBeenCalled();
+      ready.mockReturnValue(true);
+      await initializeTarkovSync();
+      expect(channel.subscribe).toHaveBeenCalled();
+    } finally {
+      ready.mockRestore();
+    }
+  });
+  it.each(
+    GAME_MODE_VALUES.flatMap((mode) => [null, 3, 9].map((pendingLevel) => ({ mode, pendingLevel })))
+  )(
+    'keeps API level decreases durable with the real controller: $mode, pending=$pendingLevel',
+    async ({ mode, pendingLevel }) => {
+      const actual = await vi.importActual<typeof import('@/composables/supabase/useSupabaseSync')>(
+        '@/composables/supabase/useSupabaseSync'
+      );
+      useSupabaseSyncMock.mockImplementation(
+        (options) =>
+          actual.useSupabaseSync(
+            options as Parameters<typeof actual.useSupabaseSync>[0]
+          ) as unknown as ReturnType<typeof useSupabaseSyncMock>
+      );
+      const pinia = createPinia().use(piniaPluginPersistedstate);
+      createApp({}).use(pinia);
+      setActivePinia(pinia);
+      await initializeTarkovSync();
+      await flushPromises();
+      const store = useTarkovStore();
+      const controller = useSupabaseSyncMock.mock.results.at(-1)?.value as ReturnType<
+        typeof actual.useSupabaseSync
+      >;
+      const remoteTime = Date.now();
+      const emit = (level: number, seconds: number) => {
+        const callback = getModeProgressCallback();
+        expect(callback).toBeTypeOf('function');
+        callback!({
+          new: {
+            game_mode: mode,
+            season_number: getGameModeSeasonNumber(mode),
+            progress_data: { ...progressWithLevel(level), progressEpoch: 1 },
+            updated_at: new Date(remoteTime + seconds * 1000).toISOString(),
+            progress_updated_at: new Date(remoteTime + seconds * 1000).toISOString(),
+          },
+          old: null,
+        });
+      };
+      emit(7, 1);
+      await nextTick();
+      expect(store[mode].level).toBe(7);
+      emit(2, 2);
+      await nextTick();
+      expect(store[mode].level).toBe(2);
+      emit(7, 3);
+      await nextTick();
+      expect(store[mode].level).toBe(7);
+      // An unrelated pending field must not make the old, clean level authoritative.
+      store[mode].displayName = 'pending name';
+      if (pendingLevel !== null) store[mode].level = pendingLevel;
+      await nextTick();
+      emit(2, 4);
+      await nextTick();
+      expect(store[mode]).toMatchObject({
+        level: pendingLevel ?? 2,
+        displayName: 'pending name',
+        progressEpoch: 1,
+      });
+      for (const other of GAME_MODE_VALUES.filter((candidate) => candidate !== mode)) {
+        expect(store[other]).toEqual(defaultState[other]);
+      }
+      controller.resume();
+      expect(await controller.syncToSupabase()).not.toBeNull();
+      expect(getLastSyncPayload().p_modes[mode]).toMatchObject({ level: pendingLevel ?? 2 });
+      expect(controller.hasPendingChanges?.()).toBe(false);
+      // Once that local edit is acknowledged, a later decrease must apply too.
+      emit(1, 5);
+      await nextTick();
+      expect(store[mode].level).toBe(1);
+      store[mode].displayName = 'later edit';
+      await nextTick();
+      controller.resume();
+      expect(await controller.syncToSupabase()).not.toBeNull();
+      expect(getLastSyncPayload().p_modes[mode]).toMatchObject({ level: 1 });
+      expect(controller.hasPendingChanges?.()).toBe(false);
+      const persisted = JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!);
+      expect(persisted.data[mode]).toMatchObject({ level: 1, progressEpoch: 1 });
+      emit(7, 1);
+      expect(store[mode].level).toBe(1);
+      resetTarkovSync('simulate reload after API decrease');
+      const reloadedPinia = createPinia().use(piniaPluginPersistedstate);
+      createApp({}).use(reloadedPinia);
+      setActivePinia(reloadedPinia);
+      modeProgressResult.data = [
+        {
+          game_mode: mode,
+          season_number: getGameModeSeasonNumber(mode),
+          progress_data: { ...progressWithLevel(1), progressEpoch: 1, displayName: 'later edit' },
+          updated_at: new Date(remoteTime + 5000).toISOString(),
+          progress_updated_at: new Date(remoteTime + 5000).toISOString(),
+        },
+      ];
+      await initializeTarkovSync();
+      await flushPromises();
+      expect(useTarkovStore()[mode]).toMatchObject({ level: 1, progressEpoch: 1 });
+    }
+  );
+  it.each([
+    { scenario: 'foreign-transaction', reset: false, owner: 'user-1', edition: 1, marker: '999' },
+    { scenario: 'changed-value', reset: false, owner: 'user-1', edition: 2, marker: '100' },
+    { scenario: 'session-reset', reset: true, owner: 'user-1', edition: 1, marker: '100' },
+    { scenario: 'new-owner', reset: true, owner: 'user-2', edition: 1, marker: '100' },
+  ])(
+    'applies unrecognized metadata with the real controller: $scenario',
+    async ({ reset, owner, edition, marker }) => {
+      const actual = await vi.importActual<typeof import('@/composables/supabase/useSupabaseSync')>(
+        '@/composables/supabase/useSupabaseSync'
+      );
+      useSupabaseSyncMock.mockImplementation(
+        (options) =>
+          actual.useSupabaseSync(
+            options as Parameters<typeof actual.useSupabaseSync>[0]
+          ) as unknown as ReturnType<typeof useSupabaseSyncMock>
+      );
+      single.mockResolvedValue({ data: createRemoteRow({ tarkov_uid: 7 }), error: null });
+      await initializeTarkovSync();
+      await flushPromises();
+      const store = useTarkovStore();
+      rpc.mockResolvedValue({
+        data: { tarkov_uid: 1001, metadata_write_id: '100', tarkov_uid_conflict: false },
+        error: null,
+      });
+      store.setTarkovUid(1001);
+      store.pvp.level = 2;
+      await nextTick();
+      await flushActiveProgressWrites();
+      const controller = useSupabaseSyncMock.mock.results.at(-1)?.value as ReturnType<
+        typeof actual.useSupabaseSync
+      >;
+      expect(await controller.syncToSupabase()).not.toBeNull();
+      expect(controller.hasPendingChanges?.()).toBe(false);
+      if (reset) {
+        resetTarkovSync();
+        supabaseContext.user.id = owner;
+        single.mockResolvedValue({
+          data: createRemoteRow({
+            user_id: owner,
+            tarkov_uid: 1001,
+            pvp_data: { ...store.pvp, level: 2 },
+          }),
+          error: null,
+        });
+        rpc.mockResolvedValue({
+          data: { tarkov_uid: 1001, metadata_write_id: '200', tarkov_uid_conflict: false },
+          error: null,
+        });
+        await initializeTarkovSync();
+        await flushPromises();
+      }
+      getRealtimeCallback()?.({
+        new: {
+          ...createRemoteRow({
+            user_id: owner,
+            tarkov_uid: 7,
+            game_edition: edition,
+            updated_at: new Date(Date.now() + 1000).toISOString(),
+          }),
+          metadata_write_id: marker,
+        },
+        old: null,
+      });
+      expect(store.tarkovUid).toBe(7);
+      controller.cleanup();
+    }
+  );
+  it.each([false, true])(
+    'keeps acknowledged metadata through delayed WAL with the real controller: queued=%s',
+    async (queued) => {
+      const actual = await vi.importActual<typeof import('@/composables/supabase/useSupabaseSync')>(
+        '@/composables/supabase/useSupabaseSync'
+      );
+      useSupabaseSyncMock.mockImplementation(
+        (options) =>
+          actual.useSupabaseSync(
+            options as Parameters<typeof actual.useSupabaseSync>[0]
+          ) as unknown as ReturnType<typeof useSupabaseSyncMock>
+      );
+      single.mockResolvedValue({ data: createRemoteRow({ tarkov_uid: 7 }), error: null });
+      await initializeTarkovSync();
+      await flushPromises();
+      const store = useTarkovStore();
+      const controller = useSupabaseSyncMock.mock.results.at(-1)?.value as ReturnType<
+        typeof actual.useSupabaseSync
+      >;
+      const firstStarted = Promise.withResolvers<undefined>();
+      const firstReply = Promise.withResolvers<{ data: unknown; error: null }>();
+      rpc.mockImplementationOnce(async () => {
+        firstStarted.resolve(undefined);
+        return firstReply.promise;
+      });
+      store.setTarkovUid(1001);
+      store.pvp.level = 2;
+      await nextTick();
+      await flushActiveProgressWrites();
+      const firstSave = controller.syncToSupabase();
+      await firstStarted.promise;
+      let secondSave: ReturnType<typeof controller.syncToSupabase> | undefined;
+      if (queued) {
+        rpc.mockResolvedValue({
+          data: { tarkov_uid: 2002, metadata_write_id: '200', tarkov_uid_conflict: false },
+          error: null,
+        });
+        store.setTarkovUid(2002);
+        await nextTick();
+        await flushActiveProgressWrites();
+        secondSave = controller.syncToSupabase();
+      }
+      firstReply.resolve({
+        data: { tarkov_uid: 1001, metadata_write_id: '100', tarkov_uid_conflict: false },
+        error: null,
+      });
+      expect(await Promise.all([firstSave, secondSave])).not.toContain(null);
+      const expectedUid = queued ? 2002 : 1001;
+      const capture = vi.spyOn(controller, 'captureRemoteMerge');
+      const patches = vi.spyOn(store, '$patch');
+      const serializer = vi.spyOn(progressStorageSerializer, 'acceptRemote');
+      for (const uid of [7, 1001]) {
+        getRealtimeCallback()?.({
+          new: {
+            ...createRemoteRow({ tarkov_uid: uid, updated_at: new Date().toISOString() }),
+            metadata_write_id: '100',
+          },
+          old: null,
+        });
+        expect(store.tarkovUid).toBe(expectedUid);
+      }
+      // The acknowledged echo still fences an older transaction with different metadata.
+      getRealtimeCallback()?.({
+        new: {
+          ...createRemoteRow({
+            current_game_mode: 'pve',
+            game_edition: 2,
+            tarkov_uid: 66,
+            updated_at: new Date(Date.now() - 1000).toISOString(),
+          }),
+          metadata_write_id: 'older-foreign',
+        },
+        old: null,
+      });
+      expect(store.tarkovUid).toBe(expectedUid);
+      expect(store.currentGameMode).toBe('pvp');
+      expect(store.gameEdition).toBe(1);
+      expect(capture).not.toHaveBeenCalled();
+      expect(patches).not.toHaveBeenCalled();
+      expect(serializer).not.toHaveBeenCalled();
+      expect(controller.hasPendingChanges?.()).toBe(false);
+      controller.cleanup();
+    }
+  );
+  it('keeps a queued UID visible through delayed metadata from the completed relink', async () => {
+    single.mockResolvedValue({ data: createRemoteRow({ tarkov_uid: 7 }), error: null });
+    await initializeTarkovSync();
+    await flushPromises();
+    const store = useTarkovStore();
+    store.setTarkovUid(1001);
+    const firstClient = {
+      rpc: async () => ({
+        data: { tarkov_uid: 1001, metadata_write_id: '100', tarkov_uid_conflict: false },
+        error: null,
+      }),
+    } as ProgressRpcClient;
+    expect((await syncProgressState(firstClient, 'user-1', store.$state)).error).toBeNull();
+    store.setTarkovUid(2002);
+    const reply = Promise.withResolvers<{ data: unknown; error: null }>();
+    const second = syncProgressState(
+      { rpc: () => reply.promise } as ProgressRpcClient,
+      'user-1',
+      store.$state
+    );
+    getRealtimeCallback()?.({
+      new: {
+        ...createRemoteRow({
+          tarkov_uid: 7,
+          updated_at: new Date(Date.now() + 1000).toISOString(),
+        }),
+        metadata_write_id: '100',
+      },
+      old: null,
+    });
+    expect(store.tarkovUid).toBe(2002);
+    reply.resolve({
+      data: { tarkov_uid: 2002, metadata_write_id: '200', tarkov_uid_conflict: false },
+      error: null,
+    });
+    expect((await second).error).toBeNull();
+    expect(store.tarkovUid).toBe(2002);
+  });
+  it('keeps the requested UID visible when the interim metadata echo arrives before an accepted RPC reply', async () => {
+    single.mockResolvedValue({ data: createRemoteRow({ tarkov_uid: 7 }), error: null });
+    await initializeTarkovSync();
+    const store = useTarkovStore();
+    store.setTarkovUid(1001);
+    const deferred = Promise.withResolvers<{ data: unknown; error: null }>();
+    const pending = syncProgressState(
+      { rpc: () => deferred.promise } as ProgressRpcClient,
+      'user-1',
+      store.$state
+    );
+    getRealtimeCallback()?.({
+      new: createRemoteRow({
+        tarkov_uid: 7,
+        updated_at: new Date(Date.now() + 1000).toISOString(),
+      }),
+      old: null,
+    });
+    expect(store.tarkovUid).toBe(1001);
+    deferred.resolve({ data: { tarkov_uid: 1001, tarkov_uid_conflict: false }, error: null });
+    expect((await pending).error).toBeNull();
+    expect(store.tarkovUid).toBe(1001);
+  });
+  it('keeps a newer UID edit when an older link is rejected', async () => {
+    await initializeTarkovSync();
+    const store = useTarkovStore();
+    store.setTarkovUid(1001);
+    const deferred = Promise.withResolvers<{ data: unknown; error: null }>();
+    const pending = syncProgressState(
+      { rpc: () => deferred.promise } as ProgressRpcClient,
+      'user-1',
+      store.$state
+    );
+    store.setTarkovUid(2002);
+    deferred.resolve({ data: { tarkov_uid: null, tarkov_uid_conflict: true }, error: null });
+    await pending;
+    expect(store.tarkovUid).toBe(2002);
+  });
+  it('persists the corrected UID when migrating guest progress to a new account', async () => {
+    const data = structuredClone(defaultState);
+    data.tarkovUid = 1001;
+    data.pvp.level = 12;
+    localStorage.setItem(
+      STORAGE_KEYS.progress,
+      JSON.stringify({ _userId: null, _timestamp: Date.now(), data })
+    );
+    const pinia = createPinia().use(piniaPluginPersistedstate);
+    createApp({}).use(pinia);
+    setActivePinia(pinia);
+    single.mockResolvedValue({ data: null, error: { code: 'PGRST116', message: 'No rows' } });
+    rpc.mockResolvedValue({ data: { tarkov_uid: null, tarkov_uid_conflict: true }, error: null });
+    await initializeTarkovSync();
+    await nextTick();
+    await flushActiveProgressWrites();
+    const envelope = JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!);
+    expect(envelope._userId).toBe('user-1');
+    expect(envelope.data.tarkovUid).toBeNull();
+    expect(useTarkovStore().tarkovUid).toBeNull();
+    expect(useTarkovStore().pvp.level).toBe(12);
+  });
+  it.each(['logout', 'same-account-reset', 'A-B-A'])(
+    'ignores delayed UID conflicts after %s',
+    async (transition) => {
+      await initializeTarkovSync();
+      const store = useTarkovStore();
+      store.setTarkovUid(1001);
+      let resolve!: (value: { data: unknown; error: null }) => void;
+      const client = {
+        rpc: vi.fn(
+          () =>
+            new Promise<{ data: unknown; error: null }>((done) => {
+              resolve = done;
+            })
+        ),
+      };
+      const pending = syncProgressState(client as ProgressRpcClient, 'user-1', store.$state);
+      resetTarkovSync('abandoned owner');
+      if (transition === 'logout') {
+        supabaseContext.user.loggedIn = false;
+        supabaseContext.user.id = '';
+      } else {
+        if (transition === 'A-B-A') {
+          supabaseContext.user.id = 'user-2';
+          resetTarkovSync('switch back');
+          supabaseContext.user.id = 'user-1';
+        }
+        await initializeTarkovSync();
+      }
+      store.setTarkovUid(1001);
+      resolve({ data: { tarkov_uid: null, tarkov_uid_conflict: true }, error: null });
+      await pending;
+      expect(store.tarkovUid).toBe(1001);
+    }
+  );
+  it('keeps a startup UID correction in the merged store and persisted envelope', async () => {
+    const data = structuredClone(defaultState);
+    data.tarkovUid = 1001;
+    data.pvp.level = 12;
+    localStorage.setItem(
+      STORAGE_KEYS.progress,
+      JSON.stringify({
+        _userId: 'user-1',
+        _timestamp: Date.now(),
+        _modeTimestamps: { pvp: Date.now(), pve: 0, seasonal: 0 },
+        data,
+      })
+    );
+    const pinia = createPinia().use(piniaPluginPersistedstate);
+    createApp({}).use(pinia);
+    setActivePinia(pinia);
+    single.mockResolvedValue({ data: createRemoteRow({ updated_at: null }), error: null });
+    modeProgressResult.data = [
+      {
+        game_mode: 'pve',
+        season_number: 0,
+        progress_data: progressWithLevel(8),
+        progress_updated_at: new Date(Date.now() + 1000).toISOString(),
+      },
+    ];
+    rpc.mockResolvedValue({ data: { tarkov_uid: null, tarkov_uid_conflict: true }, error: null });
+    await initializeTarkovSync();
+    const store = useTarkovStore();
+    expect(store.tarkovUid).toBeNull();
+    expect(store.pvp.level).toBe(12);
+    expect(store.pve.level).toBe(8);
+    await nextTick();
+    await flushActiveProgressWrites();
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!).data.tarkovUid).toBeNull();
+    await syncProgressState(
+      supabaseContext.client as unknown as ProgressRpcClient,
+      'user-1',
+      store.$state
+    );
+    expect(getLastSyncPayload().p_tarkov_uid).toBeNull();
+  });
+  it('captures guest hydration bytes before a later shared-slot change when persisting a correction', async () => {
+    const { progressSaveStatus } = await import('@/stores/tarkov/progressSaveStatus');
+    supabaseContext.user.id = null;
+    supabaseContext.user.loggedIn = false;
+    const original = structuredClone(defaultState);
+    original.pvp.level = 20;
+    original.pvp.traders.prapor = { level: 4, reputation: 1 };
+    localStorage.setItem(
+      STORAGE_KEYS.progress,
+      JSON.stringify({
+        _userId: null,
+        _timestamp: 100,
+        _metadataTimestamp: 0,
+        _modeTimestamps: { pvp: 100, pve: 0, seasonal: 0 },
+        data: original,
+      })
+    );
+    const pinia = createPinia().use(piniaPluginPersistedstate);
+    createApp({}).use(pinia);
+    setActivePinia(pinia);
+    const store = useTarkovStore();
+    expect(store.pvp.level).toBe(20);
+    const external = JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!);
+    external.data.pvp.level = 25;
+    external.data.pvp.skills.strength = 10;
+    external._modeTimestamps.pvp = Date.now() + 100_000;
+    localStorage.setItem(STORAGE_KEYS.progress, JSON.stringify(external));
+    store.$patch((state) => {
+      state.pvp.traders.prapor!.level = 1;
+    });
+    await nextTick();
+    await flushActiveProgressWrites();
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!);
+    expect(saved.data.pvp.traders.prapor.level).toBe(1);
+    expect(saved.data.pvp.level).toBe(25);
+    expect(saved.data.pvp.skills.strength).toBe(10);
+    expect(saved._modeTimestamps.pvp).toBeGreaterThan(external._modeTimestamps.pvp);
+    expect(saved._modeTimestamps.pve).toBe(0);
+    expect(progressSaveStatus.local).toBe('saved');
+  });
+  it('binds an older guest source to its own store after a later store hydrates', async () => {
+    supabaseContext.user.id = null;
+    supabaseContext.user.loggedIn = false;
+    const makeStore = () => {
+      const pinia = createPinia().use(piniaPluginPersistedstate);
+      createApp({}).use(pinia);
+      setActivePinia(pinia);
+      return useTarkovStore();
+    };
+    const older = makeStore();
+    older.$patch((state) => {
+      state.pvp.level = 20;
+      state.pve.level = 42;
+    });
+    await nextTick();
+    await flushActiveProgressWrites();
+    const later = makeStore();
+    expect(later.pvp.level).toBe(20);
+    const external = JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!);
+    external.data.pvp = { ...structuredClone(defaultState.pvp), progressEpoch: 1 };
+    external._modeTimestamps.pvp = Date.now();
+    localStorage.setItem(STORAGE_KEYS.progress, JSON.stringify(external));
+    older.$patch((state) => {
+      state.pve.level = 43;
+    });
+    await nextTick();
+    await flushActiveProgressWrites();
+    expect(older.pvp).toEqual({ ...defaultState.pvp, progressEpoch: 1 });
+    expect(older.pve.level).toBe(43);
+    expect(later.pvp.level).toBe(20);
+    expect(later.pve.level).toBe(42);
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!).data.pve.level).toBe(43);
+  });
+  it('adopts an external guest reset through real Pinia persistence before saving later progress', async () => {
+    supabaseContext.user.id = null;
+    supabaseContext.user.loggedIn = false;
+    const pinia = createPinia().use(piniaPluginPersistedstate);
+    createApp({}).use(pinia);
+    setActivePinia(pinia);
+    const store = useTarkovStore();
+    store.$patch((state) => {
+      state.pvp.level = 20;
+      state.pvp.taskCompletions.old = { complete: true, timestamp: 100 };
+      state.pve.level = 42;
+    });
+    await nextTick();
+    await flushActiveProgressWrites();
+    const external = JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!);
+    external.data.pvp = { ...structuredClone(defaultState.pvp), progressEpoch: 1 };
+    external._modeTimestamps.pvp = Date.now() + 100_000;
+    localStorage.setItem(STORAGE_KEYS.progress, JSON.stringify(external));
+    const writes = vi.spyOn(localStorage, 'setItem');
+    store.$patch((state) => {
+      state.pve.level = 43;
+    });
+    await nextTick();
+    await flushActiveProgressWrites();
+    expect(store.pvp).toEqual({ ...defaultState.pvp, progressEpoch: 1 });
+    expect(store.pve.level).toBe(43);
+    expect(writes.mock.calls.filter(([key]) => key === STORAGE_KEYS.progress)).toHaveLength(1);
+    store.$patch((state) => {
+      state.pvp.level = 2;
+    });
+    await nextTick();
+    await flushActiveProgressWrites();
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!);
+    expect(saved.data.pvp).toEqual({ ...defaultState.pvp, level: 2, progressEpoch: 1 });
+    expect(saved._modeTimestamps.pvp).toBeGreaterThan(external._modeTimestamps.pvp);
+    expect(saved._modeTimestamps.seasonal).toBe(external._modeTimestamps.seasonal);
+    expect(writes.mock.calls.filter(([key]) => key === STORAGE_KEYS.progress)).toHaveLength(2);
+    expect(rpc).not.toHaveBeenCalled();
+    writes.mockRestore();
+  });
+  it.each(['pvp', 'pve', 'seasonal', 'all'] as const)(
+    'retains guest modes and clocks across a persisted %s reset and reload',
+    async (mode) => {
+      supabaseContext.user.id = null;
+      supabaseContext.user.loggedIn = false;
+      const makePersistedStore = () => {
+        const pinia = createPinia().use(piniaPluginPersistedstate);
+        createApp({}).use(pinia);
+        setActivePinia(pinia);
+        return useTarkovStore();
+      };
+      const store = makePersistedStore();
+      store.$patch((state) => {
+        state.pvp.level = 20;
+        state.pve.level = 42;
+        state.seasonal.level = 33;
+        state.gameEdition = 4;
+        state.tarkovUid = 123;
+      });
+      await nextTick();
+      await flushActiveProgressWrites();
+      const before = JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!);
+      const reset = {
+        pvp: () => store.resetPvPData(),
+        pve: () => store.resetPvEData(),
+        seasonal: () => store.resetSeasonalData(),
+        all: () => store.resetAllData(),
+      };
+      await expect(reset[mode]()).resolves.toBeUndefined();
+      await nextTick();
+      await flushActiveProgressWrites();
+      const after = JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!);
+      expect(after).not.toBeNull();
+      for (const resetMode of mode === 'all' ? GAME_MODE_VALUES : [mode]) {
+        expect(after.data[resetMode]).toEqual({ ...defaultState[resetMode], progressEpoch: 1 });
+      }
+      // A later local edit must retain adopted clocks for the other modes.
+      store.$patch((state) => {
+        state.pvp.level = 2;
+      });
+      await nextTick();
+      await flushActiveProgressWrites();
+      const edited = JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!);
+      expect(edited._modeTimestamps.pve).toBe(after._modeTimestamps.pve);
+      expect(edited._modeTimestamps.seasonal).toBe(after._modeTimestamps.seasonal);
+      const reloaded = makePersistedStore();
+      for (const other of GAME_MODE_VALUES) {
+        if (mode === 'all' || mode === other) {
+          expect(reloaded[other]).toEqual({
+            ...defaultState[other],
+            progressEpoch: 1,
+            ...(other === 'pvp' ? { level: 2 } : {}),
+          });
+        } else {
+          expect(reloaded[other]).toEqual({
+            ...before.data[other],
+            ...(other === 'pvp' ? { level: 2 } : {}),
+          });
+          expect(after._modeTimestamps[other]).toBe(before._modeTimestamps[other]);
+        }
+      }
+      expect(after._userId).toBeNull();
+      expect(after.data.gameEdition).toBe(mode === 'all' ? defaultState.gameEdition : 4);
+      expect(after.data.tarkovUid).toBe(mode === 'all' ? null : 123);
+      if (mode !== 'all') expect(after._metadataTimestamp).toBe(before._metadataTimestamp);
+      expect(rpc).not.toHaveBeenCalled();
+    }
+  );
+  beforeEach(async () => {
+    await flushActiveProgressWrites();
     resetTarkovSync('test setup');
+    resetAccountRecoveryRetentionBlock();
+    setActiveProgressWritesBlocked(false);
     setActivePinia(createPinia());
     localStorage.clear();
     vi.clearAllMocks();
+    clearUserIdFilters();
     setRealtimeCallback(null);
     setModeProgressCallback(null);
     supabaseContext.user.id = 'user-1';
@@ -380,11 +1338,33 @@ describe('useTarkov sync integration', () => {
     metadataStoreMock.refresh.mockClear();
     metadataStoreMock.refresh.mockResolvedValue(undefined);
     metadataStoreMock.tasks = [];
-    modeProgressResult.data = [];
+    resetModeFixtures();
     modeProgressResult.error = null;
     modeProgressResult.errorSequence = [];
     single.mockResolvedValue({ data: createRemoteRow(), error: null });
-    rpc.mockResolvedValue({ error: null });
+    syncInitialState.mockReset().mockResolvedValue({});
+    // Successful uploads must be observable by the first-join REST reconciliation.
+    rpc.mockImplementation(async (name, args) => {
+      if (name === 'sync_user_game_mode_progress' && args?.p_modes) {
+        const rows = [...(modeProgressResult.data ?? [])];
+        for (const [mode, progress] of Object.entries(args.p_modes)) {
+          const season = getGameModeSeasonNumber(mode as 'pvp' | 'pve' | 'seasonal');
+          const index = rows.findIndex(
+            (row) => row.game_mode === mode && row.season_number === season
+          );
+          const row = {
+            game_mode: mode,
+            season_number: season,
+            progress_data: progress,
+            progress_updated_at: new Date(Date.now()).toISOString(),
+          };
+          if (index < 0) rows.push(row);
+          else rows[index] = row;
+        }
+        modeProgressResult.data = rows;
+      }
+      return { error: null };
+    });
     update.mockResolvedValue({ error: null });
     channel.on.mockImplementation((_: string, config: Record<string, unknown>, callback) => {
       const typedCallback = callback as (payload: { new: unknown; old: unknown }) => void;
@@ -395,17 +1375,1224 @@ describe('useTarkov sync integration', () => {
       }
       return channel;
     });
-    channel.subscribe.mockImplementation(() => channel);
+    channel.subscribe.mockImplementation((callback?: (status: string, error?: Error) => void) => {
+      callback?.('SUBSCRIBED');
+      return channel;
+    });
     useSupabaseSyncMock.mockReturnValue({
       cleanup: cleanupSync,
+      syncToSupabase: syncInitialState,
       pause: pauseSync,
       resume: resumeSync,
     });
   });
-  afterEach(() => {
+  it('retains mismatched-season owned progress for export before sanitizing active state', () => {
+    const staleSeason = ACTIVE_SEASON_NUMBER + 1;
+    const data = {
+      ...structuredClone(defaultState),
+      seasonal: progressWithLevel(17),
+      seasonalSeasonNumber: staleSeason,
+    };
+    localStorage.setItem(
+      STORAGE_KEYS.progress,
+      JSON.stringify({ _userId: 'user-1', _timestamp: Date.now(), data })
+    );
+    const pinia = createPinia().use(piniaPluginPersistedstate);
+    createApp({}).use(pinia);
+    setActivePinia(pinia);
+    const store = useTarkovStore();
+    expect(store.seasonal.level).toBe(defaultState.seasonal.level);
+    expect(listSupersededProgressCopies('user-1')).toEqual([
+      expect.objectContaining({
+        mode: 'seasonal',
+        seasonNumber: staleSeason,
+        progress: expect.objectContaining({ level: 17 }),
+      }),
+    ]);
+  });
+  it('blocks stale-season hydration when the export copy cannot be retained', () => {
+    const staleSeason = ACTIVE_SEASON_NUMBER + 1;
+    const data = {
+      ...structuredClone(defaultState),
+      seasonal: progressWithLevel(17),
+      seasonalSeasonNumber: staleSeason,
+    };
+    localStorage.setItem(
+      STORAGE_KEYS.progress,
+      JSON.stringify({ _userId: 'user-1', _timestamp: Date.now(), data })
+    );
+    const setItemSpy = vi.spyOn(localStorage, 'setItem').mockImplementation((key, value) => {
+      if (key.startsWith(STORAGE_KEYS.progressSupersededPrefix)) throw new Error('storage full');
+      return Storage.prototype.setItem.call(localStorage, key, value);
+    });
+    const pinia = createPinia().use(piniaPluginPersistedstate);
+    createApp({}).use(pinia);
+    setActivePinia(pinia);
+    const store = useTarkovStore();
+    expect(store.seasonal.level).toBe(defaultState.seasonal.level);
+    expect(isAccountRecoveryRetentionBlocked()).toBe(true);
+    expect(loggerMock.error).toHaveBeenCalledWith(
+      '[TarkovStore] Error deserializing localStorage:',
+      expect.objectContaining({
+        message: 'Could not retain stale-season progress before sanitizing it',
+      })
+    );
+    expect(localStorage.getItem(STORAGE_KEYS.progress)).toContain('"seasonalSeasonNumber":');
+    expect(listSupersededProgressCopies('user-1')).toEqual([]);
+    setItemSpy.mockRestore();
+  });
+  it('hydrates a default stale-season state without requiring an export copy', () => {
+    const data = {
+      ...structuredClone(defaultState),
+      seasonalSeasonNumber: ACTIVE_SEASON_NUMBER + 1,
+    };
+    localStorage.setItem(
+      STORAGE_KEYS.progress,
+      JSON.stringify({ _userId: 'user-1', _timestamp: Date.now(), data })
+    );
+    const setItemSpy = vi.spyOn(localStorage, 'setItem').mockImplementation((key, value) => {
+      if (key.startsWith(STORAGE_KEYS.progressSupersededPrefix)) throw new Error('storage full');
+      return Storage.prototype.setItem.call(localStorage, key, value);
+    });
+    const pinia = createPinia().use(piniaPluginPersistedstate);
+    createApp({}).use(pinia);
+    setActivePinia(pinia);
+    useTarkovStore();
+    expect(isAccountRecoveryRetentionBlocked()).toBe(false);
+    expect(listSupersededProgressCopies('user-1')).toEqual([]);
+    setItemSpy.mockRestore();
+  });
+  it('sanitizes stale guest-season data without creating an owner export copy', () => {
+    const staleSeason = ACTIVE_SEASON_NUMBER + 1;
+    const data = {
+      ...structuredClone(defaultState),
+      seasonal: progressWithLevel(17),
+      seasonalSeasonNumber: staleSeason,
+    };
+    localStorage.setItem(
+      STORAGE_KEYS.progress,
+      JSON.stringify({ _userId: null, _timestamp: Date.now(), data })
+    );
+    const pinia = createPinia().use(piniaPluginPersistedstate);
+    createApp({}).use(pinia);
+    setActivePinia(pinia);
+    const store = useTarkovStore();
+    expect(store.seasonal.level).toBe(defaultState.seasonal.level);
+    expect(listSupersededProgressCopies('user-1')).toEqual([]);
+  });
+  afterEach(async () => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
     resetTarkovSync('test teardown');
+    await nextTick();
+    await flushActiveProgressWrites();
     localStorage.clear();
   });
+  it.each(['user-2', 'user-1'])(
+    'fences an online reset awaiting the local lock after switching to %s',
+    async (nextOwner) => {
+      const store = useTarkovStore();
+      let release!: () => void;
+      let acquired!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const waiting = new Promise<void>((resolve) => {
+        acquired = resolve;
+      });
+      const request = vi
+        .spyOn(navigator.locks, 'request')
+        .mockImplementation(async (_name, _options, callback) => {
+          acquired();
+          await gate;
+          return callback({ name: `${STORAGE_KEYS.progress}:mutation`, mode: 'exclusive' } as Lock);
+        });
+      const reset = store.resetOnlineProfile();
+      await waiting;
+      supabaseContext.user.id = 'user-2';
+      const firstTransition = resetTarkovStoreForSessionTransition('user-1');
+      let secondTransition: Promise<void> | undefined;
+      if (nextOwner === 'user-1') {
+        supabaseContext.user.id = 'user-1';
+        secondTransition = resetTarkovStoreForSessionTransition('user-2');
+      }
+      store.$patch((state) => {
+        state.pvp.level = 37;
+      });
+      release();
+      await Promise.all([reset, firstTransition, secondTransition]);
+      expect(store.pvp.level).toBe(37);
+      request.mockRestore();
+    }
+  );
+  it('keeps offline Seasonal edits when historical mode freshness is unknown and metadata is newer', async () => {
+    const base = Date.parse('2026-09-06T12:00:00Z');
+    const local = structuredClone(defaultState);
+    local.currentGameMode = 'seasonal';
+    local.seasonal.displayName = 'offline edit';
+    local.seasonal.level = 12;
+    local.seasonal.taskObjectives['objective-1'] = {
+      complete: false,
+      count: 4,
+      timestamp: base + 20_000,
+    };
+    localStorage.setItem(
+      STORAGE_KEYS.progress,
+      JSON.stringify({
+        _userId: 'user-1',
+        _timestamp: base + 20_000,
+        _metadataTimestamp: base + 10_000,
+        _modeTimestamps: { pvp: base + 10_000, pve: base + 10_000, seasonal: base + 20_000 },
+        data: local,
+      })
+    );
+    single.mockResolvedValue({
+      data: createRemoteRow({
+        current_game_mode: 'pve',
+        game_edition: 3,
+        updated_at: new Date(base + 30_000).toISOString(),
+      }),
+      error: null,
+    });
+    modeProgressResult.data = [
+      {
+        game_mode: 'seasonal',
+        season_number: ACTIVE_SEASON_NUMBER,
+        progress_data: {
+          ...progressWithLevel(2),
+          displayName: 'historical',
+          taskObjectives: { 'objective-1': { complete: false, count: 1 } },
+        },
+        progress_updated_at: null,
+      },
+    ];
+    await initializeTarkovSync();
+    const store = useTarkovStore();
+    expect(store.currentGameMode).toBe('pve');
+    expect(store.gameEdition).toBe(3);
+    expect(store.seasonal.displayName).toBe('offline edit');
+    expect(store.seasonal.level).toBe(12);
+    expect(store.seasonal.taskObjectives['objective-1']?.count).toBe(4);
+    expect(getLastSyncPayload()?.p_modes).toEqual(
+      expect.objectContaining({
+        seasonal: expect.objectContaining({ displayName: 'offline edit', level: 12 }),
+      })
+    );
+  });
+  it.each(
+    (['pvp', 'pve'] as const).flatMap((mode) =>
+      [5_000, 30_000].flatMap((accountOffset) =>
+        [5_000, 30_000, 40_000].flatMap((seasonalOffset) =>
+          [5_000, 40_000].map((otherOffset) => ({
+            mode,
+            accountOffset,
+            seasonalOffset,
+            otherOffset,
+          }))
+        )
+      )
+    )
+  )(
+    'keeps newer remote decreases per mode: $mode, account=$accountOffset, Seasonal=$seasonalOffset, other=$otherOffset',
+    async ({ mode, accountOffset, seasonalOffset, otherOffset }) => {
+      const base = Date.parse('2026-09-06T12:00:00Z');
+      const progress = (level: number, reputation: number, endurance: number) => ({
+        ...progressWithLevel(20),
+        traders: { prapor: { level, reputation } },
+        skills: { Endurance: endurance },
+      });
+      localStorage.setItem(
+        STORAGE_KEYS.progress,
+        JSON.stringify({
+          _userId: 'user-1',
+          _timestamp: base + 10_000,
+          _metadataTimestamp: base + 5_000,
+          _modeTimestamps: { pvp: base + 10_000, pve: base + 10_000, seasonal: base + 10_000 },
+          data: { ...structuredClone(defaultState), [mode]: progress(4, 0.8, 30) },
+        })
+      );
+      single.mockResolvedValue({
+        data: createRemoteRow({ updated_at: new Date(base + accountOffset).toISOString() }),
+        error: null,
+      });
+      modeProgressResult.data = [
+        {
+          game_mode: mode,
+          season_number: 0,
+          progress_data: progress(2, 0.2, 10),
+          progress_updated_at: new Date(base + 30_000).toISOString(),
+        },
+      ];
+      modeProgressResult.data.push(
+        {
+          game_mode: mode === 'pvp' ? 'pve' : 'pvp',
+          season_number: 0,
+          progress_data: progressWithLevel(1),
+          progress_updated_at: new Date(base + otherOffset).toISOString(),
+        },
+        {
+          game_mode: 'seasonal',
+          season_number: ACTIVE_SEASON_NUMBER,
+          progress_data: progressWithLevel(1),
+          progress_updated_at: new Date(base + seasonalOffset).toISOString(),
+        }
+      );
+      await initializeTarkovSync();
+      await flushActiveProgressWrites();
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!).data[mode]).toMatchObject({
+        traders: { prapor: { level: 2, reputation: 0.2 } },
+        skills: { Endurance: 10 },
+      });
+      const selected = useTarkovStore()[mode];
+      expect(selected.traders.prapor).toEqual({ level: 2, reputation: 0.2 });
+      expect(selected.skills.Endurance).toBe(10);
+      const uploads = rpc.mock.calls.filter(([name]) => name === 'sync_user_game_mode_progress');
+      for (const [, payload] of uploads) {
+        expect(payload?.p_modes[mode]?.traders?.prapor?.level ?? 2).toBe(2);
+      }
+    }
+  );
+  it.each(
+    [5_000, 30_000, 40_000].flatMap((pvpOffset) =>
+      [5_000, 30_000, 40_000].map((pveOffset) => ({ pvpOffset, pveOffset }))
+    )
+  )(
+    'merges Seasonal independently: PvP=$pvpOffset, PvE=$pveOffset',
+    async ({ pvpOffset, pveOffset }) => {
+      const base = Date.parse('2026-09-06T12:00:00Z');
+      const seasonal = (taskId: string, timestamp: number) => ({
+        ...progressWithLevel(5),
+        taskCompletions: { [taskId]: { complete: true, timestamp } },
+      });
+      localStorage.setItem(
+        STORAGE_KEYS.progress,
+        JSON.stringify({
+          _userId: 'user-1',
+          _timestamp: base + 10_000,
+          _metadataTimestamp: base + 5_000,
+          _modeTimestamps: { pvp: base + 5_000, pve: base + 5_000, seasonal: base + 10_000 },
+          data: {
+            ...structuredClone(defaultState),
+            seasonal: {
+              ...seasonal('local-task', base + 10_000),
+              displayName: 'old name',
+              skillOffsets: { Endurance: 4 },
+              traders: { prapor: { level: 4, reputation: 0.8 } },
+              skills: { Endurance: 30 },
+            },
+          },
+        })
+      );
+      single.mockResolvedValue({
+        data: createRemoteRow({ updated_at: new Date(base + 5_000).toISOString() }),
+        error: null,
+      });
+      modeProgressResult.data = [
+        {
+          game_mode: 'pvp',
+          season_number: 0,
+          progress_data: progressWithLevel(1),
+          progress_updated_at: new Date(base + pvpOffset).toISOString(),
+        },
+        {
+          game_mode: 'pve',
+          season_number: 0,
+          progress_data: progressWithLevel(1),
+          progress_updated_at: new Date(base + pveOffset).toISOString(),
+        },
+        {
+          game_mode: 'seasonal',
+          season_number: ACTIVE_SEASON_NUMBER,
+          progress_data: {
+            ...seasonal('remote-task', base + 30_000),
+            traders: { prapor: { level: 2, reputation: 0.2 } },
+            skills: { Endurance: 10 },
+          },
+          progress_updated_at: new Date(base + 30_000).toISOString(),
+        },
+      ];
+      await initializeTarkovSync();
+      const tasks = {
+        'local-task': { complete: true, failed: false, timestamp: base + 10_000 },
+        'remote-task': { complete: true, failed: false, timestamp: base + 30_000 },
+      };
+      const selected = useTarkovStore().seasonal;
+      expect(selected.taskCompletions).toEqual(tasks);
+      expect(selected).toMatchObject({
+        displayName: null,
+        traders: { prapor: { level: 4, reputation: 0.8 } },
+        skills: { Endurance: 30 },
+      });
+      expect(selected.skillOffsets).toEqual({});
+      expect(getLastSyncPayload().p_modes.seasonal?.taskCompletions).toEqual(tasks);
+      await flushActiveProgressWrites();
+      expect(
+        JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!).data.seasonal.taskCompletions
+      ).toEqual(tasks);
+    }
+  );
+  it.each(GAME_MODE_VALUES.flatMap((mode) => [null, undefined].map((clock) => ({ mode, clock }))))(
+    'merges unknown $mode clocks ($clock) with explicit local clears',
+    async ({ mode, clock }) => {
+      const base = Date.parse('2026-09-06T12:00:00Z');
+      const local = structuredClone(defaultState);
+      local[mode].taskCompletions.localTask = { complete: true, timestamp: base + 10_000 };
+      local[mode].taskObjectives.objective = { count: 0, timestamp: base + 20_000 };
+      localStorage.setItem(
+        STORAGE_KEYS.progress,
+        JSON.stringify({
+          _userId: 'user-1',
+          _timestamp: base + 20_000,
+          _metadataTimestamp: base + 5_000,
+          _modeTimestamps: { [mode]: base + 20_000 },
+          data: local,
+        })
+      );
+      single.mockResolvedValue({
+        data: createRemoteRow({ updated_at: new Date(base + 40_000).toISOString() }),
+        error: null,
+      });
+      modeProgressResult.data = [
+        {
+          game_mode: mode,
+          season_number: getGameModeSeasonNumber(mode),
+          progress_updated_at: clock,
+          progress_data: {
+            ...progressWithLevel(2),
+            displayName: 'old name',
+            skillOffsets: { Endurance: 4 },
+            taskCompletions: { remoteTask: { complete: true, timestamp: base + 30_000 } },
+            taskObjectives: { objective: { count: 5, timestamp: base + 10_000 } },
+          },
+        },
+      ];
+      await initializeTarkovSync();
+      const selected = useTarkovStore()[mode];
+      expect(selected).toMatchObject({ displayName: null, skillOffsets: {} });
+      expect(selected.skillOffsets).toEqual({});
+      expect(selected.taskObjectives.objective?.count).toBe(0);
+      expect(Object.keys(selected.taskCompletions).sort()).toEqual(['localTask', 'remoteTask']);
+      expect(getLastSyncPayload().p_modes[mode]).toEqual(selected);
+      await flushActiveProgressWrites();
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!).data[mode]).toEqual(selected);
+    }
+  );
+  it.each(GAME_MODE_VALUES)('prefers remote $mode snapshots on known clock ties', async (mode) => {
+    const base = Date.parse('2026-09-06T12:00:00Z');
+    const local = structuredClone(defaultState);
+    local[mode].level = 7;
+    local[mode].displayName = 'old name';
+    local[mode].skillOffsets = { Endurance: 4 };
+    local[mode].taskCompletions.localTask = { complete: true, timestamp: base + 10_000 };
+    localStorage.setItem(
+      STORAGE_KEYS.progress,
+      JSON.stringify({
+        _userId: 'user-1',
+        _timestamp: base + 30_000,
+        _modeTimestamps: { [mode]: base + 30_000 },
+        data: local,
+      })
+    );
+    single.mockResolvedValue({
+      data: createRemoteRow({ updated_at: new Date(base + 30_000).toISOString() }),
+      error: null,
+    });
+    modeProgressResult.data = [
+      {
+        game_mode: mode,
+        season_number: getGameModeSeasonNumber(mode),
+        progress_updated_at: new Date(base + 30_000).toISOString(),
+        progress_data: progressWithLevel(2),
+      },
+    ];
+    await initializeTarkovSync();
+    const selected = useTarkovStore()[mode];
+    expect(selected).toMatchObject({ level: 2, displayName: null });
+    expect(selected.skillOffsets).toEqual({});
+    expect(selected.taskCompletions).toEqual({});
+    expect(rpc).not.toHaveBeenCalled();
+    await flushActiveProgressWrites();
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!).data[mode]).toEqual(selected);
+  });
+  it.each(
+    GAME_MODE_VALUES.flatMap((mode) =>
+      [true, false].flatMap((unknown) =>
+        [true, false].map((remoteReset) => ({ mode, unknown, remoteReset }))
+      )
+    )
+  )(
+    'honors higher $mode epochs: unknown=$unknown, remote reset=$remoteReset',
+    async ({ mode, unknown, remoteReset }) => {
+      const base = Date.parse('2026-09-06T12:00:00Z');
+      const local = structuredClone(defaultState);
+      local[mode].progressEpoch = remoteReset ? 1 : 2;
+      local[mode].taskCompletions.localTask = { complete: true, timestamp: base + 10_000 };
+      const remote = {
+        ...progressWithLevel(2),
+        progressEpoch: remoteReset ? 2 : 1,
+        taskCompletions: { remoteTask: { complete: true, timestamp: base + 30_000 } },
+      };
+      localStorage.setItem(
+        STORAGE_KEYS.progress,
+        JSON.stringify({
+          _userId: 'user-1',
+          _timestamp: base + 10_000,
+          _modeTimestamps: { [mode]: base + 10_000 },
+          data: local,
+        })
+      );
+      single.mockResolvedValue({
+        data: createRemoteRow({ updated_at: new Date(base + 5_000).toISOString() }),
+        error: null,
+      });
+      modeProgressResult.data = [
+        {
+          game_mode: mode,
+          season_number: getGameModeSeasonNumber(mode),
+          progress_updated_at: unknown ? null : new Date(base + 30_000).toISOString(),
+          progress_data: remote,
+        },
+      ];
+      await initializeTarkovSync();
+      const selected = useTarkovStore()[mode];
+      expect(selected.progressEpoch).toBe(2);
+      expect(Object.keys(selected.taskCompletions)).toEqual([
+        remoteReset ? 'remoteTask' : 'localTask',
+      ]);
+      await flushActiveProgressWrites();
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!).data[mode]).toEqual(selected);
+    }
+  );
+  it.each(GAME_MODE_VALUES)(
+    'uploads a default-valued $mode edit with its own clock',
+    async (mode) => {
+      const base = Date.parse('2026-09-06T12:00:00Z');
+      localStorage.setItem(
+        STORAGE_KEYS.progress,
+        JSON.stringify({
+          _userId: 'user-1',
+          _timestamp: base + 40_000,
+          _metadataTimestamp: 0,
+          _modeTimestamps: { pvp: 0, pve: 0, seasonal: 0, [mode]: base + 40_000 },
+          data: structuredClone(defaultState),
+        })
+      );
+      const pinia = createPinia().use(piniaPluginPersistedstate);
+      createApp({}).use(pinia);
+      setActivePinia(pinia);
+      single.mockResolvedValue({
+        data: createRemoteRow({ updated_at: new Date(base + 5_000).toISOString() }),
+        error: null,
+      });
+      modeProgressResult.data = [
+        {
+          game_mode: mode,
+          season_number: getGameModeSeasonNumber(mode),
+          progress_updated_at: new Date(base + 30_000).toISOString(),
+          progress_data: progressWithLevel(9),
+        },
+      ];
+      await initializeTarkovSync();
+      expect(useTarkovStore()[mode].level).toBe(1);
+      expect(getLastSyncPayload().p_modes[mode]?.level).toBe(1);
+      await nextTick();
+      await flushActiveProgressWrites();
+      const persisted = JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!);
+      expect(persisted.data[mode].level).toBe(1);
+      expect(persisted._modeTimestamps[mode]).toBe(base + 40_000);
+    }
+  );
+  it('keeps historical normalized PvP freshness null despite a newer account clock', async () => {
+    const base = Date.parse('2026-09-06T12:00:00Z');
+    seedOwnedEnvelope('user-1', { pvp: progressWithLevel(42) }, base + 20_000);
+    single.mockResolvedValue({
+      data: createRemoteRow({
+        game_edition: 3,
+        updated_at: new Date(base + 30_000).toISOString(),
+        pvp_data: progressWithLevel(70),
+      }),
+      error: null,
+    });
+    modeProgressResult.data = [
+      {
+        game_mode: 'pvp',
+        season_number: 0,
+        progress_data: progressWithLevel(2),
+        progress_updated_at: null,
+      },
+    ];
+    await initializeTarkovSync();
+    await flushPromises();
+    expect(useTarkovStore().pvp.level).toBe(42);
+    expect(useTarkovStore().gameEdition).toBe(3);
+    expect(single).toHaveBeenCalledTimes(2);
+  });
+  it('persists remote freshness through the real Pinia persistence plugin', async () => {
+    const base = Date.parse('2026-09-06T12:00:00Z');
+    vi.spyOn(Date, 'now').mockReturnValue(base + 40_000);
+    const local = { ...structuredClone(defaultState), pvp: progressWithLevel(1) };
+    localStorage.setItem(
+      STORAGE_KEYS.progress,
+      JSON.stringify({
+        _userId: 'user-1',
+        _timestamp: base + 10_000,
+        data: local,
+      })
+    );
+    const pinia = createPinia().use(piniaPluginPersistedstate);
+    createApp({}).use(pinia);
+    setActivePinia(pinia);
+    single.mockResolvedValue({
+      data: createRemoteRow({ game_edition: 2, updated_at: new Date(base + 20_000).toISOString() }),
+      error: null,
+    });
+    modeProgressResult.data = [
+      {
+        game_mode: 'pvp',
+        season_number: 0,
+        progress_data: progressWithLevel(2),
+        progress_updated_at: new Date(base + 20_000).toISOString(),
+      },
+      {
+        game_mode: 'pve',
+        season_number: 0,
+        progress_data: progressWithLevel(1),
+        progress_updated_at: new Date(base + 10_000).toISOString(),
+      },
+    ];
+    await initializeTarkovSync();
+    await flushPromises();
+    await nextTick();
+    await flushActiveProgressWrites();
+    const read = () => JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!);
+    expect(read()._metadataTimestamp).toBe(base + 20_000);
+    expect(read()._modeTimestamps.pvp).toBe(base + 20_000);
+    getModeProgressCallback()?.({
+      old: null,
+      new: {
+        game_mode: 'pvp',
+        season_number: 0,
+        progress_data: progressWithLevel(3),
+        updated_at: new Date(base + 35_000).toISOString(),
+        progress_updated_at: new Date(base + 30_000).toISOString(),
+      },
+    });
+    await nextTick();
+    await flushActiveProgressWrites();
+    expect(read().data.pvp.level).toBe(3);
+    expect(read()._modeTimestamps.pvp).toBe(base + 30_000);
+    useTarkovStore().$patch((state) => {
+      state.pve.level = 4;
+    });
+    await nextTick();
+    await flushActiveProgressWrites();
+    expect(read()._modeTimestamps.pve).toBe(base + 40_000);
+    expect(read()._modeTimestamps.pvp).toBe(base + 30_000);
+    expect(read()._metadataTimestamp).toBe(base + 20_000);
+    // A matching echo needs no Pinia patch, but must persist its server clock.
+    getModeProgressCallback()?.({
+      old: null,
+      new: {
+        game_mode: 'pve',
+        season_number: 0,
+        progress_data: progressWithLevel(4),
+        updated_at: new Date(base + 35_000).toISOString(),
+        progress_updated_at: new Date(base + 35_000).toISOString(),
+      },
+    });
+    await nextTick();
+    await flushActiveProgressWrites();
+    expect(read()._modeTimestamps.pve).toBe(base + 35_000);
+    useTarkovStore().$patch({ gameEdition: 3 });
+    await nextTick();
+    await flushActiveProgressWrites();
+    expect(read()._metadataTimestamp).toBe(base + 40_000);
+    getRealtimeCallback()?.({
+      old: null,
+      new: createRemoteRow({ game_edition: 3, updated_at: new Date(base + 36_000).toISOString() }),
+    });
+    await nextTick();
+    await flushActiveProgressWrites();
+    expect(read()._metadataTimestamp).toBe(base + 36_000);
+  });
+  it.each(['', 'invalid-date'])(
+    'restores owned progress when server timestamps are unusable: %s',
+    async (updatedAt) => {
+      localStorage.setItem(
+        STORAGE_KEYS.progress,
+        JSON.stringify({
+          _timestamp: Date.now(),
+          _userId: 'user-1',
+          data: { ...structuredClone(defaultState), pvp: progressWithLevel(7) },
+        })
+      );
+      single.mockResolvedValue({ data: createRemoteRow({ updated_at: updatedAt }), error: null });
+      modeProgressResult.data = [
+        { game_mode: 'pvp', season_number: 0, progress_data: progressWithLevel(5) },
+        { game_mode: 'pve', season_number: 0, progress_data: progressWithLevel(1) },
+      ];
+      await initializeTarkovSync();
+      await flushPromises();
+      expect(useTarkovStore().pvp.level).toBe(7);
+    }
+  );
+  it('keeps mode freshness independent of other modes and visibility-only timestamps', async () => {
+    const now = Date.now();
+    const local = structuredClone(defaultState);
+    local.pvp.level = 7;
+    local.pvp.taskObjectives.objective = { count: 0 };
+    local.pvp.hideoutParts.part = { count: 0 };
+    localStorage.setItem(
+      STORAGE_KEYS.progress,
+      JSON.stringify({
+        _timestamp: now - 1000,
+        _modeTimestamps: { pvp: now - 1000, pve: now - 5000, seasonal: now - 5000 },
+        _userId: 'user-1',
+        data: local,
+      })
+    );
+    single.mockResolvedValue({
+      data: createRemoteRow({ updated_at: new Date(now - 5000).toISOString() }),
+      error: null,
+    });
+    modeProgressResult.data = [
+      {
+        game_mode: 'pvp',
+        season_number: 0,
+        progress_updated_at: new Date(now - 2000).toISOString(),
+        progress_data: {
+          ...local.pvp,
+          taskObjectives: { objective: { count: 5 } },
+          hideoutParts: { part: { count: 5 } },
+        },
+      },
+      {
+        game_mode: 'pve',
+        season_number: 0,
+        updated_at: new Date(now + 2000).toISOString(),
+        progress_updated_at: new Date(now - 2000).toISOString(),
+        progress_data: { ...local.pve, level: 25 },
+      },
+      {
+        game_mode: 'seasonal',
+        season_number: ACTIVE_SEASON_NUMBER,
+        progress_updated_at: new Date(now).toISOString(),
+        progress_data: { ...local.seasonal, level: 55 },
+      },
+    ];
+    await initializeTarkovSync();
+    expect(useTarkovStore().pvp.taskObjectives.objective?.count).toBe(0);
+    expect(useTarkovStore().pvp.hideoutParts.part?.count).toBe(0);
+    expect(useTarkovStore().pve.level).toBe(25);
+    expect(useTarkovStore().seasonal.level).toBe(55);
+  });
+  it('keeps REST saving and retry reconciliation available when the initial Realtime join times out', async () => {
+    const { liveUpdatesDegraded } = await import('@/stores/tarkov/progressLiveStatus');
+    channel.subscribe.mockImplementationOnce((callback) => {
+      callback?.('TIMED_OUT');
+      return channel;
+    });
+    await expect(initializeTarkovSync()).resolves.toBeUndefined();
+    expect(liveUpdatesDegraded.value).toBe(true);
+    expect(cleanupSync).not.toHaveBeenCalled();
+    expect(showLoadFailed).not.toHaveBeenCalled();
+    const store = useTarkovStore();
+    const options = useSupabaseSyncMock.mock.calls.at(-1)?.[0] as {
+      transform: (state: UserState) => Record<string, unknown>;
+      sync: (payload: Record<string, unknown>) => Promise<unknown>;
+      reconcileBeforeRetry: () => Promise<void>;
+    };
+    await expect(options.reconcileBeforeRetry()).resolves.toBeUndefined();
+    store.$patch((state) => {
+      state.pvp.level = 17;
+    });
+    await options.sync(options.transform(store.$state));
+    expect(rpc).toHaveBeenCalledWith(
+      'sync_user_game_mode_progress',
+      expect.objectContaining({
+        p_modes: expect.objectContaining({ pvp: expect.objectContaining({ level: 17 }) }),
+      })
+    );
+    expect(cleanupSync).not.toHaveBeenCalled();
+    resetTarkovSync('test logout');
+    expect(liveUpdatesDegraded.value).toBe(false);
+  });
+  it('preserves pending edits through outage polling and reconciles the first eventual join', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const actual = await vi.importActual<typeof import('@/composables/supabase/useSupabaseSync')>(
+      '@/composables/supabase/useSupabaseSync'
+    );
+    const { liveUpdatesDegraded } = await import('@/stores/tarkov/progressLiveStatus');
+    useSupabaseSyncMock.mockImplementation(
+      (options) =>
+        actual.useSupabaseSync(
+          options as Parameters<typeof actual.useSupabaseSync>[0]
+        ) as unknown as ReturnType<typeof useSupabaseSyncMock>
+    );
+    let status: ((value: string) => void) | undefined;
+    channel.subscribe.mockImplementationOnce((callback) => {
+      status = callback;
+      callback?.('TIMED_OUT');
+      return channel;
+    });
+    try {
+      await initializeTarkovSync();
+      const store = useTarkovStore();
+      const controller = useSupabaseSyncMock.mock.results.at(-1)?.value as ReturnType<
+        typeof actual.useSupabaseSync
+      >;
+      controller.pause();
+      store.$patch((state) => {
+        state.pvp.level = 17;
+      });
+      modeProgressResult.data = [
+        {
+          game_mode: 'pvp',
+          season_number: 0,
+          progress_data: progressWithLevel(9),
+          progress_updated_at: new Date(Date.now()).toISOString(),
+        },
+        {
+          game_mode: 'pve',
+          season_number: 0,
+          progress_data: progressWithLevel(25),
+          progress_updated_at: new Date(Date.now()).toISOString(),
+        },
+      ];
+      const read = Promise.withResolvers<{
+        data: ReturnType<typeof createRemoteRow>;
+        error: null;
+      }>();
+      single.mockReturnValueOnce(read.promise);
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(single).toHaveBeenCalledTimes(2);
+      store.$patch((state) => {
+        state.pvp.displayName = 'Edited during refresh';
+      });
+      read.resolve({ data: createRemoteRow(), error: null });
+      await flushPromises();
+      expect(store.pvp).toMatchObject({ level: 17, displayName: 'Edited during refresh' });
+      expect(store.pve.level).toBe(25);
+      expect(liveUpdatesDegraded.value).toBe(true);
+      controller.resume();
+      await vi.advanceTimersByTimeAsync(6_000);
+      expect(rpc).toHaveBeenCalledWith(
+        'sync_user_game_mode_progress',
+        expect.objectContaining({
+          p_modes: expect.objectContaining({
+            pvp: expect.objectContaining({ level: 17, displayName: 'Edited during refresh' }),
+          }),
+        })
+      );
+      status?.('SUBSCRIBED');
+      await flushPromises();
+      expect(liveUpdatesDegraded.value).toBe(false);
+      expect(store.pvp.level).toBe(17);
+      expect(channel.subscribe).toHaveBeenCalledOnce();
+    } finally {
+      resetTarkovSync('test cleanup');
+      vi.useRealTimers();
+    }
+  });
+  it('stops initialization after normalized reads exhaust their retries', async () => {
+    modeProgressResult.error = { message: 'normalized unavailable' };
+    await expect(initializeTarkovSync()).rejects.toThrow('Supabase initial load failed');
+    expect(useSupabaseSyncMock).not.toHaveBeenCalled();
+  });
+  it.each(['pvp', 'pve'] as const)(
+    'reconciles owned historical %s confirmations alongside a memory-only handoff',
+    async (mode) => {
+      const { preserveUnsavedSessionProgress } = await import('@/stores/useTarkov');
+      const { recordLocalSave, markCloudSyncUnavailable, resetCloudSaveStatus } =
+        await import('@/stores/tarkov/progressSaveStatus');
+      const confirmations = Object.fromEntries(
+        Array.from({ length: 66 }, (_, i) => [
+          `s${i + 1}`,
+          { requirements: 'r'.repeat(4000), timestamp: i + 200 },
+        ])
+      );
+      seedOwnedEnvelope('user-1', {
+        pvp: progressWithLevel(5),
+        pve: progressWithLevel(3),
+        [mode]: { ...progressWithLevel(5), taskAvailability: confirmations },
+      });
+      modeProgressResult.error = { message: 'normalized unavailable' };
+      await expect(initializeTarkovSync()).rejects.toThrow('Supabase initial load failed');
+      resetTarkovSync('initial sync failed');
+      markCloudSyncUnavailable(async () => false);
+      recordLocalSave(false, 'quota');
+      useTarkovStore().$patch((state) => {
+        state[mode].level = 42;
+      });
+      const untouched = mode === 'pvp' ? 'pve' : 'pvp';
+      modeProgressResult.data = [
+        {
+          game_mode: mode,
+          season_number: 0,
+          progress_data: {
+            ...progressWithLevel(5),
+            taskAvailability: { s1: { requirements: 'old', timestamp: 0 } },
+          },
+          progress_updated_at: sessionClock(-60_000),
+        },
+        {
+          game_mode: untouched,
+          season_number: 0,
+          progress_data: progressWithLevel(9),
+          progress_updated_at: sessionClock(60_000),
+        },
+      ];
+      modeProgressResult.error = null;
+      single.mockResolvedValue({ data: createRemoteRow(), error: null });
+      preserveUnsavedSessionProgress('user-1');
+      await initializeTarkovSync();
+      expect(useTarkovStore()[mode].level).toBe(42);
+      expect(useTarkovStore()[untouched].level).toBe(9);
+      expect(useTarkovStore()[mode].taskAvailability).not.toHaveProperty('s1');
+      expect(Object.keys(useTarkovStore()[mode].taskAvailability ?? {})).toHaveLength(65);
+      recordLocalSave(true);
+      resetCloudSaveStatus();
+    }
+  );
+  it('keeps memory-only edits when a failed initialization is retried', async () => {
+    const { preserveUnsavedSessionProgress } = await import('@/stores/useTarkov');
+    const { recordLocalSave, markCloudSyncUnavailable, resetCloudSaveStatus } =
+      await import('@/stores/tarkov/progressSaveStatus');
+    seedOwnedEnvelope('user-1', { pvp: progressWithLevel(5) });
+    modeProgressResult.error = { message: 'normalized unavailable' };
+    await expect(initializeTarkovSync()).rejects.toThrow('Supabase initial load failed');
+    resetTarkovSync('initial sync failed');
+    markCloudSyncUnavailable(async () => false);
+    // The player keeps editing while local writes fail; the edit exists only in memory.
+    recordLocalSave(false, 'quota');
+    useTarkovStore().$patch((state) => {
+      state.pvp.level = 42;
+    });
+    modeProgressResult.error = null;
+    single.mockResolvedValue({ data: createRemoteRow(), error: null });
+    preserveUnsavedSessionProgress('user-1');
+    await initializeTarkovSync();
+    expect(useTarkovStore().pvp.level).toBe(42);
+    const { hasUnsavedProgressChanges } = await import('@/stores/tarkov/progressSaveStatus');
+    expect(hasUnsavedProgressChanges()).toBe(false);
+    recordLocalSave(true);
+    resetCloudSaveStatus();
+  });
+  it('uploads a memory-only handoff that the startup load did not upload', async () => {
+    const { preserveUnsavedSessionProgress } = await import('@/stores/useTarkov');
+    const {
+      hasUnsavedProgressChanges,
+      markCloudSyncUnavailable,
+      recordLocalSave,
+      resetCloudSaveStatus,
+    } = await import('@/stores/tarkov/progressSaveStatus');
+    modeProgressResult.error = { message: 'normalized unavailable' };
+    await expect(initializeTarkovSync()).rejects.toThrow('Supabase initial load failed');
+    resetTarkovSync('initial sync failed');
+    markCloudSyncUnavailable(async () => false);
+    recordLocalSave(false, 'quota');
+    useTarkovStore().$patch((state) => {
+      state.pvp.displayName = 'renamed';
+    });
+    modeProgressResult.error = null;
+    single.mockResolvedValue({ data: null, error: { code: 'PGRST116', message: 'No rows' } });
+    preserveUnsavedSessionProgress('user-1');
+    syncInitialState.mockClear().mockResolvedValue(null);
+    await initializeTarkovSync();
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    expect(useTarkovStore().pvp.displayName).toBe('renamed');
+    // Not acknowledged by the startup load itself; the started controller uploads it once and
+    // owns any retry, so a failed upload is not repeated outside its reconciled schedule.
+    expect(hasUnsavedProgressChanges()).toBe(true);
+    expect(syncInitialState).toHaveBeenCalledOnce();
+    recordLocalSave(true);
+    resetCloudSaveStatus();
+  });
+  it('retains failed first handoff intent through the join snapshot and saves its retry', async () => {
+    const actual = await vi.importActual<typeof import('@/composables/supabase/useSupabaseSync')>(
+      '@/composables/supabase/useSupabaseSync'
+    );
+    const { preserveUnsavedSessionProgress } = await import('@/stores/useTarkov');
+    const { markCloudSyncUnavailable, recordLocalSave } =
+      await import('@/stores/tarkov/progressSaveStatus');
+    modeProgressResult.error = { message: 'normalized unavailable' };
+    await expect(initializeTarkovSync()).rejects.toThrow('Supabase initial load failed');
+    resetTarkovSync('initial sync failed');
+    markCloudSyncUnavailable(async () => false);
+    recordLocalSave(false, 'quota');
+    const store = useTarkovStore();
+    store.$patch((state) => {
+      state.gameEdition = 5;
+      state.pvp.displayName = 'Unsaved handoff';
+    });
+    preserveUnsavedSessionProgress('user-1');
+    modeProgressResult.error = null;
+    single.mockResolvedValue({ data: null, error: { code: 'PGRST116', message: 'No rows' } });
+    useSupabaseSyncMock.mockImplementation(
+      (options) =>
+        actual.useSupabaseSync(
+          options as Parameters<typeof actual.useSupabaseSync>[0]
+        ) as unknown as ReturnType<typeof useSupabaseSyncMock>
+    );
+    const firstSave = Promise.withResolvers<{ error: { message: string } }>();
+    rpc.mockReturnValueOnce(firstSave.promise);
+    try {
+      await initializeTarkovSync();
+      await flushPromises();
+      expect(rpc).toHaveBeenCalledOnce();
+      const controller = useSupabaseSyncMock.mock.results.at(-1)?.value as ReturnType<
+        typeof actual.useSupabaseSync
+      >;
+      single.mockResolvedValue({
+        data: createRemoteRow({ game_edition: 2, current_game_mode: 'pve', tarkov_uid: 7 }),
+        error: null,
+      });
+      modeProgressResult.data = [
+        modeRow('pvp', { ...progressWithLevel(9), displayName: 'Cloud name', pmcFaction: 'BEAR' }),
+        modeRow('pve', progressWithLevel(25)),
+      ];
+      firstSave.resolve({ error: { message: 'handoff write failed' } });
+      await flushPromises();
+      const { reconcileRemoteSnapshot } = await import('@/stores/tarkov/realtimeListener');
+      await reconcileRemoteSnapshot();
+      expect(store.gameEdition).toBe(5);
+      expect(store.pvp.displayName).toBe('Unsaved handoff');
+      expect(store.pvp).toMatchObject({ level: 9, pmcFaction: 'BEAR' });
+      expect(store.pve.level).toBe(25);
+      expect(store.currentGameMode).toBe('pve');
+      expect(store.tarkovUid).toBe(7);
+      expect(controller.hasPendingChanges?.()).toBe(true);
+      await vi.waitFor(() => expect(controller.isPaused.value).toBe(false), { timeout: 2000 });
+      await expect(controller.retryNow()).resolves.toBe(true);
+      expect(rpc).toHaveBeenLastCalledWith(
+        'sync_user_game_mode_progress',
+        expect.objectContaining({
+          p_game_edition: 5,
+          p_current_game_mode: 'pve',
+          p_tarkov_uid: 7,
+          p_modes: expect.objectContaining({
+            pvp: expect.objectContaining({
+              displayName: 'Unsaved handoff',
+              level: 9,
+              pmcFaction: 'BEAR',
+            }),
+          }),
+        })
+      );
+      expect(controller.hasPendingChanges?.()).toBe(false);
+    } finally {
+      firstSave.resolve({ error: { message: 'handoff regression cleanup' } });
+      resetTarkovSync('handoff regression cleanup');
+    }
+  });
+  it('lets newer remote progress win for modes the memory-only edits did not touch', async () => {
+    const { preserveUnsavedSessionProgress } = await import('@/stores/useTarkov');
+    const { recordLocalSave, markCloudSyncUnavailable, resetCloudSaveStatus } =
+      await import('@/stores/tarkov/progressSaveStatus');
+    seedOwnedEnvelope('user-1', { pvp: progressWithLevel(5), pve: progressWithLevel(3) });
+    modeProgressResult.error = { message: 'normalized unavailable' };
+    await expect(initializeTarkovSync()).rejects.toThrow('Supabase initial load failed');
+    resetTarkovSync('initial sync failed');
+    markCloudSyncUnavailable(async () => false);
+    recordLocalSave(false, 'quota');
+    useTarkovStore().$patch((state) => {
+      state.pvp.level = 42;
+    });
+    modeProgressResult.data = [
+      {
+        game_mode: 'pvp',
+        season_number: 0,
+        progress_data: progressWithLevel(5),
+        progress_updated_at: sessionClock(-60_000),
+      },
+      {
+        game_mode: 'pve',
+        season_number: 0,
+        progress_data: progressWithLevel(9),
+        progress_updated_at: sessionClock(60_000),
+      },
+    ];
+    modeProgressResult.error = null;
+    single.mockResolvedValue({ data: createRemoteRow(), error: null });
+    preserveUnsavedSessionProgress('user-1');
+    await initializeTarkovSync();
+    expect(useTarkovStore().pvp.level).toBe(42);
+    expect(useTarkovStore().pve.level).toBe(9);
+    recordLocalSave(true);
+    resetCloudSaveStatus();
+  });
+  it.each(['owned', 'empty', 'legacy'])(
+    'keeps retry clocks with %s storage when another tab saves before a memory-only edit',
+    async (initialStorage) => {
+      const { preserveUnsavedSessionProgress } = await import('@/stores/useTarkov');
+      const {
+        recordLocalSave,
+        markCloudSyncUnavailable,
+        resetCloudSaveStatus,
+        progressSaveStatus,
+      } = await import('@/stores/tarkov/progressSaveStatus');
+      const baseline = {
+        pvp: progressWithLevel(5),
+        pve: progressWithLevel(3),
+        gameEdition: 1,
+      };
+      if (initialStorage === 'owned') seedOwnedEnvelope('user-1', baseline);
+      if (initialStorage === 'legacy') {
+        const legacy = structuredClone(defaultState);
+        legacy.pvp.level = 5;
+        legacy.pve.level = 3;
+        localStorage.setItem(STORAGE_KEYS.progress, JSON.stringify(legacy));
+      }
+      const pinia = createPinia().use(piniaPluginPersistedstate);
+      createApp({}).use(pinia);
+      setActivePinia(pinia);
+      modeProgressResult.error = { message: 'normalized unavailable' };
+      await expect(initializeTarkovSync()).rejects.toThrow('Supabase initial load failed');
+      if (initialStorage === 'empty') {
+        expect(localStorage.getItem(STORAGE_KEYS.progress)).toBeNull();
+        expect(readAccountRecoveryCopy('user-1')).toBeNull();
+      }
+      resetTarkovSync('initial sync failed', { preserveStorageBaselineForUserId: 'user-1' });
+      markCloudSyncUnavailable(async () => false);
+      const newer = {
+        ...baseline,
+        gameEdition: 2,
+        pve: {
+          ...baseline.pve,
+          displayName: 'Other tab',
+          pmcFaction: 'BEAR' as const,
+          skillOffsets: { endurance: 3 },
+        },
+      };
+      seedOwnedEnvelope('user-1', newer, Date.now() - 1000);
+      const setItem = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+        throw Object.assign(new Error('full'), { name: 'QuotaExceededError' });
+      });
+      useTarkovStore().$patch((state) => {
+        state.pvp.level = 42;
+      });
+      await nextTick();
+      await flushActiveProgressWrites();
+      expect(progressSaveStatus.local).toBe('failed');
+      expect(progressSaveStatus.localFailure).toBe('quota');
+      setItem.mockRestore();
+      modeProgressResult.error = null;
+      single.mockResolvedValue({ data: createRemoteRow(), error: null });
+      preserveUnsavedSessionProgress('user-1');
+      preserveUnsavedSessionProgress('user-1');
+      await initializeTarkovSync();
+      expect(useTarkovStore().pvp.level).toBe(42);
+      expect(useTarkovStore().gameEdition).toBe(2);
+      expect(useTarkovStore().pve).toMatchObject(newer.pve);
+      recordLocalSave(true);
+      resetCloudSaveStatus();
+    }
+  );
+  it('keeps newer other-tab values saved while the first cloud read is pending', async () => {
+    const { preserveUnsavedSessionProgress } = await import('@/stores/useTarkov');
+    const { markCloudSyncUnavailable, progressSaveStatus, resetCloudSaveStatus } =
+      await import('@/stores/tarkov/progressSaveStatus');
+    const pinia = createPinia().use(piniaPluginPersistedstate);
+    createApp({}).use(pinia);
+    setActivePinia(pinia);
+    const deferred = createDeferredRead();
+    const failedRead = { data: null, error: { message: 'offline' } };
+    single.mockImplementationOnce(() => deferred.promise).mockResolvedValue(failedRead);
+    const startup = initializeTarkovSync();
+    const failure = expect(startup).rejects.toThrow('Supabase initial load failed');
+    await waitForBackgroundTasks();
+    expect(single).toHaveBeenCalledOnce();
+    expect(localStorage.getItem(STORAGE_KEYS.progress)).toBeNull();
+    expect(readAccountRecoveryCopy('user-1')).toBeNull();
+    const newer = {
+      gameEdition: 2,
+      pve: {
+        ...progressWithLevel(9),
+        displayName: 'Other tab during read',
+        pmcFaction: 'BEAR' as const,
+        skillOffsets: { endurance: 3 },
+      },
+    };
+    seedOwnedEnvelope('user-1', newer, Date.now() - 1000);
+    deferred.resolve(failedRead);
+    await failure;
+    resetTarkovSync('initial sync failed', { preserveStorageBaselineForUserId: 'user-1' });
+    markCloudSyncUnavailable(async () => false);
+    const setItem = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+      throw Object.assign(new Error('full'), { name: 'QuotaExceededError' });
+    });
+    useTarkovStore().$patch((state) => {
+      state.pvp.level = 42;
+    });
+    await nextTick();
+    await flushActiveProgressWrites();
+    expect(progressSaveStatus.local).toBe('failed');
+    expect(progressSaveStatus.localFailure).toBe('quota');
+    setItem.mockRestore();
+    single.mockResolvedValue({ data: createRemoteRow(), error: null });
+    preserveUnsavedSessionProgress('user-1');
+    await initializeTarkovSync();
+    expect(useTarkovStore().pvp.level).toBe(42);
+    expect(useTarkovStore().gameEdition).toBe(2);
+    expect(useTarkovStore().pve).toMatchObject(newer.pve);
+    resetCloudSaveStatus();
+  });
+  it('does not replace the store from memory for another account or without unsaved edits', async () => {
+    const { preserveUnsavedSessionProgress } = await import('@/stores/useTarkov');
+    const { recordLocalSave } = await import('@/stores/tarkov/progressSaveStatus');
+    seedOwnedEnvelope('user-1', { pvp: progressWithLevel(5) });
+    recordLocalSave(true);
+    useTarkovStore().$patch((state) => {
+      state.pvp.level = 42;
+    });
+    preserveUnsavedSessionProgress('user-1');
+    recordLocalSave(false, 'quota');
+    preserveUnsavedSessionProgress('user-2');
+    await initializeTarkovSync();
+    // The startup load resolved from storage and the cloud, not from the in-memory edit.
+    expect(useTarkovStore().pvp.level).not.toBe(42);
+    recordLocalSave(true);
+  });
+  it('records the local sync timestamp only when the save callback succeeds', async () => {
+    await initializeTarkovSync();
+    const { getLastLocalSyncTime } = await import('@/stores/tarkov/syncTimeline');
+    const options = useSupabaseSyncMock.mock.calls.at(-1)?.[0] as { onSynced: () => void };
+    vi.spyOn(Date, 'now').mockReturnValue(123456789);
+    options.onSynced();
+    expect(getLastLocalSyncTime()).toBe(123456789);
+  });
+  it.each(['success', 'error', 'throw', 'session-reset'])(
+    'tracks an in-flight RPC and removes failed or stale markers: %s',
+    async (outcome) => {
+      await initializeTarkovSync();
+      const timeline = await import('@/stores/tarkov/syncTimeline');
+      const options = useSupabaseSyncMock.mock.calls.at(-1)?.[0] as {
+        sync: (payload: Record<string, unknown>) => Promise<unknown>;
+      };
+      let resolve!: (value: { error: null | { message: string } }) => void;
+      let reject!: (error: Error) => void;
+      rpc.mockReturnValueOnce(
+        new Promise((res, rej) => {
+          resolve = res;
+          reject = rej;
+        })
+      );
+      const startedAt = Date.now();
+      const saving = options.sync({});
+      expect(timeline.isLikelySelfOriginUpdate(startedAt)).toBe(true);
+      expect(timeline.getLastLocalSyncTime()).toBe(0);
+      if (outcome === 'session-reset') timeline.resetSyncTimeline();
+      if (outcome === 'throw') {
+        reject(new Error('offline'));
+        await expect(saving).rejects.toThrow('offline');
+      } else {
+        resolve({ error: outcome === 'error' ? { message: 'denied' } : null });
+        await saving;
+      }
+      expect(timeline.isLikelySelfOriginUpdate(startedAt)).toBe(outcome === 'success');
+    }
+  );
   it('skips reinitialization when sync already exists for same user', async () => {
     await initializeTarkovSync();
     expect(useSupabaseSyncMock).toHaveBeenCalledTimes(1);
@@ -424,18 +2611,21 @@ describe('useTarkov sync integration', () => {
     expect(cleanupSync).toHaveBeenCalledTimes(1);
     expect(useSupabaseSyncMock).toHaveBeenCalledTimes(1);
   });
-  it('shows other_account toast and clears mismatched local data', async () => {
+  it('shows other_account toast and replaces mismatched data with current-user progress', async () => {
     localStorage.setItem(
       STORAGE_KEYS.progress,
       JSON.stringify({
         _timestamp: Date.now(),
         _userId: 'other-user',
-        data: useTarkovStore().$state,
+        data: { ...structuredClone(defaultState), pvp: progressWithLevel(47) },
       })
     );
     await initializeTarkovSync();
     expect(showLocalIgnored).toHaveBeenCalledWith('other_account');
-    expect(localStorage.getItem(STORAGE_KEYS.progress)).toBeNull();
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!)).toMatchObject({
+      _userId: 'user-1',
+      data: { pvp: { level: 1 } },
+    });
   });
   it('keeps scoped local progress hidden until the matching user session is hydrated', async () => {
     supabaseContext.user.loggedIn = false;
@@ -462,6 +2652,28 @@ describe('useTarkov sync integration', () => {
     await initializeTarkovSync();
     expect(store.pvp.level).toBe(7);
     expect(getLastSyncPayload().p_modes.pvp).toEqual(expect.objectContaining({ level: 7 }));
+  });
+  it('keeps the owned active copy in place when hydrating before the session loads', () => {
+    supabaseContext.user.loggedIn = false;
+    supabaseContext.user.id = null;
+    localStorage.setItem(
+      STORAGE_KEYS.progress,
+      JSON.stringify({
+        _timestamp: Date.now(),
+        _userId: 'user-1',
+        data: { ...structuredClone(defaultState), pvp: progressWithLevel(7) },
+      })
+    );
+    const pinia = createPinia().use(piniaPluginPersistedstate);
+    createApp({}).use(pinia);
+    setActivePinia(pinia);
+    const store = useTarkovStore();
+    expect(store.pvp.level).toBe(1);
+    expect(localStorage.getItem(`${STORAGE_KEYS.progressRecoveryPrefix}user-1`)).toBeNull();
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!)).toMatchObject({
+      _userId: 'user-1',
+      data: { pvp: { level: 7 } },
+    });
   });
   it('refreshes metadata after restoring scoped progress with a different game mode', async () => {
     localStorage.setItem(
@@ -572,7 +2784,7 @@ describe('useTarkov sync integration', () => {
     expect(store.pvp.level).toBe(9);
     expect(getLastSyncPayload().p_modes.pvp).toEqual(expect.objectContaining({ level: 9 }));
   });
-  it('uses the preserved scoped snapshot after auth reset overwrites localStorage', async () => {
+  it('uses the freshest matching active snapshot when it is newer than the handoff', async () => {
     const store = useTarkovStore();
     store.$patch((state) => {
       state.pvp.level = 14;
@@ -606,15 +2818,226 @@ describe('useTarkov sync integration', () => {
       JSON.stringify({
         _timestamp: preservedTimestamp + 5000,
         _userId: 'user-2',
-        data: structuredClone(defaultState),
+        data: {
+          ...structuredClone(defaultState),
+          pvp: progressWithLevel(12),
+        },
       })
     );
     const overwrittenSnapshot = JSON.parse(localStorage.getItem(STORAGE_KEYS.progress) || '{}');
     expect(overwrittenSnapshot._userId).toBe('user-2');
-    expect(overwrittenSnapshot.data?.pvp?.level).toBe(1);
+    expect(overwrittenSnapshot.data?.pvp?.level).toBe(12);
     await initializeTarkovSync();
+    expect(store.pvp.level).toBe(12);
+    expect(getLastSyncPayload().p_modes.pvp).toEqual(expect.objectContaining({ level: 12 }));
+  });
+  it('keeps preserved snapshot mode clocks when adopting it through real persistence', async () => {
+    const base = Date.parse('2026-09-06T12:00:00Z');
+    vi.spyOn(Date, 'now').mockReturnValue(base + 100_000);
+    const pinia = createPinia().use(piniaPluginPersistedstate);
+    createApp({}).use(pinia);
+    setActivePinia(pinia);
+    const store = useTarkovStore();
+    supabaseContext.user.id = 'user-2';
+    localStorage.setItem(
+      STORAGE_KEYS.progress,
+      JSON.stringify({
+        _timestamp: base + 10_000,
+        _metadataTimestamp: base + 10_000,
+        _modeTimestamps: { pvp: base + 10_000, pve: base + 10_000, seasonal: base + 10_000 },
+        _userId: 'user-2',
+        data: { ...structuredClone(defaultState), pvp: progressWithLevel(9) },
+      })
+    );
+    resetTarkovSync('user switched', { preservePersistedStateForUserId: 'user-2' });
+    store.$reset();
+    // A memory reset no longer creates an authoritative placeholder. Legacy-tab
+    // placeholder writes are isolated and recovered by the native authority tests.
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!).data.pvp.level).toBe(9);
+    single.mockResolvedValue({
+      data: createRemoteRow({ updated_at: new Date(base + 1_000).toISOString() }),
+      error: null,
+    });
+    modeProgressResult.data = [
+      {
+        game_mode: 'pvp',
+        season_number: 0,
+        progress_data: progressWithLevel(1),
+        progress_updated_at: new Date(base + 1_000).toISOString(),
+      },
+    ];
+    await initializeTarkovSync();
+    await nextTick();
+    await flushActiveProgressWrites();
     expect(store.pvp.level).toBe(9);
-    expect(getLastSyncPayload().p_modes.pvp).toEqual(expect.objectContaining({ level: 9 }));
+    const persisted = JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!);
+    expect(persisted.data.pvp.level).toBe(9);
+    expect(persisted._modeTimestamps.pvp).toBe(base + 10_000);
+  });
+  it.each([
+    { level: 2, handoff: false },
+    { level: 1, handoff: false },
+    { level: 2, handoff: true },
+    { level: 1, handoff: true },
+  ])(
+    'keeps a genuine queued level decrease to $level through startup, handoff=$handoff',
+    async ({ level, handoff }) => {
+      const base = Date.parse('2026-09-06T12:00:00Z');
+      vi.spyOn(Date, 'now').mockReturnValue(base + 100_000);
+      localStorage.setItem(
+        STORAGE_KEYS.progress,
+        JSON.stringify({
+          _timestamp: base + 10_000,
+          _modeTimestamps: { pvp: base + 10_000, pve: 0, seasonal: 0 },
+          _userId: 'user-1',
+          data: { ...structuredClone(defaultState), pvp: progressWithLevel(9) },
+        })
+      );
+      const pinia = createPinia().use(piniaPluginPersistedstate);
+      createApp({}).use(pinia);
+      setActivePinia(pinia);
+      const store = useTarkovStore();
+      const gate = Promise.withResolvers<undefined>();
+      const held = navigator.locks.request(
+        `${STORAGE_KEYS.progress}:mutation`,
+        { mode: 'exclusive' },
+        () => gate.promise
+      );
+      try {
+        store.$patch((state) => {
+          state.pvp.level = level;
+        });
+        if (handoff) preserveUnsavedSessionProgress('user-1');
+        single.mockResolvedValue({
+          data: createRemoteRow({ updated_at: new Date(base + 1_000).toISOString() }),
+          error: null,
+        });
+        modeProgressResult.data = [
+          {
+            game_mode: 'pvp',
+            season_number: 0,
+            progress_data: progressWithLevel(9),
+            progress_updated_at: new Date(base + 1_000).toISOString(),
+          },
+        ];
+        await initializeTarkovSync();
+        expect(store.pvp.level).toBe(level);
+        expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!).data.pvp.level).toBe(9);
+      } finally {
+        gate.resolve(undefined);
+        await held;
+        await flushActiveProgressWrites();
+      }
+      const persisted = JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!);
+      expect(persisted.data.pvp.level).toBe(level);
+      expect(persisted._modeTimestamps.pvp).toBe(base + 100_000);
+    }
+  );
+  it('keeps a failed memory edit when an older conditional acknowledgement succeeds', async () => {
+    const original = JSON.stringify({
+      _userId: 'user-1',
+      _timestamp: 100,
+      data: { ...structuredClone(defaultState), pvp: progressWithLevel(10) },
+    });
+    localStorage.setItem(STORAGE_KEYS.progress, original);
+    const pinia = createPinia().use(piniaPluginPersistedstate);
+    createApp({}).use(pinia);
+    setActivePinia(pinia);
+    const store = useTarkovStore();
+    const status = await import('@/stores/tarkov/progressSaveStatus');
+    const setItem = localStorage.setItem.bind(localStorage);
+    vi.spyOn(localStorage, 'setItem').mockImplementation((key, value) => {
+      if (key === STORAGE_KEYS.progress && JSON.parse(value).data.pvp.level === 20)
+        throw new DOMException('full', 'QuotaExceededError');
+      setItem(key, value);
+    });
+    store.$patch((state) => {
+      state.pvp.level = 20;
+    });
+    expect(
+      await persistActiveProgressValue(
+        original,
+        true,
+        parsePersistedProgressState(original, 'user-1')
+      )
+    ).toBe(true);
+    await flushActiveProgressWrites();
+    expect(store.pvp.level).toBe(20);
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!).data.pvp.level).toBe(10);
+    expect(status.progressSaveStatus.local).toBe('failed');
+    expect(status.progressSaveStatus.localFailure).toBe('quota');
+    expect(status.hasUnsavedProgressChanges()).toBe(true);
+  });
+  it('keeps genuine queued owner progress when durable storage belongs to another account', async () => {
+    const pinia = createPinia().use(piniaPluginPersistedstate);
+    createApp({}).use(pinia);
+    setActivePinia(pinia);
+    const store = useTarkovStore();
+    const foreign = JSON.stringify({
+      _userId: 'user-2',
+      _timestamp: 100,
+      data: { ...structuredClone(defaultState), pvp: progressWithLevel(15) },
+    });
+    localStorage.setItem(STORAGE_KEYS.progress, foreign);
+    const gate = Promise.withResolvers<undefined>();
+    const held = navigator.locks.request(
+      `${STORAGE_KEYS.progress}:mutation`,
+      { mode: 'exclusive' },
+      () => gate.promise
+    );
+    try {
+      store.$patch((state) => {
+        state.pvp.level = 37;
+      });
+      // Initial startup must see this real edit without an explicit retry handoff.
+      await initializeTarkovSync();
+      expect(store.pvp.level).toBe(37);
+      expect(
+        JSON.parse(progressPersistStorage.getItem(STORAGE_KEYS.progress)!).data.pvp.level
+      ).toBe(37);
+      expect(localStorage.getItem(STORAGE_KEYS.progress)).toBe(foreign);
+    } finally {
+      gate.resolve(undefined);
+      await held;
+      await flushActiveProgressWrites();
+    }
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!).data.pvp.level).toBe(37);
+    expect(readAccountRecoveryCopy('user-2')?.state.pvp.level).toBe(15);
+  });
+  it('invalidates the real session-transition placeholder while the shared lock is held', async () => {
+    const pinia = createPinia().use(piniaPluginPersistedstate);
+    createApp({}).use(pinia);
+    setActivePinia(pinia);
+    const store = useTarkovStore();
+    const original = JSON.stringify({
+      _userId: 'user-1',
+      _timestamp: 100,
+      data: { ...structuredClone(defaultState), pvp: progressWithLevel(9) },
+    });
+    localStorage.setItem(STORAGE_KEYS.progress, original);
+    const gate = Promise.withResolvers<undefined>();
+    const held = navigator.locks.request(
+      `${STORAGE_KEYS.progress}:mutation`,
+      { mode: 'exclusive' },
+      () => gate.promise
+    );
+    let transition: Promise<void> | undefined;
+    try {
+      supabaseContext.user.id = 'user-2';
+      transition = resetTarkovStoreForSessionTransition('user-1', 'account switch');
+      await nextTick();
+      expect(store.pvp.level).toBe(1);
+      expect(progressPersistStorage.getItem(STORAGE_KEYS.progress)).toBe(original);
+      expect(localStorage.getItem(STORAGE_KEYS.progress)).toBe(original);
+    } finally {
+      gate.resolve(undefined);
+      await held;
+      await transition;
+      await flushActiveProgressWrites();
+    }
+    expect(localStorage.getItem(STORAGE_KEYS.progress)).toBeNull();
+    const recovered = readAccountRecoveryCopy('user-1');
+    expect(recovered?.state.pvp.level).toBe(9);
   });
   it('restores the previous user snapshot after logout resets the store', async () => {
     const store = useTarkovStore();
@@ -635,13 +3058,13 @@ describe('useTarkov sync integration', () => {
     store.$patch((state) => {
       state.pvp.level = 42;
     });
-    resetTarkovStoreForSessionTransition('user-1', 'logout');
+    await resetTarkovStoreForSessionTransition('user-1', 'logout');
     const restoredSnapshot = JSON.parse(localStorage.getItem(STORAGE_KEYS.progress) || '{}');
     expect(store.pvp.level).toBe(1);
     expect(restoredSnapshot._userId).toBe('user-1');
     expect(restoredSnapshot.data?.pvp?.level).toBe(11);
   });
-  it('clears progress when preserved logout storage cannot be rewritten', () => {
+  it('clears progress when preserved logout storage cannot be rewritten', async () => {
     const store = useTarkovStore();
     const preservedTimestamp = Date.parse('2026-02-25T00:00:00.000Z');
     localStorage.setItem(
@@ -664,7 +3087,7 @@ describe('useTarkov sync integration', () => {
       }
       return originalSetItem(key, value);
     });
-    expect(() => resetTarkovStoreForSessionTransition('user-1', 'logout')).not.toThrow();
+    await expect(resetTarkovStoreForSessionTransition('user-1', 'logout')).resolves.toBeUndefined();
     expect(store.pvp.level).toBe(1);
     expect(localStorage.getItem(STORAGE_KEYS.progress)).toBeNull();
     expect(loggerMock.error).toHaveBeenCalledWith(
@@ -689,7 +3112,7 @@ describe('useTarkov sync integration', () => {
     );
     supabaseContext.user.id = null;
     supabaseContext.user.loggedIn = false;
-    resetTarkovStoreForSessionTransition('user-1', 'logout');
+    await resetTarkovStoreForSessionTransition('user-1', 'logout');
     store.$patch((state) => {
       state.pvp.level = 4;
     });
@@ -728,7 +3151,7 @@ describe('useTarkov sync integration', () => {
     store.$patch((state) => {
       state.pvp.level = 42;
     });
-    resetTarkovStoreForSessionTransition('user-1', 'logout');
+    await resetTarkovStoreForSessionTransition('user-1', 'logout');
     const restoredSnapshot = JSON.parse(localStorage.getItem(STORAGE_KEYS.progress) || '{}');
     expect(store.pvp.level).toBe(1);
     expect(restoredSnapshot._userId).toBeUndefined();
@@ -932,19 +3355,12 @@ describe('useTarkov sync integration', () => {
     expect(getLastSyncPayload()).toEqual(
       expect.objectContaining({
         p_current_game_mode: 'pve',
-        p_modes: expect.objectContaining({
-          pvp: expect.objectContaining({
-            level: 1,
-            progressEpoch: 3,
-          }),
+        p_modes: {
           pve: expect.objectContaining({
             level: 8,
             progressEpoch: 0,
           }),
-          seasonal: expect.objectContaining({
-            level: 1,
-          }),
-        }),
+        },
       })
     );
     expect(store.pvp.level).toBe(1);
@@ -1117,6 +3533,50 @@ describe('useTarkov sync integration', () => {
     expect(useSupabaseSyncMock).toHaveBeenCalledTimes(1);
     expect(showLoadFailed).not.toHaveBeenCalled();
   });
+  it.each([false, true])(
+    'splits every populated local mode on first sign-in, oversized=%s',
+    async (oversized) => {
+      const objectives = Object.fromEntries(
+        Array.from({ length: 2500 }, (_, i) => [
+          `objective-${i}`.padEnd(40, 'x'),
+          { complete: true, count: 1 },
+        ])
+      );
+      const populated = structuredClone(defaultState);
+      for (const mode of ['pvp', 'pve', 'seasonal'] as const) {
+        populated[mode].level = 7;
+        populated[mode].taskObjectives = structuredClone(objectives);
+      }
+      seedOwnedEnvelope('user-1', populated);
+      single.mockResolvedValue({
+        data: null,
+        error: { code: 'PGRST116', message: 'No rows found' },
+      });
+      modeProgressResult.data = [];
+      rpc.mockImplementation(async (_name, args) => ({
+        error:
+          oversized && Object.hasOwn(args!.p_modes, 'pvp')
+            ? { code: 'P0001', message: 'p_modes exceeds the maximum payload size' }
+            : null,
+      }));
+      if (oversized) {
+        await expect(initializeTarkovSync()).rejects.toThrow(
+          'p_modes exceeds the maximum payload size'
+        );
+        expect(useSupabaseSyncMock).not.toHaveBeenCalled();
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!);
+        expect(Object.keys(saved.data.seasonal.taskObjectives)).toHaveLength(2500);
+      } else {
+        await initializeTarkovSync();
+        expect(useSupabaseSyncMock).toHaveBeenCalledTimes(1);
+      }
+      expect(rpc.mock.calls.map((call) => Object.keys(call[1]!.p_modes))).toEqual([
+        ['pvp'],
+        ['pve'],
+        ['seasonal'],
+      ]);
+    }
+  );
   it('migrates persisted item-only progress when remote row is missing', async () => {
     localStorage.setItem(
       STORAGE_KEYS.progress,
@@ -1177,6 +3637,58 @@ describe('useTarkov sync integration', () => {
     await Promise.resolve();
     expect(useSupabaseSyncMock).toHaveBeenCalledTimes(1);
   });
+  it('persists manual-only progress that starts a deferred subscription', async () => {
+    single.mockResolvedValue({ data: null, error: { code: 'PGRST116', message: 'No rows found' } });
+    await initializeTarkovSync();
+    const store = useTarkovStore();
+    store.addManualActivityEntries([
+      { id: 'legacy-only', timestamp: 1000, type: 'task', action: 'complete', title: 'Legacy' },
+    ]);
+    await nextTick();
+    await flushActiveProgressWrites();
+    expect(useSupabaseSyncMock).toHaveBeenCalledTimes(1);
+    expect(syncInitialState).toHaveBeenCalledTimes(1);
+    const options = useSupabaseSyncMock.mock.calls.at(-1)?.[0] as {
+      transform: (state: typeof store.$state) => { pvp_data: UserProgressData } | null;
+    };
+    expect(options.transform(store.$state)?.pvp_data.manualActivityHistory?.[0]?.id).toBe(
+      'legacy-only'
+    );
+    store.clearManualActivityHistory();
+    expect(options.transform(store.$state)?.pvp_data.manualActivityEpoch).toBe(1);
+  });
+  it.each(['failure', 'rejection', 'session-reset', 'persistent-failure'])(
+    'makes one direct initial upload and leaves retries to the reconciled controller: %s',
+    async (outcome) => {
+      single.mockResolvedValue({
+        data: null,
+        error: { code: 'PGRST116', message: 'No rows found' },
+      });
+      await initializeTarkovSync();
+      vi.useFakeTimers();
+      try {
+        if (outcome === 'rejection') syncInitialState.mockRejectedValueOnce(new Error('offline'));
+        else syncInitialState.mockResolvedValueOnce(null);
+        if (outcome === 'persistent-failure') syncInitialState.mockResolvedValue(null);
+        useTarkovStore().addManualActivityEntries([
+          { id: 'initial', timestamp: 1000, type: 'task', action: 'complete', title: 'Initial' },
+        ]);
+        await nextTick();
+        await flushActiveProgressWrites();
+        expect(syncInitialState).toHaveBeenCalledTimes(1);
+        if (outcome === 'session-reset') resetTarkovSync('session changed');
+        await vi.advanceTimersByTimeAsync(5000);
+        // A second direct attempt would skip the remote merge that controller retries perform.
+        expect(syncInitialState).toHaveBeenCalledTimes(1);
+        const options = useSupabaseSyncMock.mock.calls.at(-1)?.[0] as {
+          reconcileBeforeRetry?: unknown;
+        };
+        expect(options.reconcileBeforeRetry).toEqual(expect.any(Function));
+      } finally {
+        vi.useRealTimers();
+      }
+    }
+  );
   it('shows merge toast for realtime conflicts when no API update metadata is present', async () => {
     single.mockResolvedValue({
       data: createRemoteRow({
@@ -1351,6 +3863,445 @@ describe('useTarkov sync integration', () => {
     await expect(initializeTarkovSync()).rejects.toThrow('Supabase initial load failed');
     expect(showLocalIgnored).toHaveBeenCalledTimes(1);
   });
+  it.each([
+    ['active', 'short_remote'],
+    ['recovery', 'short_remote'],
+    ['active', 'both_oversized'],
+    ['recovery', 'both_oversized'],
+    ['active', 'remote_clear'],
+    ['recovery', 'remote_clear'],
+    ['foreign', 'short_remote'],
+    ['legacy', 'short_remote'],
+    ['active', 'newer_remote_epoch'],
+    ['active', 'older_remote_epoch'],
+    ['recovery', 'older_remote_epoch'],
+  ])(
+    'preserves historical confirmation winners through %s hydration with %s',
+    async (source, scenario) => {
+      const local = {
+        ...progressWithLevel(1),
+        progressEpoch: scenario === 'older_remote_epoch' ? 1 : 0,
+        taskAvailability: Object.fromEntries(
+          Array.from({ length: 66 }, (_, i) => [
+            `s${i + 1}`,
+            { requirements: 'r'.repeat(4000), timestamp: i + 200 },
+          ])
+        ),
+      };
+      const envelope = JSON.stringify({
+        _userId: source === 'foreign' ? 'user-2' : 'user-1',
+        _timestamp: SESSION_BASE_MS,
+        data: { ...structuredClone(defaultState), pvp: local },
+      });
+      localStorage.setItem(
+        source !== 'recovery'
+          ? STORAGE_KEYS.progress
+          : `${STORAGE_KEYS.progressRecoveryPrefix}user-1`,
+        source === 'legacy'
+          ? JSON.stringify({ ...structuredClone(defaultState), pvp: local })
+          : envelope
+      );
+      const pinia = createPinia().use(piniaPluginPersistedstate);
+      createApp({}).use(pinia);
+      setActivePinia(pinia);
+      const store = useTarkovStore();
+      if (source === 'active') {
+        expect(store.pvp.taskAvailability).not.toHaveProperty('s1');
+        expect(Object.keys(store.pvp.taskAvailability ?? {})).toHaveLength(65);
+      }
+      single.mockResolvedValue({
+        data: createRemoteRow({ pvp_data: progressWithLevel(1) }),
+        error: null,
+      });
+      const remote =
+        scenario === 'both_oversized'
+          ? {
+              ...Object.fromEntries(
+                Array.from({ length: 65 }, (_, i) => [
+                  `s${i + 2}`,
+                  { requirements: 'r'.repeat(4000), timestamp: i },
+                ])
+              ),
+              extra: { requirements: 'r'.repeat(4000), timestamp: 0 },
+              s1: { requirements: 'old', timestamp: 100 },
+            }
+          : {
+              s1: {
+                requirements: scenario === 'remote_clear' ? '' : 'old',
+                timestamp: scenario === 'remote_clear' ? 200 : 0,
+              },
+            };
+      modeProgressResult.data = [
+        modeRow('pvp', {
+          ...progressWithLevel(1),
+          progressEpoch: scenario === 'newer_remote_epoch' ? 1 : 0,
+          taskAvailability: remote,
+        }),
+      ];
+      await initializeTarkovSync();
+      if (source === 'foreign' || source === 'legacy' || scenario === 'newer_remote_epoch') {
+        expect(store.pvp.taskAvailability).toEqual(remote);
+      } else if (scenario === 'remote_clear') {
+        expect(store.pvp.taskAvailability?.s1).toEqual(remote.s1);
+        expect(Object.keys(store.pvp.taskAvailability ?? {})).toHaveLength(66);
+      } else {
+        expect(store.pvp.taskAvailability).not.toHaveProperty('s1');
+        expect(Object.keys(store.pvp.taskAvailability ?? {})).toHaveLength(65);
+      }
+    }
+  );
+  it.each(['pvp', 'pve', 'seasonal'] as const)(
+    'reconciles historical %s evidence after a bounded write and real reload',
+    async (mode) => {
+      const confirmations = Object.fromEntries(
+        Array.from({ length: 66 }, (_, i) => [
+          `s${i + 1}`,
+          { requirements: 'r'.repeat(4000), timestamp: i + 200 },
+        ])
+      );
+      const raw = JSON.stringify({
+        _userId: 'user-1',
+        _timestamp: SESSION_BASE_MS,
+        data: {
+          ...structuredClone(defaultState),
+          [mode]: { ...progressWithLevel(1), taskAvailability: confirmations },
+        },
+      });
+      localStorage.setItem(STORAGE_KEYS.progress, raw);
+      const createPersistedStore = () => {
+        const pinia = createPinia().use(piniaPluginPersistedstate);
+        createApp({}).use(pinia);
+        setActivePinia(pinia);
+        return useTarkovStore();
+      };
+      const first = createPersistedStore();
+      first[mode].level = 2;
+      await nextTick();
+      await flushActiveProgressWrites();
+      expect(localStorage.getItem(`${STORAGE_KEYS.progressRecoveryPrefix}user-1`)).toBe(raw);
+      resetTarkovSync('reload');
+      const restored = createPersistedStore();
+      single.mockResolvedValue({
+        data: createRemoteRow({ pvp_data: progressWithLevel(1) }),
+        error: null,
+      });
+      modeProgressResult.data = [
+        modeRow(mode, {
+          ...progressWithLevel(1),
+          taskAvailability: { s1: { requirements: 'old', timestamp: 0 } },
+        }),
+      ];
+      await initializeTarkovSync();
+      expect(restored[mode].taskAvailability).not.toHaveProperty('s1');
+      expect(restored[mode].level).toBe(2);
+      expect(localStorage.getItem(`${STORAGE_KEYS.progressRecoveryPrefix}user-1`)).toBeNull();
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!);
+      expect(Object.keys(saved.data[mode].taskAvailability)).toHaveLength(65);
+      expect(saved).not.toHaveProperty('confirmationCandidates');
+      expect(saved.data).not.toHaveProperty('confirmationCandidates');
+    }
+  );
+  it('retains historical evidence across sign-out and another account before owner reconciliation', async () => {
+    const confirmations = Object.fromEntries(
+      Array.from({ length: 66 }, (_, i) => [
+        `s${i + 1}`,
+        { requirements: 'r'.repeat(4000), timestamp: i + 200 },
+      ])
+    );
+    const raw = JSON.stringify({
+      _userId: 'user-1',
+      _timestamp: SESSION_BASE_MS,
+      data: {
+        ...structuredClone(defaultState),
+        pvp: { ...progressWithLevel(1), taskAvailability: confirmations },
+      },
+    });
+    localStorage.setItem(STORAGE_KEYS.progress, raw);
+    const pinia = createPinia().use(piniaPluginPersistedstate);
+    createApp({}).use(pinia);
+    setActivePinia(pinia);
+    const store = useTarkovStore();
+    supabaseContext.user.id = null as unknown as string;
+    supabaseContext.user.loggedIn = false;
+    await resetTarkovStoreForSessionTransition('user-1', 'logout');
+    await nextTick();
+    await flushActiveProgressWrites();
+    supabaseContext.user.id = 'user-2';
+    supabaseContext.user.loggedIn = true;
+    resetTarkovSync('another account');
+    await initializeTarkovSync();
+    expect(store.pvp.taskAvailability).toEqual({});
+    expect(localStorage.getItem(`${STORAGE_KEYS.progressRecoveryPrefix}user-1`)).toBe(raw);
+    supabaseContext.user.id = 'user-1';
+    resetTarkovSync('original owner');
+    single.mockResolvedValue({
+      data: createRemoteRow({ pvp_data: progressWithLevel(1) }),
+      error: null,
+    });
+    modeProgressResult.data = [
+      modeRow('pvp', {
+        ...progressWithLevel(1),
+        taskAvailability: { s1: { requirements: 'old', timestamp: 0 } },
+      }),
+    ];
+    await initializeTarkovSync();
+    expect(store.pvp.taskAvailability).not.toHaveProperty('s1');
+    expect(Object.keys(store.pvp.taskAvailability!)).toHaveLength(65);
+    expect(localStorage.getItem(`${STORAGE_KEYS.progressRecoveryPrefix}user-1`)).toBeNull();
+  });
+  it('preserves the original on failed startup upload and retires it only after a successful retry', async () => {
+    const confirmations = Object.fromEntries(
+      Array.from({ length: 66 }, (_, i) => [
+        `s${i + 1}`,
+        { requirements: 'r'.repeat(4000), timestamp: i + 200 },
+      ])
+    );
+    const raw = JSON.stringify({
+      _userId: 'user-1',
+      _timestamp: SESSION_BASE_MS,
+      data: {
+        ...structuredClone(defaultState),
+        pvp: { ...progressWithLevel(1), taskAvailability: confirmations },
+      },
+    });
+    localStorage.setItem(`${STORAGE_KEYS.progressRecoveryPrefix}user-1`, raw);
+    single.mockResolvedValue({
+      data: createRemoteRow({ pvp_data: progressWithLevel(1) }),
+      error: null,
+    });
+    modeProgressResult.data = [
+      modeRow('pvp', {
+        ...progressWithLevel(1),
+        taskAvailability: { s1: { requirements: 'old', timestamp: 0 } },
+      }),
+    ];
+    rpc.mockResolvedValue({ error: { message: 'offline' } });
+    await expect(initializeTarkovSync()).rejects.toThrow('Supabase initial load failed');
+    expect(localStorage.getItem(`${STORAGE_KEYS.progressRecoveryPrefix}user-1`)).toBe(raw);
+    rpc.mockResolvedValue({ error: null });
+    await initializeTarkovSync();
+    expect(useTarkovStore().pvp.taskAvailability).not.toHaveProperty('s1');
+    expect(localStorage.getItem(`${STORAGE_KEYS.progressRecoveryPrefix}user-1`)).toBeNull();
+  });
+  it('reconciles historical evidence even when quota prevents making a recovery copy', async () => {
+    const confirmations = Object.fromEntries(
+      Array.from({ length: 66 }, (_, i) => [
+        `s${i + 1}`,
+        { requirements: 'r'.repeat(4000), timestamp: i + 200 },
+      ])
+    );
+    const raw = JSON.stringify({
+      _userId: 'user-1',
+      _timestamp: SESSION_BASE_MS,
+      data: {
+        ...structuredClone(defaultState),
+        pvp: { ...progressWithLevel(1), taskAvailability: confirmations },
+      },
+    });
+    localStorage.setItem(STORAGE_KEYS.progress, raw);
+    const pinia = createPinia().use(piniaPluginPersistedstate);
+    createApp({}).use(pinia);
+    setActivePinia(pinia);
+    const store = useTarkovStore();
+    const originalSet = localStorage.setItem.bind(localStorage);
+    const quotaSpy = vi.spyOn(localStorage, 'setItem').mockImplementation((key, value) => {
+      if (key === `${STORAGE_KEYS.progressRecoveryPrefix}user-1`)
+        throw new DOMException('full', 'QuotaExceededError');
+      originalSet(key, value);
+    });
+    store.pvp.level = 2;
+    await nextTick();
+    await flushActiveProgressWrites();
+    expect(localStorage.getItem(STORAGE_KEYS.progress)).toBe(raw);
+    expect(isAccountRecoveryRetentionBlocked()).toBe(true);
+    single.mockResolvedValue({
+      data: createRemoteRow({ pvp_data: progressWithLevel(1) }),
+      error: null,
+    });
+    modeProgressResult.data = [
+      modeRow('pvp', {
+        ...progressWithLevel(1),
+        taskAvailability: { s1: { requirements: 'old', timestamp: 0 } },
+      }),
+    ];
+    await initializeTarkovSync();
+    expect(store.pvp.taskAvailability).not.toHaveProperty('s1');
+    expect(isAccountRecoveryRetentionBlocked()).toBe(false);
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!);
+    expect(saved.data.pvp.taskAvailability).not.toHaveProperty('s1');
+    expect(Object.keys(saved.data.pvp.taskAvailability)).toHaveLength(65);
+    quotaSpy.mockRestore();
+    store.$dispose();
+  });
+  it.each([66, 1001])(
+    'does not resurrect older duplicates when the server unions the bounded startup upload from %s entries',
+    async (count) => {
+      const confirmations = Object.fromEntries(
+        Array.from({ length: count }, (_, i) => [
+          `s${i + 1}`,
+          { requirements: 'r'.repeat(4000), timestamp: i + 200 },
+        ])
+      );
+      seedOwnedEnvelope('user-1', {
+        pvp: { ...progressWithLevel(1), taskAvailability: confirmations },
+      });
+      let server = Object.fromEntries(
+        Array.from({ length: Math.min(count, 1000) }, (_, i) => [
+          `s${i + 1}`,
+          { requirements: 'old', timestamp: 0 },
+        ])
+      );
+      single.mockResolvedValue({
+        data: createRemoteRow({ pvp_data: progressWithLevel(1) }),
+        error: null,
+      });
+      modeProgressResult.data = [
+        modeRow('pvp', { ...progressWithLevel(1), taskAvailability: server }),
+      ];
+      rpc.mockImplementation((_name, payload) => {
+        const modes = payload?.p_modes as Partial<Record<'pvp', UserProgressData>> | undefined;
+        if (modes?.pvp) server = mergeTaskAvailability(server, modes.pvp.taskAvailability);
+        return Promise.resolve({ error: null });
+      });
+      await initializeTarkovSync();
+      expect(useTarkovStore().pvp.taskAvailability).not.toHaveProperty('s1');
+      expect(server.s1?.requirements).not.toBe('old');
+      expect(Object.values(server).every((entry) => entry.requirements !== 'old')).toBe(true);
+      expect(Object.keys(server).length).toBeLessThanOrEqual(1000);
+      for (const [, payload] of rpc.mock.calls) {
+        expect(payload?.p_modes).toBeDefined();
+        const modes = payload?.p_modes as Partial<Record<'pvp', UserProgressData>>;
+        const map = modes.pvp?.taskAvailability ?? {};
+        const encoder = new TextEncoder();
+        const bytes = Object.entries(map).reduce(
+          (total, [id, entry]) =>
+            total + encoder.encode(id).length + encoder.encode(entry.requirements).length,
+          0
+        );
+        expect(bytes).toBeLessThanOrEqual(262144);
+        expect(Object.keys(map).length).toBeLessThanOrEqual(1000);
+        expect(encoder.encode(JSON.stringify(payload?.p_modes)).length).toBeLessThanOrEqual(
+          512 * 1024
+        );
+      }
+    }
+  );
+  it('retains the original when the final upload fails after a successful bounded eviction pass', async () => {
+    const confirmations = Object.fromEntries(
+      Array.from({ length: 66 }, (_, i) => [
+        `s${i + 1}`,
+        { requirements: 'r'.repeat(4000), timestamp: i + 200 },
+      ])
+    );
+    seedOwnedEnvelope('user-1', {
+      pvp: { ...progressWithLevel(1), taskAvailability: confirmations },
+    });
+    const raw = localStorage.getItem(STORAGE_KEYS.progress);
+    let server = { s1: { requirements: 'old', timestamp: 0 } };
+    single.mockResolvedValue({
+      data: createRemoteRow({ pvp_data: progressWithLevel(1) }),
+      error: null,
+    });
+    modeProgressResult.data = [
+      modeRow('pvp', { ...progressWithLevel(1), taskAvailability: server }),
+    ];
+    let writes = 0;
+    rpc.mockImplementation((_name, payload) => {
+      writes++;
+      if (writes === 2) return Promise.resolve({ error: { message: 'offline' } });
+      const modes = payload?.p_modes as Partial<Record<'pvp', UserProgressData>> | undefined;
+      if (modes?.pvp)
+        server = mergeTaskAvailability(server, modes.pvp.taskAvailability) as typeof server;
+      return Promise.resolve({ error: null });
+    });
+    await expect(initializeTarkovSync()).rejects.toThrow('Supabase initial load failed');
+    expect(server.s1.requirements).toBe('');
+    expect(localStorage.getItem(STORAGE_KEYS.progress)).toBe(raw);
+    modeProgressResult.data = [
+      modeRow('pvp', { ...progressWithLevel(1), taskAvailability: server }),
+    ];
+    await initializeTarkovSync();
+    expect(Object.values(server).every((entry) => entry.requirements !== 'old')).toBe(true);
+    expect(localStorage.getItem(STORAGE_KEYS.progress)).not.toBe(raw);
+  });
+  it('does not launch the final upload after auth changes during an eviction pass', async () => {
+    const confirmations = Object.fromEntries(
+      Array.from({ length: 66 }, (_, i) => [
+        `s${i + 1}`,
+        { requirements: 'r'.repeat(4000), timestamp: i + 200 },
+      ])
+    );
+    seedOwnedEnvelope('user-1', {
+      pvp: { ...progressWithLevel(1), taskAvailability: confirmations },
+    });
+    const raw = localStorage.getItem(STORAGE_KEYS.progress);
+    single.mockResolvedValue({
+      data: createRemoteRow({ pvp_data: progressWithLevel(1) }),
+      error: null,
+    });
+    modeProgressResult.data = [
+      modeRow('pvp', {
+        ...progressWithLevel(1),
+        taskAvailability: { s1: { requirements: 'old', timestamp: 0 } },
+      }),
+    ];
+    rpc.mockImplementationOnce(async () => {
+      await switchSession('user-1', 'user-2');
+      return Promise.resolve({ error: null });
+    });
+    await initializeTarkovSync();
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem(`${STORAGE_KEYS.progressRecoveryPrefix}user-1`)).toBe(raw);
+    expect(useTarkovStore().pvp.taskAvailability).toEqual({});
+  });
+  it('merges historical oversized confirmations before startup eviction', async () => {
+    const local = {
+      ...progressWithLevel(1),
+      taskAvailability: { s1: { requirements: 'old', timestamp: 0 } },
+    };
+    seedOwnedEnvelope('user-1', { pvp: local });
+    useTarkovStore().$patch({ pvp: local });
+    single.mockResolvedValue({
+      data: createRemoteRow({ pvp_data: progressWithLevel(1) }),
+      error: null,
+    });
+    modeProgressResult.data = [
+      modeRow('pvp', {
+        ...progressWithLevel(1),
+        taskAvailability: Object.fromEntries(
+          Array.from({ length: 66 }, (_, i) => [
+            `s${i + 1}`,
+            { requirements: 'r'.repeat(4000), timestamp: i + 1 },
+          ])
+        ),
+      }),
+    ];
+    await initializeTarkovSync();
+    expect(useTarkovStore().pvp.taskAvailability).not.toHaveProperty('s1');
+    expect(Object.keys(useTarkovStore().pvp.taskAvailability ?? {})).toHaveLength(65);
+  });
+  it.each([{ rows: [] }, { rows: [{ game_mode: 'pvp', season_number: 0, progress_data: {} }] }])(
+    'ignores poisoned legacy payloads when normalized rows are %j',
+    async ({ rows }) => {
+      modeProgressResult.data = rows;
+      single.mockResolvedValue({
+        data: createRemoteRow({
+          game_edition: 3,
+          tarkov_uid: 12345,
+          pvp_data: progressWithTaskState('poisoned-legacy-task', true),
+          pve_data: progressWithLevel(70),
+        }),
+        error: null,
+      });
+      await initializeTarkovSync();
+      expect(single).toHaveBeenCalledTimes(2);
+      expect(select.mock.calls.flat().join(',')).not.toMatch(/pvp_data|pve_data/);
+      expect(useTarkovStore().pvp.taskCompletions['poisoned-legacy-task']).toBeUndefined();
+      expect(useTarkovStore().pve.level).toBe(1);
+      expect(useTarkovStore().gameEdition).toBe(3);
+      expect(useTarkovStore().tarkovUid).toBe(12345);
+    }
+  );
   it('deduplicates repeated API update toast payloads by update id', async () => {
     const now = Date.now();
     single.mockResolvedValue({
@@ -1429,6 +4380,7 @@ describe('useTarkov sync integration', () => {
     callback?.({
       new: {
         ...payload,
+        progress_data: { ...payload.progress_data, level: 2 },
         updated_at: new Date(now + 2000).toISOString(),
       },
       old: {},
@@ -1556,6 +4508,68 @@ describe('useTarkov sync integration', () => {
       expect.objectContaining({ message: 'Failed to reset online profile: reset failed' })
     );
   });
+  it.each([
+    { scenario: 'saved', locking: true },
+    { scenario: 'save failed', locking: false },
+  ])(
+    'reports a signed-out Seasonal reset only once its replacement is saved: $scenario',
+    async ({ locking }) => {
+      supabaseContext.user.id = null;
+      supabaseContext.user.loggedIn = false;
+      const original = JSON.stringify({
+        _userId: null,
+        _timestamp: Date.now(),
+        data: { ...structuredClone(defaultState), seasonal: progressWithLevel(17) },
+      });
+      localStorage.setItem(STORAGE_KEYS.progress, original);
+      const pinia = createPinia().use(piniaPluginPersistedstate);
+      createApp({}).use(pinia);
+      setActivePinia(pinia);
+      const store = useTarkovStore();
+      expect(store.seasonal.level).toBe(17);
+      const locks = Object.getOwnPropertyDescriptor(navigator, 'locks')!;
+      if (!locking)
+        Object.defineProperty(navigator, 'locks', { configurable: true, value: undefined });
+      try {
+        const reset = store.resetSeasonalData();
+        if (locking) await expect(reset).resolves.toBeUndefined();
+        else
+          await expect(reset).rejects.toThrow(
+            'Local guest progress could not be saved after reset'
+          );
+      } finally {
+        Object.defineProperty(navigator, 'locks', locks);
+      }
+      expect(store.seasonal.level).toBe(locking ? defaultState.seasonal.level : 17);
+      const completion = expect(loggerMock.debug);
+      (locking ? completion : completion.not).toHaveBeenCalledWith(
+        '[TarkovStore] Seasonal data reset complete'
+      );
+      // A reload restores an uncleared envelope, so only a failure may be reported for it.
+      expect(localStorage.getItem(STORAGE_KEYS.progress) === original).toBe(!locking);
+    }
+  );
+  it('logs an online profile reset whose active copy could not be cleared as failed', async () => {
+    const store = useTarkovStore();
+    store.$patch((state) => {
+      state.pvp.level = 42;
+    });
+    const locks = Object.getOwnPropertyDescriptor(navigator, 'locks')!;
+    Object.defineProperty(navigator, 'locks', { configurable: true, value: undefined });
+    try {
+      await store.resetOnlineProfile();
+    } finally {
+      Object.defineProperty(navigator, 'locks', locks);
+    }
+    // The cloud already holds the reset, so memory follows it even though cleanup failed.
+    expect(store.pvp.level).toBe(defaultState.pvp.level);
+    expect(loggerMock.error).toHaveBeenCalledWith(
+      'Error resetting online profile:',
+      expect.objectContaining({
+        message: 'Online profile reset saved, but local progress could not be cleared',
+      })
+    );
+  });
   it('shows load_failed and aborts sync for multi-provider account with no progress row', async () => {
     supabaseContext.user.providers = ['discord', 'google'];
     single.mockResolvedValue({
@@ -1566,4 +4580,1238 @@ describe('useTarkov sync integration', () => {
     expect(showLoadFailed).toHaveBeenCalledTimes(1);
     expect(useSupabaseSyncMock).not.toHaveBeenCalled();
   });
+  // ---------------------------------------------------------------------------
+  // Approved race: a startup read that stays pending across an auth transition.
+  // A's continuation must not patch the store/persisted envelope after the
+  // transition, and must not install or replace sync/listener machinery.
+  // ---------------------------------------------------------------------------
+  describe('stale startup initialization continued across auth transitions', () => {
+    const seedSessionA = () =>
+      seedOwnedEnvelope('user-1', {
+        pvp: compoundProgress(10, 'task-local-a'),
+        pve: progressWithLevel(7),
+      });
+    const releaseStaleRead = (
+      deferred: ReturnType<typeof createDeferredRead>,
+      result: SupabaseRowResult
+    ) => {
+      modeProgressResult.data = [
+        modeRow('pvp', compoundProgress(10, 'task-stale-a')),
+        modeRow('pve', progressWithLevel(3)),
+      ];
+      deferred.resolve(result);
+    };
+    it('leaves the switched-to session untouched when the previous session read resolves late', async () => {
+      seedSessionA();
+      const staleRead = createDeferredRead();
+      single.mockImplementationOnce(() => staleRead.promise);
+      const staleInit = initializeTarkovSync();
+      expect(getUserIdFilters()).toEqual(['user-1']);
+      await switchSession('user-1', 'user-2');
+      single.mockResolvedValue({
+        data: createRemoteRow({
+          updated_at: sessionClock(2_000),
+          user_id: 'user-2',
+          pvp_data: compoundProgress(33, 'task-b'),
+          pve_data: progressWithLevel(11),
+        }),
+        error: null,
+      });
+      await initializeTarkovSync();
+      await settleBackgroundWork();
+      const store = useTarkovStore();
+      expect(store.pvp.taskCompletions['task-b']?.complete).toBe(true);
+      expect(store.pvp.level).toBe(33);
+      expect(readPersistedEnvelope()._userId).toBe('user-2');
+      const baseline = watchSessionActivity();
+      releaseStaleRead(staleRead, {
+        data: createRemoteRow({ user_id: 'user-1', updated_at: sessionClock(9_000) }),
+        error: null,
+      });
+      await staleInit.catch(() => undefined);
+      await settleBackgroundWork();
+      expectNoFollowOnSessionActivity(baseline, watchSessionActivity());
+      expect(useTarkovStore().pvp.level).toBe(33);
+      expect(useTarkovStore().pve.level).toBe(11);
+      expect(useTarkovStore().pvp.taskCompletions['task-b']?.complete).toBe(true);
+      expect(useTarkovStore().pvp.taskCompletions['task-stale-a']).toBeUndefined();
+      const envelope = readPersistedEnvelope();
+      expect(envelope._userId).toBe('user-2');
+      expect(envelope.data?.pvp?.taskCompletions?.['task-b']?.complete).toBe(true);
+      expect(showLocalIgnored).not.toHaveBeenCalled();
+      expect(showLoadFailed).not.toHaveBeenCalled();
+    });
+    it('keeps the signed-out store and protected snapshot untouched when a pending read resolves late', async () => {
+      seedSessionA();
+      const staleRead = createDeferredRead();
+      single.mockImplementationOnce(() => staleRead.promise);
+      const staleInit = initializeTarkovSync();
+      expect(getUserIdFilters()).toEqual(['user-1']);
+      await switchSession('user-1', null, 'logout');
+      expect(useTarkovStore().pvp.taskCompletions['task-local-a']).toBeUndefined();
+      expect(readPersistedEnvelope()._userId).toBe('user-1');
+      const baseline = watchSessionActivity();
+      releaseStaleRead(staleRead, {
+        data: createRemoteRow({ user_id: 'user-1', updated_at: sessionClock(9_000) }),
+        error: null,
+      });
+      await staleInit.catch(() => undefined);
+      await settleBackgroundWork();
+      expectNoFollowOnSessionActivity(baseline, watchSessionActivity());
+      expect(useTarkovStore().pvp.level).toBe(1);
+      expect(useTarkovStore().pvp.taskCompletions['task-stale-a']).toBeUndefined();
+      const envelope = readPersistedEnvelope();
+      expect(envelope._userId).toBe('user-1');
+      expect(envelope._timestamp).toBe(SESSION_BASE_MS);
+      expect(showLocalIgnored).not.toHaveBeenCalled();
+      expect(showLoadFailed).not.toHaveBeenCalled();
+    });
+    it('does not continue a stale initial read after a newer session for the same identity ran', async () => {
+      seedSessionA();
+      const staleModeRead = createDeferredModeRead();
+      staleModeRead.begin();
+      single.mockResolvedValueOnce({
+        data: createRemoteRow({
+          user_id: 'user-1',
+          updated_at: sessionClock(1_000),
+          pvp_data: null,
+          pve_data: null,
+        }),
+        error: null,
+      });
+      const staleInit = initializeTarkovSync();
+      await settleBackgroundWork();
+      await switchSession('user-1', 'user-2');
+      single.mockResolvedValue({
+        data: createRemoteRow({
+          updated_at: sessionClock(2_000),
+          user_id: 'user-2',
+          pvp_data: compoundProgress(33, 'task-b'),
+          pve_data: progressWithLevel(11),
+        }),
+        error: null,
+      });
+      await initializeTarkovSync();
+      await settleBackgroundWork();
+      await switchSession('user-2', 'user-1');
+      const freshRow = createRemoteRow({
+        updated_at: sessionClock(30_000),
+        user_id: 'user-1',
+        pvp_data: compoundProgress(50, 'task-return-second'),
+        pve_data: progressWithLevel(12),
+      });
+      single.mockResolvedValue({ data: freshRow, error: null });
+      await initializeTarkovSync();
+      await settleBackgroundWork();
+      const store = useTarkovStore();
+      expect(store.pvp.taskCompletions['task-return-second']?.complete).toBe(true);
+      expect(store.pvp.level).toBe(50);
+      const baseline = watchSessionActivity();
+      staleModeRead.release([
+        { game_mode: 'pvp', season_number: 0, progress_data: compoundProgress(10, 'task-stale-a') },
+        { game_mode: 'pve', season_number: 0, progress_data: progressWithLevel(3) },
+      ]);
+      await staleInit.catch(() => undefined);
+      await settleBackgroundWork();
+      expectNoFollowOnSessionActivity(baseline, watchSessionActivity());
+      expect(store.pvp.level).toBe(50);
+      expect(store.pve.level).toBe(12);
+      expect(store.pvp.taskCompletions['task-return-second']?.complete).toBe(true);
+      expect(store.pvp.taskCompletions['task-stale-a']).toBeUndefined();
+      const envelope = readPersistedEnvelope();
+      expect(envelope._userId).toBe('user-1');
+      expect(envelope.data?.pvp?.level).toBe(50);
+      expect(showLocalIgnored).not.toHaveBeenCalled();
+      expect(showLoadFailed).not.toHaveBeenCalled();
+    });
+    it('does not surface a stale failed read as the active session load failure', async () => {
+      seedSessionA();
+      const staleRead = createDeferredRead();
+      single.mockImplementationOnce(() => staleRead.promise);
+      const staleInit = initializeTarkovSync();
+      await switchSession('user-1', 'user-2');
+      single.mockResolvedValue({
+        data: createRemoteRow({
+          updated_at: sessionClock(2_000),
+          user_id: 'user-2',
+          pvp_data: compoundProgress(33, 'task-b'),
+          pve_data: progressWithLevel(11),
+        }),
+        error: null,
+      });
+      await initializeTarkovSync();
+      await settleBackgroundWork();
+      const baseline = watchSessionActivity();
+      staleRead.resolve({
+        data: null,
+        error: { message: 'stale row read failed' },
+      });
+      await staleInit.catch(() => undefined);
+      await settleBackgroundWork();
+      expect(loggerMock.error).not.toHaveBeenCalledWith(
+        '[TarkovStore] Error loading data from Supabase:',
+        expect.objectContaining({ message: 'stale row read failed' })
+      );
+      expect(loggerMock.error).not.toHaveBeenCalledWith(
+        '[TarkovStore] Initial load failed; sync not started'
+      );
+      expect(showLoadFailed).not.toHaveBeenCalled();
+      expectNoFollowOnSessionActivity(baseline, watchSessionActivity());
+      expect(useTarkovStore().pvp.taskCompletions['task-b']?.complete).toBe(true);
+      expect(useTarkovStore().pvp.level).toBe(33);
+      expect(readPersistedEnvelope()._userId).toBe('user-2');
+    });
+    it('leaves the switched-to session untouched when a deferred normalized read resolves late', async () => {
+      seedSessionA();
+      single.mockResolvedValue({
+        data: createRemoteRow({ user_id: 'user-1', updated_at: sessionClock(9_000) }),
+        error: null,
+      });
+      const staleModeRead = createDeferredModeRead();
+      staleModeRead.begin();
+      const staleInit = initializeTarkovSync();
+      await settleBackgroundWork();
+      // The row read and the deferred normalized read were both issued for user-1.
+      expect(getUserIdFilters()).toEqual(['user-1', 'user-1']);
+      await switchSession('user-1', 'user-2');
+      single.mockResolvedValue({
+        data: createRemoteRow({
+          updated_at: sessionClock(2_000),
+          user_id: 'user-2',
+          pvp_data: compoundProgress(33, 'task-b'),
+          pve_data: progressWithLevel(11),
+        }),
+        error: null,
+      });
+      await initializeTarkovSync();
+      await settleBackgroundWork();
+      const baseline = watchSessionActivity();
+      staleModeRead.release([
+        modeRow('pvp', compoundProgress(10, 'task-stale-a')),
+        modeRow('pve', progressWithLevel(3)),
+      ]);
+      await staleInit.catch(() => undefined);
+      await settleBackgroundWork();
+      expectNoFollowOnSessionActivity(baseline, watchSessionActivity());
+      expect(useTarkovStore().pvp.level).toBe(33);
+      expect(useTarkovStore().pve.level).toBe(11);
+      expect(useTarkovStore().pvp.taskCompletions['task-stale-a']).toBeUndefined();
+      const envelope = readPersistedEnvelope();
+      expect(envelope._userId).toBe('user-2');
+      expect(envelope.data?.pvp?.level).toBe(33);
+      expect(showLocalIgnored).not.toHaveBeenCalled();
+      expect(showLoadFailed).not.toHaveBeenCalled();
+    });
+    it.each([
+      { boundary: 'successful retry', retry: true, error: null },
+      {
+        boundary: 'freshness compatibility fallback',
+        retry: false,
+        error: { code: '42703', message: 'column progress_updated_at does not exist' },
+      },
+    ])('fences normalized follow-on reads after a stale $boundary', async ({ retry, error }) => {
+      seedSessionA();
+      const deferred = createDeferredModeRead();
+      if (retry) modeProgressResult.errorSequence = [{ message: 'temporary read failure' }];
+      else deferred.begin();
+      const pending = initializeTarkovSync();
+      await settleBackgroundWork();
+      if (retry) deferred.begin();
+      await vi.waitFor(() => expect(getUserIdFilters()).toHaveLength(retry ? 3 : 2), {
+        timeout: 2000,
+      });
+      await switchSession('user-1', 'user-2');
+      single.mockResolvedValue({
+        data: createRemoteRow({ user_id: 'user-2', pvp_data: compoundProgress(33, 'task-b') }),
+        error: null,
+      });
+      await initializeTarkovSync();
+      await settleBackgroundWork();
+      const baseline = watchSessionActivity();
+      deferred.release([], error);
+      await pending;
+      await settleBackgroundWork();
+      expectNoFollowOnSessionActivity(baseline, watchSessionActivity());
+      expect(useTarkovStore().pvp.level).toBe(33);
+    });
+    it('leaves real persisted storage untouched when a superseded merge write settles late', async () => {
+      // The race the non-plugin harness cannot observe: the persisted-state
+      // plugin serializes every state patch, so a stale continuation's post-ack
+      // patch would write another account's progress into actual storage.
+      const pinia = createPinia().use(piniaPluginPersistedstate);
+      createApp({}).use(pinia);
+      setActivePinia(pinia);
+      seedSessionA();
+      // A row without an account clock keeps the owned local progress as the
+      // merge winner, so the initial merge write actually dispatches.
+      const staleOwnerRow = createRemoteRow({ user_id: 'user-1', updated_at: null });
+      const staleRead = createDeferredRead();
+      single.mockImplementationOnce(() => staleRead.promise);
+      single.mockResolvedValue({ data: staleOwnerRow, error: null });
+      const staleMergeWrite = Promise.withResolvers<{
+        error: { code?: string; message: string } | null;
+      }>();
+      rpc.mockImplementationOnce(() => staleMergeWrite.promise as ReturnType<typeof rpc>);
+      const staleInit = initializeTarkovSync();
+      // Resolve the owner's read while it still owns the session, so the merge
+      // write itself dispatches and then suspends as the in-flight patch owner...
+      staleRead.resolve({
+        data: staleOwnerRow,
+        error: null,
+      });
+      await settleBackgroundWork();
+      expect(rpc).toHaveBeenCalledTimes(1);
+      await switchSession('user-1', 'user-2');
+      single.mockResolvedValue({
+        data: createRemoteRow({
+          updated_at: sessionClock(2_000),
+          user_id: 'user-2',
+          pvp_data: compoundProgress(33, 'task-b'),
+          pve_data: progressWithLevel(11),
+        }),
+        error: null,
+      });
+      await initializeTarkovSync();
+      await settleBackgroundWork();
+      await nextTick();
+      await flushActiveProgressWrites();
+      const baseline = watchSessionActivity();
+      staleMergeWrite.resolve({ error: null });
+      await staleInit.catch(() => undefined);
+      await settleBackgroundWork();
+      await nextTick();
+      await flushActiveProgressWrites();
+      expectNoFollowOnSessionActivity(baseline, watchSessionActivity());
+      const store = useTarkovStore();
+      expect(store.pvp.level).toBe(33);
+      expect(store.pve.level).toBe(11);
+      expect(store.pvp.taskCompletions['task-b']?.complete).toBe(true);
+      expect(store.pvp.taskCompletions['task-stale-a']).toBeUndefined();
+      const envelope = readPersistedEnvelope();
+      expect(envelope._userId).toBe('user-2');
+      expect(envelope.data?.pvp?.level).toBe(33);
+      expect(envelope.data?.pvp?.taskCompletions?.['task-stale-a']).toBeUndefined();
+      expect(showLocalIgnored).not.toHaveBeenCalled();
+      expect(showLoadFailed).not.toHaveBeenCalled();
+    });
+  });
+  describe('progress save status', () => {
+    type StatusOptions = {
+      onSaveStatusChange: (status: Record<string, unknown>) => void;
+      retryDelaysMs: readonly number[];
+    };
+    const failedStatus = {
+      state: 'failed',
+      failure: 'offline',
+      retryAttempt: 3,
+      nextRetryAt: null,
+    };
+    it('mirrors only the current controller and routes manual retries to it', async () => {
+      const retryNow = vi.fn().mockResolvedValue(true);
+      useSupabaseSyncMock.mockReturnValue({
+        cleanup: cleanupSync,
+        syncToSupabase: syncInitialState,
+        pause: pauseSync,
+        resume: resumeSync,
+        retryNow,
+      } as unknown as ReturnType<typeof useSupabaseSyncMock>);
+      await initializeTarkovSync();
+      const status = await import('@/stores/tarkov/progressSaveStatus');
+      const options = useSupabaseSyncMock.mock.calls.at(-1)?.[0] as StatusOptions;
+      expect(options.retryDelaysMs).toEqual(status.CLOUD_SAVE_RETRY_DELAYS_MS);
+      options.onSaveStatusChange(failedStatus);
+      expect(status.progressSaveStatus.cloud).toEqual(failedStatus);
+      await expect(status.retryCloudSave()).resolves.toBe(true);
+      expect(retryNow).toHaveBeenCalledOnce();
+      await switchSession('user-1', null, 'signed out');
+      expect(status.progressSaveStatus.cloud.state).toBe('idle');
+      // A disposed controller cannot resurrect a warning for the next session.
+      options.onSaveStatusChange(failedStatus);
+      expect(status.progressSaveStatus.cloud.state).toBe('idle');
+      await expect(status.retryCloudSave()).resolves.toBe(false);
+    });
+    it('records local save failures from the real persistence plugin', async () => {
+      const pinia = createPinia().use(piniaPluginPersistedstate);
+      createApp({}).use(pinia);
+      setActivePinia(pinia);
+      await initializeTarkovSync();
+      const status = await import('@/stores/tarkov/progressSaveStatus');
+      useTarkovStore().$patch((state) => {
+        state.pvp.level = 7;
+      });
+      await nextTick();
+      await flushActiveProgressWrites();
+      expect(status.progressSaveStatus.local).toBe('saved');
+      const setItem = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+        throw Object.assign(new Error('full'), { name: 'QuotaExceededError' });
+      });
+      useTarkovStore().$patch((state) => {
+        state.pvp.level = 8;
+      });
+      await nextTick();
+      await flushActiveProgressWrites();
+      expect(status.progressSaveStatus.local).toBe('failed');
+      expect(status.progressSaveStatus.localFailure).toBe('quota');
+      setItem.mockRestore();
+    });
+  });
+  describe('account recovery copies', () => {
+    const recoveryKey = (userId: string) => `${STORAGE_KEYS.progressRecoveryPrefix}${userId}`;
+    const writeActiveCopy = (userId: string | null, level: number, timestamp: number) =>
+      localStorage.setItem(
+        STORAGE_KEYS.progress,
+        JSON.stringify({
+          _timestamp: timestamp,
+          _userId: userId,
+          data: { ...structuredClone(defaultState), pvp: progressWithLevel(level) },
+        })
+      );
+    const readRecoveryLevel = (userId: string) =>
+      JSON.parse(localStorage.getItem(recoveryKey(userId)) ?? 'null')?.data?.pvp?.level;
+    it('keeps unacknowledged changes for their owner across guest and other-account use', async () => {
+      const store = useTarkovStore();
+      const preservedAt = Date.parse('2026-02-25T00:00:00.000Z');
+      writeActiveCopy('user-1', 11, preservedAt);
+      await switchSession('user-1', null, 'logout');
+      expect(readRecoveryLevel('user-1')).toBe(11);
+      // A guest session overwrites the active copy; the recovery copy is separate.
+      writeActiveCopy(null, 4, preservedAt + 1000);
+      await switchSession(null, 'user-2', 'login');
+      single.mockResolvedValue({
+        data: createRemoteRow({
+          user_id: 'user-2',
+          pvp_data: progressWithLevel(2),
+          updated_at: '2026-03-01T00:00:00.000Z',
+        }),
+        error: null,
+      });
+      await initializeTarkovSync();
+      expect(store.pvp.level).toBe(2);
+      expect(readRecoveryLevel('user-1')).toBe(11);
+      await switchSession('user-2', 'user-1', 'account switch');
+      single.mockResolvedValue({
+        data: createRemoteRow({
+          pvp_data: progressWithLevel(1),
+          updated_at: '2026-02-01T00:00:00.000Z',
+        }),
+        error: null,
+      });
+      await initializeTarkovSync();
+      expect(store.pvp.level).toBe(11);
+      expect(getLastSyncPayload().p_modes.pvp).toEqual(expect.objectContaining({ level: 11 }));
+      // Reconciled with the cloud, so the copy is retired; the other account's is kept.
+      expect(localStorage.getItem(recoveryKey('user-1'))).toBeNull();
+      expect(readRecoveryLevel('user-2')).toBe(2);
+    });
+    it.each([
+      ['retires', true],
+      ['keeps', false],
+    ])(
+      '%s a metadata-only recovery copy by whether a startup upload is acknowledged',
+      async (_label, acknowledged) => {
+        const base = Date.parse('2026-02-25T00:00:00.000Z');
+        localStorage.setItem(
+          recoveryKey('user-1'),
+          JSON.stringify({
+            _timestamp: base,
+            _userId: 'user-1',
+            data: {
+              ...structuredClone(defaultState),
+              pvp: { ...structuredClone(defaultState.pvp), displayName: 'recovered' },
+            },
+          })
+        );
+        single.mockResolvedValue({ data: null, error: { code: 'PGRST116', message: 'No rows' } });
+        syncInitialState.mockResolvedValue(null);
+        await initializeTarkovSync();
+        await settleBackgroundWork();
+        expect(useTarkovStore().pvp.displayName).toBe('recovered');
+        expect(syncInitialState).toHaveBeenCalledOnce();
+        expect(localStorage.getItem(recoveryKey('user-1'))).not.toBeNull();
+        // A later scheduled retry, not the first attempt, is acknowledged.
+        const options = useSupabaseSyncMock.mock.calls.at(-1)?.[0] as { onSynced: () => void };
+        if (acknowledged) options.onSynced();
+        expect(localStorage.getItem(recoveryKey('user-1')) === null).toBe(acknowledged);
+      }
+    );
+    it('reports possibly unsynced progress only when local state could await the cloud', async () => {
+      const { mayHoldUnsyncedProgress } = await import('@/stores/useTarkov');
+      const store = useTarkovStore();
+      expect(mayHoldUnsyncedProgress('user-1')).toBe(false);
+      localStorage.setItem(recoveryKey('user-1'), '{"_userId":"user-1","data":{}}');
+      expect(mayHoldUnsyncedProgress('user-1')).toBe(true);
+      localStorage.removeItem(recoveryKey('user-1'));
+      store.$patch((state) => {
+        state.pvp = progressWithLevel(4);
+      });
+      expect(mayHoldUnsyncedProgress('user-1')).toBe(true);
+    });
+    it('retries a rejected startup recovery copy removal on the next upload', async () => {
+      const store = useTarkovStore();
+      localStorage.setItem(
+        recoveryKey('user-1'),
+        JSON.stringify({
+          _timestamp: Date.parse('2026-02-25T00:00:00.000Z'),
+          _userId: 'user-1',
+          data: { ...structuredClone(defaultState), pvp: progressWithLevel(5) },
+        })
+      );
+      single.mockResolvedValue({
+        data: createRemoteRow({
+          pvp_data: progressWithLevel(1),
+          updated_at: '2026-02-01T00:00:00.000Z',
+        }),
+        error: null,
+      });
+      const removeItem = vi.spyOn(localStorage, 'removeItem').mockImplementation((key: string) => {
+        if (key === recoveryKey('user-1')) throw new DOMException('denied', 'SecurityError');
+      });
+      await initializeTarkovSync();
+      expect(store.pvp.level).toBe(5);
+      expect(localStorage.getItem(recoveryKey('user-1'))).not.toBeNull();
+      removeItem.mockRestore();
+      const options = useSupabaseSyncMock.mock.calls.at(-1)?.[0] as { onSynced: () => void };
+      options.onSynced();
+      expect(localStorage.getItem(recoveryKey('user-1'))).toBeNull();
+    });
+    it('retries recovery copy retirement on a later upload when removal fails', async () => {
+      localStorage.setItem(
+        recoveryKey('user-1'),
+        JSON.stringify({
+          _timestamp: Date.parse('2026-02-25T00:00:00.000Z'),
+          _userId: 'user-1',
+          data: {
+            ...structuredClone(defaultState),
+            pvp: { ...structuredClone(defaultState.pvp), displayName: 'recovered' },
+          },
+        })
+      );
+      single.mockResolvedValue({ data: null, error: { code: 'PGRST116', message: 'No rows' } });
+      syncInitialState.mockResolvedValue(null);
+      await initializeTarkovSync();
+      await settleBackgroundWork();
+      const options = useSupabaseSyncMock.mock.calls.at(-1)?.[0] as { onSynced: () => void };
+      const removeItem = vi.spyOn(localStorage, 'removeItem').mockImplementationOnce(() => {
+        throw new DOMException('denied', 'SecurityError');
+      });
+      options.onSynced();
+      expect(localStorage.getItem(recoveryKey('user-1'))).not.toBeNull();
+      removeItem.mockRestore();
+      options.onSynced();
+      expect(localStorage.getItem(recoveryKey('user-1'))).toBeNull();
+    });
+    it('does not fold the transition placeholder into the next owner recovery copy', async () => {
+      const pinia = createPinia().use(piniaPluginPersistedstate);
+      createApp({}).use(pinia);
+      setActivePinia(pinia);
+      useTarkovStore();
+      const base = Date.parse('2026-02-25T00:00:00.000Z');
+      const recovery = JSON.stringify({
+        _timestamp: base,
+        _userId: 'user-2',
+        data: {
+          ...structuredClone(defaultState),
+          pvp: { ...progressWithLevel(6), displayName: 'second-owner' },
+        },
+      });
+      localStorage.setItem(recoveryKey('user-2'), recovery);
+      writeActiveCopy('user-1', 3, base);
+      await switchSession('user-1', 'user-2');
+      expect(localStorage.getItem(recoveryKey('user-2'))).toBe(recovery);
+    });
+    it('does not restore a recovery copy older than the owner active copy', async () => {
+      const store = useTarkovStore();
+      const base = Date.parse('2026-02-25T00:00:00.000Z');
+      localStorage.setItem(
+        recoveryKey('user-1'),
+        JSON.stringify({
+          _timestamp: base,
+          _userId: 'user-1',
+          data: { ...structuredClone(defaultState), pvp: progressWithLevel(5) },
+        })
+      );
+      writeActiveCopy('user-1', 9, base + 1000);
+      single.mockResolvedValue({
+        data: createRemoteRow({
+          pvp_data: progressWithLevel(1),
+          updated_at: '2026-02-01T00:00:00.000Z',
+        }),
+        error: null,
+      });
+      await initializeTarkovSync();
+      expect(store.pvp.level).toBe(9);
+      expect(localStorage.getItem(recoveryKey('user-1'))).toBeNull();
+    });
+    it('skips the recovery copy when the cloud acknowledged every change', async () => {
+      const hasPendingChanges = vi.fn(() => false);
+      useSupabaseSyncMock.mockReturnValue({
+        cleanup: cleanupSync,
+        syncToSupabase: syncInitialState,
+        pause: pauseSync,
+        resume: resumeSync,
+        hasPendingChanges,
+      } as unknown as ReturnType<typeof useSupabaseSyncMock>);
+      writeActiveCopy('user-1', 3, Date.parse('2026-02-25T00:00:00.000Z'));
+      await initializeTarkovSync();
+      await switchSession('user-1', null, 'logout');
+      expect(hasPendingChanges).toHaveBeenCalled();
+      expect(localStorage.getItem(recoveryKey('user-1'))).toBeNull();
+    });
+    it('keeps other accounts recovery copies and backups across session transitions', async () => {
+      localStorage.setItem(recoveryKey('user-9'), '{"_userId":"user-9","data":{}}');
+      localStorage.setItem(`${STORAGE_KEYS.progressBackupPrefix}user-9_123`, '{"data":{}}');
+      writeActiveCopy('user-1', 3, Date.parse('2026-02-25T00:00:00.000Z'));
+      await switchSession('user-1', 'user-2', 'account switch');
+      expect(localStorage.getItem(STORAGE_KEYS.progress) ?? '').not.toContain('"user-1"');
+      expect(localStorage.getItem(recoveryKey('user-9'))).not.toBeNull();
+      expect(localStorage.getItem(`${STORAGE_KEYS.progressBackupPrefix}user-9_123`)).not.toBeNull();
+      expect(readRecoveryLevel('user-1')).toBe(3);
+    });
+    it('retains nothing for an owner whose device data removal is pending', async () => {
+      const pinia = createPinia().use(piniaPluginPersistedstate);
+      createApp({}).use(pinia);
+      setActivePinia(pinia);
+      const { requestDeviceDataRemoval, clearDeviceDataRemoval } =
+        await import('@/stores/tarkov/deviceData');
+      localStorage.setItem(recoveryKey('user-1'), '{"_userId":"user-1","data":{}}');
+      localStorage.setItem(recoveryKey('user-2'), '{"_userId":"user-2","data":{}}');
+      writeActiveCopy('user-1', 15, Date.parse('2026-02-25T00:00:00.000Z'));
+      resetTarkovSync('capture pre-removal handoff', {
+        preservePersistedStateForUserId: 'user-1',
+      });
+      requestDeviceDataRemoval('user-1');
+      await switchSession('user-1', null, 'logout');
+      expect(localStorage.getItem(STORAGE_KEYS.progress)).toBeNull();
+      expect(localStorage.getItem(recoveryKey('user-1'))).toBeNull();
+      expect(localStorage.getItem(recoveryKey('user-2'))).not.toBeNull();
+      clearDeviceDataRemoval();
+      single.mockResolvedValue({
+        data: createRemoteRow({
+          user_id: 'user-1',
+          pvp_data: progressWithLevel(2),
+        }),
+        error: null,
+      });
+      await switchSession(null, 'user-1', 'owner signs back in after device removal');
+      await initializeTarkovSync();
+      expect(useTarkovStore().pvp.level).toBe(2);
+    });
+    it('retains a mismatched owner copy found during hydration as its recovery copy', () => {
+      writeActiveCopy('user-9', 6, Date.parse('2026-02-25T00:00:00.000Z'));
+      const pinia = createPinia().use(piniaPluginPersistedstate);
+      createApp({}).use(pinia);
+      setActivePinia(pinia);
+      const store = useTarkovStore();
+      expect(store.pvp.level).toBe(1);
+      expect(readRecoveryLevel('user-9')).toBe(6);
+      expect(
+        Object.keys(localStorage).some((key) => key.startsWith(STORAGE_KEYS.progressBackupPrefix))
+      ).toBe(false);
+    });
+    it('protects an owner-scoped active copy during guest hydration when recovery storage is full', async () => {
+      const original = JSON.stringify({
+        _timestamp: 10,
+        _userId: 'user-1',
+        data: { ...structuredClone(defaultState), pvp: progressWithLevel(15) },
+      });
+      localStorage.setItem(STORAGE_KEYS.progress, original);
+      supabaseContext.user.id = null;
+      supabaseContext.user.loggedIn = false;
+      const setItem = vi.spyOn(localStorage, 'setItem').mockImplementation((key, value) => {
+        if (key === recoveryKey('user-1')) throw new Error('full');
+        return Storage.prototype.setItem.call(localStorage, key, value);
+      });
+      const pinia = createPinia().use(piniaPluginPersistedstate);
+      createApp({}).use(pinia);
+      setActivePinia(pinia);
+      const store = useTarkovStore();
+      expect(store.pvp.level).toBe(defaultState.pvp.level);
+      expect(localStorage.getItem(STORAGE_KEYS.progress)).toBe(original);
+      await clearActiveProgressStorage();
+      expect(localStorage.getItem(STORAGE_KEYS.progress)).toBe(original);
+      progressPersistStorage.setItem(
+        STORAGE_KEYS.progress,
+        JSON.stringify({ _userId: null, data: defaultState })
+      );
+      await flushActiveProgressWrites();
+      expect(localStorage.getItem(STORAGE_KEYS.progress)).toBe(original);
+      setItem.mockRestore();
+    });
+    it('retains the latest owner envelope before a cross-tab write replaces it', async () => {
+      const latestOwnerCopy = JSON.stringify({
+        _timestamp: 22,
+        _userId: 'user-9',
+        data: { ...structuredClone(defaultState), pvp: progressWithLevel(21) },
+      });
+      localStorage.setItem(STORAGE_KEYS.progress, latestOwnerCopy);
+      progressPersistStorage.setItem(
+        STORAGE_KEYS.progress,
+        JSON.stringify({ _timestamp: 23, _userId: 'user-2', data: defaultState })
+      );
+      await flushActiveProgressWrites();
+      expect(readRecoveryLevel('user-9')).toBe(21);
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.progress) ?? '{}')._userId).toBe(
+        'user-2'
+      );
+    });
+    it('blocks a new owner from replacing the active copy when recovery retention fails', async () => {
+      const store = useTarkovStore();
+      store.$patch((state) => {
+        state.pvp.level = 15;
+      });
+      const original = JSON.stringify({
+        _timestamp: 10,
+        _userId: 'user-1',
+        data: { ...structuredClone(defaultState), pvp: progressWithLevel(15) },
+      });
+      localStorage.setItem(STORAGE_KEYS.progress, original);
+      const setItem = vi.spyOn(localStorage, 'setItem').mockImplementation((key, value) => {
+        if (key === recoveryKey('user-1')) throw new Error('full');
+        return Storage.prototype.setItem.call(localStorage, key, value);
+      });
+      await switchSession('user-1', null, 'quota during sign-out');
+      expect(localStorage.getItem(STORAGE_KEYS.progress)).toBe(original);
+      expect(store.pvp.level).toBe(defaultState.pvp.level);
+      await switchSession(null, 'user-2', 'quota persists during next sign-in');
+      expect(store.pvp.level).toBe(defaultState.pvp.level);
+      progressPersistStorage.setItem(
+        STORAGE_KEYS.progress,
+        JSON.stringify({ _userId: 'user-2', data: defaultState })
+      );
+      await flushActiveProgressWrites();
+      expect(localStorage.getItem(STORAGE_KEYS.progress)).toBe(original);
+      await expect(initializeTarkovSync()).rejects.toThrow('Account recovery retention is blocked');
+      expect(useSupabaseSyncMock).not.toHaveBeenCalled();
+      expect(localStorage.getItem(STORAGE_KEYS.progress)).toBe(original);
+      setItem.mockRestore();
+      single.mockResolvedValue({
+        data: createRemoteRow({
+          user_id: 'user-2',
+          pvp_data: progressWithLevel(2),
+        }),
+        error: null,
+      });
+      await initializeTarkovSync();
+      expect(useSupabaseSyncMock).toHaveBeenCalledTimes(1);
+      expect(readRecoveryLevel('user-1')).toBe(15);
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.progress) ?? '{}')._userId).toBe(
+        'user-2'
+      );
+      expect(useTarkovStore().pvp.level).toBe(2);
+    });
+    it('aborts sign-in when a foreign active copy cannot be retained', async () => {
+      const original = JSON.stringify({
+        _timestamp: 10,
+        _userId: 'user-9',
+        data: { ...structuredClone(defaultState), pvp: progressWithLevel(15) },
+      });
+      localStorage.setItem(STORAGE_KEYS.progress, original);
+      vi.spyOn(localStorage, 'setItem').mockImplementation((key, value) => {
+        if (key === recoveryKey('user-9')) throw new Error('storage full');
+        return Storage.prototype.setItem.call(localStorage, key, value);
+      });
+      await expect(initializeTarkovSync()).rejects.toThrow('Account recovery retention is blocked');
+      expect(useSupabaseSyncMock).not.toHaveBeenCalled();
+      expect(localStorage.getItem(STORAGE_KEYS.progress)).toBe(original);
+      expect(showLoadFailed).toHaveBeenCalled();
+    });
+    it('aborts sign-in when the current recovery copy is malformed', async () => {
+      localStorage.setItem(recoveryKey('user-1'), '{malformed');
+      await expect(initializeTarkovSync()).rejects.toThrow('Account recovery retention is blocked');
+      expect(useSupabaseSyncMock).not.toHaveBeenCalled();
+      expect(localStorage.getItem(recoveryKey('user-1'))).toBe('{malformed');
+      expect(showLoadFailed).toHaveBeenCalled();
+    });
+    it('aborts reconciliation when a foreign active copy appears after the startup guard', async () => {
+      const original = JSON.stringify({
+        _timestamp: 10,
+        _userId: 'user-9',
+        data: { ...structuredClone(defaultState), pvp: progressWithLevel(15) },
+      });
+      localStorage.setItem(STORAGE_KEYS.progress, original);
+      const getItem = localStorage.getItem.bind(localStorage);
+      let activeReads = 0;
+      vi.spyOn(localStorage, 'getItem').mockImplementation((key: string) => {
+        if (key === STORAGE_KEYS.progress) {
+          activeReads += 1;
+          if (activeReads === 1) return null;
+        }
+        return getItem(key);
+      });
+      vi.spyOn(localStorage, 'setItem').mockImplementation((key, value) => {
+        if (key === recoveryKey('user-9')) throw new Error('storage full');
+        return Storage.prototype.setItem.call(localStorage, key, value);
+      });
+      await expect(initializeTarkovSync()).rejects.toThrow('Supabase initial load failed');
+      expect(activeReads).toBeGreaterThanOrEqual(2);
+      expect(useSupabaseSyncMock).not.toHaveBeenCalled();
+      expect(Storage.prototype.getItem.call(localStorage, STORAGE_KEYS.progress)).toBe(original);
+    });
+    it('releases only the removed owner retention barrier after explicit device-data removal', async () => {
+      const original = JSON.stringify({
+        _timestamp: 10,
+        _userId: 'user-1',
+        data: { ...structuredClone(defaultState), pvp: progressWithLevel(15) },
+      });
+      localStorage.setItem(STORAGE_KEYS.progress, original);
+      const setItem = vi.spyOn(localStorage, 'setItem').mockImplementation((key, value) => {
+        if (key === recoveryKey('user-1')) throw new Error('full');
+        return Storage.prototype.setItem.call(localStorage, key, value);
+      });
+      await switchSession('user-1', null, 'quota during sign-out');
+      expect(localStorage.getItem(STORAGE_KEYS.progress)).toBe(original);
+      const { removeAccountDeviceData, requestDeviceDataRemoval } =
+        await import('@/stores/tarkov/deviceData');
+      requestDeviceDataRemoval('user-1');
+      await removeAccountDeviceData('user-1');
+      expect(localStorage.getItem(STORAGE_KEYS.progress)).toBeNull();
+      setItem.mockRestore();
+      await switchSession(null, 'user-2', 'owner removed local data');
+      await initializeTarkovSync();
+      expect(useSupabaseSyncMock).toHaveBeenCalledTimes(1);
+      expect(useTarkovStore().pvp.level).toBe(defaultState.pvp.level);
+    });
+    it('archives recovery-only progress before applying a higher remote reset epoch', async () => {
+      const localEpoch = 1;
+      const raw = JSON.stringify({
+        _timestamp: Date.parse('2026-02-25T00:00:00.000Z'),
+        _userId: 'user-1',
+        data: {
+          ...structuredClone(defaultState),
+          pvp: { ...progressWithLevel(12), progressEpoch: localEpoch },
+        },
+      });
+      localStorage.setItem(recoveryKey('user-1'), raw);
+      single.mockResolvedValue({
+        data: createRemoteRow({
+          pvp_data: { ...progressWithLevel(1), progressEpoch: localEpoch + 1 },
+        }),
+        error: null,
+      });
+      await initializeTarkovSync();
+      expect(listSupersededProgressCopies('user-1')).toEqual([
+        expect.objectContaining({
+          mode: 'pvp',
+          seasonNumber: null,
+          progress: expect.objectContaining({ level: 12, progressEpoch: localEpoch }),
+        }),
+      ]);
+      expect(useTarkovStore().pvp.progressEpoch).toBe(localEpoch + 1);
+      expect(localStorage.getItem(recoveryKey('user-1'))).toBeNull();
+    });
+    it('retains displaced Seasonal progress with its active season before a remote reset', async () => {
+      const localEpoch = 1;
+      const raw = JSON.stringify({
+        _timestamp: Date.parse('2026-02-25T00:00:00.000Z'),
+        _userId: 'user-1',
+        data: {
+          ...structuredClone(defaultState),
+          seasonalSeasonNumber: ACTIVE_SEASON_NUMBER,
+          seasonal: { ...progressWithLevel(12), progressEpoch: localEpoch },
+        },
+      });
+      localStorage.setItem(recoveryKey('user-1'), raw);
+      modeProgressResult.data = [
+        {
+          game_mode: 'seasonal',
+          season_number: ACTIVE_SEASON_NUMBER,
+          progress_data: { ...progressWithLevel(1), progressEpoch: localEpoch + 1 },
+        },
+      ];
+      await initializeTarkovSync();
+      expect(listSupersededProgressCopies('user-1')).toEqual([
+        expect.objectContaining({
+          mode: 'seasonal',
+          seasonNumber: ACTIVE_SEASON_NUMBER,
+          progress: expect.objectContaining({ level: 12, progressEpoch: localEpoch }),
+        }),
+      ]);
+      expect(useTarkovStore().seasonal.progressEpoch).toBe(localEpoch + 1);
+    });
+    it('keeps recovery-only progress and aborts reconciliation when reset archival fails', async () => {
+      const raw = JSON.stringify({
+        _timestamp: Date.parse('2026-02-25T00:00:00.000Z'),
+        _userId: 'user-1',
+        data: {
+          ...structuredClone(defaultState),
+          pvp: { ...progressWithLevel(12), progressEpoch: 1 },
+        },
+      });
+      localStorage.setItem(recoveryKey('user-1'), raw);
+      single.mockResolvedValue({
+        data: createRemoteRow({ pvp_data: { ...progressWithLevel(1), progressEpoch: 2 } }),
+        error: null,
+      });
+      const setItem = vi.spyOn(localStorage, 'setItem').mockImplementation((key, value) => {
+        if (key.startsWith(STORAGE_KEYS.progressSupersededPrefix)) throw new Error('full');
+        return Storage.prototype.setItem.call(localStorage, key, value);
+      });
+      await expect(initializeTarkovSync()).rejects.toThrow('Supabase initial load failed');
+      expect(localStorage.getItem(recoveryKey('user-1'))).toBe(raw);
+      expect(listSupersededProgressCopies('user-1')).toEqual([]);
+      expect(useTarkovStore().pvp.progressEpoch).toBe(1);
+      expect(useSupabaseSyncMock).not.toHaveBeenCalled();
+      setItem.mockRestore();
+      await initializeTarkovSync();
+      expect(listSupersededProgressCopies('user-1')).toEqual([
+        expect.objectContaining({
+          mode: 'pvp',
+          progress: expect.objectContaining({ level: 12, progressEpoch: 1 }),
+        }),
+      ]);
+      expect(useTarkovStore().pvp.progressEpoch).toBe(2);
+      expect(localStorage.getItem(recoveryKey('user-1'))).toBeNull();
+    });
+    const holdOtherTabProgressLock = async (beforeRelease = () => {}) => {
+      const gate = Promise.withResolvers<undefined>();
+      const acquired = Promise.withResolvers<undefined>();
+      const held = navigator.locks.request(
+        `${STORAGE_KEYS.progress}:mutation`,
+        { mode: 'exclusive' },
+        () => {
+          acquired.resolve(undefined);
+          return gate.promise.then(beforeRelease);
+        }
+      );
+      await acquired.promise;
+      return { held, release: () => gate.resolve(undefined) };
+    };
+    it('preserves the incoming account edit made before a held-lock transition settles', async () => {
+      const now = Date.now();
+      writeActiveCopy('user-1', 10, now - 1000);
+      const pinia = createPinia().use(piniaPluginPersistedstate);
+      createApp({}).use(pinia);
+      setActivePinia(pinia);
+      const store = useTarkovStore();
+      const { held, release } = await holdOtherTabProgressLock();
+      let transition!: Promise<void>;
+      try {
+        supabaseContext.user.id = 'user-2';
+        transition = resetTarkovStoreForSessionTransition('user-1', 'account switch');
+        store.$patch((current) => {
+          current.pvp.level = 9;
+        });
+        store.$persist();
+      } finally {
+        release();
+      }
+      await Promise.all([held, transition]);
+      await flushActiveProgressWrites();
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!);
+      expect(saved._userId).toBe('user-2');
+      expect(saved.data.pvp.level).toBe(9);
+      expect(store.pvp.level).toBe(9);
+    });
+    it.each([false, true])(
+      'adopts a pending guest edit after logout has completed, intervening owner edit=%s',
+      async (interveningEdit) => {
+        const now = Date.now();
+        vi.spyOn(Date, 'now').mockReturnValue(now);
+        writeActiveCopy('user-1', 15, now - 2000);
+        const pinia = createPinia().use(piniaPluginPersistedstate);
+        createApp({}).use(pinia);
+        setActivePinia(pinia);
+        const store = useTarkovStore();
+        await switchSession('user-1', null, 'logout');
+        await flushActiveProgressWrites();
+        const { held, release } = await holdOtherTabProgressLock(() => {
+          if (interveningEdit) writeActiveCopy('user-1', 17, now + 1000);
+        });
+        let login!: Promise<void>;
+        try {
+          store.$patch((guest) => {
+            guest.pvp.level = 9;
+          });
+          store.$persist();
+          supabaseContext.user.id = 'user-2';
+          supabaseContext.user.loggedIn = true;
+          single.mockResolvedValue({ data: null, error: { code: 'PGRST116', message: 'No rows' } });
+          modeProgressResult.data = [];
+          login = (
+            hasPendingProgressHandoff() ? settlePendingProgressHandoffs() : Promise.resolve()
+          ).then(() => initializeTarkovSync());
+        } finally {
+          release();
+        }
+        await Promise.all([held, login]);
+        await flushActiveProgressWrites();
+        expect(store.pvp.level).toBe(9);
+        expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!).data.pvp.level).toBe(9);
+        expect(readRecoveryLevel('user-1')).toBe(interveningEdit ? 17 : 15);
+      }
+    );
+    it('keeps failed guest edits unsaved while the prior owner handoff settles', async () => {
+      const now = Date.now();
+      seedOwnedEnvelope('user-1', { pvp: progressWithLevel(10) }, now);
+      const pinia = createPinia().use(piniaPluginPersistedstate);
+      createApp({}).use(pinia);
+      setActivePinia(pinia);
+      const store = useTarkovStore();
+      store.$persist();
+      await flushActiveProgressWrites();
+      const { held, release } = await holdOtherTabProgressLock();
+      const state = JSON.parse(JSON.stringify(store.$state));
+      progressStorageSerializer.acceptRemote({
+        state,
+        userId: 'user-1',
+        remote: state,
+        next: state,
+        updatedAtByMode: { pvp: now - 1000 },
+        metadataTimestamp: now - 1000,
+      });
+      supabaseContext.user.id = null;
+      supabaseContext.user.loggedIn = false;
+      const transition = resetTarkovStoreForSessionTransition('user-1', 'logout');
+      const setItem = localStorage.setItem.bind(localStorage);
+      const failure = vi.spyOn(localStorage, 'setItem').mockImplementation((key, value) => {
+        if (key === STORAGE_KEYS.progress && JSON.parse(value)._userId === null)
+          throw new DOMException('full', 'QuotaExceededError');
+        setItem(key, value);
+      });
+      try {
+        store.$patch((guest) => {
+          guest.pvp.level = 9;
+        });
+        store.$persist();
+      } finally {
+        release();
+      }
+      await Promise.all([held, transition]);
+      await flushActiveProgressWrites();
+      failure.mockRestore();
+      const status = await import('@/stores/tarkov/progressSaveStatus');
+      expect(store.pvp.level).toBe(9);
+      expect(status.progressSaveStatus.local).toBe('failed');
+      expect(status.hasUnsavedProgressChanges()).toBe(true);
+    });
+    it.each(['empty', 'recovery', 'remote'] as const)(
+      'keeps untouched mode clocks at zero when metadata changes during an account handoff, source=%s',
+      async (source) => {
+        const hasRecovery = source === 'recovery';
+        const now = Date.now();
+        vi.spyOn(Date, 'now').mockReturnValue(now);
+        if (hasRecovery)
+          localStorage.setItem(
+            recoveryKey('user-2'),
+            JSON.stringify({
+              _timestamp: now - 2000,
+              _userId: 'user-2',
+              data: {
+                ...structuredClone(defaultState),
+                pvp: {
+                  ...progressWithLevel(25),
+                  displayName: 'owner-B',
+                  pmcFaction: 'BEAR',
+                  skillOffsets: { Endurance: 42 },
+                },
+              },
+            })
+          );
+        writeActiveCopy('user-1', 10, now - 1000);
+        const pinia = createPinia().use(piniaPluginPersistedstate);
+        createApp({}).use(pinia);
+        setActivePinia(pinia);
+        const store = useTarkovStore();
+        const { held, release } = await holdOtherTabProgressLock();
+        let transition!: Promise<void>;
+        try {
+          supabaseContext.user.id = 'user-2';
+          transition = resetTarkovStoreForSessionTransition('user-1', 'account switch');
+          store.$patch({ gameEdition: 3 });
+          store.$persist();
+        } finally {
+          release();
+        }
+        await Promise.all([held, transition]);
+        await flushActiveProgressWrites();
+        expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!)._modeTimestamps).toEqual({
+          pvp: 0,
+          pve: 0,
+          seasonal: 0,
+        });
+        single.mockResolvedValue({
+          data: createRemoteRow({
+            user_id: 'user-2',
+            game_edition: 1,
+            pvp_data: source === 'remote' ? progressWithLevel(25) : progressWithLevel(1),
+            updated_at: new Date(now - 3000).toISOString(),
+          }),
+          error: null,
+        });
+        await initializeTarkovSync();
+        expect(store.gameEdition).toBe(3);
+        expect(store.pvp.level).toBe(source === 'empty' ? 1 : 25);
+        expect(store.pvp.displayName).toBe(hasRecovery ? 'owner-B' : null);
+        expect(store.pvp.pmcFaction).toBe(hasRecovery ? 'BEAR' : 'USEC');
+        expect(store.pvp.skillOffsets.Endurance).toBe(hasRecovery ? 42 : undefined);
+      }
+    );
+    it.each([
+      { nextOwner: null, interveningEdit: false, queued: 'none' },
+      { nextOwner: null, interveningEdit: true, queued: 'none' },
+      { nextOwner: 'user-2', interveningEdit: false, queued: 'none' },
+      { nextOwner: 'user-2', interveningEdit: true, queued: 'none' },
+      { nextOwner: null, interveningEdit: false, queued: 'persist' },
+      { nextOwner: null, interveningEdit: true, queued: 'persist' },
+      { nextOwner: 'user-2', interveningEdit: false, queued: 'second-ack' },
+      { nextOwner: null, interveningEdit: false, queued: 'prior-edit' },
+      { nextOwner: 'user-2', interveningEdit: false, queued: 'aba' },
+      { nextOwner: null, interveningEdit: false, queued: 'login-before-logout' },
+      { nextOwner: null, interveningEdit: false, queued: 'guest-edit' },
+      { nextOwner: null, interveningEdit: true, queued: 'guest-edit' },
+      { nextOwner: null, interveningEdit: false, queued: 'guest-edit-before-settlement' },
+      { nextOwner: 'user-2', interveningEdit: false, queued: 'current-edit-before-settlement' },
+      { nextOwner: null, interveningEdit: false, queued: 'metadata-edit-before-settlement' },
+      { nextOwner: null, interveningEdit: false, queued: 'device-removal-edit-before-settlement' },
+      { nextOwner: null, interveningEdit: false, queued: 'device-removal' },
+      { nextOwner: 'user-2', interveningEdit: false, queued: 'blocked-retention' },
+    ])(
+      'keeps acknowledged metadata clocks through $nextOwner transition with $queued queued while another tab holds the lock, intervening edit=$interveningEdit',
+      async ({ nextOwner, interveningEdit, queued }) => {
+        const now = Date.now();
+        vi.spyOn(Date, 'now').mockReturnValue(now);
+        const localAt = now - (queued === 'blocked-retention' ? 5000 : 0);
+        const acknowledgedAt = localAt - 2000;
+        const remoteAt = localAt - 1000;
+        seedOwnedEnvelope('user-1', { gameEdition: 1, pvp: progressWithLevel(10) }, localAt);
+        const pinia = createPinia().use(piniaPluginPersistedstate);
+        createApp({}).use(pinia);
+        setActivePinia(pinia);
+        const store = useTarkovStore();
+        store.$persist();
+        await flushActiveProgressWrites();
+        const { held, release } = await holdOtherTabProgressLock(() => {
+          if (interveningEdit)
+            seedOwnedEnvelope(
+              'user-1',
+              { gameEdition: 3, pvp: progressWithLevel(10) },
+              localAt + 1000
+            );
+        });
+        let transition!: Promise<void>;
+        const setItem = localStorage.setItem.bind(localStorage);
+        const retentionFailure =
+          queued === 'blocked-retention'
+            ? vi.spyOn(localStorage, 'setItem').mockImplementation((key, value) => {
+                if (key.startsWith(STORAGE_KEYS.progressRecoveryPrefix))
+                  throw Object.assign(new Error('full'), { name: 'QuotaExceededError' });
+                setItem(key, value);
+              })
+            : null;
+        try {
+          if (queued === 'prior-edit' || queued === 'blocked-retention') {
+            store.$patch({ gameEdition: 3 });
+            store.$persist();
+          }
+          const state = structuredClone(JSON.parse(JSON.stringify(store.$state)));
+          if (queued !== 'blocked-retention')
+            progressStorageSerializer.acceptRemote({
+              state,
+              userId: 'user-1',
+              remote: state,
+              next: state,
+              updatedAtByMode: {
+                pvp: acknowledgedAt,
+                pve: acknowledgedAt,
+                seasonal: acknowledgedAt,
+              },
+              metadataTimestamp: acknowledgedAt,
+            });
+          if (queued === 'persist') store.$persist();
+          if (queued === 'second-ack')
+            progressStorageSerializer.acceptRemote({
+              state,
+              userId: 'user-1',
+              remote: state,
+              next: state,
+              updatedAtByMode: { pvp: acknowledgedAt - 1000 },
+              metadataTimestamp: acknowledgedAt - 1000,
+            });
+          supabaseContext.user.id = nextOwner;
+          supabaseContext.user.loggedIn = nextOwner !== null;
+          if (queued === 'device-removal') requestDeviceDataRemoval('user-1');
+          transition = resetTarkovStoreForSessionTransition('user-1', 'logout');
+          if (queued.endsWith('edit-before-settlement')) {
+            store.$patch((current) => {
+              if (queued === 'metadata-edit-before-settlement') current.gameEdition = 3;
+              else current.pvp.level = 9;
+            });
+            store.$persist();
+            if (queued === 'device-removal-edit-before-settlement')
+              requestDeviceDataRemoval('user-1');
+          }
+          if (queued === 'device-removal')
+            expect(getPendingProgressWritesForOwners(['user-1'])).toEqual([]);
+          if (queued === 'aba') {
+            supabaseContext.user.id = 'user-1';
+            supabaseContext.user.loggedIn = true;
+            const firstTransition = transition;
+            transition = Promise.all([
+              firstTransition,
+              resetTarkovStoreForSessionTransition('user-2', 'returns before handoff settles'),
+            ]).then(() => {});
+          }
+          if (queued === 'login-before-logout' || queued === 'guest-edit') {
+            if (queued === 'guest-edit') {
+              store.$patch((guest) => {
+                guest.pvp.level = 9;
+              });
+              store.$persist();
+            }
+            supabaseContext.user.id = 'user-2';
+            supabaseContext.user.loggedIn = true;
+            expect(hasPendingProgressHandoff()).toBe(true);
+            if (queued === 'guest-edit') {
+              single.mockResolvedValue({
+                data: null,
+                error: { code: 'PGRST116', message: 'No rows' },
+              });
+              modeProgressResult.data = [];
+            } else
+              single.mockResolvedValue({
+                data: createRemoteRow({ user_id: 'user-2' }),
+                error: null,
+              });
+            const firstTransition = transition;
+            const nextLogin = settlePendingProgressHandoffs().then(async () => {
+              await initializeTarkovSync();
+              await flushActiveProgressWrites();
+              if (queued === 'guest-edit') {
+                expect(store.pvp.level).toBe(9);
+                expect(
+                  JSON.parse(localStorage.getItem(STORAGE_KEYS.progress)!).data.pvp.level
+                ).toBe(9);
+              }
+            });
+            transition = Promise.all([firstTransition, nextLogin]).then(() => {});
+          }
+          await nextTick();
+        } finally {
+          release();
+        }
+        await Promise.all([held, transition]);
+        await flushActiveProgressWrites();
+        retentionFailure?.mockRestore();
+        if (queued.endsWith('edit-before-settlement')) {
+          const current = JSON.parse(localStorage.getItem(STORAGE_KEYS.progress) ?? 'null')?.data;
+          if (queued === 'metadata-edit-before-settlement') expect(current?.gameEdition).toBe(3);
+          else expect(current?.pvp?.level).toBe(9);
+        }
+        if (queued === 'device-removal-edit-before-settlement')
+          expect(localStorage.getItem(recoveryKey('user-1'))).toBeNull();
+        supabaseContext.user.id = 'user-1';
+        supabaseContext.user.loggedIn = true;
+        single.mockResolvedValue({
+          data: createRemoteRow({ game_edition: 2, updated_at: new Date(remoteAt).toISOString() }),
+          error: null,
+        });
+        await initializeTarkovSync();
+        expect(store.gameEdition).toBe(interveningEdit || queued === 'blocked-retention' ? 3 : 2);
+      }
+    );
+  });
+});
+vi.mock('@/stores/tarkov/progressAuthority', async () => {
+  const { createProgressPolicyAuthority } = await import('#tests/test-helpers/progressAuthority');
+  return createProgressPolicyAuthority();
 });

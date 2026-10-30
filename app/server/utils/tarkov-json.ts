@@ -1,9 +1,17 @@
-import { JSONPath } from 'jsonpath-plus';
 import { $fetch } from 'ofetch';
 import { useRuntimeConfig } from '#imports';
 import { createLogger } from '@/server/utils/logger';
 import { TARKOVTRACKER_USER_AGENT } from '@/server/utils/userAgent';
+import { toTrustedGameLinkUrl } from '@/utils/externalUrl';
 import { buildSkillImageUrl } from '@/utils/tarkovUrls';
+import { assertTaskImportSource } from '@/utils/taskImportCatalog';
+import { normalizeOtherRequirements } from '@/utils/taskOtherRequirements';
+import {
+  isValidTraderLevel,
+  normalizeTraderRequirements,
+  resolveRequiredPrestige,
+  taskRequirementDiagnostics,
+} from '@/utils/taskRequirements';
 import type { ValidGameMode } from '@/server/utils/tarkov-cache-config';
 import type {
   FinishRewards,
@@ -52,7 +60,7 @@ const HIDEOUT_SKILL_REQUIREMENT_SKILLS: Record<string, { id: string; name: strin
   },
 };
 type JsonRecord = Record<string, unknown>;
-type TarkovJsonEndpoint = 'hideout' | 'items' | 'maps' | 'tasks' | 'traders';
+type TarkovJsonEndpoint = 'hideout' | 'items' | 'maps' | 'season' | 'tasks' | 'traders';
 type TarkovJsonEnvelope<T = unknown> = {
   data: T;
   translations?: string[];
@@ -79,11 +87,8 @@ type TarkovJsonOptions = {
   timeoutMs?: number;
   deps?: TarkovJsonDependencies;
 };
-type TarkovJsonPrestigeOptions = Omit<TarkovJsonOptions, 'gameMode'>;
-type JsonPathResult = {
-  parent?: unknown;
-  parentProperty?: string | number;
-  value?: unknown;
+type TarkovJsonPrestigeOptions = TarkovJsonOptions & {
+  project?: (payload: JsonTasksPayload) => JsonTasksPayload;
 };
 type TranslationLookupResult = {
   source: 'fallback' | 'primary';
@@ -184,7 +189,7 @@ async function fetchEnvelope<T>(
   options: TarkovJsonOptions
 ): Promise<TarkovJsonEnvelope<T>> {
   const fetcher = options.deps?.fetcher ?? ($fetch as TarkovJsonFetcherRequest);
-  const fetcherLogger = options.deps?.logger ?? logger;
+  const fetcherLogger = resolveLogger(options);
   const sleep =
     options.deps?.sleep ??
     ((ms: number) =>
@@ -282,235 +287,130 @@ function readTranslation(
   }
   return undefined;
 }
-function parseJsonPath(path: string): string[] | null {
-  if (!path.startsWith('$.')) return null;
-  const parts = path.slice(2).split('.');
-  const segments: string[] = [];
-  for (const part of parts) {
-    if (!part) return null;
-    if (part === '*') {
-      segments.push('*');
-    } else if (part.endsWith('[*]')) {
-      const key = part.slice(0, -3);
-      if (!/^[a-zA-Z0-9_-]+$/.test(key)) return null;
-      segments.push(part);
-    } else {
-      if (!/^[a-zA-Z0-9_-]+$/.test(part)) return null;
-      segments.push(part);
-    }
+// Upstream translation paths use a small JSONPath subset: `.name`, `.*`, `[*]`, `['a','b']` and
+// `..name`. Anything else is reported and skipped; no expression is ever evaluated.
+type TranslationPathSegment =
+  | { kind: 'child'; names: string[] }
+  | { kind: 'wildcard' }
+  | { kind: 'descendant'; names: string[] };
+type TranslateFn = (key: string) => string | undefined;
+const PATH_NAME = '[A-Za-z0-9_-]+';
+const PATH_TOKEN = new RegExp(
+  `^(?:\\.\\.(${PATH_NAME})|\\.(${PATH_NAME})|\\[('${PATH_NAME}'(?:,'${PATH_NAME}')*)\\]|\\.\\*|\\[\\*\\])`
+);
+function toPathSegment(match: RegExpExecArray): TranslationPathSegment {
+  if (match[1]) return { kind: 'descendant', names: [match[1]] };
+  if (match[2]) return { kind: 'child', names: [match[2]] };
+  if (match[3])
+    return { kind: 'child', names: [...new Set(match[3].split(',').map((n) => n.slice(1, -1)))] };
+  return { kind: 'wildcard' };
+}
+function tokenizeTranslationPath(rest: string): TranslationPathSegment[] | null {
+  const segments: TranslationPathSegment[] = [];
+  for (let match = PATH_TOKEN.exec(rest); match; match = PATH_TOKEN.exec(rest)) {
+    segments.push(toPathSegment(match));
+    rest = rest.slice(match[0].length);
   }
+  return rest || !segments.length ? null : segments;
+}
+const hasUnsafeName = (segment: TranslationPathSegment) =>
+  segment.kind !== 'wildcard' && segment.names.some((name) => UNSAFE_TRANSLATION_KEYS.has(name));
+function parseTranslationPath(path: string): TranslationPathSegment[] | null {
+  if (!path.startsWith('$')) return null;
+  const segments = tokenizeTranslationPath(path.slice(1));
+  if (!segments || segments.some(hasUnsafeName)) return null;
   return segments;
 }
-function immutableUpdate(
-  obj: unknown,
-  segments: string[],
+type JsonContainer = Record<string, unknown> | unknown[];
+const isJsonContainer = (node: unknown): node is JsonContainer =>
+  node !== null && typeof node === 'object';
+const isSafeOwnKey = (node: JsonContainer, key: string) =>
+  !UNSAFE_TRANSLATION_KEYS.has(key) && Object.hasOwn(node, key);
+function containerKeys(node: JsonContainer, names?: string[]): string[] {
+  if (Array.isArray(node)) return names ? [] : Object.keys(node);
+  return (names ?? Object.keys(node)).filter((key) => isSafeOwnKey(node, key));
+}
+const shallowCopy = (node: JsonContainer): JsonContainer =>
+  Array.isArray(node) ? [...node] : { ...node };
+function updateEntries(
+  node: JsonContainer,
+  keys: string[],
+  update: (value: unknown) => unknown
+): JsonContainer {
+  let result = node;
+  for (const key of keys) {
+    const value = (node as Record<string, unknown>)[key];
+    const updated = update(value);
+    if (updated === value) continue;
+    if (result === node) result = shallowCopy(node);
+    (result as Record<string, unknown>)[key] = updated;
+  }
+  return result;
+}
+const translateLeaf = (node: unknown, translate: TranslateFn) =>
+  typeof node === 'string' ? (translate(node) ?? node) : node;
+function translateSegment(
+  node: JsonContainer,
+  segment: TranslationPathSegment,
+  visit: (value: unknown, offset: 0 | 1) => unknown
+): JsonContainer {
+  const next = (value: unknown) => visit(value, 1);
+  if (segment.kind === 'wildcard') return updateEntries(node, containerKeys(node), next);
+  const matched = updateEntries(node, containerKeys(node, segment.names), next);
+  if (segment.kind === 'child') return matched;
+  return updateEntries(matched, containerKeys(matched), (value) => visit(value, 0));
+}
+function translateAtPath(
+  node: unknown,
+  segments: TranslationPathSegment[],
   index: number,
-  translateFn: (val: string) => string | undefined
+  translate: TranslateFn
 ): unknown {
-  if (obj === null || typeof obj !== 'object') {
-    return obj;
-  }
-  if (index >= segments.length) {
-    return obj;
-  }
   const segment = segments[index];
-  if (segment === undefined) {
-    return obj;
-  }
-  const isLast = index === segments.length - 1;
-  if (segment === '*') {
-    if (Array.isArray(obj)) {
-      let copied = false;
-      let newArr = obj as unknown[];
-      for (let i = 0; i < obj.length; i++) {
-        if (isLast) {
-          const val = obj[i];
-          if (typeof val === 'string') {
-            const trans = translateFn(val);
-            if (trans !== undefined) {
-              if (!copied) {
-                newArr = [...obj];
-                copied = true;
-              }
-              newArr[i] = trans;
-            }
-          }
-        } else {
-          const updated = immutableUpdate(obj[i], segments, index + 1, translateFn);
-          if (updated !== obj[i]) {
-            if (!copied) {
-              newArr = [...obj];
-              copied = true;
-            }
-            newArr[i] = updated;
-          }
-        }
-      }
-      return newArr;
-    } else {
-      let copied = false;
-      const record = obj as Record<string, unknown>;
-      let newObj = record;
-      for (const key of Object.keys(record)) {
-        if (isLast) {
-          const val = record[key];
-          if (typeof val === 'string') {
-            const trans = translateFn(val);
-            if (trans !== undefined) {
-              if (!copied) {
-                newObj = { ...record };
-                copied = true;
-              }
-              newObj[key] = trans;
-            }
-          }
-        } else {
-          const updated = immutableUpdate(record[key], segments, index + 1, translateFn);
-          if (updated !== record[key]) {
-            if (!copied) {
-              newObj = { ...record };
-              copied = true;
-            }
-            newObj[key] = updated;
-          }
-        }
-      }
-      return newObj;
-    }
-  } else if (segment.endsWith('[*]')) {
-    const prop = segment.slice(0, -3);
-    const record = obj as Record<string, unknown>;
-    const arr = record[prop];
-    if (Array.isArray(arr)) {
-      let copied = false;
-      let newArr = arr as unknown[];
-      for (let i = 0; i < arr.length; i++) {
-        if (isLast) {
-          const val = arr[i];
-          if (typeof val === 'string') {
-            const trans = translateFn(val);
-            if (trans !== undefined) {
-              if (!copied) {
-                newArr = [...arr];
-                copied = true;
-              }
-              newArr[i] = trans;
-            }
-          }
-        } else {
-          const updated = immutableUpdate(arr[i], segments, index + 1, translateFn);
-          if (updated !== arr[i]) {
-            if (!copied) {
-              newArr = [...arr];
-              copied = true;
-            }
-            newArr[i] = updated;
-          }
-        }
-      }
-      if (newArr !== arr) {
-        return {
-          ...record,
-          [prop]: newArr,
-        };
-      }
-    }
-    return obj;
-  } else {
-    const record = obj as Record<string, unknown>;
-    const val = record[segment];
-    if (isLast) {
-      if (typeof val === 'string') {
-        const trans = translateFn(val);
-        if (trans !== undefined) {
-          return {
-            ...record,
-            [segment]: trans,
-          };
-        }
-      }
-    } else {
-      const updated = immutableUpdate(val, segments, index + 1, translateFn);
-      if (updated !== val) {
-        return {
-          ...record,
-          [segment]: updated,
-        };
-      }
-    }
-    return obj;
-  }
+  if (!segment) return translateLeaf(node, translate);
+  if (!isJsonContainer(node)) return node;
+  return translateSegment(node, segment, (value, offset) =>
+    translateAtPath(value, segments, index + offset, translate)
+  );
+}
+type TranslationLogger = Pick<typeof logger, 'warn'>;
+function applyTranslationPath(
+  current: unknown,
+  path: string,
+  translate: TranslateFn,
+  log: TranslationLogger,
+  requireTranslations: boolean
+): unknown {
+  const segments = parseTranslationPath(path);
+  if (segments) return translateAtPath(current, segments, 0, translate);
+  if (requireTranslations) throw new Error('Unsupported json.tarkov.dev season translation path');
+  log.warn('[TarkovJson] Skipped unsupported translation path', { path });
+  return current;
 }
 function applyTranslations<T>(
   response: TarkovJsonEnvelope<T>,
-  primaryTranslations?: JsonRecord,
-  fallbackTranslations?: JsonRecord
+  primaryTranslations: JsonRecord | undefined,
+  fallbackTranslations: JsonRecord | undefined,
+  log: TranslationLogger,
+  requireTranslations: boolean
 ): T {
   const translations = primaryTranslations ?? fallbackTranslations;
-  if (!translations || !response.translations?.length) return response.data;
-  const translateFn = (key: string) => {
-    const translated = readTranslation(translations, fallbackTranslations, key);
-    return translated?.value;
+  if (!translations && requireTranslations)
+    throw new Error('Missing json.tarkov.dev season translations');
+  if (!translations) return response.data;
+  const translate: TranslateFn = (key) => {
+    const translation = readTranslation(translations, fallbackTranslations, key);
+    if (!translation && requireTranslations)
+      throw new Error('Unresolved json.tarkov.dev season translation');
+    return translation?.value;
   };
-  let updatedResponse = response as TarkovJsonEnvelope<T>;
-  let useFallback = false;
-  for (const path of response.translations ?? []) {
-    const segments = parseJsonPath(path);
-    if (segments) {
-      try {
-        updatedResponse = immutableUpdate(
-          updatedResponse,
-          segments,
-          0,
-          translateFn
-        ) as TarkovJsonEnvelope<T>;
-      } catch (error) {
-        logger.warn('[TarkovJson] Failed to apply fast translation path', {
-          error: error instanceof Error ? error.message : String(error),
-          path,
-        });
-        useFallback = true;
-        break;
-      }
-    } else {
-      useFallback = true;
-      break;
-    }
-  }
-  if (useFallback) {
-    const translatedResponse = structuredClone(response) as TarkovJsonEnvelope<T>;
-    for (const path of response.translations ?? []) {
-      try {
-        JSONPath({
-          path,
-          json: translatedResponse,
-          resultType: 'all',
-          callback: (result: JsonPathResult) => {
-            const parent = result.parent;
-            if (!isRecord(parent) && !Array.isArray(parent)) return;
-            const parentProperty = result.parentProperty;
-            if (parentProperty === undefined) return;
-            const translationKey = result.value;
-            if (typeof translationKey !== 'string') return;
-            const translated = readTranslation(translations, fallbackTranslations, translationKey);
-            if (!translated) return;
-            if (translated.source === 'fallback') {
-              logger.debug('[TarkovJson] Applied fallback translation', { path, translationKey });
-            }
-            (parent as Record<string | number, unknown>)[parentProperty] = translated.value;
-          },
-        });
-      } catch (error) {
-        logger.warn('[TarkovJson] Failed to apply translation path', {
-          error: error instanceof Error ? error.message : String(error),
-          path,
-        });
-      }
-    }
-    return translatedResponse.data;
-  }
-  return updatedResponse.data;
+  const translated = (response.translations ?? []).reduce<unknown>(
+    (current, path) => applyTranslationPath(current, path, translate, log, requireTranslations),
+    response
+  );
+  return (translated as TarkovJsonEnvelope<T>).data;
 }
+const resolveLogger = (options: TarkovJsonOptions) => options.deps?.logger ?? logger;
 export async function fetchTarkovJsonEndpoint<T>(
   endpoint: TarkovJsonEndpoint,
   options: TarkovJsonOptions = {}
@@ -529,7 +429,9 @@ export async function fetchTarkovJsonEndpoint<T>(
   return applyTranslations(
     baseResponse,
     primaryResponse.status === 'fulfilled' ? primaryResponse.value.data : undefined,
-    fallbackResponse.status === 'fulfilled' ? fallbackResponse.value?.data : undefined
+    fallbackResponse.status === 'fulfilled' ? fallbackResponse.value?.data : undefined,
+    resolveLogger(options),
+    endpoint === 'season'
   );
 }
 function adaptCategoryRef(value: unknown, context: AdapterContext) {
@@ -541,6 +443,28 @@ function adaptCategoryRef(value: unknown, context: AdapterContext) {
     normalizedName: typeof raw.normalizedName === 'string' ? raw.normalizedName : undefined,
   });
 }
+const ITEM_STRING_FIELDS = [
+  'shortName',
+  'name',
+  'normalizedName',
+  'image512pxLink',
+  'image8xLink',
+  'gridImageLink',
+  'baseImageLink',
+  'iconLink',
+  'backgroundColor',
+] as const;
+function adaptItemFields(raw: JsonRecord, id: string): JsonRecord {
+  const fields: JsonRecord = {
+    id: typeof raw.id === 'string' ? raw.id : id,
+    link: toTrustedGameLinkUrl(raw.link),
+    wikiLink: toTrustedGameLinkUrl(raw.wikiLink),
+  };
+  for (const key of ITEM_STRING_FIELDS) {
+    if (typeof raw[key] === 'string') fields[key] = raw[key];
+  }
+  return fields;
+}
 function adaptItemRef(value: unknown, context: AdapterContext): TarkovItem {
   const id = stringId(value) ?? '';
   const raw = readRecordRef(value, context.itemsById, context.questItemsById);
@@ -550,57 +474,28 @@ function adaptItemRef(value: unknown, context: AdapterContext): TarkovItem {
     rawProperties.defaultPreset = adaptItemRef(rawProperties.defaultPreset, context);
   }
   return compactObject({
-    id: typeof raw.id === 'string' ? raw.id : id,
-    shortName: typeof raw.shortName === 'string' ? raw.shortName : undefined,
-    name: typeof raw.name === 'string' ? raw.name : undefined,
-    normalizedName: typeof raw.normalizedName === 'string' ? raw.normalizedName : undefined,
-    link: typeof raw.link === 'string' ? raw.link : undefined,
-    wikiLink: typeof raw.wikiLink === 'string' ? raw.wikiLink : undefined,
-    image512pxLink: typeof raw.image512pxLink === 'string' ? raw.image512pxLink : undefined,
-    image8xLink: typeof raw.image8xLink === 'string' ? raw.image8xLink : undefined,
-    gridImageLink: typeof raw.gridImageLink === 'string' ? raw.gridImageLink : undefined,
-    baseImageLink: typeof raw.baseImageLink === 'string' ? raw.baseImageLink : undefined,
-    iconLink: typeof raw.iconLink === 'string' ? raw.iconLink : undefined,
-    backgroundColor: typeof raw.backgroundColor === 'string' ? raw.backgroundColor : undefined,
+    ...adaptItemFields(raw, id),
     properties: rawProperties,
   }) as TarkovItem;
+}
+const DEFAULT_PRESET_STRING_FIELDS = ['iconLink', 'image512pxLink', 'backgroundColor'] as const;
+function adaptObjectiveDefaultPreset(properties: unknown, context: AdapterContext) {
+  const ref = isRecord(properties) ? properties.defaultPreset : undefined;
+  const raw = isRecord(ref) ? ref : readRecordRef(ref, context.itemsById);
+  if (!raw) return undefined;
+  const preset: JsonRecord = { id: stringId(raw) };
+  for (const key of DEFAULT_PRESET_STRING_FIELDS) {
+    if (typeof raw[key] === 'string') preset[key] = raw[key];
+  }
+  return compactObject(preset);
 }
 function adaptObjectiveItemRef(value: unknown, context: AdapterContext): TarkovItem {
   const id = stringId(value) ?? '';
   const raw = readRecordRef(value, context.itemsById, context.questItemsById);
   if (!raw) return { id };
-  const rawProperties = isRecord(raw.properties) ? raw.properties : undefined;
-  const rawDefaultPreset = isRecord(rawProperties?.defaultPreset)
-    ? rawProperties.defaultPreset
-    : readRecordRef(rawProperties?.defaultPreset, context.itemsById);
-  const defaultPreset = rawDefaultPreset
-    ? compactObject({
-        id: stringId(rawDefaultPreset),
-        iconLink:
-          typeof rawDefaultPreset.iconLink === 'string' ? rawDefaultPreset.iconLink : undefined,
-        image512pxLink:
-          typeof rawDefaultPreset.image512pxLink === 'string'
-            ? rawDefaultPreset.image512pxLink
-            : undefined,
-        backgroundColor:
-          typeof rawDefaultPreset.backgroundColor === 'string'
-            ? rawDefaultPreset.backgroundColor
-            : undefined,
-      })
-    : undefined;
+  const defaultPreset = adaptObjectiveDefaultPreset(raw.properties, context);
   return compactObject({
-    id: typeof raw.id === 'string' ? raw.id : id,
-    shortName: typeof raw.shortName === 'string' ? raw.shortName : undefined,
-    name: typeof raw.name === 'string' ? raw.name : undefined,
-    normalizedName: typeof raw.normalizedName === 'string' ? raw.normalizedName : undefined,
-    link: typeof raw.link === 'string' ? raw.link : undefined,
-    wikiLink: typeof raw.wikiLink === 'string' ? raw.wikiLink : undefined,
-    image512pxLink: typeof raw.image512pxLink === 'string' ? raw.image512pxLink : undefined,
-    image8xLink: typeof raw.image8xLink === 'string' ? raw.image8xLink : undefined,
-    gridImageLink: typeof raw.gridImageLink === 'string' ? raw.gridImageLink : undefined,
-    baseImageLink: typeof raw.baseImageLink === 'string' ? raw.baseImageLink : undefined,
-    iconLink: typeof raw.iconLink === 'string' ? raw.iconLink : undefined,
-    backgroundColor: typeof raw.backgroundColor === 'string' ? raw.backgroundColor : undefined,
+    ...adaptItemFields(raw, id),
     properties: defaultPreset ? { defaultPreset } : undefined,
   }) as TarkovItem;
 }
@@ -632,6 +527,8 @@ function adaptItem(raw: JsonRecord, context: AdapterContext, lite = false): Tark
   return compactObject({
     ...raw,
     ...base,
+    link: base.link,
+    wikiLink: base.wikiLink,
     categories,
     category: categories?.[0],
     containsItems,
@@ -741,7 +638,7 @@ function adaptTaskRef(value: unknown, context: AdapterContext) {
   return compactObject({
     id,
     name: typeof raw?.name === 'string' ? raw.name : undefined,
-    wikiLink: typeof raw?.wikiLink === 'string' ? raw.wikiLink : undefined,
+    wikiLink: toTrustedGameLinkUrl(raw?.wikiLink),
   });
 }
 function adaptTaskRequirement(raw: unknown, context: AdapterContext) {
@@ -761,7 +658,7 @@ function adaptTraderRequirement(raw: unknown, context: AdapterContext) {
 const onlyIfPopulated = <T>(items: T[]): T[] | undefined => (items.length > 0 ? items : undefined);
 function readFiniteLevel(adapted: TraderRequirement & { level?: number }): number | undefined {
   const level = adapted.level ?? adapted.value;
-  return typeof level === 'number' && Number.isFinite(level) ? level : undefined;
+  return typeof level === 'number' && isValidTraderLevel(level) ? level : undefined;
 }
 function pushTraderRequirement(
   adapted: (TraderRequirement & { level?: number }) | undefined,
@@ -806,13 +703,6 @@ function adaptTraderRequirements(
     traderRequirements: onlyIfPopulated(traderRequirements),
   };
 }
-// json.tarkov.dev may serialize requiredPrestige as a bare id string or as an object ref.
-// Accept both shapes.
-function adaptRequiredPrestigeRef(value: unknown): { id: string } | undefined {
-  if (typeof value === 'string' && value) return { id: value };
-  if (isRecord(value) && value.id != null) return { id: String(value.id) };
-  return undefined;
-}
 function adaptTaskCore(raw: JsonRecord, context: AdapterContext): Task {
   return compactObject({
     id: stringId(raw) ?? '',
@@ -823,15 +713,23 @@ function adaptTaskCore(raw: JsonRecord, context: AdapterContext): Task {
     lightkeeperRequired:
       typeof raw.lightkeeperRequired === 'boolean' ? raw.lightkeeperRequired : undefined,
     experience: typeof raw.experience === 'number' ? raw.experience : undefined,
-    wikiLink: typeof raw.wikiLink === 'string' ? raw.wikiLink : undefined,
+    wikiLink: toTrustedGameLinkUrl(raw.wikiLink),
     minPlayerLevel: typeof raw.minPlayerLevel === 'number' ? raw.minPlayerLevel : undefined,
-    requiredPrestige: adaptRequiredPrestigeRef(raw.requiredPrestige),
+    requiredPrestige: resolveRequiredPrestige(raw.requiredPrestige),
     taskRequirements: Array.isArray(raw.taskRequirements)
       ? raw.taskRequirements.map((requirement) => adaptTaskRequirement(requirement, context))
       : undefined,
+    // Dropping a declared gate above must stay observable, or a malformed gate reads as no gate.
+    otherRequirements: onlyIfPopulated(normalizeOtherRequirements(raw.otherRequirements)),
+    requirementDiagnostics: onlyIfPopulated(taskRequirementDiagnostics(raw)),
     objectives: [],
     failConditions: [],
     ...adaptTraderRequirements(raw.traderRequirements, context),
+    normalizedTraderRequirements: normalizeTraderRequirements(
+      Array.isArray(raw.traderRequirements)
+        ? raw.traderRequirements.map((requirement) => adaptTraderRequirement(requirement, context))
+        : raw.traderRequirements
+    ),
     factionName: typeof raw.factionName === 'string' ? raw.factionName : undefined,
   }) as Task;
 }
@@ -1105,6 +1003,23 @@ export function adaptTaskObjectivesResponse(
     },
   };
 }
+/** Combines all import fields from the same raw task set before one overlay application. */
+export function adaptTasksImportResponse(
+  tasksPayload: JsonTasksPayload,
+  options: { hideoutPayload?: unknown; tradersPayload?: unknown } = {}
+): { data: { tasks: Task[] } } {
+  assertTaskImportSource(tasksPayload);
+  const context = buildContext({ ...options, tasksPayload });
+  context.tasksById = toLookup(tasksPayload.tasks);
+  return {
+    data: {
+      tasks: toRecordArray(tasksPayload.tasks).map((task) => ({
+        ...adaptTaskCore(task, context),
+        ...adaptTaskObjectives(task, context),
+      })),
+    },
+  };
+}
 export function adaptTaskRewardsResponse(
   tasksPayload: JsonTasksPayload,
   options: {
@@ -1155,8 +1070,12 @@ export function adaptPrestigeResponse(
   };
 }
 export function createTarkovJsonBootstrapFetcher(options: TarkovJsonOptions) {
+  // Player levels are numeric, so only the base envelope is needed; skipping the language
+  // envelopes saves two multi-megabyte upstream subrequests per cache miss.
   return async () =>
-    adaptBootstrapResponse(await fetchTarkovJsonEndpoint<JsonItemsPayload>('items', options));
+    adaptBootstrapResponse(
+      (await fetchEnvelope<JsonItemsPayload>(buildPath('items', options), options)).data
+    );
 }
 export function createTarkovJsonItemsFetcher(
   options: TarkovJsonOptions,
@@ -1202,6 +1121,17 @@ export function createTarkovJsonTaskObjectivesFetcher(options: TarkovJsonOptions
     }
   };
 }
+/** English import snapshots are generated off the Worker request path by precompute. */
+export function createTarkovJsonTasksImportFetcher(options: TarkovJsonOptions) {
+  return async () => {
+    const [tasksPayload, hideoutPayload, tradersPayload] = await Promise.all([
+      fetchTarkovJsonEndpoint<JsonTasksPayload>('tasks', options),
+      fetchTarkovJsonEndpoint<unknown>('hideout', options),
+      fetchTarkovJsonEndpoint<unknown>('traders', options),
+    ]);
+    return adaptTasksImportResponse(tasksPayload, { hideoutPayload, tradersPayload });
+  };
+}
 export function createTarkovJsonTaskRewardsFetcher(options: TarkovJsonOptions) {
   return async () => {
     try {
@@ -1231,15 +1161,21 @@ export function createTarkovJsonHideoutFetcher(options: TarkovJsonOptions) {
   };
 }
 export function createTarkovJsonPrestigeFetcher(options: TarkovJsonPrestigeOptions) {
-  const regularOptions: TarkovJsonOptions = { ...options, gameMode: PRESTIGE_SOURCE_GAME_MODE };
+  const sourceOptions: TarkovJsonOptions = {
+    ...options,
+    gameMode: options.gameMode ?? PRESTIGE_SOURCE_GAME_MODE,
+  };
   return async () => {
     try {
       const [tasksPayload, hideoutPayload, tradersPayload] = await Promise.all([
-        fetchTarkovJsonEndpoint<JsonTasksPayload>('tasks', regularOptions),
-        fetchTarkovJsonEndpoint<unknown>('hideout', regularOptions),
-        fetchTarkovJsonEndpoint<unknown>('traders', regularOptions),
+        fetchTarkovJsonEndpoint<JsonTasksPayload>('tasks', sourceOptions),
+        fetchTarkovJsonEndpoint<unknown>('hideout', sourceOptions),
+        fetchTarkovJsonEndpoint<unknown>('traders', sourceOptions),
       ]);
-      return adaptPrestigeResponse(tasksPayload, { hideoutPayload, tradersPayload });
+      return adaptPrestigeResponse(options.project ? options.project(tasksPayload) : tasksPayload, {
+        hideoutPayload,
+        tradersPayload,
+      });
     } catch (error) {
       logger.error('Failed to build prestige payload from tasks, hideout, and traders', {
         error,

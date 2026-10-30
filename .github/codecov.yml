@@ -1,0 +1,36 @@
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 5%
+      # Codecov merges imported-file reports from all shards. Keep a meaningful
+      # merged line-coverage floor; local Vitest also includes unimported app
+      # files and enforces per-metric and targeted module floors.
+      # Baseline and denominator differences: docs/testing-coverage.md.
+      absolute-floor:
+        target: 65
+        threshold: 0%
+      # Fork PRs intentionally skip the coverage upload (no org secrets) and
+      # Codecov statuses default to if_not_found: success, so forks are not
+      # blocked on missing reports. Dependabot auto-merge polls commit status
+      # contexts, so a failed absolute-floor status still blocks merges.
+    patch:
+      default:
+        target: auto
+        threshold: 10%
+bundle_analysis:
+  status: informational
+  warning_threshold: 5%
+# Coverage and bundle results are reported through the codecov/* statuses and the Codecov app;
+# PR comments are off to keep per-PR notification noise down.
+comment: false
+ignore:
+  - 'app/locales/**'
+  - 'app/**/*.d.ts'
+  - 'supabase/**'
+  - 'workers/**'
+  - 'scripts/**'
+  - 'tests/**'
+  - 'docs/**'
+  - 'public/**'

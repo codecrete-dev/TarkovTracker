@@ -1,3 +1,12 @@
+import { normalizeOtherRequirements } from '@/utils/taskOtherRequirements';
+import {
+  hasDeclaredPrestigeLevel,
+  isDeclaredGate,
+  isValidTraderLevel,
+  normalizeTraderReference,
+  normalizeTraderRequirements,
+  resolveRequiredPrestige,
+} from '@/utils/taskRequirements';
 /**
  * Overlay utility for applying tarkov-data-overlay corrections to tarkov.dev API data.
  *
@@ -14,33 +23,20 @@ import {
   inferObjectiveType,
   normalizeObjectiveList,
 } from './objectiveTypeInferrer';
+import { addFallbackCrafts, addFallbackItems } from './overlayAdditions';
+import { overlayAuthHeaders } from './overlayAuth';
+import {
+  attachCounterDerivations,
+  progressionPools,
+  usableCounterDerivations,
+} from './overlayCounters';
+import { mergeOverlayRecords, overlayEntries, scopedOverlay } from './overlayProjectors';
+import { attachTraderTaskGroups } from './overlayTaskGroups';
+import { validateOverlayData, unknownOverlaySections } from './overlayValidation';
 import { TARKOVTRACKER_USER_AGENT } from './userAgent';
+import type { OverlayData, OverlayLocaleData as LocaleOverlayData } from './overlayTypes';
+import type { HideoutStation, TarkovItem, Task, TaskRequirementDiagnostic } from '@/types/tarkov';
 const logger = createLogger('Overlay');
-// Overlay data structure
-interface ModeOverlayData {
-  tasks?: Record<string, Record<string, unknown>>;
-  tasksAdd?: Record<string, Record<string, unknown>>;
-}
-interface LocaleOverlayData {
-  tasks?: Record<string, Record<string, unknown>>;
-  items?: Record<string, Record<string, unknown>>;
-  traders?: Record<string, Record<string, unknown>>;
-}
-interface OverlayData {
-  tasks?: Record<string, Record<string, unknown>>;
-  tasksAdd?: Record<string, Record<string, unknown>>;
-  items?: Record<string, Record<string, unknown>>;
-  traders?: Record<string, Record<string, unknown>>;
-  hideout?: Record<string, Record<string, unknown>>;
-  editions?: Record<string, unknown>;
-  modes?: Record<string, ModeOverlayData>;
-  locales?: Record<string, LocaleOverlayData>;
-  $meta?: {
-    version: string;
-    generated: string;
-    sha256: string;
-  };
-}
 type OverlayStatus = 'fresh' | 'cached' | 'stale' | 'missing';
 export interface OverlayMeta {
   status: OverlayStatus;
@@ -51,6 +47,7 @@ export interface OverlayMeta {
   fetchedAt?: string;
   cacheAgeMs?: number;
   error?: string;
+  unconsumedSections?: string[];
 }
 // Module-level cache behavior: cachedOverlay and cacheTimestamp persist across requests in
 // long-running Node.js processes but reset on cold starts in serverless/edge platforms.
@@ -92,58 +89,19 @@ let lastOverlayMeta: OverlayMeta = {
   status: 'missing',
   sourceUrl: OVERLAY_URL_WITH_BUSTER,
 };
-/**
- * Validate overlay data structure
- */
-function isValidOverlayData(data: unknown): data is OverlayData {
-  if (!data || typeof data !== 'object') return false;
-  const overlay = data as OverlayData;
-  // Check for required $meta field with version
-  if (!overlay.$meta || typeof overlay.$meta !== 'object') {
-    logger.warn('Invalid overlay: missing $meta');
-    return false;
-  }
-  if (typeof overlay.$meta.version !== 'string') {
-    logger.warn('Invalid overlay: missing or invalid $meta.version');
-    return false;
-  }
-  // Validate optional entity collections are records if present
-  const collections = ['tasks', 'tasksAdd', 'items', 'traders', 'hideout'] as const;
-  for (const collection of collections) {
-    if (
-      overlay[collection] !== undefined &&
-      (typeof overlay[collection] !== 'object' || overlay[collection] === null)
-    ) {
-      logger.warn(`Invalid overlay: ${collection} is not an object`);
-      return false;
-    }
-  }
-  // Validate optional modes field
-  if (overlay.modes !== undefined) {
-    if (typeof overlay.modes !== 'object' || overlay.modes === null) {
-      logger.warn('Invalid overlay: modes is not an object');
-      return false;
-    }
-    for (const [mode, modeData] of Object.entries(overlay.modes)) {
-      if (typeof modeData !== 'object' || modeData === null) {
-        logger.warn(`Invalid overlay: modes.${mode} is not an object`);
-        return false;
-      }
-    }
-  }
-  return true;
-}
 function buildOverlayMeta(
   overlay: OverlayData | null,
   status: OverlayStatus,
   extra?: Partial<OverlayMeta>
 ): OverlayMeta {
+  const { version, generated, sha256 } = overlay?.$meta ?? {};
   return {
     status,
-    version: overlay?.$meta?.version,
-    generated: overlay?.$meta?.generated,
-    sha256: overlay?.$meta?.sha256,
+    version,
+    generated,
+    sha256,
     sourceUrl: OVERLAY_URL_WITH_BUSTER,
+    unconsumedSections: overlay ? unknownOverlaySections(overlay) : [],
     ...extra,
   };
 }
@@ -176,7 +134,11 @@ async function fetchOverlayOverHttps(signal: AbortSignal): Promise<Response> {
     const response = await fetch(currentUrl, {
       signal,
       redirect: 'manual',
-      headers: { Accept: 'application/json', 'User-Agent': TARKOVTRACKER_USER_AGENT },
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': TARKOVTRACKER_USER_AGENT,
+        ...overlayAuthHeaders(currentUrl),
+      },
     });
     if (!OVERLAY_REDIRECT_STATUSES.has(response.status)) return response;
     await response.body?.cancel();
@@ -204,14 +166,17 @@ async function processOverlayResponse(
     return buildOverlayFailure(`HTTP ${response.status}`);
   }
   const parsedData = await response.json();
-  if (!isValidOverlayData(parsedData)) {
+  if (!validateOverlayData(parsedData)) {
     logger.warn('Fetched overlay failed validation, using stale cache');
     return buildOverlayFailure('validation_failed');
   }
+  const unconsumed = unknownOverlaySections(parsedData);
+  if (unconsumed.length) logger.warn('Unconsumed overlay sections:', unconsumed);
   cachedOverlay = parsedData;
   cacheTimestamp = now;
-  logger.info(`Loaded overlay v${cachedOverlay.$meta?.version}`);
+  logger.info(`Loaded overlay v${cachedOverlay.$meta!.version}`);
   lastOverlayMeta = buildOverlayMeta(cachedOverlay, 'fresh', {
+    unconsumedSections: unconsumed,
     fetchedAt: new Date(now).toISOString(),
     cacheAgeMs: 0,
   });
@@ -271,7 +236,7 @@ function scheduleOverlayRefresh(now: number, scheduleRefresh: OverlayRefreshSche
   const refresh = startOverlayRefresh(now);
   if (refresh.started) scheduleRefresh(refresh.promise);
 }
-async function fetchOverlay(
+export async function fetchOverlay(
   forceRefresh: boolean = false,
   scheduleRefresh?: OverlayRefreshScheduler
 ): Promise<OverlayFetchResult> {
@@ -289,7 +254,8 @@ async function fetchOverlay(
  * Apply overlay corrections to an array of entities
  * Filters out entities marked as disabled after applying corrections
  */
-type ApplyEntityOverlayOptions = {
+type ApplyEntityOverlayOptions<T extends { id: string }> = {
+  normalize?: (task: T, patch: Record<string, unknown>, original: T) => T;
   logLabel?: string;
   /** If true, log even when appliedCount and disabledCount are both zero. Default: true */
   logEvenWhenZero?: boolean;
@@ -297,7 +263,7 @@ type ApplyEntityOverlayOptions = {
 function applyEntityOverlay<T extends { id: string }>(
   entities: T[],
   corrections: Record<string, Record<string, unknown>> | undefined,
-  options: ApplyEntityOverlayOptions = {}
+  options: ApplyEntityOverlayOptions<T> = {}
 ): T[] {
   if (!corrections || !entities) return entities;
   let appliedCount = 0;
@@ -309,7 +275,8 @@ function applyEntityOverlay<T extends { id: string }>(
         appliedCount++;
         logger.debug(`Applying correction to ${entity.id}:`, correction);
         // Deep merge the correction into the entity (recursively merges nested objects)
-        return deepMerge(entity as Record<string, unknown>, correction) as T;
+        const merged = deepMerge(entity as Record<string, unknown>, correction) as T;
+        return options.normalize ? options.normalize(merged, correction, entity) : merged;
       }
       return entity;
     })
@@ -455,6 +422,61 @@ export function applyTaskObjectiveAdditions<T extends { id: string }>(task: T): 
     objectives: [...existing, ...deduped],
   };
 }
+const EXTRACT_FACTIONS = new Set(['pmc', 'scav', 'shared']);
+const nonEmptyString = (value: unknown): value is string =>
+  typeof value === 'string' && value.trim().length > 0;
+const validExtractPosition = (value: unknown): boolean =>
+  value === undefined ||
+  (isPlainObject(value) &&
+    ['x', 'y', 'z'].every(
+      (axis) => typeof value[axis] === 'number' && Number.isFinite(value[axis])
+    ));
+/** Leaflet renders additions verbatim, so malformed entries are dropped rather than forwarded. */
+const isValidExtractAddition = (
+  value: unknown
+): value is Record<string, unknown> & {
+  id: string;
+  name: string;
+} =>
+  isPlainObject(value) &&
+  [
+    nonEmptyString(value.id),
+    nonEmptyString(value.name),
+    value.faction == null || EXTRACT_FACTIONS.has(value.faction as string),
+    validExtractPosition(value.position),
+  ].every(Boolean);
+const isExtractMatching = (existing: unknown, id: string, name: string): boolean =>
+  isPlainObject(existing) && (existing.id === id || existing.name === name);
+function filterNewExtracts(existing: unknown[], additions: unknown[]): Record<string, unknown>[] {
+  const result: Record<string, unknown>[] = [];
+  for (const addition of additions) {
+    if (!isValidExtractAddition(addition)) continue;
+    const seen = [...existing, ...result];
+    if (!seen.some((ext) => isExtractMatching(ext, addition.id, addition.name)))
+      result.push(addition);
+  }
+  return result;
+}
+function mergeMapExtractAdditions(
+  map: Record<string, unknown>,
+  additions: unknown[]
+): Record<string, unknown> {
+  const existing = Array.isArray(map.extracts) ? map.extracts : [];
+  const deduped = filterNewExtracts(existing, additions);
+  const { extractsAdd: _omitted, ...rest } = map;
+  if (deduped.length === 0) return rest;
+  return {
+    ...rest,
+    extracts: [...existing, ...deduped],
+  };
+}
+export function applyMapExtractAdditions<T extends { id: string }>(map: T): T {
+  if (!isPlainObject(map)) return map;
+  const obj = map as Record<string, unknown>;
+  const additions = Array.isArray(obj.extractsAdd) ? obj.extractsAdd : [];
+  if (additions.length === 0) return map;
+  return mergeMapExtractAdditions(obj, additions) as T;
+}
 type OverlayTaskAddition = Record<string, unknown> & { id: string };
 function normalizeTaskAdditions(
   additions: Record<string, Record<string, unknown>> | undefined
@@ -467,7 +489,9 @@ function normalizeTaskAdditions(
     .map((entry) => {
       const factionName = typeof entry.factionName === 'string' ? entry.factionName : 'Any';
       const objectives = normalizeObjectiveList(entry.objectives);
-      const failConditions = normalizeObjectiveList(entry.failConditions);
+      const failConditions = normalizeObjectiveList(
+        entry.failConditions === undefined ? [] : entry.failConditions
+      );
       return { ...entry, factionName, objectives, failConditions };
     });
 }
@@ -475,21 +499,129 @@ const isLevelRequirement = (requirement: unknown): requirement is Record<string,
   isPlainObject(requirement) && requirement.requirementType === 'level';
 const hasFiniteLevelThreshold = (requirement: Record<string, unknown>): boolean => {
   const level = requirement.level ?? requirement.value;
-  return typeof level === 'number' && Number.isFinite(level);
+  return typeof level === 'number' && isValidTraderLevel(level);
 };
 function applyTraderRequirementSplit(task: Record<string, unknown>): void {
   const raw = task.traderRequirements;
+  task.normalizedTraderRequirements = normalizeTraderRequirements(raw);
   if (!Array.isArray(raw)) return;
-  const traderLevelRequirements = raw
+  const adapted = raw.map((requirement) =>
+    isPlainObject(requirement)
+      ? { ...requirement, trader: normalizeTraderReference(requirement.trader) }
+      : requirement
+  );
+  const traderLevelRequirements = adapted
     .filter(isLevelRequirement)
     .filter(hasFiniteLevelThreshold)
     .map((requirement) => ({ ...requirement, level: requirement.level ?? requirement.value }));
-  const traderRequirements = raw.filter(
+  const traderRequirements = adapted.filter(
     (requirement) => isPlainObject(requirement) && requirement.requirementType !== 'level'
   );
   task.traderLevelRequirements =
     traderLevelRequirements.length > 0 ? traderLevelRequirements : undefined;
   task.traderRequirements = traderRequirements.length > 0 ? traderRequirements : undefined;
+}
+const DECLARED_GATE_DIAGNOSTICS = {
+  taskRequirements: 'task_requirement',
+  requiredPrestige: 'prestige_reference',
+} as const satisfies Partial<Record<keyof Task, TaskRequirementDiagnostic>>;
+type DeclaredGateField = keyof typeof DECLARED_GATE_DIAGNOSTICS;
+const DECLARED_GATE_FIELDS = Object.keys(DECLARED_GATE_DIAGNOSTICS) as DeclaredGateField[];
+const patchesField = (patch: Record<string, unknown> | undefined, field: string): boolean =>
+  patch != null && field in patch;
+const patchesDeclaredGates = (patch: Record<string, unknown> | undefined): boolean =>
+  DECLARED_GATE_FIELDS.some((field) => patchesField(patch, field));
+const declaredGateFields = (task: Record<string, unknown>): DeclaredGateField[] =>
+  DECLARED_GATE_FIELDS.filter((field) => isDeclaredGate(task[field]));
+const diagnosticsFor = (fields: DeclaredGateField[]): TaskRequirementDiagnostic[] =>
+  fields.map((field) => DECLARED_GATE_DIAGNOSTICS[field]);
+const normalizeDeclaredRequirements = (task: Record<string, unknown>): void => {
+  if (Array.isArray(task.taskRequirements)) return;
+  delete task.taskRequirements;
+};
+const normalizeDeclaredPrestige = (task: Record<string, unknown>): void => {
+  const resolved = resolveRequiredPrestige(task.requiredPrestige);
+  if (resolved) task.requiredPrestige = resolved;
+  else if (!hasDeclaredPrestigeLevel(task.requiredPrestige)) delete task.requiredPrestige;
+};
+const orderedGateDiagnostics = (
+  diagnostics: TaskRequirementDiagnostic[]
+): TaskRequirementDiagnostic[] =>
+  diagnosticsFor(DECLARED_GATE_FIELDS).filter((diagnostic) => diagnostics.includes(diagnostic));
+const recordGateDiagnostics = (
+  task: Record<string, unknown>,
+  diagnostics: TaskRequirementDiagnostic[]
+): void => {
+  if (diagnostics.length) task.requirementDiagnostics = orderedGateDiagnostics(diagnostics);
+  else delete task.requirementDiagnostics;
+};
+const recordedGateDiagnostics = (task: Record<string, unknown>): TaskRequirementDiagnostic[] =>
+  Array.isArray(task.requirementDiagnostics)
+    ? (task.requirementDiagnostics as TaskRequirementDiagnostic[])
+    : [];
+/**
+ * A patch that leaves a gate field alone must not clear the diagnostic the adapter recorded for it:
+ * the adapter already dropped the value a recomputation would need in order to re-detect it.
+ */
+const retainedGateDiagnostics = (
+  task: Record<string, unknown>,
+  patch: Record<string, unknown> | undefined
+): TaskRequirementDiagnostic[] => {
+  const untouched = DECLARED_GATE_FIELDS.filter((field) => !patchesField(patch, field));
+  const kept = new Set(diagnosticsFor(untouched));
+  return recordedGateDiagnostics(task).filter((diagnostic) => kept.has(diagnostic));
+};
+/**
+ * The overlay merges into already-adapted tasks, so a correction or an injected task can reintroduce
+ * a raw gate the adapter would have normalized. Recomputing here keeps `taskRequirements` a list and
+ * resolves `requiredPrestige`, then reports exactly the declared gates normalization had to drop.
+ */
+function applyDeclaredGateNormalization(
+  task: Record<string, unknown>,
+  retained: TaskRequirementDiagnostic[]
+): void {
+  const declared = declaredGateFields(task);
+  normalizeDeclaredRequirements(task);
+  normalizeDeclaredPrestige(task);
+  const otherRequirements = normalizeOtherRequirements(task.otherRequirements);
+  if (otherRequirements.length) task.otherRequirements = otherRequirements;
+  else delete task.otherRequirements;
+  const dropped = declared.filter((field) => task[field] === undefined);
+  recordGateDiagnostics(task, [...retained, ...diagnosticsFor(dropped)]);
+}
+/**
+ * Normalize the gates a patch touched. Only patched entities are fresh `deepMerge` results, so this
+ * both avoids mutating shared input and lets a correction clear the diagnostic for the field it
+ * rewrote while leaving an untouched field's diagnostic intact.
+ */
+function applyPatchedGateNormalization<T extends { id: string }>(
+  task: T,
+  patch: Record<string, unknown> | undefined,
+  original: T
+): void {
+  const record = task as Record<string, unknown>;
+  // Diagnostics are derived state: corrections cannot replace the adapter's evidence.
+  recordGateDiagnostics(record, recordedGateDiagnostics(original as Record<string, unknown>));
+  if (!patchesDeclaredGates(patch) && !patchesField(patch, 'otherRequirements')) return;
+  applyDeclaredGateNormalization(record, retainedGateDiagnostics(record, patch));
+}
+/** Re-normalize a corrected upstream task. */
+function applyTaskPatchNormalization<T extends { id: string }>(
+  task: T,
+  patch: Record<string, unknown> | undefined,
+  original: T
+): T {
+  const record = task as Record<string, unknown>;
+  if (patchesField(patch, 'traderRequirements')) applyTraderRequirementSplit(record);
+  applyPatchedGateNormalization(task, patch, original);
+  return task;
+}
+/** Overlay additions never pass through the adapter, so their raw gates are all still readable. */
+function applyTaskAdditionNormalization<T extends { id: string }>(task: T): T {
+  const record = task as Record<string, unknown>;
+  if ('traderRequirements' in record) applyTraderRequirementSplit(record);
+  applyDeclaredGateNormalization(record, []);
+  return applyTaskObjectiveAdditions(task);
 }
 function mergeModeCorrections(
   shared: Record<string, Record<string, unknown>> | undefined,
@@ -510,31 +642,94 @@ function mergeModeCorrections(
  * @returns The data with overlay corrections applied
  */
 type OverlayTargetData = {
+  maps?: Array<{ id: string }>;
   tasks?: Array<{ id: string }>;
   items?: Array<{ id: string }>;
   traders?: Array<{ id: string }>;
   hideoutStations?: Array<{ id: string }>;
 };
 function applyLocaleOverlays(target: OverlayTargetData, localeOverlay: LocaleOverlayData): void {
-  if (Array.isArray(target.tasks)) {
-    target.tasks = applyLocaleOverlay(target.tasks, localeOverlay.tasks);
+  for (const collection of ['items', 'maps', 'traders'] as const) {
+    const entities = target[collection];
+    if (Array.isArray(entities))
+      target[collection] = applyLocaleOverlay(entities, localeOverlay[collection]);
   }
-  if (Array.isArray(target.items)) {
-    target.items = applyLocaleOverlay(target.items, localeOverlay.items);
-  }
-  if (Array.isArray(target.traders)) {
-    target.traders = applyLocaleOverlay(target.traders, localeOverlay.traders);
-  }
+  // Locale patches land after the main task pass, so a gate one of them declares needs the same
+  // normalization. Locale corrections are meant to be locale-sensitive fields only; this keeps a
+  // stray gate from reaching consumers unchecked rather than trusting that convention. The merge and
+  // the normalization share one pass so the patch stays associated with its pre-patch task id.
+  const tasks = target.tasks;
+  if (!Array.isArray(tasks)) return;
+  target.tasks = tasks.map((task) => {
+    const patch = localeOverlay.tasks?.[task.id];
+    if (!isPlainObject(patch)) return task;
+    const merged = deepMerge(task as Record<string, unknown>, patch) as { id: string };
+    applyPatchedGateNormalization(merged, patch, task);
+    return merged;
+  });
 }
 function applyEntityCollectionOverlay(
   target: OverlayTargetData,
-  collection: 'hideoutStations' | 'items' | 'traders',
+  collection: 'hideoutStations' | 'items' | 'traders' | 'maps',
   patches: Record<string, Record<string, unknown>> | undefined
 ): void {
   const entities = target[collection];
   if (!patches || !Array.isArray(entities)) return;
-  target[collection] = applyEntityOverlay(entities, patches);
+  const normalize =
+    collection === 'maps'
+      ? (applyMapExtractAdditions as (map: { id: string }) => { id: string })
+      : undefined;
+  target[collection] = applyEntityOverlay(entities, patches, { normalize });
 }
+const chapterTaskIds = (chapter: Record<string, unknown>): string[] => {
+  if (!Array.isArray(chapter.questUnlocks)) return [];
+  return chapter.questUnlocks
+    .filter(isPlainObject)
+    .map((unlock) => unlock.id)
+    .filter((id): id is string => typeof id === 'string');
+};
+const storyChapterName = (chapter: Record<string, unknown>, id: string) =>
+  typeof chapter.name === 'string' ? chapter.name : id;
+type StoryCatalog = Record<string, Record<string, unknown>>;
+const storyCatalog = (overlay: OverlayData, mode: string, locale: string): StoryCatalog =>
+  mergeOverlayRecords(
+    scopedOverlay(overlay, 'storyChapters', mode),
+    overlay.locales?.[locale]?.storyChapters
+  );
+const refId = (value: unknown): unknown => (isPlainObject(value) ? value.id : undefined);
+const catalogHasObjective = (chapters: StoryCatalog, requirement: Record<string, unknown>) => {
+  const chapterId = refId(requirement.storyChapter);
+  if (typeof chapterId !== 'string' || !Object.hasOwn(chapters, chapterId)) return false;
+  const objectiveId = refId(requirement.objective);
+  return overlayEntries(chapters[chapterId]!.objectives).some(({ id }) => id === objectiveId);
+};
+/**
+ * A story gate naming a chapter or objective absent from this mode's catalog can never be met, so
+ * it fails closed as unsupported instead of letting Mark available record a fabricated objective.
+ */
+const resolveStoryGate = (requirement: unknown, chapters: StoryCatalog): unknown =>
+  isPlainObject(requirement) &&
+  requirement.type === 'storyObjective' &&
+  !catalogHasObjective(chapters, requirement)
+    ? { type: 'unknown', upstreamType: 'storyObjective' }
+    : requirement;
+const withResolvedStoryGates = <T extends { id: string }>(task: T, chapters: StoryCatalog): T => {
+  const gates = (task as Record<string, unknown>).otherRequirements;
+  if (!Array.isArray(gates)) return task;
+  return { ...task, otherRequirements: gates.map((gate) => resolveStoryGate(gate, chapters)) };
+};
+const collectStoryUnlocks = (chapters: Record<string, Record<string, unknown>> = {}) => {
+  const byTask = new Map<string, Array<{ id: string; name: string }>>();
+  for (const [id, chapter] of Object.entries(chapters)) {
+    const name = storyChapterName(chapter, id);
+    for (const taskId of chapterTaskIds(chapter)) {
+      const entries = byTask.get(taskId) ?? [];
+      entries.push({ id, name });
+      byTask.set(taskId, entries);
+    }
+  }
+  return byTask;
+};
 export async function applyOverlay<T extends { data?: OverlayTargetData }>(
   data: T,
   options: {
@@ -553,6 +748,7 @@ export async function applyOverlay<T extends { data?: OverlayTargetData }>(
     return result;
   }
   result.data = { ...data.data };
+  const locale = options.locale?.trim() || 'en';
   // Apply task corrections and inject overlay task additions
   if (Array.isArray(result.data.tasks)) {
     // Merge mode-specific task corrections on top of shared corrections
@@ -561,14 +757,9 @@ export async function applyOverlay<T extends { data?: OverlayTargetData }>(
     const mergedTasksAdd = mergeModeCorrections(overlay.tasksAdd, modeOverlay?.tasksAdd);
     const correctedTasks = applyEntityOverlay(
       result.data.tasks as Array<{ id: string }>,
-      mergedTasks
-    ).map((task) => {
-      const patch = mergedTasks?.[task.id];
-      if (patch && 'traderRequirements' in patch) {
-        applyTraderRequirementSplit(task as Record<string, unknown>);
-      }
-      return applyTaskObjectiveAdditions(task);
-    });
+      mergedTasks,
+      { normalize: applyTaskPatchNormalization }
+    ).map(applyTaskObjectiveAdditions);
     const normalizedAdditions = normalizeTaskAdditions(mergedTasksAdd);
     logger.info(
       `Overlay tasksAdd: ${normalizedAdditions.length} additions after filtering disabled`
@@ -576,24 +767,51 @@ export async function applyOverlay<T extends { data?: OverlayTargetData }>(
     const addedTasks = applyEntityOverlay(normalizedAdditions, mergedTasks, {
       logLabel: 'tasksAdd',
       logEvenWhenZero: false,
-    }).map((task) => {
-      if ('traderRequirements' in task) {
-        applyTraderRequirementSplit(task as Record<string, unknown>);
-      }
-      return applyTaskObjectiveAdditions(task);
-    });
+    }).map(applyTaskAdditionNormalization);
     const existingIds = new Set(correctedTasks.map((task) => task.id));
     const dedupedAdditions = addedTasks.filter((task) => !existingIds.has(task.id));
     logger.info(`Overlay tasksAdd: ${dedupedAdditions.length} additions after dedupe`);
-    result.data.tasks = [...correctedTasks, ...dedupedAdditions];
+    const chapters = storyCatalog(overlay, options.gameMode ?? 'regular', locale);
+    const storyUnlocksByTask = collectStoryUnlocks(chapters);
+    result.data.tasks = [...correctedTasks, ...dedupedAdditions].map((task) => ({
+      ...task,
+      storyUnlocks: storyUnlocksByTask.get(task.id) ?? [],
+    }));
   }
-  applyEntityCollectionOverlay(result.data, 'items', overlay.items);
-  applyEntityCollectionOverlay(result.data, 'traders', overlay.traders);
-  applyEntityCollectionOverlay(result.data, 'hideoutStations', overlay.hideout);
-  const locale = options.locale?.trim() || 'en';
+  const mode = options.gameMode ?? 'regular';
+  if (Array.isArray(result.data.items))
+    result.data.items = addFallbackItems(result.data.items as TarkovItem[], overlay, mode);
+  if (Array.isArray(result.data.hideoutStations))
+    result.data.hideoutStations = addFallbackCrafts(
+      result.data.hideoutStations as HideoutStation[],
+      overlay,
+      mode
+    );
+  applyEntityCollectionOverlay(result.data, 'items', scopedOverlay(overlay, 'items', mode));
+  applyEntityCollectionOverlay(result.data, 'traders', scopedOverlay(overlay, 'traders', mode));
+  applyEntityCollectionOverlay(
+    result.data,
+    'hideoutStations',
+    scopedOverlay(overlay, 'hideout', mode)
+  );
+  applyEntityCollectionOverlay(result.data, 'maps', scopedOverlay(overlay, 'maps', mode));
   const localeOverlay = overlay.locales?.[locale];
   if (localeOverlay) {
     applyLocaleOverlays(result.data, localeOverlay);
   }
+  // Last, so a gate injected by any correction, including a locale patch, is checked.
+  if (Array.isArray(result.data.tasks)) {
+    const chapters = storyCatalog(overlay, mode, locale);
+    result.data.tasks = result.data.tasks.map((task) => withResolvedStoryGates(task, chapters));
+  }
+  // Last, so no later task patch can supply or strip a derivation the registry does not declare.
+  if (Array.isArray(result.data.tasks))
+    result.data.tasks = attachCounterDerivations(
+      result.data.tasks,
+      usableCounterDerivations(overlay, mode),
+      progressionPools(overlay, mode)
+    );
+  if (Array.isArray(result.data.tasks))
+    result.data.tasks = attachTraderTaskGroups(result.data.tasks, overlay, mode);
   return result;
 }

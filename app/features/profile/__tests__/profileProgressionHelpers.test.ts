@@ -21,7 +21,6 @@ const defaultProgressData: UserProgressData = {
   taskCompletions: {},
   taskObjectives: {},
   traders: {},
-  xpOffset: 0,
 };
 describe('profileProgressionHelpers', () => {
   it('normalizes mode and user id values from route input', () => {
@@ -54,5 +53,18 @@ describe('profileProgressionHelpers', () => {
     expect(normalized.pmcFaction).toBe('BEAR');
     expect(normalized.taskCompletions).toEqual({ a: { complete: true } });
     expect(normalized.hideoutModules).toEqual({});
+    expect(normalized.taskAvailability).toEqual({});
+  });
+  it('keeps valid availability confirmations in shared profiles', () => {
+    const normalized = normalizeSharedProgressData(
+      {
+        taskAvailability: {
+          a: { requirements: 'sig', timestamp: 5 },
+          bad: { requirements: 1, timestamp: 5 },
+        },
+      },
+      defaultProgressData
+    );
+    expect(normalized.taskAvailability).toEqual({ a: { requirements: 'sig', timestamp: 5 } });
   });
 });

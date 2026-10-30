@@ -17,16 +17,24 @@
 import { ACTIVE_SEASON_NUMBER, GAME_MODES, type GameMode } from '@/utils/constants';
 import {
   reconcileSeasonalProgressSeason,
+  sanitizeManualActivityEpoch,
+  sanitizeManualActivityHistory,
   sanitizeOwnedProgressData,
 } from '@/utils/progressSanitizers';
+import { nextClock } from '@/utils/taskAvailabilityConfirmation';
 import {
   isTaskComplete as isTaskCompletionComplete,
   isTaskFailed as isTaskCompletionFailed,
   type RawTaskCompletion,
 } from '@/utils/taskStatus';
-import type { TaskCompletion, UserProgressData } from '@/types/progress';
+import type { ManualActivityEntry, TaskCompletion, UserProgressData } from '@/types/progress';
 import type { _GettersTree } from 'pinia';
-export type { ApiTaskUpdate, ApiUpdateMeta, UserProgressData } from '@/types/progress';
+export type {
+  ApiTaskUpdate,
+  ApiUpdateMeta,
+  ManualActivityEntry,
+  UserProgressData,
+} from '@/types/progress';
 export interface UserState {
   currentGameMode: GameMode;
   gameEdition: number;
@@ -40,9 +48,9 @@ const defaultProgressData: UserProgressData = {
   level: 1,
   pmcFaction: 'USEC',
   displayName: null,
-  xpOffset: 0,
   taskObjectives: {},
   taskCompletions: {},
+  taskAvailability: {},
   hideoutParts: {},
   hideoutModules: {},
   traders: {},
@@ -52,6 +60,8 @@ const defaultProgressData: UserProgressData = {
   skillOffsets: {},
   storyChapters: {},
   apiUpdateHistory: [],
+  manualActivityHistory: [],
+  manualActivityEpoch: 0,
 };
 export const defaultState: UserState = {
   currentGameMode: GAME_MODES.PVP,
@@ -150,8 +160,8 @@ const getCurrentData = (state: UserState): UserProgressData => {
       level: 1,
       pmcFaction: 'USEC',
       displayName: null,
-      xpOffset: 0,
       taskCompletions: {},
+      taskAvailability: {},
       taskObjectives: {},
       hideoutParts: {},
       hideoutModules: {},
@@ -162,6 +172,8 @@ const getCurrentData = (state: UserState): UserProgressData => {
       skillOffsets: {},
       storyChapters: {},
       apiUpdateHistory: [],
+      manualActivityHistory: [],
+      manualActivityEpoch: 0,
     };
   }
   return state[state.currentGameMode];
@@ -195,6 +207,8 @@ export const getters = {
   isHideoutModuleComplete: (state: UserState) => (hideoutId: string) =>
     getCurrentData(state)?.hideoutModules?.[hideoutId]?.complete ?? false,
   getCurrentProgressData: (state: UserState) => () => getCurrentData(state),
+  getManualActivityHistory: (state: UserState) => (): ManualActivityEntry[] =>
+    getCurrentData(state)?.manualActivityHistory ?? [],
   getModeProgressData: (state: UserState) => (mode: GameMode) => state[mode],
   getPvPProgressData: (state: UserState) => () => state.pvp,
   getPvEProgressData: (state: UserState) => () => state.pve,
@@ -205,7 +219,6 @@ export const getters = {
     getCurrentData(state)?.traders?.[traderId]?.reputation ?? 0,
   getSkillLevel: (state: UserState) => (skillName: string) =>
     getCurrentData(state)?.skills?.[skillName] ?? 0,
-  getXpOffset: (state: UserState) => () => getCurrentData(state)?.xpOffset ?? 0,
   getPrestigeLevel: (state: UserState) => () => getCurrentData(state)?.prestigeLevel ?? 0,
   getProgressEpoch: (state: UserState) => () => getCurrentData(state)?.progressEpoch ?? 0,
   getSkillOffset: (state: UserState) => (skillName: string) =>
@@ -252,6 +265,31 @@ const updateObjective = <Key extends ProgressObjectKey>(
     ...updates,
   } as ProgressObjectEntry<Key>;
 };
+/**
+ * The timestamp is kept strictly after the task's status timestamp so a confirmation made right
+ * after a status change (same millisecond) is still honoured, and never behind the previous
+ * confirmation so the newest user intent wins a merge.
+ */
+const setAvailabilityConfirmation = (state: UserState, taskId: string, requirements: string) => {
+  const currentData = getCurrentData(state);
+  const statusTs = currentData.taskCompletions?.[taskId]?.timestamp ?? 0;
+  const previousTs = currentData.taskAvailability?.[taskId]?.timestamp ?? 0;
+  const confirmations = (currentData.taskAvailability ??= {});
+  // `statusTs - 1` so the confirmation may share the status millisecond (it still counts).
+  confirmations[taskId] = { requirements, timestamp: nextClock(statusTs - 1, previousTs) };
+};
+/**
+ * A status change must retire the task's current confirmation even when that confirmation carries a
+ * clock from a device that runs ahead, so the status timestamp is advanced past it.
+ */
+const setTaskStatus = (state: UserState, taskId: string, completion: TaskCompletion) => {
+  const confirmationTs = getCurrentData(state).taskAvailability?.[taskId]?.timestamp;
+  const timestamp =
+    confirmationTs === undefined
+      ? completion.timestamp
+      : Math.max(completion.timestamp ?? 0, nextClock(confirmationTs));
+  updateObjective(state, 'taskCompletions', taskId, { ...completion, timestamp });
+};
 // Simplified actions
 export const actions = {
   switchGameMode(this: UserState, mode: GameMode) {
@@ -283,10 +321,6 @@ export const actions = {
   setModeDisplayName(this: UserState, mode: GameMode, name: string | null) {
     const modeData = this[mode];
     modeData.displayName = typeof name === 'string' ? name : null;
-  },
-  setXpOffset(this: UserState, offset: number) {
-    const currentData = getCurrentData(this);
-    currentData.xpOffset = Number.isFinite(offset) ? Math.trunc(offset) : 0;
   },
   setPrestigeLevel(this: UserState, level: number) {
     const currentData = getCurrentData(this);
@@ -331,19 +365,21 @@ export const actions = {
       count: Math.max(0, count),
     });
   },
+  clearTaskAvailability(this: UserState, taskId: string) {
+    // Only the confirmation store changes: a stale clear can never rewrite task status.
+    setAvailabilityConfirmation(this, taskId, '');
+  },
+  confirmTaskAvailability(this: UserState, taskId: string, requirements: string) {
+    setAvailabilityConfirmation(this, taskId, requirements);
+  },
   setTaskComplete(this: UserState, taskId: string) {
-    updateObjective(this, 'taskCompletions', taskId, createCompletion(true, false, false));
+    setTaskStatus(this, taskId, createCompletion(true, false, false));
   },
   setTaskFailed(this: UserState, taskId: string, failOptions?: { manual?: boolean }) {
-    updateObjective(
-      this,
-      'taskCompletions',
-      taskId,
-      createCompletion(true, true, failOptions?.manual)
-    );
+    setTaskStatus(this, taskId, createCompletion(true, true, failOptions?.manual));
   },
   setTaskUncompleted(this: UserState, taskId: string) {
-    updateObjective(this, 'taskCompletions', taskId, createCompletion(false, false, false));
+    setTaskStatus(this, taskId, createCompletion(false, false, false));
   },
   setTaskObjectiveComplete(this: UserState, objectiveId: string) {
     updateObjective(this, 'taskObjectives', objectiveId, {
@@ -432,9 +468,11 @@ export const actions = {
     if (!data.storyChapters[chapterId].objectives) {
       data.storyChapters[chapterId].objectives = {};
     }
+    // A completion the user records now must outrank an entry another device stamped ahead.
+    const previous = data.storyChapters[chapterId].objectives![objectiveId]?.timestamp ?? 0;
     data.storyChapters[chapterId].objectives![objectiveId] = {
       complete: true,
-      timestamp: Date.now(),
+      timestamp: nextClock(previous),
     };
   },
   setStoryObjectiveUncomplete(this: UserState, chapterId: string, objectiveId: string) {
@@ -445,9 +483,11 @@ export const actions = {
     if (!data.storyChapters[chapterId].objectives) {
       data.storyChapters[chapterId].objectives = {};
     }
+    // An uncompletion must also outrank an entry another device stamped ahead.
+    const previous = data.storyChapters[chapterId].objectives![objectiveId]?.timestamp ?? 0;
     data.storyChapters[chapterId].objectives![objectiveId] = {
       complete: false,
-      timestamp: Date.now(),
+      timestamp: nextClock(previous),
     };
   },
   toggleStoryObjectiveComplete(this: UserState, chapterId: string, objectiveId: string) {
@@ -457,6 +497,30 @@ export const actions = {
     } else {
       actions.setStoryObjectiveComplete.call(this, chapterId, objectiveId);
     }
+  },
+  /**
+   * Append manual activity entries to the selected mode's synced history.
+   *
+   * The history is stored inside the mode's progress blob so it shares the
+   * lifecycle, sanitization, merge, and reset rules of every other progress
+   * field. Entries are deduplicated by id, sorted newest first, and capped by
+   * the shared sanitizer limit.
+   */
+  addManualActivityEntries(this: UserState, entries: ManualActivityEntry[]) {
+    if (!Array.isArray(entries) || entries.length === 0) return;
+    const currentData = getCurrentData(this);
+    currentData.manualActivityHistory = sanitizeManualActivityHistory([
+      ...entries,
+      ...sanitizeManualActivityHistory(currentData.manualActivityHistory),
+    ]);
+  },
+  clearManualActivityHistory(this: UserState) {
+    const currentData = getCurrentData(this);
+    currentData.manualActivityEpoch = Math.min(
+      2147483647,
+      sanitizeManualActivityEpoch(currentData.manualActivityEpoch) + 1
+    );
+    currentData.manualActivityHistory = [];
   },
 } as const;
 export type UserActions = typeof actions;

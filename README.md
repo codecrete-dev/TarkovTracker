@@ -1,7 +1,23 @@
 # TarkovTracker
 
-[![Crowdin](https://badges.crowdin.net/tarkovtrackerorg/localized.svg)](https://crowdin.com/project/tarkovtrackerorg)
-[![codecov](https://codecov.io/gh/tarkovtracker-org/TarkovTracker/graph/badge.svg)](https://codecov.io/gh/tarkovtracker-org/TarkovTracker)
+[![CI][ci-badge]][ci-link]
+[![Coverage][coverage-badge]][coverage-link]
+[![Latest release][release-badge]][release-link]
+[![License: GPL-3.0][license-badge]](LICENSE.md)
+[![Translated][crowdin-badge]][crowdin-link]
+[![Discord][discord-badge]][discord-link]
+
+[ci-badge]: https://github.com/tarkovtracker-org/TarkovTracker/actions/workflows/ci.yml/badge.svg?branch=main
+[ci-link]: https://github.com/tarkovtracker-org/TarkovTracker/actions/workflows/ci.yml?query=branch%3Amain
+[coverage-badge]: https://codecov.io/gh/tarkovtracker-org/TarkovTracker/graph/badge.svg
+[coverage-link]: https://codecov.io/gh/tarkovtracker-org/TarkovTracker
+[release-badge]: https://img.shields.io/github/v/release/tarkovtracker-org/TarkovTracker?label=release
+[release-link]: https://github.com/tarkovtracker-org/TarkovTracker/releases/latest
+[license-badge]: https://img.shields.io/github/license/tarkovtracker-org/TarkovTracker
+[crowdin-badge]: https://badges.crowdin.net/tarkovtrackerorg/localized.svg
+[crowdin-link]: https://translate.tarkovtracker.org
+[discord-badge]: https://img.shields.io/discord/1433379620648124451?label=discord&logo=discord&logoColor=white&color=5865F2
+[discord-link]: https://discord.gg/M8nBgA2sT6
 
 TarkovTracker tracks Escape from Tarkov tasks, hideout upgrades, required items, levels, and team
 progress separately for PvP and PvE.
@@ -36,19 +52,24 @@ Sign in (via Discord, Twitch, Google, or GitHub) when you want to:
 - **Use API tokens** — programmatically read your progress via the public API
 - **Back up your data** — server-side storage protects against browser data loss
 
-> **Signing in:** If you have local progress and create a new account, that progress uploads to
-> your account on first login. Returning users (same browser, same account) get a merge of local
-> and cloud progress. If you sign into an existing account from a new browser that already has
-> cloud progress, the cloud data takes precedence — your local guest progress is not merged.
+> [!NOTE]
+> **What happens to local progress when you sign in:**
+>
+> - **New account:** your local progress is uploaded on first login.
+> - **Same browser, same account:** local and cloud progress are merged.
+> - **Existing account on a new browser:** cloud progress wins; local guest progress is not merged.
 
 ### Getting help
 
 - **Questions or bugs?** See [`SUPPORT.md`](SUPPORT.md) for where to ask.
 - **Found a security issue?** See [`SECURITY.md`](SECURITY.md) for how to report it privately.
 - **Community:** Join us on [Discord](https://discord.gg/M8nBgA2sT6).
+- **Support the project:** TarkovTracker is free, ad-free, and maintained almost entirely by one
+  developer. [Becoming a supporter](https://tarkovtracker.org/supporter) keeps updates coming.
 - **Translations:** Help translate at
-  [translate.tarkovtracker.org](https://translate.tarkovtracker.org). Supported languages:
-  English, German, Spanish, French, Russian, Ukrainian, and Chinese.
+  [translate.tarkovtracker.org](https://translate.tarkovtracker.org). Available in English,
+  Chinese, Czech, French, German, Italian, Japanese, Korean, Polish, Portuguese, Russian, Spanish,
+  and Ukrainian.
 
 ---
 
@@ -63,7 +84,7 @@ TarkovTracker, visit **<https://tarkovtracker.org>** — no setup required.
 ### Local development
 
 ```bash
-corepack enable        # enables pnpm via Corepack (Node >=24.19.0)
+corepack enable        # enables pnpm via Corepack (Node per .nvmrc)
 pnpm install
 pnpm run dev           # http://localhost:3000
 ```
@@ -74,10 +95,10 @@ not need to be duplicated under `NUXT_PUBLIC_*`. Without Supabase configured, th
 offline mode with localStorage only — auth, sync, realtime, and team features are unavailable.
 
 > `SUPABASE_URL` and `SUPABASE_ANON_KEY` are required for login/sync. Everything else is optional and
-> documented in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+> documented in [`docs/architecture.md`](docs/architecture.md).
 
-**Tech stack:** Nuxt 4 (SPA, `ssr: false`), Vue 3 Composition API, TypeScript strict, Pinia,
-Supabase, Tailwind CSS v4, Vitest, Cloudflare Pages/Workers.
+**Tech stack:** Nuxt 4 (prerendered public pages, client-side progression), Vue 3 Composition
+API, TypeScript (strict), Pinia, Supabase, Tailwind CSS v4, Vitest, Cloudflare Pages/Workers.
 
 ### Common commands
 
@@ -93,7 +114,7 @@ Supabase, Tailwind CSS v4, Vitest, Cloudflare Pages/Workers.
 
 Run `pnpm run lint`, `pnpm run typecheck`, and `pnpm run test` before pushing. The full command
 list (including i18n, Supabase types, OpenAPI validation, and the API gateway tests) is in
-[`AGENTS.md`](AGENTS.md) and [`docs/WORKFLOW_AUTOMATION.md`](docs/WORKFLOW_AUTOMATION.md).
+[`AGENTS.md`](AGENTS.md) and [`docs/workflow-automation.md`](docs/workflow-automation.md).
 
 ### Contributing
 
@@ -105,31 +126,30 @@ feature. PRs that bundle unrelated changes may be asked to split or be closed.
 - **[Label system](.github/LABELS.md)** — issue types, scope, priority, ownership, and status.
 - **[Project board](.github/PROJECT_BOARD.md)** — how issues move from backlog to done.
 
-> New to the codebase? Start with
-> [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md) for the development workflow and PR process.
-> When available, issues labeled
+> [!TIP]
+> New to the codebase? Look for issues labeled
 > [`good-first-issue`](https://github.com/tarkovtracker-org/TarkovTracker/labels/good-first-issue)
-> are scoped for newcomers.
+> — they are scoped for newcomers.
 
 ### Documentation
 
 The short version: this README gets you running; the `docs/` folder explains how things work.
 
-| You want to…                                      | Read                                                                                       |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Get started                                       | This README                                                                                |
-| Report a security vulnerability                   | [`SECURITY.md`](SECURITY.md)                                                               |
-| Find where to get help                            | [`SUPPORT.md`](SUPPORT.md)                                                                 |
-| Read the code of conduct                          | [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)                                                 |
-| Understand the systems (caching, data, overlay)   | [`docs/SYSTEMS.md`](docs/SYSTEMS.md)                                                       |
-| Understand the full architecture & data flow      | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)                                             |
-| Read the Tarkov data architecture decision        | [`docs/decisions/tarkov-data-architecture.md`](docs/decisions/tarkov-data-architecture.md) |
-| Use or extend the HTTP/API surface                | [`docs/API.md`](docs/API.md)                                                               |
-| Understand rate limits / abuse controls           | [`docs/RATE_LIMITING.md`](docs/RATE_LIMITING.md)                                           |
-| Deploy, configure env vars, or handle an incident | [`docs/runbook.md`](docs/runbook.md)                                                       |
-| Understand CI/CD, hooks, and releases             | [`docs/WORKFLOW_AUTOMATION.md`](docs/WORKFLOW_AUTOMATION.md)                               |
-| Contribute (issues, branches, PRs, labels)        | [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md)                                       |
-| Work as (or configure) an AI agent                | [`AGENTS.md`](AGENTS.md) + [`docs/agent-context/`](docs/agent-context/)                    |
+| You want to…                                      | Read                                                           |
+| ------------------------------------------------- | -------------------------------------------------------------- |
+| Get started                                       | This README                                                    |
+| Report a security vulnerability                   | [`SECURITY.md`](SECURITY.md)                                   |
+| Find where to get help                            | [`SUPPORT.md`](SUPPORT.md)                                     |
+| Read the code of conduct                          | [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)                     |
+| Understand the systems (caching, data, overlay)   | [`docs/systems/`](docs/systems/README.md)                      |
+| Understand the full architecture & data flow      | [`docs/architecture.md`](docs/architecture.md)                 |
+| Read the Tarkov data architecture decision        | [`docs/decision-tarkov-data.md`](docs/decision-tarkov-data.md) |
+| Use or extend the HTTP/API surface                | [`docs/api.md`](docs/api.md)                                   |
+| Understand rate limits / abuse controls           | [`docs/rate-limiting.md`](docs/rate-limiting.md)               |
+| Deploy, configure env vars, or handle an incident | [`docs/runbook.md`](docs/runbook.md)                           |
+| Understand CI/CD, hooks, and releases             | [`docs/workflow-automation.md`](docs/workflow-automation.md)   |
+| Contribute (issues, branches, PRs, labels)        | [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md)           |
+| Work as (or configure) an AI agent                | [`AGENTS.md`](AGENTS.md)                                       |
 
 Start at [`docs/README.md`](docs/README.md) if you are not sure which doc you need.
 
@@ -144,8 +164,8 @@ docs/        Project documentation
 public/      Static assets
 ```
 
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full module map and
-[`docs/SYSTEMS.md`](docs/SYSTEMS.md) for how the non-obvious systems (Tarkov.dev integration,
+See [`docs/architecture.md`](docs/architecture.md) for the full module map and
+[`docs/systems/`](docs/systems/README.md) for how the non-obvious systems (Tarkov.dev integration,
 multi-layer caching, overlay corrections, precompute) actually work.
 
 ### License

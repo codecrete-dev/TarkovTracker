@@ -1,7 +1,7 @@
 export const GITHUB_IMAGE_DOMAINS = ['avatars.githubusercontent.com', 'github.com'] as const;
 export const TARKOV_IMAGE_DOMAINS = ['assets.tarkov.dev'] as const;
 export const YOUTUBE_IMAGE_DOMAINS = ['i.ytimg.com'] as const;
-export const PRIMARY_APP_HOSTNAMES = ['tarkovtracker.org', 'www.tarkovtracker.org'] as const;
+const PRIMARY_APP_HOSTNAMES = ['tarkovtracker.org', 'www.tarkovtracker.org'] as const;
 const PRODUCTION_APP_URL = 'https://tarkovtracker.org';
 const LOCAL_APP_HOSTNAMES = new Set(['localhost', '127.0.0.1']);
 const resolveEnvValue = (...values: Array<string | undefined>) =>
@@ -59,6 +59,9 @@ export const resolveCanonicalSiteUrl = (appUrl?: string): string => {
 export const resolveClientLogSinkUrl = (env: NodeJS.ProcessEnv): string => {
   return resolveEnvValue(env.NUXT_PUBLIC_CLIENT_LOG_SINK_URL);
 };
+/** Aggregate progress metrics have their own opt-in; never enable general browser forwarding. */
+export const resolveProgressDiagnosticSinkUrl = (env: NodeJS.ProcessEnv): string =>
+  resolveEnvValue(env.NUXT_PUBLIC_PROGRESS_DIAGNOSTIC_SINK_URL);
 export const isPagesPreviewHostname = (hostname?: string): boolean => {
   const normalizedHostname = resolveHostname(hostname);
   return normalizedHostname.endsWith('.pages.dev');

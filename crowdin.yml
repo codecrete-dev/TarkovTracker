@@ -1,4 +1,0 @@
-files:
-  - source: /app/locales/en.json
-    translation: /app/locales/%two_letters_code%.json
-    update_option: update_as_unapproved

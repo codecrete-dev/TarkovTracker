@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Session, SupabaseClient } from '@supabase/supabase-js';
 export interface SupabaseUser {
   id: string | null;
   email: string | null;
@@ -32,8 +32,18 @@ export interface SupabasePlugin {
     provider: 'twitch' | 'discord' | 'google' | 'github',
     options?: { skipBrowserRedirect?: boolean; redirectTo?: string }
   ) => Promise<{ url?: string }>;
-  signOut: () => Promise<void>;
-  ready: () => Promise<void>;
+  /**
+   * Resolves `signed_out_locally` when this browser's session ended but the server did not
+   * confirm revocation. Rejects with `SupabaseSessionChangedError` if another account's session
+   * is current, and with the SDK error when the session could not be ended at all.
+   */
+  signOut: (
+    expectedUserId?: string,
+    scope?: 'global' | 'local'
+  ) => Promise<'signed_out' | 'signed_out_locally'>;
+  /** Removes only this browser's copy of the owner's session, without contacting the server. */
+  signOutThisDevice: (expectedUserId: string) => Promise<void>;
+  ready: () => Promise<Session | null>;
 }
 declare module '#app' {
   interface NuxtApp {

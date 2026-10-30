@@ -22,7 +22,11 @@
       </div>
       <div class="min-w-0 flex-1">
         <div class="flex flex-wrap items-start justify-between gap-2">
-          <h3 class="text-lg font-semibold tracking-wide text-white">{{ name }}</h3>
+          <h3
+            class="light:text-surface-50 min-w-0 text-lg font-semibold tracking-wide wrap-break-word text-white"
+          >
+            {{ name }}
+          </h3>
           <UBadge
             v-if="showCategoryBadge"
             color="neutral"
@@ -33,7 +37,7 @@
             {{ categoryBadge }}
           </UBadge>
         </div>
-        <p class="text-surface-300 mt-2 min-h-12 text-[0.9375rem] leading-relaxed">
+        <p class="text-surface-300 mt-2 min-h-12 text-[0.9375rem] leading-relaxed wrap-break-word">
           {{ description }}
         </p>
       </div>
@@ -77,7 +81,7 @@
           color="neutral"
           variant="ghost"
           icon="i-mdi-dots-horizontal"
-          class="text-surface-200 min-h-9 min-w-9 px-3 hover:text-white"
+          class="text-surface-200 light:hover:text-surface-50 min-h-9 min-w-9 px-3 hover:text-white"
           :aria-label="t('page.resources.more_actions', 'More actions')"
           :label="t('common.more', 'More')"
           trailing-icon="i-mdi-chevron-down"

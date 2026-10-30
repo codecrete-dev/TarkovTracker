@@ -1,7 +1,7 @@
 <template>
   <nav
     :aria-label="t('page.kappa.trader_selector.label', 'Select Trader')"
-    class="-mx-3 flex snap-x snap-mandatory scrollbar-none gap-1.5 overflow-x-auto px-3 py-1 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10"
+    class="-mx-3 flex snap-x snap-mandatory scroll-px-3 scrollbar-none gap-1.5 overflow-x-auto px-3 py-1 sm:-mx-6 sm:scroll-px-6 sm:px-6 lg:-mx-10 lg:scroll-px-10 lg:px-10"
   >
     <button
       v-for="group in groups"
@@ -11,7 +11,7 @@
       :class="
         modelValue === group.trader.id
           ? activePillClasses
-          : 'bg-surface-900/40 hover:bg-surface-800/60 text-surface-300 border-white/8 hover:text-white'
+          : 'bg-surface-900/40 hover:bg-surface-800/60 text-surface-300 light:hover:text-surface-50 border-white/8 hover:text-white'
       "
       :aria-pressed="modelValue === group.trader.id"
       @click="$emit('update:modelValue', group.trader.id)"
@@ -53,8 +53,8 @@
   const { t } = useI18n({ useScope: 'global' });
   const activePillClasses = computed(() =>
     props.accent === 'kappa'
-      ? 'border-warning-500/40 bg-warning-500/10 text-white'
-      : 'border-info-500/40 bg-info-500/10 text-white'
+      ? 'border-warning-500/40 bg-warning-500/10 text-white light:text-surface-50'
+      : 'border-info-500/40 bg-info-500/10 text-white light:text-surface-50'
   );
   const activeBadgeClasses = computed(() =>
     props.accent === 'kappa' ? 'bg-warning-500/20 text-warning-300' : 'bg-info-500/20 text-info-300'

@@ -319,10 +319,14 @@ export type Database = {
           discord_user_id: string | null
           expires_at: string | null
           has_ever_supported: boolean
+          last_contribution_at: string | null
+          retention_history_verified: boolean
           started_at: string
           status: string
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
+          subscription_ended_at: string | null
+          supporter_disqualified_at: string | null
           tier: string
           type: string
           updated_at: string
@@ -333,10 +337,14 @@ export type Database = {
           discord_user_id?: string | null
           expires_at?: string | null
           has_ever_supported?: boolean
+          last_contribution_at?: string | null
+          retention_history_verified?: boolean
           started_at?: string
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          subscription_ended_at?: string | null
+          supporter_disqualified_at?: string | null
           tier?: string
           type: string
           updated_at?: string
@@ -347,10 +355,14 @@ export type Database = {
           discord_user_id?: string | null
           expires_at?: string | null
           has_ever_supported?: boolean
+          last_contribution_at?: string | null
+          retention_history_verified?: boolean
           started_at?: string
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          subscription_ended_at?: string | null
+          supporter_disqualified_at?: string | null
           tier?: string
           type?: string
           updated_at?: string
@@ -366,9 +378,11 @@ export type Database = {
           id: string
           initiated_by: string | null
           target_user: string | null
+          server_verified: boolean;
           team_id: string | null
         }
         Insert: {
+          server_verified?: boolean;
           created_at?: string | null
           event_data?: Json | null
           event_type: string
@@ -378,6 +392,7 @@ export type Database = {
           team_id?: string | null
         }
         Update: {
+          server_verified?: boolean;
           created_at?: string | null
           event_data?: Json | null
           event_type?: string
@@ -470,6 +485,7 @@ export type Database = {
           game_mode: string
           profile_public: boolean
           progress_data: Json
+          progress_updated_at: string | null
           season_number: number
           updated_at: string
           user_id: string
@@ -479,6 +495,7 @@ export type Database = {
           game_mode: string
           profile_public?: boolean
           progress_data?: Json
+          progress_updated_at?: string | null
           season_number?: number
           updated_at?: string
           user_id: string
@@ -488,7 +505,41 @@ export type Database = {
           game_mode?: string
           profile_public?: boolean
           progress_data?: Json
+          progress_updated_at?: string | null
           season_number?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_game_profiles: {
+        Row: {
+          created_at: string
+          eft_account_id: string | null
+          game_edition: number | null
+          id: string
+          is_default: boolean
+          label: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          eft_account_id?: string | null
+          game_edition?: number | null
+          id?: string
+          is_default?: boolean
+          label?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          eft_account_id?: string | null
+          game_edition?: number | null
+          id?: string
+          is_default?: boolean
+          label?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -498,18 +549,17 @@ export type Database = {
         Row: {
           created_at: string | null
           dashboard_notice_dismissed: boolean
-          enable_holiday_effects: boolean | null
           enable_manual_task_fail: boolean | null
+          hidden_task_ids: Json | null
           hide_completed_map_objectives: boolean | null
           hide_completed_task_objectives: boolean | null
           hide_global_tasks: boolean | null
           hide_non_kappa_tasks: boolean | null
-          hideout_collapse_completed: boolean
+          hide_task_rewards: boolean | null
           hideout_primary_view: string | null
           hideout_require_skill_levels: boolean
           hideout_require_station_levels: boolean
           hideout_require_trader_loyalty: boolean
-          hideout_sort_ready_first: boolean
           items_hide_non_fir: boolean | null
           items_team_hide_all: boolean | null
           items_team_hide_hideout: boolean | null
@@ -533,7 +583,6 @@ export type Database = {
           needed_items_sort_direction: string | null
           needed_items_view_mode: string | null
           needed_type_view: string | null
-          neededitems_style: string | null
           only_tasks_with_required_keys: boolean
           pinned_task_ids: Json | null
           profile_share_pve_public: boolean
@@ -549,13 +598,11 @@ export type Database = {
           show_map_extracts: boolean | null
           show_next_quests: boolean | null
           show_non_special_tasks: boolean | null
-          show_not_required_labels: boolean | null
           show_previous_quests: boolean | null
           show_required_labels: boolean | null
-          show_task_ids: boolean | null
           skill_sort_mode: string | null
           streamer_mode: boolean | null
-          task_card_density: string | null
+          task_collapse_default: boolean | null
           task_filter_presets: Json | null
           task_map_view: string | null
           task_primary_view: string | null
@@ -571,24 +618,22 @@ export type Database = {
           trader_sort_direction: string | null
           trader_sort_mode: string | null
           updated_at: string | null
-          use_automatic_level_calculation: boolean | null
           user_id: string
         }
         Insert: {
           created_at?: string | null
           dashboard_notice_dismissed?: boolean
-          enable_holiday_effects?: boolean | null
           enable_manual_task_fail?: boolean | null
+          hidden_task_ids?: Json | null
           hide_completed_map_objectives?: boolean | null
           hide_completed_task_objectives?: boolean | null
           hide_global_tasks?: boolean | null
           hide_non_kappa_tasks?: boolean | null
-          hideout_collapse_completed?: boolean
+          hide_task_rewards?: boolean | null
           hideout_primary_view?: string | null
           hideout_require_skill_levels?: boolean
           hideout_require_station_levels?: boolean
           hideout_require_trader_loyalty?: boolean
-          hideout_sort_ready_first?: boolean
           items_hide_non_fir?: boolean | null
           items_team_hide_all?: boolean | null
           items_team_hide_hideout?: boolean | null
@@ -612,7 +657,6 @@ export type Database = {
           needed_items_sort_direction?: string | null
           needed_items_view_mode?: string | null
           needed_type_view?: string | null
-          neededitems_style?: string | null
           only_tasks_with_required_keys?: boolean
           pinned_task_ids?: Json | null
           profile_share_pve_public?: boolean
@@ -628,13 +672,11 @@ export type Database = {
           show_map_extracts?: boolean | null
           show_next_quests?: boolean | null
           show_non_special_tasks?: boolean | null
-          show_not_required_labels?: boolean | null
           show_previous_quests?: boolean | null
           show_required_labels?: boolean | null
-          show_task_ids?: boolean | null
           skill_sort_mode?: string | null
           streamer_mode?: boolean | null
-          task_card_density?: string | null
+          task_collapse_default?: boolean | null
           task_filter_presets?: Json | null
           task_map_view?: string | null
           task_primary_view?: string | null
@@ -650,24 +692,22 @@ export type Database = {
           trader_sort_direction?: string | null
           trader_sort_mode?: string | null
           updated_at?: string | null
-          use_automatic_level_calculation?: boolean | null
           user_id: string
         }
         Update: {
           created_at?: string | null
           dashboard_notice_dismissed?: boolean
-          enable_holiday_effects?: boolean | null
           enable_manual_task_fail?: boolean | null
+          hidden_task_ids?: Json | null
           hide_completed_map_objectives?: boolean | null
           hide_completed_task_objectives?: boolean | null
           hide_global_tasks?: boolean | null
           hide_non_kappa_tasks?: boolean | null
-          hideout_collapse_completed?: boolean
+          hide_task_rewards?: boolean | null
           hideout_primary_view?: string | null
           hideout_require_skill_levels?: boolean
           hideout_require_station_levels?: boolean
           hideout_require_trader_loyalty?: boolean
-          hideout_sort_ready_first?: boolean
           items_hide_non_fir?: boolean | null
           items_team_hide_all?: boolean | null
           items_team_hide_hideout?: boolean | null
@@ -691,7 +731,6 @@ export type Database = {
           needed_items_sort_direction?: string | null
           needed_items_view_mode?: string | null
           needed_type_view?: string | null
-          neededitems_style?: string | null
           only_tasks_with_required_keys?: boolean
           pinned_task_ids?: Json | null
           profile_share_pve_public?: boolean
@@ -707,13 +746,11 @@ export type Database = {
           show_map_extracts?: boolean | null
           show_next_quests?: boolean | null
           show_non_special_tasks?: boolean | null
-          show_not_required_labels?: boolean | null
           show_previous_quests?: boolean | null
           show_required_labels?: boolean | null
-          show_task_ids?: boolean | null
           skill_sort_mode?: string | null
           streamer_mode?: boolean | null
-          task_card_density?: string | null
+          task_collapse_default?: boolean | null
           task_filter_presets?: Json | null
           task_map_view?: string | null
           task_primary_view?: string | null
@@ -729,7 +766,6 @@ export type Database = {
           trader_sort_direction?: string | null
           trader_sort_mode?: string | null
           updated_at?: string | null
-          use_automatic_level_calculation?: boolean | null
           user_id?: string
         }
         Relationships: []
@@ -767,13 +803,53 @@ export type Database = {
         }
         Relationships: []
       }
+      user_profile_mode_progress: {
+        Row: {
+          created_at: string
+          game_mode: string
+          profile_id: string
+          profile_public: boolean
+          progress_data: Json
+          season_number: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          game_mode: string
+          profile_id: string
+          profile_public?: boolean
+          progress_data?: Json
+          season_number?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          game_mode?: string
+          profile_id?: string
+          profile_public?: boolean
+          progress_data?: Json
+          season_number?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_profile_mode_progress_profile_fkey"
+            columns: ["profile_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "user_game_profiles"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
       user_progress: {
         Row: {
           created_at: string | null
           current_game_mode: string | null
           game_edition: number | null
-          pve_data: Json | null
-          pvp_data: Json | null
+          metadata_write_id: string | null
           tarkov_uid: number | null
           updated_at: string | null
           user_id: string
@@ -782,8 +858,7 @@ export type Database = {
           created_at?: string | null
           current_game_mode?: string | null
           game_edition?: number | null
-          pve_data?: Json | null
-          pvp_data?: Json | null
+          metadata_write_id?: string | null
           tarkov_uid?: number | null
           updated_at?: string | null
           user_id: string
@@ -792,8 +867,7 @@ export type Database = {
           created_at?: string | null
           current_game_mode?: string | null
           game_edition?: number | null
-          pve_data?: Json | null
-          pvp_data?: Json | null
+          metadata_write_id?: string | null
           tarkov_uid?: number | null
           updated_at?: string | null
           user_id?: string
@@ -884,41 +958,12 @@ export type Database = {
         }
         Relationships: []
       }
-      team_member_summary: {
-        Row: {
-          current_game_mode: string | null
-          pve_display_name: string | null
-          pve_level: number | null
-          pve_tasks_completed: number | null
-          pvp_display_name: string | null
-          pvp_level: number | null
-          pvp_tasks_completed: number | null
-          user_id: string | null
-        }
-        Insert: {
-          current_game_mode?: string | null
-          pve_display_name?: never
-          pve_level?: never
-          pve_tasks_completed?: never
-          pvp_display_name?: never
-          pvp_level?: never
-          pvp_tasks_completed?: never
-          user_id?: string | null
-        }
-        Update: {
-          current_game_mode?: string | null
-          pve_display_name?: never
-          pve_level?: never
-          pve_tasks_completed?: never
-          pvp_display_name?: never
-          pvp_level?: never
-          pvp_tasks_completed?: never
-          user_id?: string | null
-        }
-        Relationships: []
-      }
     }
     Functions: {
+      add_game_profile: {
+        Args: { p_eft_account_id: string | null; p_label: string | null }
+        Returns: Json
+      }
       archive_prestige_run_and_reset_progress: {
         Args: {
           p_archived_progress: Json
@@ -974,6 +1019,18 @@ export type Database = {
           reset_at: string
         }[]
       }
+      delete_game_profile: {
+        Args: { p_profile_id: string }
+        Returns: undefined
+      }
+      disband_team: {
+        Args: { p_owner_id: string; p_team_id: string }
+        Returns: boolean
+      }
+      get_game_profile_progress: {
+        Args: { p_profile_id: string }
+        Returns: Json
+      }
       get_api_usage_summary: {
         Args: { p_limit?: number; p_since: string }
         Returns: {
@@ -990,9 +1047,21 @@ export type Database = {
         Args: { p_token_id: string }
         Returns: undefined
       }
+      list_game_profiles: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       merge_api_update_history: {
         Args: { max_entries?: number; payload: Json; previous_payload: Json }
         Returns: Json
+      }
+      leave_team: {
+        Args: { p_team_id: string; p_user_id: string }
+        Returns: string
+      }
+      kick_team: {
+        Args: { p_initiator_id: string; p_member_id: string; p_team_id: string }
+        Returns: string
       }
       merge_progress_data: {
         Args: {
@@ -1003,6 +1072,22 @@ export type Database = {
           p_user_id: string
         }
         Returns: number
+      }
+      disqualify_supporter_account: {
+        Args: { p_user_id: string; p_charge_id: string }
+        Returns: undefined
+      }
+      disqualify_supporter_customer: {
+        Args: { p_customer_id: string; p_user_id?: string }
+        Returns: undefined
+      }
+      supporter_benefits_disqualified: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
+      record_account_activity: {
+        Args: { p_user_id: string }
+        Returns: undefined
       }
       record_api_usage: {
         Args: {
@@ -1048,7 +1133,16 @@ export type Database = {
           p_seasonal_season_number?: number | null
           p_tarkov_uid: number | null
         }
-        Returns: undefined
+        Returns: Json
+      }
+      sync_game_profile_progress: {
+        Args: {
+          p_game_edition: number | null
+          p_modes: Json
+          p_profile_id: string
+          p_seasonal_season_number?: number | null
+        }
+        Returns: Json
       }
       transfer_team_ownership: {
         Args: {
@@ -1058,16 +1152,13 @@ export type Database = {
         }
         Returns: undefined
       }
-      update_task_completion: {
+      update_game_profile: {
         Args: {
-          p_complete: boolean
-          p_failed: boolean
-          p_game_mode: string
-          p_task_id: string
-          p_timestamp: number
-          p_user_id: string
+          p_eft_account_id: string | null
+          p_label: string | null
+          p_profile_id: string | null
         }
-        Returns: undefined
+        Returns: Json
       }
     }
     Enums: {

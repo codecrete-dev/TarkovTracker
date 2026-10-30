@@ -1,13 +1,12 @@
 <template>
   <div
-    class="flex h-full min-h-44 cursor-pointer flex-col rounded-lg border px-5 py-4 shadow-md transition-all outline-none"
+    class="flex h-full flex-col rounded-lg border px-5 py-4 shadow-md transition-all"
     :class="cardContainerClasses"
-    @click="handleCardClick"
   >
     <div class="mb-3 flex items-center gap-3">
       <button
         type="button"
-        class="flex min-w-0 flex-1 items-center gap-3 text-left transition-opacity hover:opacity-80 focus:outline-none"
+        class="focus-visible:ring-primary-500 light:focus-visible:ring-primary-800 flex min-w-0 flex-1 items-center gap-3 rounded text-left transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:outline-none"
         :aria-label="$t('page.dashboard.traders.view_tasks', { name: trader.name })"
         @click="navigateToTraderTasks"
       >
@@ -31,22 +30,20 @@
           </div>
           <div
             v-else-if="isComplete"
-            class="bg-success-900/80 ring-success-500/50 absolute -right-1 -bottom-1 flex h-5 w-5 items-center justify-center rounded-full ring-1"
+            class="bg-success-900/80 light:bg-success-100 ring-success-500/50 absolute -right-1 -bottom-1 flex h-5 w-5 items-center justify-center rounded-full ring-1"
             aria-hidden="true"
           >
             <UIcon name="i-mdi-check-bold" class="text-success-400 h-3 w-3" />
           </div>
         </div>
         <div class="min-w-0 flex-1">
-          <div
-            class="truncate text-sm font-semibold"
-            :class="isLocked ? 'text-surface-400' : isComplete ? 'text-surface-300' : 'text-white'"
-          >
+          <div class="truncate text-sm font-semibold" :class="nameClass">
             {{ trader.name }}
           </div>
         </div>
       </button>
       <div
+        v-if="!isLocked"
         class="text-sm font-semibold tabular-nums"
         :class="percentageTextClass"
         :style="percentageTextStyle"
@@ -54,65 +51,89 @@
         {{ percentage }}%
       </div>
     </div>
-    <div
-      class="mb-2 flex items-center justify-between text-xs font-medium"
-      :class="isLocked ? 'text-surface-400' : isComplete ? 'text-surface-400' : 'text-surface-300'"
-    >
-      <span>{{ completedTasks }}/{{ totalTasks }} {{ $t('page.dashboard.traders.tasks') }}</span>
-    </div>
-    <DashboardProgressBar
-      :percentage="percentage"
-      :color="mainBarColor"
-      :class="{ 'mb-4': isLocked || hasLoyaltyLevels || isFence }"
-    />
-    <div v-if="isLocked && unlockTask">
-      <div class="border-warning-500/15 bg-warning-950/20 rounded-lg border px-3 py-2.5">
-        <div class="mb-1.5 flex items-center gap-1.5 leading-none">
-          <UIcon name="i-mdi-lock-outline" class="text-warning-400/80 h-3.5 w-3.5 shrink-0" />
-          <span class="text-warning-300/80 text-xs leading-none font-medium">
-            {{ $t('page.dashboard.traders.unlock_required') }}
-          </span>
-        </div>
-        <NuxtLink
-          :to="{ path: '/tasks', query: { task: unlockTaskId } }"
-          class="text-info-400 hover:text-info-300 block text-sm font-medium transition-colors hover:underline"
-        >
-          {{ unlockTask.name }}
-        </NuxtLink>
-      </div>
-    </div>
-    <div v-else-if="hasLoyaltyLevels" class="space-y-2">
+    <DashboardTraderUnlockLink v-if="unlock" :unlock="unlock" />
+    <template v-else>
       <div
+        class="mb-2 flex items-center justify-between text-xs font-medium"
+        :class="isComplete ? 'text-surface-400' : 'text-surface-300'"
+      >
+        <span>{{ completedTasks }}/{{ totalTasks }} {{ $t('page.dashboard.traders.tasks') }}</span>
+      </div>
+      <DashboardProgressBar
+        :percentage="percentage"
+        :color="mainBarColor"
+        :class="{ 'mb-4': hasLoyaltyLevels || isFence }"
+      />
+      <div v-if="hasLoyaltyLevels" class="space-y-2">
+        <div
+          class="flex items-center justify-between text-xs font-medium"
+          :class="isComplete ? 'text-surface-400' : 'text-surface-300'"
+        >
+          <span>{{ $t('page.dashboard.traders.loyalty_level') }}</span>
+          <span v-if="hasReputation">{{ $t('page.dashboard.traders.reputation') }}</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <div
+            class="flex flex-1 overflow-hidden rounded-md border"
+            :class="
+              isComplete
+                ? 'bg-surface-800/40 border-surface-700/60'
+                : 'bg-surface-800/60 border-surface-700'
+            "
+          >
+            <button
+              v-for="lvl in 4"
+              :key="lvl"
+              type="button"
+              class="focus-visible:ring-primary-500/40 min-h-10 flex-1 px-3 py-2 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              :class="loyaltyButtonClasses(lvl)"
+              :aria-label="$t('page.dashboard.traders.set_loyalty_level', { level: lvl })"
+              :aria-pressed="currentLevel === lvl"
+              @click="updateLevel(lvl)"
+            >
+              {{ lvl }}
+            </button>
+          </div>
+          <ReputationInput
+            :has-reputation="hasReputation"
+            :input-id="reputationInputId"
+            :input-name="reputationInputName"
+            :reputation-input="reputationInput"
+            :title="$t('page.dashboard.traders.reputation')"
+            @blur="onReputationBlur"
+            @focus="isEditingReputation = true"
+            @input="onReputationInput"
+            @keydown="onReputationKeydown"
+          />
+        </div>
+        <div v-if="nextLevelInfo" class="pt-0.5">
+          <div class="text-surface-300 flex items-center justify-between text-[11px] tabular-nums">
+            <span>
+              {{
+                $t('page.dashboard.traders.rep_progress_label', { level: nextLevelInfo.nextLevel })
+              }}
+            </span>
+            <span>
+              {{ formatReputation(currentReputation) }} /
+              {{ nextLevelInfo.requiredReputation.toFixed(2) }}
+            </span>
+          </div>
+          <DashboardProgressBar
+            :percentage="nextLevelInfo.progress"
+            color="primary"
+            size="sm"
+            class="mt-1"
+          />
+        </div>
+      </div>
+      <div
+        v-else-if="isFence"
         class="flex items-center justify-between text-xs font-medium"
         :class="isComplete ? 'text-surface-400' : 'text-surface-300'"
       >
-        <span>{{ $t('page.dashboard.traders.loyalty_level') }}</span>
-        <span v-if="hasReputation">{{ $t('page.dashboard.traders.reputation') }}</span>
-      </div>
-      <div class="flex items-center gap-3">
-        <div
-          class="flex flex-1 overflow-hidden rounded-md border"
-          :class="
-            isComplete
-              ? 'bg-surface-800/40 border-surface-700/60'
-              : 'bg-surface-800/60 border-surface-700'
-          "
-        >
-          <button
-            v-for="lvl in 4"
-            :key="lvl"
-            type="button"
-            class="focus-visible:ring-primary-500/40 min-h-10 flex-1 px-3 py-2 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-            :class="loyaltyButtonClasses(lvl)"
-            :aria-label="$t('page.dashboard.traders.set_loyalty_level', { level: lvl })"
-            :aria-pressed="currentLevel === lvl"
-            @click="updateLevel(lvl)"
-          >
-            {{ lvl }}
-          </button>
-        </div>
+        <span>{{ $t('page.dashboard.traders.scav_karma') }}</span>
         <ReputationInput
-          :has-reputation="hasReputation"
+          :has-reputation="true"
           :input-id="reputationInputId"
           :input-name="reputationInputName"
           :reputation-input="reputationInput"
@@ -123,57 +144,16 @@
           @keydown="onReputationKeydown"
         />
       </div>
-      <div v-if="nextLevelInfo" class="pt-0.5">
-        <div class="text-surface-300 flex items-center justify-between text-[11px] tabular-nums">
-          <span>
-            {{
-              $t('page.dashboard.traders.rep_progress_label', { level: nextLevelInfo.nextLevel })
-            }}
-          </span>
-          <span>
-            {{ formatReputation(currentReputation) }} /
-            {{ nextLevelInfo.requiredReputation.toFixed(2) }}
-          </span>
-        </div>
-        <DashboardProgressBar
-          :percentage="nextLevelInfo.progress"
-          color="primary"
-          size="sm"
-          class="mt-1"
-        />
-      </div>
-    </div>
-    <div
-      v-else-if="isFence"
-      class="flex items-center justify-between text-xs font-medium"
-      :class="isComplete ? 'text-surface-400' : 'text-surface-300'"
-    >
-      <span>{{ $t('page.dashboard.traders.scav_karma') }}</span>
-      <ReputationInput
-        :has-reputation="true"
-        :input-id="reputationInputId"
-        :input-name="reputationInputName"
-        :reputation-input="reputationInput"
-        :title="$t('page.dashboard.traders.reputation')"
-        @blur="onReputationBlur"
-        @focus="isEditingReputation = true"
-        @input="onReputationInput"
-        @keydown="onReputationKeydown"
-      />
-    </div>
+    </template>
   </div>
 </template>
 <script setup lang="ts">
-  import { isTraderLocked } from '@/features/dashboard/traderLockStatus';
-  import { useMetadataStore } from '@/stores/useMetadata';
+  import { useTheme } from '@/composables/useTheme';
+  import { traderPercentageStyle } from '@/features/dashboard/traderPercentageStyle';
   import { usePreferencesStore } from '@/stores/usePreferences';
   import { useTarkovStore } from '@/stores/useTarkov';
-  import {
-    GAME_MODES,
-    resolveTraderUnlockTaskIds,
-    TRADERS_WITHOUT_LOYALTY_LEVELS,
-    TRADERS_WITHOUT_REPUTATION,
-  } from '@/utils/constants';
+  import { TRADERS_WITHOUT_LOYALTY_LEVELS, TRADERS_WITHOUT_REPUTATION } from '@/utils/constants';
+  import type { TraderUnlockRequirement } from '@/features/dashboard/traderLockStatus';
   import type { Trader, TraderLoyaltyLevel } from '@/types/tarkov';
   const MIN_REPUTATION = -10;
   const MAX_REPUTATION = 10;
@@ -184,11 +164,12 @@
     completedTasks: number;
     totalTasks: number;
     percentage: number;
+    unlock?: TraderUnlockRequirement | null;
   }>();
   const router = useRouter();
   const preferencesStore = usePreferencesStore();
   const tarkovStore = useTarkovStore();
-  const metadataStore = useMetadataStore();
+  const { isLightTheme } = useTheme();
   const hasLoyaltyLevels = computed(
     () =>
       !TRADERS_WITHOUT_LOYALTY_LEVELS.includes(
@@ -202,32 +183,7 @@
       )
   );
   const isFence = computed(() => props.trader.normalizedName === 'fence');
-  const unlockTaskIds = computed(() =>
-    resolveTraderUnlockTaskIds(
-      props.trader.normalizedName,
-      tarkovStore.getCurrentGameMode?.() ?? GAME_MODES.PVP
-    )
-  );
-  const availableUnlockTasks = computed(() => {
-    if (!unlockTaskIds.value.length || !metadataStore.tasks?.length) return [];
-    const unlockTaskIdSet = new Set(unlockTaskIds.value);
-    return metadataStore.tasks.filter((task) => unlockTaskIdSet.has(task.id));
-  });
-  const unlockTaskId = computed(() => {
-    const firstTask = availableUnlockTasks.value[0];
-    return firstTask?.id ?? null;
-  });
-  const unlockTask = computed(() => {
-    const firstTask = availableUnlockTasks.value[0];
-    return firstTask ?? null;
-  });
-  const isLocked = computed(() =>
-    isTraderLocked(props.trader, {
-      tasks: metadataStore.tasks,
-      isTaskComplete: (id) => tarkovStore.isTaskComplete(id),
-      gameMode: tarkovStore.getCurrentGameMode?.() ?? GAME_MODES.PVP,
-    })
-  );
+  const isLocked = computed(() => Boolean(props.unlock));
   const currentLevel = computed(() => tarkovStore.getTraderLevel(props.trader.id));
   const currentReputation = computed(() => tarkovStore.getTraderReputation(props.trader.id));
   const maxLevel = computed(() => {
@@ -246,36 +202,38 @@
     }
     if (isComplete.value) {
       return [
-        'bg-surface-950/50 border-success-500/15',
+        'bg-surface-950/50 border-success-500/15 min-h-44',
         'hover:border-success-500/25 hover:shadow-lg',
-        'focus-visible:border-success-500/30 focus-visible:ring-success-700/30 focus-visible:ring-2',
       ];
     }
-    return [
-      'bg-surface-900 border-white/12',
-      'hover:border-surface-600 hover:shadow-lg',
-      'focus-visible:border-surface-500 focus-visible:ring-surface-700/50 focus-visible:ring-2',
-    ];
+    return ['bg-surface-900 border-white/12 min-h-44', 'hover:border-surface-600 hover:shadow-lg'];
   });
   const portraitClasses = computed(() => {
     if (isLocked.value) return 'bg-surface-800 border-surface-700/50 opacity-50 grayscale';
     if (isComplete.value) return 'bg-surface-800 border-success-600/40';
     return 'bg-surface-800 border-surface-700';
   });
+  const nameClass = computed(() => {
+    if (isLocked.value) return 'text-surface-400';
+    if (isComplete.value) return 'text-surface-300';
+    return 'light:text-surface-50 text-white';
+  });
   const mainBarColor = computed(() => {
-    if (isLocked.value) return 'locked' as const;
     if (isComplete.value) return 'success' as const;
     return 'gradient' as const;
   });
-  const percentageTextStyle = computed(() => {
-    if (isLocked.value || isComplete.value) return {};
-    if (props.percentage <= 0) return {};
-    const hue = (props.percentage / 100) * 120;
-    return { color: `hsl(${hue}, 70%, 55%)` };
-  });
+  const percentageTextStyle = computed(() =>
+    traderPercentageStyle(
+      {
+        isLocked: isLocked.value,
+        isComplete: isComplete.value,
+        percentage: props.percentage,
+      },
+      isLightTheme.value ? 'light' : 'dark'
+    )
+  );
   const percentageTextClass = computed(() => {
-    if (isLocked.value) return 'text-surface-500';
-    if (isComplete.value) return 'text-success-400/70';
+    if (isComplete.value) return 'text-success-400/70 light:text-success-900';
     if (props.percentage <= 0) return 'text-surface-400';
     return '';
   });
@@ -283,11 +241,11 @@
     const isActive = currentLevel.value === lvl;
     if (isComplete.value) {
       return isActive
-        ? 'bg-success-900/40 text-success-300/70'
+        ? 'bg-success-900/40 light:bg-success-100 text-success-300/70 light:text-success-900'
         : 'text-surface-500 hover:bg-surface-700/40 hover:text-surface-400';
     }
     return isActive
-      ? 'bg-surface-600 text-white'
+      ? 'bg-surface-600 text-white light:text-surface-50'
       : 'text-surface-300 hover:bg-surface-700/70 hover:text-surface-100';
   };
   const nextLevelInfo = computed(() => {
@@ -354,18 +312,8 @@
     const target = event.target as HTMLInputElement;
     target.blur();
   };
-  const isInteractiveTarget = (target: EventTarget | null) =>
-    target instanceof HTMLElement &&
-    Boolean(target.closest('a,button,input,label,select,textarea,[role="button"]'));
-  const handleCardClick = (event: MouseEvent) => {
-    if (isInteractiveTarget(event.target)) {
-      return;
-    }
-    navigateToTraderTasks();
-  };
   const navigateToTraderTasks = () => {
-    preferencesStore.setTaskPrimaryView('traders');
     preferencesStore.setTaskTraderView(props.trader.id);
-    router.push('/tasks');
+    router.push({ path: '/tasks/traders', query: { trader: props.trader.id } });
   };
 </script>

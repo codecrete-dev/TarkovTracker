@@ -1,24 +1,31 @@
 import { defineStore, type Store } from 'pinia';
 import { useSupabaseListener } from '@/composables/supabase/useSupabaseListener';
 import { getCurrentGameMode } from '@/stores/utils/gameMode';
+import {
+  createChannelReleaseLatch,
+  logChannelSubscribeFailure,
+  removeOwnedChannel,
+  type OwnedRealtimeChannel,
+} from '@/utils/realtimeChannel';
 import { collectTeamMembershipIds } from '@/utils/teamMemberships';
 import type { SystemGetters, SystemState } from '@/types/tarkov';
 import type { GameMode } from '@/utils/constants';
-import type { PostgrestError, RealtimeChannel } from '@supabase/supabase-js';
+import type { PostgrestError } from '@supabase/supabase-js';
 /**
  * Helper to extract team ID from system store state.
  * Now handles game-mode-specific team IDs (pvp_team_id, pve_team_id).
  * Falls back to legacy team/team_id for backwards compatibility.
  */
+const getLegacyTeamId = (state: SystemState): string | null =>
+  [state.team, state.team_id].find((teamId) => typeof teamId === 'string' && teamId.length > 0) ??
+  null;
 export function getTeamIdFromState(state: SystemState, gameMode?: GameMode): string | null {
   const mode = gameMode || getCurrentGameMode();
-  if (mode === 'seasonal') {
-    return state.seasonal_team_id ?? null;
-  }
-  if (mode === 'pve') {
-    return state.pve_team_id ?? state.team ?? state.team_id ?? null;
-  }
-  return state.pvp_team_id ?? state.team ?? state.team_id ?? null;
+  const modeSpecificTeamId = state[getTeamIdStateKey(mode)];
+  if (modeSpecificTeamId) return modeSpecificTeamId;
+  if (mode === 'seasonal') return null;
+  if ([state.pvp_team_id, state.pve_team_id].some(Boolean)) return null;
+  return getLegacyTeamId(state);
 }
 export function getTeamIdStateKey(
   gameMode: GameMode
@@ -37,24 +44,46 @@ export function hasTeamInState(state: SystemState, gameMode?: GameMode): boolean
  * System store definition with getters for user tokens and team info
  */
 export const useSystemStore = defineStore<string, SystemState, SystemGetters>('system', {
+  // Every key below mirrors a `user_system` column. The row is hydrated wholesale
+  // by the Supabase listener and read through the exported `SystemState` helpers
+  // above, never as `systemStore.<column>`, so there is no store-member reference
+  // for the analyzer to find. The keys also cannot be narrowed away: the row shape
+  // is the database contract, and dropping one would silently stop hydrating it.
   state: (): SystemState => ({
-    // fallow-ignore-next-line unused-store-member -- state hydrated/accessed via Supabase $state and middleware
+    // Only reachable through a `$state` type assertion (AdminCacheCard.vue), which
+    // erases the store type and leaves no member reference to detect.
+    // fallow-ignore-next-line unused-store-member -- not actionable: reads go through an erased `$state` assertion
     user_id: null,
-    // fallow-ignore-next-line unused-store-member -- state hydrated/accessed via Supabase $state and middleware
+    // Legacy pre-per-mode columns, read only by `getLegacyTeamId(state)` from a
+    // plain `SystemState` parameter. Removing them would drop the compatibility
+    // path for rows written before per-mode team ids existed.
+    // fallow-ignore-next-line unused-store-member -- not actionable: read via a plain `SystemState` parameter, not the store
     team: null,
-    // fallow-ignore-next-line unused-store-member -- state hydrated/accessed via Supabase $state and middleware
+    // fallow-ignore-next-line unused-store-member -- not actionable: read via a plain `SystemState` parameter, not the store
     team_id: null,
-    // fallow-ignore-next-line unused-store-member -- state hydrated/accessed via Supabase $state and middleware
+    // Read only by `getTeamIdFromState(state)` from a plain `SystemState`
+    // parameter, whose active-mode lookup is the computed key
+    // `state[getTeamIdStateKey(mode)]`; no consumer names them on the store.
+    // fallow-ignore-next-line unused-store-member -- not actionable: read via a plain `SystemState` parameter and a computed key
     pvp_team_id: null,
-    // fallow-ignore-next-line unused-store-member -- state hydrated/accessed via Supabase $state and middleware
+    // fallow-ignore-next-line unused-store-member -- not actionable: read via a plain `SystemState` parameter and a computed key
     pve_team_id: null,
-    // fallow-ignore-next-line unused-store-member -- state hydrated/accessed via membership queries and $state
+    // fallow-ignore-next-line unused-store-member -- not actionable: read via a plain `SystemState` parameter and a computed key
     seasonal_team_id: null,
-    // fallow-ignore-next-line unused-store-member -- state hydrated/accessed via Supabase $state and middleware
+    // Read as `systemStore.$state.is_admin` by the admin route guard
+    // (`app/middleware/admin.ts`), the same erased-`$state` access as `user_id`:
+    // the assertion-free `$state` read never names this store member.
+    // fallow-ignore-next-line unused-store-member -- not actionable: reads go through `$state`, which names no store member
     is_admin: false,
   }),
   getters: {
-    // fallow-ignore-next-line unused-store-member -- state hydrated/accessed via Supabase $state and middleware
+    // Consumers read `systemStore.userTeam`, but only through
+    // `useSystemStoreWithSupabase()`, whose declared return type is the alias
+    // `Store<string, SystemState, SystemGetters>` and does not resolve back to
+    // this `defineStore` call. The sibling `isAdmin` getter reports clean purely
+    // because settings.vue also holds a direct `useSystemStore()` instance, so the
+    // only fix would be forcing consumers off the wrapper.
+    // fallow-ignore-next-line unused-store-member -- not actionable: reads resolve against the wrapper's aliased store type
     userTeam(state): string | null {
       return getTeamIdFromState(state);
     },
@@ -104,7 +133,11 @@ export function useSystemStoreWithSupabase(): SystemStoreInstance {
   }
   const systemStore = useSystemStore();
   const { $supabase } = useNuxtApp();
-  const membershipChannel = ref<RealtimeChannel | null>(null);
+  const listenerScope = effectScope(true);
+  // `shallowRef`: a Realtime channel owns a socket, timers, and internal state
+  // that must not be wrapped in a deep reactive proxy.
+  const membershipChannel = shallowRef<OwnedRealtimeChannel | null>(null);
+  const channelRelease = createChannelReleaseLatch();
   let membershipRequestId = 0;
   let membershipSessionId = 0;
   const getAuthenticatedUserId = (): string | null =>
@@ -193,28 +226,57 @@ export function useSystemStoreWithSupabase(): SystemStoreInstance {
       : undefined;
   });
   // Setup Supabase listener with reactive filter ref
-  const { cleanup, isSubscribed, hasInitiallyLoaded, loadError } = useSupabaseListener({
-    store: systemStore,
-    table: 'user_system',
-    filter: systemFilter,
-    storeId: 'system',
-    onData: handleSystemSnapshot,
-  });
+  const listenerState = listenerScope.run(() =>
+    useSupabaseListener({
+      store: systemStore,
+      table: 'user_system',
+      filter: systemFilter,
+      storeId: 'system',
+      onData: handleSystemSnapshot,
+      scope: listenerScope,
+    })
+  );
+  if (!listenerState) throw new Error('Failed to create system realtime listener');
+  const { cleanup, isSubscribed, hasInitiallyLoaded, loadError } = listenerState;
   const cleanupMembershipChannel = async () => {
-    if (!membershipChannel.value) return;
-    await $supabase.client.removeChannel(membershipChannel.value as unknown as RealtimeChannel);
+    const owned = membershipChannel.value;
     membershipChannel.value = null;
+    if (!owned) return;
+    channelRelease.hold(owned, removeOwnedChannel(owned, 'SystemStore'));
+    await channelRelease.release(owned.topic);
+  };
+  const canJoinMembershipTopic = async (
+    topic: string,
+    sessionId: number,
+    userId: string
+  ): Promise<boolean> =>
+    (await channelRelease.release(topic)) && isCurrentMembershipSession(sessionId, userId);
+  /**
+   * Tears the previous channel down and resolves the user this setup owns.
+   *
+   * @returns The authenticated user id, or `null` when a newer session
+   *   superseded this one or nobody is signed in.
+   */
+  const resolveMembershipSession = async (sessionId: number): Promise<string | null> => {
+    await cleanupMembershipChannel();
+    if (!isCurrentMembershipSession(sessionId)) return null;
+    const userId = getAuthenticatedUserId();
+    if (!userId) return null;
+    await refreshTeamMemberships(userId, sessionId);
+    return isCurrentMembershipSession(sessionId, userId) ? userId : null;
   };
   const setupMembershipChannel = async () => {
     const sessionId = ++membershipSessionId;
-    await cleanupMembershipChannel();
-    if (!isCurrentMembershipSession(sessionId)) return;
-    const userId = getAuthenticatedUserId();
+    const userId = await resolveMembershipSession(sessionId);
     if (!userId) return;
-    await refreshTeamMemberships(userId, sessionId);
-    if (!isCurrentMembershipSession(sessionId, userId)) return;
-    membershipChannel.value = $supabase.client
-      .channel(`system-team-memberships-${userId}`)
+    const client = $supabase.client;
+    const topic = `system-team-memberships-${userId}`;
+    // The topic is per user, so signing out and back in reuses it. An unclean
+    // leave keeps it occupied and `subscribe()` would never rejoin, so decline
+    // this attempt and let the next auth change retry.
+    if (!(await canJoinMembershipTopic(topic, sessionId, userId))) return;
+    const channel = client
+      .channel(topic)
       .on(
         'postgres_changes',
         {
@@ -225,24 +287,34 @@ export function useSystemStoreWithSupabase(): SystemStoreInstance {
         },
         () => void refreshTeamMemberships(userId, sessionId)
       )
-      .subscribe();
+      .subscribe((status, error) => {
+        if (status === 'SUBSCRIBED' && isCurrentMembershipSession(sessionId, userId)) {
+          void refreshTeamMemberships(userId, sessionId);
+        }
+        logChannelSubscribeFailure('SystemStore', status, error, {
+          table: 'team_memberships',
+        });
+      });
+    membershipChannel.value = { channel, client, topic };
   };
-  const stopMembershipAuthWatch = watch(
-    () => [$supabase.user?.loggedIn, $supabase.user?.id] as const,
-    () => {
-      systemStore.$patch({
-        user_id: getAuthenticatedUserId(),
-        pvp_team_id: null,
-        pve_team_id: null,
-        seasonal_team_id: null,
-        team: null,
-        team_id: null,
-        is_admin: false,
-      } as Partial<SystemState>);
-      void setupMembershipChannel();
-    },
-    { immediate: true }
-  );
+  listenerScope.run(() => {
+    watch(
+      () => [$supabase.user?.loggedIn, $supabase.user?.id] as const,
+      () => {
+        systemStore.$patch({
+          user_id: getAuthenticatedUserId(),
+          pvp_team_id: null,
+          pve_team_id: null,
+          seasonal_team_id: null,
+          team: null,
+          team_id: null,
+          is_admin: false,
+        } as Partial<SystemState>);
+        void setupMembershipChannel();
+      },
+      { immediate: true }
+    );
+  });
   // Helper functions that provide properly typed access to team state
   const getTeamId = (): string | null => {
     // Pinia guarantees $state is always an object
@@ -260,9 +332,10 @@ export function useSystemStoreWithSupabase(): SystemStoreInstance {
     loadError,
     cleanup: () => {
       membershipSessionId += 1;
-      stopMembershipAuthWatch();
       cleanup();
       void cleanupMembershipChannel();
+      listenerScope.stop();
+      if (systemStoreInstance === instance) systemStoreInstance = null;
     },
     getTeamId,
     hasTeam,

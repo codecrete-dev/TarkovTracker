@@ -3,6 +3,7 @@ import {
   actions,
   getters,
   migrateToGameModeStructure,
+  type ManualActivityEntry,
   type UserState,
 } from '@/stores/progressState';
 import { ACTIVE_SEASON_NUMBER } from '@/utils/constants';
@@ -15,7 +16,6 @@ const createBaseState = (): UserState =>
       level: 1,
       pmcFaction: 'USEC',
       displayName: null,
-      xpOffset: 0,
       taskObjectives: {},
       taskCompletions: {},
       hideoutParts: {},
@@ -30,7 +30,6 @@ const createBaseState = (): UserState =>
       level: 1,
       pmcFaction: 'USEC',
       displayName: null,
-      xpOffset: 0,
       taskObjectives: {},
       taskCompletions: {},
       hideoutParts: {},
@@ -60,6 +59,92 @@ describe('progressState getters task completion compatibility', () => {
     const state = createStateWithTaskCompletion({ complete: true, failed: true });
     expect(getters.isTaskComplete(state)('task-1')).toBe(false);
     expect(getters.isTaskFailed(state)('task-1')).toBe(true);
+  });
+});
+describe('task availability confirmations', () => {
+  it('confirms and clears without touching task status or objectives', () => {
+    // Review #979: confirming must not create a completion record that reads as active, and a
+    // clear must not rewrite (and so on merge override) another device's status.
+    const state = createBaseState();
+    state.pvp.taskObjectives.objective = { count: 2, complete: false };
+    actions.confirmTaskAvailability.call(state, 'task', 'requirements');
+    expect(state.pvp.taskCompletions.task).toBeUndefined();
+    expect(state.pvp.taskAvailability?.task?.requirements).toBe('requirements');
+    actions.clearTaskAvailability.call(state, 'task');
+    expect(state.pvp.taskCompletions.task).toBeUndefined();
+    expect(state.pvp.taskAvailability?.task?.requirements).toBe('');
+    expect(state.pvp.taskObjectives.objective).toEqual({ count: 2, complete: false });
+  });
+  it('leaves an existing completion untouched when clearing', () => {
+    const state = createBaseState();
+    const completion = { complete: true, failed: false, manual: true, timestamp: 10 };
+    state.pvp.taskCompletions.task = { ...completion };
+    actions.clearTaskAvailability.call(state, 'task');
+    expect(state.pvp.taskCompletions.task).toEqual(completion);
+  });
+  it('stamps confirmations after the status clock and after the previous confirmation', () => {
+    const state = createBaseState();
+    const future = Date.now() + 60_000;
+    state.pvp.taskCompletions.task = { complete: false, failed: false, timestamp: future };
+    actions.confirmTaskAvailability.call(state, 'task', 'requirements');
+    const first = state.pvp.taskAvailability!.task!.timestamp;
+    expect(first).toBeGreaterThanOrEqual(future);
+    actions.clearTaskAvailability.call(state, 'task');
+    expect(state.pvp.taskAvailability!.task!.timestamp).toBeGreaterThan(first);
+  });
+  it('advances a status change past a confirmation stamped by a clock running ahead', () => {
+    const state = createBaseState();
+    const ahead = Date.now() + 3_600_000;
+    state.pvp.taskAvailability = { task: { requirements: 'requirements', timestamp: ahead } };
+    for (const action of [
+      actions.setTaskComplete,
+      actions.setTaskFailed,
+      actions.setTaskUncompleted,
+    ]) {
+      action.call(state, 'task');
+      expect(state.pvp.taskCompletions.task!.timestamp!).toBeGreaterThan(ahead);
+    }
+  });
+  it('scopes confirmations to the current mode and retires them on later status changes', () => {
+    const state = createBaseState();
+    for (const action of [
+      actions.setTaskUncompleted,
+      actions.setTaskComplete,
+      actions.setTaskFailed,
+    ]) {
+      actions.confirmTaskAvailability.call(state, 'task', 'requirements');
+      expect(state.pve.taskAvailability?.task).toBeUndefined();
+      const confirmedAt = state.pvp.taskAvailability!.task!.timestamp;
+      vi.useFakeTimers();
+      vi.setSystemTime(confirmedAt + 5);
+      action.call(state, 'task');
+      expect(state.pvp.taskCompletions.task!.timestamp!).toBeGreaterThan(confirmedAt);
+      vi.useRealTimers();
+    }
+  });
+});
+describe('story objective completion clock', () => {
+  it('stamps a completion after an entry another device wrote ahead', () => {
+    const state = createBaseState();
+    const ahead = Date.now() + 3_600_000;
+    state.pvp.storyChapters.boreas = {
+      objectives: { drives: { complete: false, timestamp: ahead } },
+    };
+    actions.setStoryObjectiveComplete.call(state, 'boreas', 'drives');
+    const entry = state.pvp.storyChapters.boreas.objectives!.drives!;
+    expect(entry.complete).toBe(true);
+    expect(entry.timestamp!).toBeGreaterThan(ahead);
+  });
+  it('stamps an uncompletion after an entry another device wrote ahead', () => {
+    const state = createBaseState();
+    const ahead = Date.now() + 3_600_000;
+    state.pvp.storyChapters.boreas = {
+      objectives: { drives: { complete: true, timestamp: ahead } },
+    };
+    actions.setStoryObjectiveUncomplete.call(state, 'boreas', 'drives');
+    const entry = state.pvp.storyChapters.boreas.objectives!.drives!;
+    expect(entry.complete).toBe(false);
+    expect(entry.timestamp!).toBeGreaterThan(ahead);
   });
 });
 describe('progressState storyline timestamps', () => {
@@ -156,5 +241,122 @@ describe('migrateToGameModeStructure', () => {
     expect(migrated.seasonalSeasonNumber).toBe(ACTIVE_SEASON_NUMBER);
     expect(migrated.pvp.level).toBe(5);
     expect(migrated.pve.level).toBe(3);
+  });
+});
+describe('manual activity history actions', () => {
+  const entry = (overrides: Partial<ManualActivityEntry> = {}): ManualActivityEntry => ({
+    id: 'manual-1',
+    timestamp: 1000,
+    type: 'task',
+    action: 'complete',
+    title: 'Completed Task: Debut',
+    ...overrides,
+  });
+  it('writes entries into the selected mode only', () => {
+    const state = createBaseState();
+    actions.addManualActivityEntries.call(state, [entry({ id: 'pvp-1' })]);
+    expect(
+      getters
+        .getManualActivityHistory(state)()
+        .map((item) => item.id)
+    ).toEqual(['pvp-1']);
+    expect(state.pve.manualActivityHistory ?? []).toEqual([]);
+    actions.switchGameMode.call(state, 'pve');
+    expect(getters.getManualActivityHistory(state)()).toEqual([]);
+    actions.addManualActivityEntries.call(state, [entry({ id: 'pve-1' })]);
+    expect(
+      getters
+        .getManualActivityHistory(state)()
+        .map((item) => item.id)
+    ).toEqual(['pve-1']);
+    expect(state.pvp.manualActivityHistory?.map((item) => item.id)).toEqual(['pvp-1']);
+  });
+  it('orders entries newest first and collapses duplicate ids', () => {
+    const state = createBaseState();
+    actions.addManualActivityEntries.call(state, [entry({ id: 'dup', timestamp: 100 })]);
+    actions.addManualActivityEntries.call(state, [entry({ id: 'other', timestamp: 500 })]);
+    actions.addManualActivityEntries.call(state, [
+      entry({ id: 'dup', timestamp: 900, title: 'Newer' }),
+    ]);
+    const history = getters.getManualActivityHistory(state)();
+    expect(history.map((item) => item.id)).toEqual(['dup', 'other']);
+    expect(history[0]?.title).toBe('Newer');
+  });
+  it('caps the history at 50 entries, retaining the newest', () => {
+    const state = createBaseState();
+    actions.addManualActivityEntries.call(
+      state,
+      Array.from({ length: 70 }, (_unused, index) =>
+        entry({ id: `manual-${index}`, timestamp: 1000 + index })
+      )
+    );
+    const history = getters.getManualActivityHistory(state)();
+    expect(history).toHaveLength(50);
+    expect(history[0]?.id).toBe('manual-69');
+    expect(history.at(-1)?.id).toBe('manual-20');
+  });
+  it('drops malformed entries', () => {
+    const state = createBaseState();
+    actions.addManualActivityEntries.call(state, [
+      { id: '', timestamp: 1, type: 'task', action: 'complete', title: 'no id' },
+      { id: 'no-title', timestamp: 1, type: 'task', action: 'complete', title: '   ' },
+      { id: 'bad-type', timestamp: 1, type: 'quest', action: 'complete', title: 'x' },
+      { id: 'bad-action', timestamp: 1, type: 'task', action: 'deleted', title: 'x' },
+      { id: 'no-timestamp', timestamp: Number.NaN, type: 'task', action: 'complete', title: 'x' },
+    ] as unknown as ManualActivityEntry[]);
+    expect(getters.getManualActivityHistory(state)()).toEqual([]);
+  });
+  it('ignores an empty batch and clears only the selected mode', () => {
+    const state = createBaseState();
+    actions.addManualActivityEntries.call(state, [entry({ id: 'pvp-1' })]);
+    actions.addManualActivityEntries.call(state, []);
+    expect(getters.getManualActivityHistory(state)()).toHaveLength(1);
+    actions.switchGameMode.call(state, 'pve');
+    actions.addManualActivityEntries.call(state, [entry({ id: 'pve-1' })]);
+    actions.clearManualActivityHistory.call(state);
+    expect(state.pve.manualActivityHistory).toEqual([]);
+    expect(state.pvp.manualActivityHistory?.map((item) => item.id)).toEqual(['pvp-1']);
+  });
+});
+describe('manual activity clearing', () => {
+  it('discards malformed stored history before appending an entry', () => {
+    const state = createBaseState();
+    state.pvp.manualActivityHistory = {} as ManualActivityEntry[];
+    const entry: ManualActivityEntry = {
+      id: 'valid',
+      timestamp: 1,
+      type: 'task',
+      action: 'complete',
+      title: 'Valid',
+    };
+    expect(() => actions.addManualActivityEntries.call(state, [entry])).not.toThrow();
+    expect(state.pvp.manualActivityHistory).toEqual([entry]);
+  });
+  it('advances the history generation without changing gameplay or another mode', () => {
+    const state = createBaseState();
+    state.pvp.level = 42;
+    state.pvp.progressEpoch = 3;
+    actions.clearManualActivityHistory.call(state);
+    expect(state.pvp.manualActivityEpoch).toBe(1);
+    expect(state.pvp.level).toBe(42);
+    expect(state.pvp.progressEpoch).toBe(3);
+    expect(state.pve.manualActivityEpoch).toBeUndefined();
+    actions.clearManualActivityHistory.call(state);
+    expect(state.pvp.manualActivityEpoch).toBe(2);
+  });
+});
+describe('legacy XP state migration', () => {
+  it('preserves saved levels and prestige in every mode while dropping retired offsets', () => {
+    const legacy = createBaseState();
+    legacy.seasonal = structuredClone(legacy.pvp);
+    for (const [index, mode] of (['pvp', 'pve', 'seasonal'] as const).entries()) {
+      Object.assign(legacy[mode], { level: 30 + index, prestigeLevel: index, xpOffset: 999999 });
+    }
+    legacy.seasonalSeasonNumber = ACTIVE_SEASON_NUMBER;
+    const migrated = migrateToGameModeStructure(legacy);
+    for (const [index, mode] of (['pvp', 'pve', 'seasonal'] as const).entries()) {
+      expect(migrated[mode]).toMatchObject({ level: 30 + index, prestigeLevel: index });
+      expect(migrated[mode]).not.toHaveProperty('xpOffset');
+    }
   });
 });

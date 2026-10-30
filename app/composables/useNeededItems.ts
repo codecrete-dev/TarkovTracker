@@ -1,8 +1,10 @@
 import { useNeededItemsSorting } from '@/composables/useNeededItemsSorting';
 import {
+  findAcceptedItemMatchIndex,
   getNeededItemData,
   getNeededItemId,
   isNonFirSpecialEquipment,
+  itemMatchesQuery,
 } from '@/features/neededitems/neededItemFilters';
 import { useMetadataStore } from '@/stores/useMetadata';
 import { usePreferencesStore } from '@/stores/usePreferences';
@@ -12,6 +14,7 @@ import { isCurrencyItemId } from '@/utils/constants';
 import { fuzzyMatch } from '@/utils/fuzzySearch';
 import { logger } from '@/utils/logger';
 import { perfNow, roundPerfMs } from '@/utils/perf';
+import { ALL_TAB_ICON } from '@/utils/statusTones';
 import { buildTaskTypeFilterOptions, filterTasksByTypeSettings } from '@/utils/taskTypeFilters';
 import type {
   NeededItemsFirFilter,
@@ -23,7 +26,9 @@ import type {
   GroupedNeededItem,
   NeededItemHideoutModule,
   NeededItemTaskObjective,
+  TarkovItem,
 } from '@/types/tarkov';
+import type { StatusTabItem } from '@/utils/statusTones';
 const DEFAULT_FULL_LOAD_TIMEOUT_MS = 5000;
 const DEFAULT_FULL_LOAD_MIN_TIME_MS = 16;
 const DEFAULT_FULL_LOAD_DELAY_MS = 1500;
@@ -44,12 +49,7 @@ export interface UseNeededItemsOptions {
   search?: Ref<string>;
   t?: (key: string) => string;
 }
-export interface FilterTab {
-  label: string;
-  value: NeededItemsFilterType;
-  icon: string;
-  count: number;
-}
+export type FilterTab = StatusTabItem<NeededItemsFilterType>;
 export interface UseNeededItemsReturn {
   activeFilter: WritableComputedRef<NeededItemsFilterType>;
   firFilter: WritableComputedRef<NeededItemsFirFilter>;
@@ -65,6 +65,8 @@ export interface UseNeededItemsReturn {
   allItems: ComputedRef<(NeededItemTaskObjective | NeededItemHideoutModule)[]>;
   filteredItems: ComputedRef<(NeededItemTaskObjective | NeededItemHideoutModule)[]>;
   groupedItems: ComputedRef<GroupedNeededItem[]>;
+  /** Needs folded into `groupedItems`, the "total" of the Group by item count. */
+  groupedNeedCount: ComputedRef<number>;
   displayItems: ComputedRef<
     GroupedNeededItem[] | (NeededItemTaskObjective | NeededItemHideoutModule)[]
   >;
@@ -165,6 +167,38 @@ export function useNeededItems(options: UseNeededItemsOptions = {}): UseNeededIt
     }
     return visibleIds;
   });
+  const hiddenTaskIds = computed(() => new Set(preferencesStore.getHiddenTaskIds));
+  // Hidden tasks keep their completed objectives, like the task list's Completed view.
+  // Failed tasks also carry the completion flag, so they stay hidden.
+  const isTaskSucceeded = (taskId: string): boolean =>
+    progressStore.tasksCompletions?.[taskId]?.['self'] === true &&
+    progressStore.tasksFailed?.[taskId]?.['self'] !== true;
+  // Mirrors NeededItem's team needs: teammates ride on the user's objective record.
+  const showsTeamNeeds = (need: NeededItemTaskObjective): boolean =>
+    !preferencesStore.itemsTeamAllHidden &&
+    !(preferencesStore.itemsTeamNonFIRHidden && !need.foundInRaid);
+  const hasPendingTeammate = (need: NeededItemTaskObjective): boolean => {
+    const objectiveCompletions =
+      progressStore.objectiveCompletions?.[need.sourceObjectiveId ?? need.id] ?? {};
+    const taskCompletions = progressStore.tasksCompletions?.[need.taskId] ?? {};
+    return Object.entries(objectiveCompletions).some(
+      ([user, completed]) =>
+        user !== 'self' &&
+        !completed &&
+        !taskCompletions[user] &&
+        !!progressStore.teamStores?.[user]
+    );
+  };
+  const isHiddenForSelf = (need: NeededItemTaskObjective, progressTeamId: string): boolean =>
+    progressTeamId === 'self' &&
+    hiddenTaskIds.value.has(need.taskId) &&
+    !isTaskSucceeded(need.taskId);
+  // Hiding is personal: a hidden task's objective stays while a teammate still needs it.
+  const neededByTeammate = (need: NeededItemTaskObjective): boolean =>
+    showsTeamNeeds(need) && hasPendingTeammate(need);
+  // Objectives kept only for teammates add nothing to the user's own counts or targets.
+  const countsForSelf = (need: NeededItemTaskObjective | NeededItemHideoutModule): boolean =>
+    need.needType !== 'taskObjective' || need.hiddenForSelf !== true;
   const itemsLoaded = computed(() => (items.value?.length ?? 0) > 0);
   const itemsError = computed(() => metadataStore.itemsError);
   const itemsReady = computed(() => itemsLoaded.value && !itemsError.value);
@@ -283,6 +317,7 @@ export function useNeededItems(options: UseNeededItemsOptions = {}): UseNeededIt
     for (const need of combined) {
       let key: string;
       let itemId: string | undefined;
+      let hiddenForSelf = false;
       if (need.needType === 'taskObjective') {
         if (taskTypeOptions.excludedTaskIds.has(need.taskId)) {
           continue;
@@ -300,7 +335,11 @@ export function useNeededItems(options: UseNeededItemsOptions = {}): UseNeededIt
         if (task && task.factionName !== 'Any' && task.factionName !== taskFaction) {
           continue;
         }
-        if (progressStore.invalidTasks?.[need.taskId]?.[progressTeamId] === true) {
+        hiddenForSelf = isHiddenForSelf(need, progressTeamId);
+        if (
+          progressStore.invalidTasks?.[need.taskId]?.[progressTeamId] === true ||
+          (hiddenForSelf && !neededByTeammate(need))
+        ) {
           continue;
         }
         if (task && !visibleTaskIds.value.has(task.id)) {
@@ -329,7 +368,11 @@ export function useNeededItems(options: UseNeededItemsOptions = {}): UseNeededIt
         const newCount = (existing.count ?? 0) + normalizedCount;
         aggregated.set(key, { ...existing, count: newCount });
       } else {
-        aggregated.set(key, { ...need, count: normalizedCount });
+        aggregated.set(key, {
+          ...need,
+          count: normalizedCount,
+          ...(hiddenForSelf && { hiddenForSelf }),
+        });
       }
     }
     const result = Array.from(aggregated.values());
@@ -354,7 +397,7 @@ export function useNeededItems(options: UseNeededItemsOptions = {}): UseNeededIt
   };
   const filterTabsWithCounts = computed((): FilterTab[] => {
     const counts = { tasks: 0, hideout: 0, completed: 0, incomplete: 0 };
-    for (const item of allItems.value) {
+    for (const item of allItems.value.filter(countsForSelf)) {
       const completed = isParentCompleted(item);
       if (completed) {
         counts.completed++;
@@ -368,26 +411,30 @@ export function useNeededItems(options: UseNeededItemsOptions = {}): UseNeededIt
       {
         label: translate('common.all'),
         value: 'all' as NeededItemsFilterType,
-        icon: 'i-mdi-clipboard-list',
+        icon: ALL_TAB_ICON,
         count: counts.incomplete,
+        tone: 'neutral',
       },
       {
         label: translate('common.tasks'),
         value: 'tasks' as NeededItemsFilterType,
         icon: 'i-mdi-checkbox-marked-circle-outline',
         count: counts.tasks,
+        tone: 'info',
       },
       {
         label: translate('common.hideout'),
         value: 'hideout' as NeededItemsFilterType,
         icon: 'i-mdi-home',
         count: counts.hideout,
+        tone: 'info',
       },
       {
         label: translate('common.completed'),
         value: 'completed' as NeededItemsFilterType,
         icon: 'i-mdi-check-all',
         count: counts.completed,
+        tone: 'success',
       },
     ];
   });
@@ -412,6 +459,9 @@ export function useNeededItems(options: UseNeededItemsOptions = {}): UseNeededIt
   const passesOwnershipFilter = (
     item: NeededItemTaskObjective | NeededItemHideoutModule
   ): boolean => {
+    // A teammate-only need is listed because a teammate still lacks it, so the
+    // user's own count does not make it owned.
+    if (!countsForSelf(item)) return true;
     const count = item.count ?? 1;
     const currentCount =
       item.needType === 'taskObjective'
@@ -467,39 +517,38 @@ export function useNeededItems(options: UseNeededItemsOptions = {}): UseNeededIt
   ): boolean => {
     return !hideTeamItems.value || passesTeamFilter(item);
   };
+  /**
+   * Task objectives match their task's name, and pooled "any of these"
+   * objectives also match any valid turn-in item, not just the primary/cycled
+   * one, so searching e.g. "Augmentin" surfaces the quest.
+   */
+  const taskMatchesSearch = (taskObjective: NeededItemTaskObjective): boolean => {
+    if (findAcceptedItemMatchIndex(taskObjective.acceptedItems, search.value) !== -1) {
+      return true;
+    }
+    const task = metadataStore.getTaskById(taskObjective.taskId);
+    return Boolean(task?.name && fuzzyMatch(task.name, search.value));
+  };
+  const stationLevelMatchesSearch = (stationName: string, level: number): boolean => {
+    const stationWithLevel = `${stationName} ${level}`;
+    const stationWithLevelText = `${stationName} level ${level}`;
+    return (
+      fuzzyMatch(stationWithLevel, search.value) || fuzzyMatch(stationWithLevelText, search.value)
+    );
+  };
+  const stationMatchesSearch = (need: NeededItemHideoutModule): boolean => {
+    const station = metadataStore.getStationById(need.hideoutModule.stationId);
+    const stationName = station?.name;
+    if (!stationName) return false;
+    if (fuzzyMatch(stationName, search.value)) return true;
+    return stationLevelMatchesSearch(stationName, need.hideoutModule.level);
+  };
+  // An empty search matches every item (fuzzyMatch treats an empty query as a
+  // wildcard), so the item-name check doubles as the empty-search early-out.
   const passesSearchFilter = (item: NeededItemTaskObjective | NeededItemHideoutModule): boolean => {
-    if (!search.value) {
-      return true;
-    }
-    const itemObj = getNeededItemData(item);
-    const itemName = itemObj?.name ?? '';
-    const itemShortName = itemObj?.shortName ?? '';
-    if (fuzzyMatch(itemName, search.value) || fuzzyMatch(itemShortName, search.value)) {
-      return true;
-    }
-    if (item.needType === 'taskObjective') {
-      const task = metadataStore.getTaskById((item as NeededItemTaskObjective).taskId);
-      if (task?.name && fuzzyMatch(task.name, search.value)) {
-        return true;
-      }
-    }
-    if (item.needType === 'hideoutModule') {
-      const hideoutModule = (item as NeededItemHideoutModule).hideoutModule;
-      const station = metadataStore.getStationById(hideoutModule.stationId);
-      if (station?.name) {
-        if (fuzzyMatch(station.name, search.value)) {
-          return true;
-        }
-        const stationWithLevel = `${station.name} ${hideoutModule.level}`;
-        const stationWithLevelText = `${station.name} level ${hideoutModule.level}`;
-        if (
-          fuzzyMatch(stationWithLevel, search.value) ||
-          fuzzyMatch(stationWithLevelText, search.value)
-        ) {
-          return true;
-        }
-      }
-    }
+    if (itemMatchesQuery(getNeededItemData(item), search.value)) return true;
+    if (item.needType === 'taskObjective') return taskMatchesSearch(item);
+    if (item.needType === 'hideoutModule') return stationMatchesSearch(item);
     return false;
   };
   const filteredItems = computed(() => {
@@ -531,20 +580,90 @@ export function useNeededItems(options: UseNeededItemsOptions = {}): UseNeededIt
     return sorted;
   });
   type GroupedNeededItemAccumulator = Omit<GroupedNeededItem, 'total' | 'currentCount'>;
+  type GroupTarget = { id: string; data: TarkovItem; name: string };
+  const canGroupItem = (item: TarkovItem | undefined): item is TarkovItem & { name: string } =>
+    Boolean(item?.id && item?.name);
+  const groupEntryName = (item: TarkovItem | undefined): string | undefined => {
+    if (!item) return undefined;
+    return item.name || item.shortName;
+  };
+  const toGroupTarget = (item: TarkovItem | undefined): GroupTarget | null => {
+    const name = groupEntryName(item);
+    if (!item?.id || !name) return null;
+    return { id: item.id, data: item, name };
+  };
+  /**
+   * Returns the search-matched accepted item of a pooled "any of these"
+   * objective, or undefined when the search did not match one of its accepted
+   * items. Uses the same name-or-short-name matching as the search filter and
+   * the display pin so all three stay consistent.
+   */
+  const findAcceptedGroupMatch = (need: NeededItemTaskObjective): TarkovItem | undefined => {
+    const matchIndex = findAcceptedItemMatchIndex(need.acceptedItems, search.value);
+    if (matchIndex < 0) return undefined;
+    return need.acceptedItems?.[matchIndex];
+  };
+  /**
+   * Resolves the item a need is grouped and registered under in the grouped
+   * view. When searching, a pooled "any of these" objective that matched an
+   * accepted item is grouped under that matched turn-in item (identified by
+   * name or short name, mirroring the search match) so it is the visible
+   * entry; without an accepted match the primary item stays canonical under
+   * the grouped-view rule that nameless items are not grouped.
+   */
+  const resolveGroupTarget = (
+    need: NeededItemTaskObjective | NeededItemHideoutModule
+  ): GroupTarget | null => {
+    const acceptedTarget =
+      need.needType === 'taskObjective' ? toGroupTarget(findAcceptedGroupMatch(need)) : null;
+    if (acceptedTarget) return acceptedTarget;
+    const primaryData = getNeededItemData(need);
+    if (!canGroupItem(primaryData)) return null;
+    return { id: primaryData.id, data: primaryData, name: primaryData.name };
+  };
+  type GroupedNeed = {
+    need: NeededItemTaskObjective | NeededItemHideoutModule;
+    target: GroupTarget;
+  };
+  const isAcceptedRekey = ({ need, target }: GroupedNeed): boolean =>
+    target.id !== getNeededItemData(need)?.id;
+  /**
+   * Needs paired with their combined-view group. A pooled objective re-keyed
+   * under a searched accepted item only joins that group when the item has no
+   * direct needs of its own; otherwise a broad pool (e.g. "sell 75 of any
+   * item") would inflate the searched item's total and Smart Fill targets.
+   */
+  const resolveGroupedNeeds = (
+    needs: (NeededItemTaskObjective | NeededItemHideoutModule)[],
+    suppressionNeeds = needs
+  ): GroupedNeed[] => {
+    const resolved = needs.flatMap((need) => {
+      const target = resolveGroupTarget(need);
+      return target ? [{ need, target }] : [];
+    });
+    const directIds = new Set(
+      suppressionNeeds.flatMap((need) => {
+        const target = resolveGroupTarget(need);
+        return target && target.id === getNeededItemData(need)?.id ? [target.id] : [];
+      })
+    );
+    return resolved.filter((entry) => !isAcceptedRekey(entry) || !directIds.has(entry.target.id));
+  };
+  const selfFilteredItems = computed(() => filteredItems.value.filter(countsForSelf));
+  const groupedNeeds = computed((): GroupedNeed[] => resolveGroupedNeeds(selfFilteredItems.value));
+  // Needs folded into the Group by item groups; teammate-only needs are not among them.
+  const groupedNeedCount = computed(() => groupedNeeds.value.length);
   const groupedItems = computed((): GroupedNeededItem[] => {
     const startedAt = perfDebug.value ? perfNow() : 0;
     const groups = new Map<string, GroupedNeededItemAccumulator>();
-    for (const need of filteredItems.value) {
-      const itemId = getNeededItemId(need);
-      if (!itemId) continue;
-      const itemData = getNeededItemData(need);
-      if (!itemData || !itemData.name) continue;
+    for (const { need, target } of groupedNeeds.value) {
+      const { id: itemId, data: itemData, name: itemName } = target;
       const existingGroup = groups.get(itemId);
       if (!existingGroup) {
         groups.set(itemId, {
           item: {
             id: itemData.id,
-            name: itemData.name,
+            name: itemName,
             iconLink: itemData.iconLink,
             image512pxLink: itemData.image512pxLink,
             wikiLink: itemData.wikiLink,
@@ -606,6 +725,18 @@ export function useNeededItems(options: UseNeededItemsOptions = {}): UseNeededIt
   });
   const objectivesByItemId = computed(() => {
     const startedAt = perfDebug.value ? perfNow() : 0;
+    // Keep the modal's Smart Fill targets stable when item progress changes.
+    // Ownership filtering is count-based, so build this from the same view
+    // filters as `filteredItems` except `passesOwnershipToggleFilter`.
+    const modalNeeds = allItems.value
+      .filter(passesCompletionFilter)
+      .filter(passesTypeFilter)
+      .filter(passesFirFilter)
+      .filter(passesSpecialEquipmentFilter)
+      .filter(passesKappaToggleFilter)
+      .filter(passesTeamToggleFilter)
+      .filter(passesSearchFilter)
+      .filter(countsForSelf);
     const map = new Map<
       string,
       {
@@ -613,10 +744,8 @@ export function useNeededItems(options: UseNeededItemsOptions = {}): UseNeededIt
         hideoutModules: NeededItemHideoutModule[];
       }
     >();
-    for (const need of filteredItems.value) {
-      const itemData = getNeededItemData(need);
-      const itemId = itemData?.id;
-      if (!itemId) continue;
+    for (const { need, target } of resolveGroupedNeeds(modalNeeds, selfFilteredItems.value)) {
+      const itemId = target.id;
       if (!map.has(itemId)) {
         map.set(itemId, { taskObjectives: [], hideoutModules: [] });
       }
@@ -630,7 +759,7 @@ export function useNeededItems(options: UseNeededItemsOptions = {}): UseNeededIt
     if (perfDebug.value) {
       logPerf('objectives-by-item-id', {
         groups: map.size,
-        inputItems: filteredItems.value.length,
+        inputItems: modalNeeds.length,
         ms: roundPerfMs(perfNow() - startedAt),
       });
     }
@@ -657,6 +786,7 @@ export function useNeededItems(options: UseNeededItemsOptions = {}): UseNeededIt
     allItems,
     filteredItems,
     groupedItems,
+    groupedNeedCount,
     displayItems,
     objectivesByItemId,
     filterTabsWithCounts,

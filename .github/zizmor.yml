@@ -1,0 +1,32 @@
+# zizmor configuration (https://docs.zizmor.sh/configuration/).
+# Runs in the CI `Lint & Format` job when `.github/` changes. Every ignore below is an accepted,
+# documented design decision; add a justification with any new entry.
+rules:
+  dangerous-triggers:
+    ignore:
+      # Auto-merge uses a trusted post-CI workflow_run because Dependabot PR events get read-only
+      # tokens. It never checks out or executes PR code; it checks live metadata and merges only
+      # allowlisted lockfile-only changes; see docs/workflow-automation.md "Dependabot Auto Merge".
+      - dependabot-auto-merge.yml
+      # The status-only preview controller is the intended trusted boundary for `workflow_run`
+      # and `pull_request_target`: it checks out default-branch code, verifies candidate claims
+      # against live GitHub state, and never installs or executes candidate code. Deployment lives
+      # in the explicit-dispatch workflow; see docs/systems/previews.md.
+      - preview-state.yml
+      # Review Admission checks out main only and runs dependency-free observers. Candidate data
+      # is bounded metadata; status success requires a run-owned receipt and fresh live review,
+      # collaborator, PR and queue proof. Signal workflows have read-only tokens and no checkout.
+      # The consumer authenticates run/path/event/source/attempt before trusting the receipt.
+      - review-admission.yml
+      # Queue submission uses main's dependency-free controller, authenticates both source runs
+      # and run-owned receipts, rechecks immutable generated assets/current main/CI/preview/admission,
+      # and requests an ordinary head-pinned merge. It never executes downloaded candidate code.
+      - release-promotion-queue.yml
+      # CI completion is only a finalize wakeup: the gate authenticates the successful same-repo
+      # main CI and canonical promotion source, then checks out the exact validated main SHA.
+      # Fork/candidate CI cannot select code, prepare a release, or authorize publication.
+      - release.yml
+  # `./.github/actions/...` is the form the workflow fixtures in scripts/workflow-tests assert on; the
+  # `$/` alias is equivalent for a same-repository composite action and offers no security gain.
+  self-repository:
+    disable: true

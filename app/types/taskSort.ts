@@ -3,12 +3,13 @@ export const TASK_SORT_MODES = [
   'impact',
   'alphabetical',
   'level',
+  'progression',
   'trader',
   'teammates',
   'xp',
 ] as const;
 export type TaskSortMode = (typeof TASK_SORT_MODES)[number];
-export const TASK_SORT_DIRECTIONS = ['asc', 'desc'] as const;
+const TASK_SORT_DIRECTIONS = ['asc', 'desc'] as const;
 export type TaskSortDirection = (typeof TASK_SORT_DIRECTIONS)[number];
 export const isValidSortMode = (value: string | undefined): value is TaskSortMode =>
   typeof value === 'string' && TASK_SORT_MODES.includes(value as TaskSortMode);

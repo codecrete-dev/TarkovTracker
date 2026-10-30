@@ -11,6 +11,8 @@ import {
   adaptTaskRewardsResponse,
   adaptTasksCoreResponse,
   fetchTarkovJsonEndpoint,
+  createTarkovJsonBootstrapFetcher,
+  createTarkovJsonPrestigeFetcher,
 } from '@/server/utils/tarkov-json';
 type TestJsonFetcher = <T = unknown>(
   url: string,
@@ -34,7 +36,74 @@ describe('default fetch budget', () => {
     expect(worstCaseMs).toBeLessThan(100_000);
   });
 });
+describe('createTarkovJsonBootstrapFetcher', () => {
+  it('reads player levels from the base envelope without fetching language envelopes', async () => {
+    const fetcher = createFetcher({
+      'https://json.tarkov.dev/pve/items': {
+        data: { items: {}, playerLevels: [{ level: 1, exp: 0 }] },
+        translations: ['$.data.items.*.name'],
+      },
+    });
+    const result = await createTarkovJsonBootstrapFetcher({ deps: { fetcher }, gameMode: 'pve' })();
+    expect(result.data.playerLevels).toEqual([{ level: 1, exp: 0 }]);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+});
 describe('fetchTarkovJsonEndpoint', () => {
+  it.each([{ data: {} }, new Error('translations unavailable')])(
+    'rejects unresolved season translations regardless of raw key spelling (%#)',
+    async (dictionary) => {
+      const fetcher = createFetcher({
+        'https://json.tarkov.dev/pvp-season/season': {
+          data: { perks: { common: [{ name: 'different.perk.title' }] } },
+          translations: ['$.data.perks.*.*.name'],
+        },
+        'https://json.tarkov.dev/pvp-season/season_en': dictionary,
+      });
+      await expect(
+        fetchTarkovJsonEndpoint('season', {
+          gameMode: 'pvp-season',
+          lang: 'en',
+          maxRetries: 1,
+          deps: { fetcher },
+        })
+      ).rejects.toThrow(/season translations?/);
+    }
+  );
+  it('rejects unsupported declared translation paths for season metadata', async () => {
+    const fetcher = createFetcher({
+      'https://json.tarkov.dev/pvp-season/season': {
+        data: { perks: { common: [{ name: 'different.perk.title' }] } },
+        translations: ['$.data.perks[?(@.name)].name'],
+      },
+      'https://json.tarkov.dev/pvp-season/season_en': { data: { 'different.perk.title': 'Name' } },
+    });
+    await expect(
+      fetchTarkovJsonEndpoint('season', {
+        gameMode: 'pvp-season',
+        deps: { fetcher },
+      })
+    ).rejects.toThrow('Unsupported json.tarkov.dev season translation path');
+  });
+  it('localizes grouped season perks with English fallback using the published paths', async () => {
+    const fetcher = createFetcher({
+      'https://json.tarkov.dev/pvp-season/season': {
+        data: { perks: { common: [{ name: 'perk name', description: 'perk description' }] } },
+        translations: ['$.data.perks.*.*.name', '$.data.perks.*.*.description'],
+      },
+      'https://json.tarkov.dev/pvp-season/season_de': { data: { 'perk name': 'Name DE' } },
+      'https://json.tarkov.dev/pvp-season/season_en': {
+        data: { 'perk name': 'Name EN', 'perk description': 'Description EN' },
+      },
+    });
+    expect(
+      await fetchTarkovJsonEndpoint('season', {
+        gameMode: 'pvp-season',
+        lang: 'de',
+        deps: { fetcher },
+      })
+    ).toEqual({ perks: { common: [{ name: 'Name DE', description: 'Description EN' }] } });
+  });
   it('merges English translations into the base response', async () => {
     const fetcher = createFetcher({
       'https://json.tarkov.dev/regular/items': {
@@ -210,7 +279,7 @@ describe('fetchTarkovJsonEndpoint', () => {
     expect(result.items.item1?.shortName).toBe('Short');
     expect(result.items.item2?.name).toBe('item.name');
   });
-  it('falls back to JSONPath when the fast path cannot parse a translation path', async () => {
+  it('translates recursive descent and nested array wildcard paths', async () => {
     const fetcher = createFetcher({
       'https://json.tarkov.dev/regular/items': {
         data: { items: [{ id: 'item1', name: 'item.name', tags: ['tag.one', 'tag.two'] }] },
@@ -228,6 +297,113 @@ describe('fetchTarkovJsonEndpoint', () => {
     });
     expect(result.items[0]?.name).toBe('Bandage');
     expect(result.items[0]?.tags).toEqual(['Medical', 'Healing']);
+  });
+  it('translates the union and descendant paths upstream emits for tasks', async () => {
+    const base = {
+      data: {
+        tasks: {
+          t1: {
+            objectives: [
+              {
+                playerHealthEffect: { effects: ['effect.pain'], bodyParts: ['part.head'] },
+                zones: [{ bodyParts: ['part.chest'] }],
+                note: 'part.head',
+              },
+            ],
+          },
+        },
+      },
+      translations: [
+        "$.data.tasks.*.objectives[*]['healthEffect','playerHealthEffect','enemyHealthEffect'].effects[*]",
+        '$.data.tasks.*.objectives[*]..bodyParts[*]',
+      ],
+    };
+    const fetcher = createFetcher({
+      'https://json.tarkov.dev/regular/tasks': base,
+      'https://json.tarkov.dev/regular/tasks_de': {
+        data: { 'effect.pain': 'Schmerzen', 'part.head': 'Kopf' },
+      },
+      'https://json.tarkov.dev/regular/tasks_en': {
+        data: { 'effect.pain': 'Pain', 'part.head': 'Head', 'part.chest': 'Thorax' },
+      },
+    });
+    const before = JSON.stringify(base);
+    const result = await fetchTarkovJsonEndpoint<{ tasks: Record<string, unknown> }>('tasks', {
+      deps: { fetcher },
+      lang: 'de',
+    });
+    expect(result.tasks.t1).toEqual({
+      objectives: [
+        {
+          playerHealthEffect: { effects: ['Schmerzen'], bodyParts: ['Kopf'] },
+          zones: [{ bodyParts: ['Thorax'] }],
+          note: 'part.head',
+        },
+      ],
+    });
+    expect(JSON.stringify(base)).toBe(before);
+  });
+  it('preserves data and warns for unsupported translation paths', async () => {
+    const warn = vi.fn();
+    const injectedLogger = {
+      error: vi.fn(),
+      warn(this: unknown, ...args: unknown[]) {
+        if (this !== injectedLogger) throw new Error('logger receiver lost');
+        warn(...args);
+      },
+    };
+    const items = { item1: { name: 'item.name', shortName: 'item.short' } };
+    const fetcher = createFetcher({
+      'https://json.tarkov.dev/regular/items': {
+        data: { items },
+        translations: [
+          '$.data.items[?(@.name)].name',
+          '$.data.items.*.__proto__',
+          "$.data.items['constructor','name']",
+          '$.data.items.*.shortName',
+        ],
+      },
+      'https://json.tarkov.dev/regular/items_en': {
+        data: { 'item.name': 'Bandage', 'item.short': 'Band' },
+      },
+    });
+    const result = await fetchTarkovJsonEndpoint<{ items: typeof items }>('items', {
+      deps: { fetcher, logger: injectedLogger },
+      lang: 'en',
+    });
+    expect(result.items.item1).toEqual({ name: 'item.name', shortName: 'Band' });
+    expect(items.item1.shortName).toBe('item.short');
+    expect(warn).toHaveBeenCalledTimes(3);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('unsupported'), {
+      path: '$.data.items[?(@.name)].name',
+    });
+  });
+  it('skips own __proto__ keys when walking wildcards', async () => {
+    const items = JSON.parse('{"__proto__":{"name":"item.name"},"item1":{"name":"item.name"}}');
+    const fetcher = createFetcher({
+      'https://json.tarkov.dev/regular/items': {
+        data: { items },
+        translations: ['$.data.items.*.name'],
+      },
+      'https://json.tarkov.dev/regular/items_en': { data: { 'item.name': 'Bandage' } },
+    });
+    const result = await fetchTarkovJsonEndpoint<{
+      items: Record<string, { name: string }>;
+    }>('items', { deps: { fetcher }, lang: 'en' });
+    expect(result.items.item1?.name).toBe('Bandage');
+    expect(Object.getOwnPropertyDescriptor(result.items, '__proto__')?.value).toEqual({
+      name: 'item.name',
+    });
+    expect(({} as { name?: string }).name).toBeUndefined();
+  });
+  it('returns the original objects when nothing is translated', async () => {
+    const data = { items: { item1: { name: 'item.name' } } };
+    const fetcher = createFetcher({
+      'https://json.tarkov.dev/regular/items': { data, translations: ['$.data.items.*.name'] },
+      'https://json.tarkov.dev/regular/items_en': { data: {} },
+    });
+    const result = await fetchTarkovJsonEndpoint('items', { deps: { fetcher }, lang: 'en' });
+    expect(result).toBe(data);
   });
   it('does not fetch translation files when the base response has no translation paths', async () => {
     const payload = { items: {} };
@@ -529,6 +705,50 @@ describe('tarkov JSON adapters', () => {
       items: expect.arrayContaining([expect.objectContaining({ id: 'item1', name: 'Salewa' })]),
     });
   });
+  it('drops untrusted links from full item catalog entries', () => {
+    const [item] = adaptItemsResponse({
+      items: {
+        evil: { id: 'evil', link: 'javascript:alert(1)', wikiLink: 'data:text/html,x' },
+      },
+    }).data.items;
+    expect(item).not.toHaveProperty('link');
+    expect(item).not.toHaveProperty('wikiLink');
+  });
+  it('drops untrusted item and task links at the adapter boundary', () => {
+    const payload = {
+      tasks: {
+        task1: {
+          ...tasksPayload.tasks.task1,
+          wikiLink: 'javascript:alert(1)',
+          objectives: [
+            {
+              id: 'objective1',
+              type: 'giveItem',
+              items: [
+                {
+                  id: 'safe',
+                  link: 'https://tarkov.dev/item/safe',
+                  wikiLink: 'https://escapefromtarkov.fandom.com/wiki/Safe',
+                  properties: { defaultPreset: { id: 'preset', iconLink: 'icon.webp', name: 7 } },
+                },
+                { id: 'evil', link: 'data:text/html,x', wikiLink: 'javascript:alert(1)' },
+              ],
+            },
+          ],
+        },
+      },
+    };
+    const objectives = adaptTaskObjectivesResponse(payload, { hideoutPayload, tradersPayload }).data
+      .tasks[0]?.objectives?.[0]?.items;
+    expect(objectives?.[0]).toMatchObject({
+      link: 'https://tarkov.dev/item/safe',
+      wikiLink: 'https://escapefromtarkov.fandom.com/wiki/Safe',
+      properties: { defaultPreset: { id: 'preset', iconLink: 'icon.webp' } },
+    });
+    expect(objectives?.[1]).toEqual({ id: 'evil' });
+    const core = adaptTasksCoreResponse(payload, mapsPayload, tradersPayload).data.tasks[0];
+    expect(core).not.toHaveProperty('wikiLink');
+  });
   it('splits trader requirements by requirementType (level vs reputation)', () => {
     const tasks = adaptTasksCoreResponse(tasksPayload, mapsPayload, tradersPayload).data.tasks;
     expect(tasks[0]?.traderLevelRequirements).toEqual([
@@ -600,3 +820,51 @@ describe('tarkov JSON adapters', () => {
     expect(prestige?.conditions?.[1]?.task).toMatchObject({ id: 'task1', name: 'Debut' });
   });
 });
+it.each(['regular', 'pve', 'pvp-season'] as const)(
+  'projects raw prestige before adaptation in %s',
+  async (gameMode) => {
+    const fetcher = createFetcher({
+      [`https://json.tarkov.dev/${gameMode}/tasks`]: { data: { tasks: {}, prestige: [] } },
+      [`https://json.tarkov.dev/${gameMode}/hideout`]: { data: {} },
+      [`https://json.tarkov.dev/${gameMode}/traders`]: { data: {} },
+    });
+    const project = vi.fn((payload) => ({
+      ...payload,
+      prestige: [{ id: 'prestige', level: 1, conditions: [] }],
+    }));
+    const response = await createTarkovJsonPrestigeFetcher({
+      gameMode,
+      deps: { fetcher },
+      project,
+    })();
+    expect(project).toHaveBeenCalledOnce();
+    expect(response.data.prestige[0]).toMatchObject({ id: 'prestige', level: 1 });
+  }
+);
+it('defaults prestige to its upstream source mode when no mode is supplied', async () => {
+  const fetcher = createFetcher({
+    'https://json.tarkov.dev/regular/tasks': { data: { tasks: {}, prestige: [] } },
+    'https://json.tarkov.dev/regular/hideout': { data: {} },
+    'https://json.tarkov.dev/regular/traders': { data: {} },
+  });
+  const response = await createTarkovJsonPrestigeFetcher({ deps: { fetcher } })();
+  expect(response.data.prestige).toEqual([]);
+});
+it.each([undefined, null, {}])(
+  'normalizes non-array trader requirements without losing the task: %j',
+  (traderRequirements) => {
+    const result = adaptTasksCoreResponse(
+      { tasks: { sparse: { id: 'sparse', traderRequirements } } },
+      {},
+      {}
+    ).data.tasks;
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ id: 'sparse' });
+    expect(result[0]?.traderLevelRequirements).toBeUndefined();
+    expect(result[0]?.normalizedTraderRequirements).toEqual(
+      traderRequirements === undefined
+        ? []
+        : [expect.objectContaining({ requirementType: 'unknown' })]
+    );
+  }
+);

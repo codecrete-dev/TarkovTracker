@@ -3,17 +3,87 @@ import { mockNuxtImport } from '@nuxt/test-utils/runtime';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defaultState, type UserState } from '@/stores/progressState';
 import { recordLocalSyncTime, resetSyncTimeline } from '@/stores/tarkov/syncTimeline';
+import { GAME_MODE_VALUES, getGameModeSeasonNumber } from '@/utils/constants';
+import { logger } from '@/utils/logger';
+import { installRealtimeVisibility } from '@/utils/realtimeVisibility';
+import type { WithRemoteSnapshot } from '@/utils/pendingState';
 const showProgressMerged = vi.fn();
-const { channel, handlers, supabaseContext } = vi.hoisted(() => {
+type FakeChannel = {
+  topic: string;
+  subscribed: boolean;
+  subscribeCallback?: (status: string, error?: Error) => void;
+  on: ReturnType<typeof vi.fn>;
+  subscribe: ReturnType<typeof vi.fn>;
+};
+const {
+  createdChannels,
+  handlers,
+  openTopics,
+  removalGate,
+  resolveRemovals,
+  subscribeGate,
+  supabaseContext,
+} = vi.hoisted(() => {
   const handlers = new Map<string, (payload: { new: unknown }) => void>();
-  const removeChannel = vi.fn(async () => undefined);
-  const channel = {
-    on: vi.fn(),
-    subscribe: vi.fn(),
+  const createdChannels: FakeChannel[] = [];
+  const openTopics = new Map<string, FakeChannel>();
+  const subscribeGate = { defer: false };
+  const removalGate = { defer: false, resolvers: [] as Array<() => void> };
+  const resolveRemovals = () => {
+    const resolvers = removalGate.resolvers.splice(0);
+    resolvers.forEach((resolve) => resolve());
   };
+  const makeChannel = (topic: string): FakeChannel => {
+    const fake: FakeChannel = {
+      on: vi.fn(),
+      subscribe: vi.fn(),
+      subscribed: false,
+      topic,
+    };
+    fake.on = vi.fn(
+      (_event: string, config: { table: string }, handler: (payload: { new: unknown }) => void) => {
+        handlers.set(config.table, handler);
+        return fake;
+      }
+    );
+    fake.subscribe = vi.fn((callback?: (status: string, error?: Error) => void) => {
+      fake.subscribeCallback = callback;
+      if (subscribeGate.defer) return fake;
+      fake.subscribed = true;
+      callback?.('SUBSCRIBED');
+      return fake;
+    });
+    return fake;
+  };
+  const removeChannel = vi.fn(async (target: unknown) => {
+    if (removalGate.defer) {
+      await new Promise<void>((resolve) => removalGate.resolvers.push(resolve));
+    }
+    for (const [topic, fake] of openTopics) {
+      if (fake === target) {
+        fake.subscribed = false;
+        openTopics.delete(topic);
+      }
+    }
+    return undefined;
+  });
   const supabaseContext = {
     client: {
-      channel: vi.fn(() => channel),
+      realtime: {
+        connect: vi.fn(),
+        disconnect: vi.fn().mockResolvedValue(undefined),
+        getChannels: vi.fn(() => []),
+      },
+      from: vi.fn(),
+      // Mirrors `RealtimeClient.channel()`: an open topic returns the live channel.
+      channel: vi.fn((topic: string) => {
+        const existing = openTopics.get(topic);
+        if (existing) return existing;
+        const fake = makeChannel(topic);
+        createdChannels.push(fake);
+        openTopics.set(topic, fake);
+        return fake;
+      }),
       removeChannel,
     },
     user: {
@@ -21,11 +91,23 @@ const { channel, handlers, supabaseContext } = vi.hoisted(() => {
       loggedIn: true,
     },
   };
-  return { channel, handlers, removeChannel, supabaseContext };
+  return {
+    createdChannels,
+    handlers,
+    openTopics,
+    removalGate,
+    resolveRemovals,
+    subscribeGate,
+    supabaseContext,
+  };
 });
 mockNuxtImport('useNuxtApp', () => () => ({
   $supabase: supabaseContext,
 }));
+const releaseDeferredRemovals = (): void => {
+  removalGate.defer = false;
+  resolveRemovals();
+};
 vi.mock('@/composables/useToastI18n', () => ({
   useToastI18n: () => ({ showProgressMerged }),
 }));
@@ -47,29 +129,1216 @@ vi.mock('@/utils/logger', () => ({
     warn: vi.fn(),
   },
 }));
+const migrateStoryObjectiveIdsMock = vi.fn(() => ({ migrated: 0, dropped: 0 }));
 describe('seasonal progress realtime synchronization', () => {
   const state = structuredClone(defaultState);
   const store = {
     $state: state,
     $patch: (mutator: (target: UserState) => void) => mutator(state),
+    migrateStoryObjectiveIds: migrateStoryObjectiveIdsMock,
   };
   beforeEach(() => {
+    supabaseContext.client.from.mockReset().mockImplementation((table: string) => ({
+      select: () => ({
+        abortSignal() {
+          return this;
+        },
+        eq: () =>
+          table === 'user_progress'
+            ? { single: async () => ({ data: null, error: null }) }
+            : Promise.resolve({ data: [], error: null }),
+      }),
+    }));
     handlers.clear();
+    createdChannels.length = 0;
+    openTopics.clear();
+    releaseDeferredRemovals();
+    removalGate.resolvers.length = 0;
+    subscribeGate.defer = false;
     Object.assign(state, structuredClone(defaultState));
-    channel.on.mockImplementation(
-      (_event: string, config: { table: string }, handler: (payload: { new: unknown }) => void) => {
-        handlers.set(config.table, handler);
-        return channel;
-      }
-    );
-    channel.subscribe.mockImplementation(() => channel);
     supabaseContext.user.loggedIn = true;
   });
   afterEach(async () => {
+    releaseDeferredRemovals();
     const { cleanupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+    const { clearAcknowledgedModes } = await import('@/stores/tarkov/acknowledgedModes');
     await cleanupRealtimeListener();
+    clearAcknowledgedModes();
     resetSyncTimeline();
     vi.clearAllMocks();
+  });
+  it.each(GAME_MODE_VALUES)(
+    'preserves an acknowledged newer local %s reset level',
+    async (mode) => {
+      const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+      state[mode].level = 7;
+      state[mode].progressEpoch = 2;
+      await setupRealtimeListener(store);
+      const callback = handlers.get('user_game_mode_progress');
+      expect(callback).toBeTypeOf('function');
+      callback!({
+        new: {
+          game_mode: mode,
+          season_number: getGameModeSeasonNumber(mode),
+          progress_data: { ...structuredClone(defaultState[mode]), level: 2, progressEpoch: 1 },
+          updated_at: '2026-10-05T12:00:00Z',
+        },
+      });
+      expect(state[mode]).toMatchObject({ level: 7, progressEpoch: 2 });
+    }
+  );
+  it.each(
+    GAME_MODE_VALUES.flatMap((mode) => [false, true].map((editLevel) => ({ mode, editLevel })))
+  )(
+    'accepts a lower reconnect level while preserving edits made during the read: $mode, edit=$editLevel',
+    async ({ mode, editLevel }) => {
+      const { setupRealtimeListener, reconcileRemoteSnapshot } =
+        await import('@/stores/tarkov/realtimeListener');
+      const result = Promise.withResolvers<unknown>();
+      supabaseContext.client.from.mockImplementation((table: string) => ({
+        select: () => ({
+          abortSignal() {
+            return this;
+          },
+          eq: () =>
+            table === 'user_progress'
+              ? { single: async () => ({ data: null, error: null }) }
+              : result.promise,
+        }),
+      }));
+      state[mode].level = 7;
+      state[mode].progressEpoch = 1;
+      await setupRealtimeListener(store);
+      const refresh = reconcileRemoteSnapshot();
+      state[mode].displayName = 'edited during read';
+      if (editLevel) state[mode].level = 3;
+      result.resolve({
+        data: [
+          {
+            game_mode: mode,
+            season_number: getGameModeSeasonNumber(mode),
+            progress_data: { ...structuredClone(defaultState[mode]), level: 2, progressEpoch: 1 },
+            updated_at: '2026-10-05T12:00:00Z',
+            progress_updated_at: '2026-10-05T12:00:00Z',
+          },
+        ],
+        error: null,
+      });
+      await refresh;
+      expect(state[mode]).toMatchObject({
+        level: editLevel ? 3 : 2,
+        displayName: 'edited during read',
+        progressEpoch: 1,
+      });
+    }
+  );
+  it.each(['mode reset', 'metadata'])(
+    'acknowledges a direct save when its matching %s echo precedes the RPC response',
+    async (scope) => {
+      const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+      const { syncProgressState } = await import('@/stores/tarkov/progressPersistence');
+      const { recordAcknowledgedModes } = await import('@/stores/tarkov/acknowledgedModes');
+      await setupRealtimeListener(store);
+      const userId = supabaseContext.user.id;
+      recordAcknowledgedModes(userId, {
+        pvp: state.pvp,
+        pve: state.pve,
+        seasonal: state.seasonal,
+      });
+      const desired = structuredClone(state);
+      if (scope === 'mode reset') desired.pvp.progressEpoch = 1;
+      else {
+        desired.currentGameMode = 'pve';
+        desired.gameEdition = 4;
+      }
+      let finish!: () => void;
+      const rpc = vi.fn(
+        (_name: string, _args: Record<string, unknown>) =>
+          new Promise<{ error: null }>((resolve) => {
+            finish = () => resolve({ error: null });
+          })
+      );
+      const save = syncProgressState({ rpc }, userId, desired);
+      const args = rpc.mock.calls[0]![1] as { p_modes: Partial<UserState> };
+      if (scope === 'mode reset') {
+        handlers.get('user_game_mode_progress')?.({
+          new: {
+            game_mode: 'pvp',
+            season_number: 0,
+            progress_data: args.p_modes.pvp,
+            updated_at: '2026-09-06T12:00:00Z',
+          },
+        });
+      } else {
+        handlers.get('user_progress')?.({
+          new: {
+            current_game_mode: 'pve',
+            game_edition: 4,
+            tarkov_uid: null,
+            updated_at: '2026-09-06T12:00:00Z',
+          },
+        });
+      }
+      finish();
+      expect((await save).error).toBeNull();
+      expect(state.pvp.progressEpoch).toBe(desired.pvp.progressEpoch);
+      expect(state.currentGameMode).toBe(desired.currentGameMode);
+      expect(state.gameEdition).toBe(desired.gameEdition);
+    }
+  );
+  it('accepts the SDK message reference without treating it as a snapshot reconciler', async () => {
+    const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+    await setupRealtimeListener(store);
+    const channel = createdChannels[0]!;
+    for (const [, config, callback] of channel.on.mock.calls) {
+      const row =
+        config.table === 'user_game_mode_progress'
+          ? {
+              game_mode: 'pvp',
+              season_number: 0,
+              progress_data: { level: 12 },
+              updated_at: new Date().toISOString(),
+            }
+          : { game_edition: 2, current_game_mode: 'pvp', updated_at: new Date().toISOString() };
+      expect(() => callback({ new: row, old: {} }, 'sdk-message-ref')).not.toThrow();
+    }
+    expect(state.pvp.level).toBe(12);
+    expect(state.gameEdition).toBe(2);
+  });
+  it('advances the sync baseline to accepted remote progress so a later revert is sent', async () => {
+    const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+    const {
+      beginAcknowledgement,
+      clearAcknowledgedModes,
+      recordAcknowledgedModes,
+      selectChangedModes,
+    } = await import('@/stores/tarkov/acknowledgedModes');
+    const userId = supabaseContext.user.id;
+    const original = structuredClone(state.pvp);
+    recordAcknowledgedModes(userId, { pvp: original });
+    await setupRealtimeListener(store);
+    const inFlight = beginAcknowledgement(userId);
+    handlers.get('user_game_mode_progress')?.({
+      new: {
+        game_mode: 'pvp',
+        season_number: 0,
+        progress_data: { ...structuredClone(original), level: 8 },
+        updated_at: '2026-09-06T12:00:00Z',
+      },
+    });
+    expect(state.pvp.level).toBe(8);
+    expect(inFlight.isCurrent()).toBe(false);
+    expect(Object.keys(selectChangedModes(userId, { pvp: original }))).toEqual(['pvp']);
+    clearAcknowledgedModes();
+  });
+  it('stops an in-flight split sync when Realtime applies newer account metadata', async () => {
+    const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+    const { beginAcknowledgement, clearAcknowledgedModes } =
+      await import('@/stores/tarkov/acknowledgedModes');
+    await setupRealtimeListener(store);
+    const inFlight = beginAcknowledgement(supabaseContext.user.id);
+    handlers.get('user_progress')?.({
+      new: {
+        current_game_mode: 'pve',
+        game_edition: 4,
+        tarkov_uid: null,
+        updated_at: '2026-09-06T12:00:00Z',
+      },
+    });
+    expect(state.currentGameMode).toBe('pve');
+    expect(inFlight.isCurrent()).toBe(false);
+    clearAcknowledgedModes();
+  });
+  it('keeps historical progress freshness unknown after a newer mode event with a null clock', async () => {
+    const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+    const { progressStorageSerializer } = await import('@/stores/tarkov/localStorage');
+    const { parseUserScopedStorage } = await import('@/utils/userScopedStorage');
+    progressStorageSerializer.reset();
+    await setupRealtimeListener(store);
+    handlers.get('user_progress')?.({
+      new: {
+        current_game_mode: 'pvp',
+        game_edition: 4,
+        tarkov_uid: null,
+        updated_at: '2026-09-06T12:00:00Z',
+      },
+    });
+    handlers.get('user_game_mode_progress')?.({
+      new: {
+        game_mode: 'pvp',
+        season_number: 0,
+        progress_data: structuredClone(defaultState.pvp),
+        progress_updated_at: null,
+        updated_at: '2026-09-06T12:01:00Z',
+      },
+    });
+    const persisted = parseUserScopedStorage(
+      progressStorageSerializer.serialize(state, supabaseContext.user.id, Date.now())
+    );
+    expect(persisted?._metadataTimestamp).toBe(Date.parse('2026-09-06T12:00:00Z'));
+    expect(persisted?._modeTimestamps?.pvp).toBe(0);
+    progressStorageSerializer.reset();
+  });
+  it.each(['live', 'reconnect'])(
+    'merges historical oversized confirmations before %s eviction',
+    async (source) => {
+      const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+      state.pvp.taskAvailability = { s1: { requirements: 'old', timestamp: 0 } };
+      const row = {
+        game_mode: 'pvp',
+        season_number: 0,
+        progress_data: {
+          ...structuredClone(defaultState.pvp),
+          taskAvailability: Object.fromEntries(
+            Array.from({ length: 66 }, (_, i) => [
+              `s${i + 1}`,
+              { requirements: 'r'.repeat(4000), timestamp: i + 1 },
+            ])
+          ),
+        },
+        updated_at: '2026-09-06T12:00:00Z',
+      };
+      supabaseContext.client.from.mockImplementation((table: string) => ({
+        select: () => ({
+          abortSignal() {
+            return this;
+          },
+          eq: () =>
+            table === 'user_progress'
+              ? { single: async () => ({ data: null, error: null }) }
+              : Promise.resolve({ data: [row], error: null }),
+        }),
+      }));
+      await setupRealtimeListener(store);
+      if (source === 'live') handlers.get('user_game_mode_progress')?.({ new: row });
+      else {
+        createdChannels[0]!.subscribeCallback?.('SUBSCRIBED');
+        await vi.waitFor(() => expect(supabaseContext.client.from).toHaveBeenCalledTimes(2));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+      expect(state.pvp.taskAvailability).not.toHaveProperty('s1');
+      expect(Object.keys(state.pvp.taskAvailability ?? {})).toHaveLength(65);
+    }
+  );
+  it.each(['live', 'reconnect'])(
+    'ignores visibility-created placeholders during %s updates',
+    async (source) => {
+      const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+      state.pvp.pmcFaction = 'BEAR';
+      state.pvp.skillOffsets = { Endurance: 3 };
+      const before = structuredClone(state.pvp);
+      const placeholder = {
+        game_mode: 'pvp',
+        season_number: 0,
+        progress_data: {},
+        profile_public: true,
+        updated_at: '2026-09-06T12:00:00Z',
+      };
+      supabaseContext.client.from.mockImplementation((table: string) => ({
+        select: () => ({
+          abortSignal() {
+            return this;
+          },
+          eq: () =>
+            table === 'user_progress'
+              ? { single: async () => ({ data: null, error: null }) }
+              : Promise.resolve({ data: [placeholder], error: null }),
+        }),
+      }));
+      await setupRealtimeListener(store);
+      if (source === 'live') handlers.get('user_game_mode_progress')?.({ new: placeholder });
+      else {
+        createdChannels[0]!.subscribeCallback?.('SUBSCRIBED');
+        await vi.waitFor(() => expect(supabaseContext.client.from).toHaveBeenCalledTimes(2));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+      expect(state.pvp).toEqual(before);
+      // Ignoring the placeholder must not advance ordering past real progress.
+      handlers.get('user_game_mode_progress')?.({
+        new: {
+          ...placeholder,
+          updated_at: '2026-09-06T11:00:00Z',
+          progress_data: { ...before, level: 8 },
+        },
+      });
+      expect(state.pvp.level).toBe(8);
+    }
+  );
+  it('waits for the sync controller before starting a reconnect read', async () => {
+    const { setupRealtimeListener, registerSyncControllerGetter } =
+      await import('@/stores/tarkov/realtimeListener');
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const withSnapshot: WithRemoteSnapshot = async (read) => {
+      await gate;
+      return read((remote) => remote);
+    };
+    registerSyncControllerGetter(() => ({ pause: vi.fn(), resume: vi.fn(), withSnapshot }));
+    supabaseContext.client.from.mockImplementation((table: string) => ({
+      select: () => ({
+        abortSignal() {
+          return this;
+        },
+        eq: () =>
+          table === 'user_progress'
+            ? { single: async () => ({ data: null, error: null }) }
+            : Promise.resolve({
+                data: [{ game_mode: 'pvp', season_number: 0, progress_data: { level: 8 } }],
+                error: null,
+              }),
+      }),
+    }));
+    try {
+      await setupRealtimeListener(store);
+      createdChannels[0]?.subscribeCallback?.('SUBSCRIBED');
+      await Promise.resolve();
+      expect(supabaseContext.client.from).not.toHaveBeenCalled();
+      release();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(supabaseContext.client.from).toHaveBeenCalledWith('user_game_mode_progress');
+      expect(state.pvp.level).toBe(8);
+    } finally {
+      registerSyncControllerGetter(() => null);
+    }
+  });
+  it('reports a rejected snapshot barrier without an unhandled rejection', async () => {
+    const { registerSyncControllerGetter, setupRealtimeListener } =
+      await import('@/stores/tarkov/realtimeListener');
+    const failure = new Error('barrier failed');
+    const withSnapshot: WithRemoteSnapshot = async () => {
+      throw failure;
+    };
+    registerSyncControllerGetter(() => ({ pause: vi.fn(), resume: vi.fn(), withSnapshot }));
+    try {
+      await setupRealtimeListener(store);
+      createdChannels[0]?.subscribeCallback?.('SUBSCRIBED');
+      await Promise.resolve();
+      expect(logger.warn).toHaveBeenCalledWith(
+        '[Realtime] Subscription degraded; using background refresh',
+        failure
+      );
+    } finally {
+      registerSyncControllerGetter(() => null);
+    }
+  });
+  it('keeps a newer local reset pending when older remote progress arrives', async () => {
+    const { setupRealtimeListener, registerSyncControllerGetter } =
+      await import('@/stores/tarkov/realtimeListener');
+    const { createPendingStateTracker, snapshotSyncState } = await import('@/utils/pendingState');
+    const tracker = createPendingStateTracker(() => state);
+    registerSyncControllerGetter(() => ({
+      pause: vi.fn(),
+      resume: vi.fn(),
+      captureRemoteMerge: tracker.capture,
+    }));
+    try {
+      await setupRealtimeListener(store);
+      state.pvp.progressEpoch = 1;
+      state.pvp.displayName = 'pending reset name';
+      const emit = (progressEpoch: number, displayName: string, updatedAt: string) =>
+        handlers.get('user_game_mode_progress')?.({
+          new: {
+            game_mode: 'pvp',
+            season_number: 0,
+            progress_data: { ...structuredClone(defaultState.pvp), progressEpoch, displayName },
+            updated_at: updatedAt,
+          },
+        });
+      emit(0, 'old remote', '2026-09-06T12:00:00Z');
+      emit(1, 'remote same epoch', '2026-09-06T12:01:00Z');
+      expect(state.pvp.displayName).toBe('pending reset name');
+      tracker.captureAcknowledgement(snapshotSyncState(state))();
+      emit(1, 'after save', '2026-09-06T12:02:00Z');
+      expect(state.pvp.displayName).toBe('after save');
+    } finally {
+      registerSyncControllerGetter(() => null);
+    }
+  });
+  it('keeps pending local progress export-only when a live remote reset replaces it', async () => {
+    const { setupRealtimeListener, registerSyncControllerGetter } =
+      await import('@/stores/tarkov/realtimeListener');
+    const { listSupersededProgressCopies } = await import('@/stores/tarkov/supersededProgress');
+    localStorage.clear();
+    let pending = true;
+    registerSyncControllerGetter(() => ({
+      pause: vi.fn(),
+      resume: vi.fn(),
+      hasPendingChanges: () => pending,
+    }));
+    const emitReset = (updatedAt: string, epoch: number) =>
+      handlers.get('user_game_mode_progress')?.({
+        new: {
+          game_mode: 'pvp',
+          season_number: 0,
+          progress_data: { ...structuredClone(defaultState.pvp), progressEpoch: epoch },
+          updated_at: updatedAt,
+        },
+      });
+    try {
+      await setupRealtimeListener(store);
+      Object.assign(state.pvp, { level: 30, displayName: 'offline edit' });
+      emitReset('2026-09-06T12:00:00Z', 1);
+      expect(state.pvp.progressEpoch).toBe(1);
+      const copies = listSupersededProgressCopies(supabaseContext.user.id);
+      expect(copies).toHaveLength(1);
+      expect(copies[0]).toMatchObject({ mode: 'pvp', progress: { level: 30 } });
+      // Acknowledged progress is already cloud-saved, so a later reset keeps no extra copy.
+      pending = false;
+      state.pvp.level = 12;
+      emitReset('2026-09-06T12:01:00Z', 2);
+      expect(listSupersededProgressCopies(supabaseContext.user.id)).toHaveLength(1);
+    } finally {
+      registerSyncControllerGetter(() => null);
+      localStorage.clear();
+    }
+  });
+  it('holds a live remote reset and sync when its displaced progress cannot be retained', async () => {
+    vi.useFakeTimers();
+    const { setupRealtimeListener, registerSyncControllerGetter } =
+      await import('@/stores/tarkov/realtimeListener');
+    const supersededModule = await import('@/stores/tarkov/supersededProgress');
+    const saveSpy = vi.spyOn(supersededModule, 'saveSupersededProgressCopy').mockReturnValue(null);
+    const pause = vi.fn();
+    const resume = vi.fn();
+    registerSyncControllerGetter(() => ({ pause, resume, hasPendingChanges: () => true }));
+    try {
+      await setupRealtimeListener(store);
+      Object.assign(state.pvp, { level: 30, displayName: 'offline edit' });
+      handlers.get('user_game_mode_progress')?.({
+        new: {
+          game_mode: 'pvp',
+          season_number: 0,
+          progress_data: { ...structuredClone(defaultState.pvp), progressEpoch: 1 },
+          updated_at: '2026-09-06T12:00:00Z',
+        },
+      });
+      expect(state.pvp).toMatchObject({ level: 30, displayName: 'offline edit', progressEpoch: 0 });
+      expect(pause).toHaveBeenCalled();
+      // A later metadata event must not resume the held sync and upload the displaced edits.
+      handlers.get('user_progress')?.({
+        new: { current_game_mode: 'pvp', game_edition: 3, updated_at: '2026-09-06T12:01:00Z' },
+      });
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(resume).not.toHaveBeenCalled();
+    } finally {
+      saveSpy.mockRestore();
+      registerSyncControllerGetter(() => null);
+      vi.useRealTimers();
+      const { resetAccountRecoveryRetentionBlock } =
+        await import('@/stores/tarkov/accountRecovery');
+      const { setActiveProgressWritesBlocked } = await import('@/stores/tarkov/localStorage');
+      resetAccountRecoveryRetentionBlock();
+      setActiveProgressWritesBlocked(false);
+    }
+  });
+  it('ignores late progress events while the shared transport is suspended', async () => {
+    vi.useFakeTimers();
+    const page = Object.assign(new EventTarget(), { visibilityState: 'hidden' as const });
+    const disposeVisibility = installRealtimeVisibility(supabaseContext.client.realtime, page);
+    try {
+      const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+      await setupRealtimeListener(store);
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(supabaseContext.client.realtime.disconnect).toHaveBeenCalled();
+      handlers.get('user_game_mode_progress')?.({
+        new: {
+          game_mode: 'pvp',
+          season_number: 0,
+          progress_data: { ...state.pvp, level: 55 },
+          updated_at: new Date().toISOString(),
+        },
+      });
+      expect(state.pvp.level).toBe(defaultState.pvp.level);
+    } finally {
+      disposeVisibility();
+      vi.useRealTimers();
+    }
+  });
+  it('rebuilds the channel when setup runs again with one already active', async () => {
+    const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+    await setupRealtimeListener(store);
+    expect(supabaseContext.client.channel).toHaveBeenCalledTimes(1);
+    // The internal cleanup bumps the listener generation, so a naive generation
+    // check would abort here and leave the user without a progress listener.
+    await setupRealtimeListener(store);
+    expect(supabaseContext.client.channel).toHaveBeenCalledTimes(2);
+    expect(handlers.size).toBeGreaterThan(0);
+  });
+  it('finishes setup without waiting for the channel so REST saves remain available', async () => {
+    subscribeGate.defer = true;
+    const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+    const setup = setupRealtimeListener(store);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    const channel = createdChannels[0];
+    if (!channel) throw new Error('Expected a realtime channel to be created');
+    expect(channel.subscribe).toHaveBeenCalledOnce();
+    let settled = false;
+    void setup.then(() => {
+      settled = true;
+    });
+    await Promise.resolve();
+    expect(settled).toBe(true);
+    channel.subscribed = true;
+    channel.subscribeCallback?.('SUBSCRIBED');
+    await setup;
+    expect(settled).toBe(true);
+  });
+  it('retains the channel and REST snapshot reader after an initial subscription failure', async () => {
+    subscribeGate.defer = true;
+    const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+    const setup = setupRealtimeListener(store);
+    const error = new Error('Join failed');
+    const completed = expect(setup).resolves.toBeUndefined();
+    await vi.waitFor(() => expect(createdChannels[0]?.subscribeCallback).toBeDefined());
+    createdChannels[0]!.subscribeCallback!('CHANNEL_ERROR', error);
+    await completed;
+    expect(openTopics.size).toBe(1);
+    expect(supabaseContext.client.removeChannel).not.toHaveBeenCalled();
+    supabaseContext.client.from.mockImplementation((table: string) => ({
+      select: () => ({
+        abortSignal() {
+          return this;
+        },
+        eq: () =>
+          table === 'user_progress'
+            ? { single: async () => ({ data: { game_edition: 2 }, error: null }) }
+            : Promise.resolve({ data: [], error: null }),
+      }),
+    }));
+    const { reconcileRemoteSnapshot } = await import('@/stores/tarkov/realtimeListener');
+    await reconcileRemoteSnapshot();
+    expect(supabaseContext.client.from).toHaveBeenCalledWith('user_progress');
+    expect(supabaseContext.client.from).toHaveBeenCalledWith('user_game_mode_progress');
+    expect(state.gameEdition).toBe(2);
+  });
+  it('replaces a terminally closed channel and ignores statuses from its former owner', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    subscribeGate.defer = true;
+    const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+    const { liveUpdatesDegraded } = await import('@/stores/tarkov/progressLiveStatus');
+    try {
+      await setupRealtimeListener(store);
+      const previous = createdChannels[0]!;
+      const previousMetadataHandler = handlers.get('user_progress')!;
+      previous.subscribeCallback?.('CLOSED');
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(supabaseContext.client.removeChannel).toHaveBeenCalledWith(previous);
+      expect(createdChannels).toHaveLength(2);
+      const replacement = createdChannels[1]!;
+      replacement.subscribeCallback?.('SUBSCRIBED');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(liveUpdatesDegraded.value).toBe(false);
+      previous.subscribeCallback?.('CLOSED');
+      const currentEdition = state.gameEdition;
+      previousMetadataHandler({ new: { game_edition: 2, updated_at: new Date().toISOString() } });
+      expect(state.gameEdition).toBe(currentEdition);
+      expect(liveUpdatesDegraded.value).toBe(false);
+      await vi.advanceTimersByTimeAsync(45_000);
+      expect(createdChannels).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it('continues polling through a stalled leave and only replaces after it settles', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    subscribeGate.defer = true;
+    const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+    try {
+      await setupRealtimeListener(store);
+      removalGate.defer = true;
+      createdChannels[0]!.subscribeCallback?.('CLOSED');
+      await vi.advanceTimersByTimeAsync(45_000);
+      expect(createdChannels).toHaveLength(1);
+      expect(supabaseContext.client.from).toHaveBeenCalled();
+      resolveRemovals();
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(createdChannels).toHaveLength(2);
+      expect(supabaseContext.client.removeChannel).toHaveBeenCalledOnce();
+    } finally {
+      removalGate.defer = false;
+      resolveRemovals();
+      vi.useRealTimers();
+    }
+  });
+  it('retries an unclean terminal leave without joining an occupied topic', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    subscribeGate.defer = true;
+    const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+    try {
+      await setupRealtimeListener(store);
+      supabaseContext.client.removeChannel.mockRejectedValueOnce(new Error('temporary failure'));
+      createdChannels[0]!.subscribeCallback?.('CLOSED');
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(createdChannels).toHaveLength(1);
+      expect(supabaseContext.client.from).toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(createdChannels).toHaveLength(2);
+      expect(supabaseContext.client.removeChannel).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it('aborts stalled metadata and mode reads so fallback cannot hold the save barrier forever', async () => {
+    vi.useFakeTimers();
+    subscribeGate.defer = true;
+    const { setupRealtimeListener, registerSyncControllerGetter } =
+      await import('@/stores/tarkov/realtimeListener');
+    const { liveUpdatesDegraded } = await import('@/stores/tarkov/progressLiveStatus');
+    const signals: AbortSignal[] = [];
+    let held = false;
+    const withSnapshot: WithRemoteSnapshot = async (read) => {
+      held = true;
+      try {
+        return await read((remote) => remote);
+      } finally {
+        held = false;
+      }
+    };
+    registerSyncControllerGetter(() => ({ pause: vi.fn(), resume: vi.fn(), withSnapshot }));
+    supabaseContext.client.from.mockImplementation((table: string) => ({
+      select: () => ({
+        abortSignal(signal: AbortSignal) {
+          signals.push(signal);
+          // Auth may stall before fetch starts and never observe the abort signal.
+          const pending = new Promise(() => undefined);
+          return { eq: () => (table === 'user_progress' ? { single: () => pending } : pending) };
+        },
+      }),
+    }));
+    try {
+      await setupRealtimeListener(store);
+      createdChannels[0]!.subscribeCallback?.('SUBSCRIBED');
+      expect(held).toBe(true);
+      await vi.advanceTimersByTimeAsync(15_000);
+      expect(signals).toHaveLength(2);
+      expect(signals.every((signal) => signal.aborted)).toBe(true);
+      expect(held).toBe(false);
+      expect(liveUpdatesDegraded.value).toBe(true);
+    } finally {
+      registerSyncControllerGetter(() => null);
+      vi.useRealTimers();
+    }
+  });
+  it('ignores a superseded join failure without removing the replacement', async () => {
+    subscribeGate.defer = true;
+    const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+    const older = setupRealtimeListener(store);
+    await vi.waitFor(() => expect(createdChannels[0]?.subscribeCallback).toBeDefined());
+    subscribeGate.defer = false;
+    await setupRealtimeListener(store);
+    createdChannels[0]!.subscribeCallback!('CHANNEL_ERROR', new Error('Obsolete join'));
+    await expect(older).resolves.toBeUndefined();
+    expect(createdChannels.filter(({ subscribed }) => subscribed)).toEqual([createdChannels[1]]);
+    expect(openTopics.size).toBe(1);
+  });
+  it('declines a same-topic replacement when the previous leave fails', async () => {
+    const previousUserId = supabaseContext.user.id;
+    supabaseContext.user.id = '33333333-3333-4333-8333-333333333333';
+    try {
+      const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+      await setupRealtimeListener(store);
+      supabaseContext.client.removeChannel.mockRejectedValueOnce(new Error('Leave failed'));
+      await setupRealtimeListener(store);
+      expect(createdChannels).toHaveLength(1);
+      expect(createdChannels[0]!.subscribe).toHaveBeenCalledOnce();
+      expect(logger.warn).toHaveBeenCalledWith(
+        '[TarkovStore] Failed to remove realtime channel:',
+        expect.any(Error)
+      );
+    } finally {
+      supabaseContext.user.id = previousUserId;
+    }
+  });
+  it('does not block a new user on a different topic leave', async () => {
+    try {
+      const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+      await setupRealtimeListener(store);
+      removalGate.defer = true;
+      supabaseContext.user.id = '22222222-2222-4222-8222-222222222222';
+      const setup = setupRealtimeListener(store);
+      await setup;
+      expect(createdChannels).toHaveLength(2);
+      expect(createdChannels[1]?.subscribed).toBe(true);
+      expect(openTopics.has('user_progress_22222222-2222-4222-8222-222222222222')).toBe(true);
+    } finally {
+      releaseDeferredRemovals();
+    }
+  });
+  it('lets the newest overlapping setup replace the older request', async () => {
+    const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+    await setupRealtimeListener(store);
+    // Two concurrent setups must not leave duplicate live channels.
+    await Promise.all([setupRealtimeListener(store), setupRealtimeListener(store)]);
+    expect(createdChannels).toHaveLength(2);
+    // Only the newest request is allowed to join after the shared leave.
+    expect(createdChannels.filter(({ subscribed }) => subscribed)).toEqual([createdChannels[1]]);
+    expect(openTopics.size).toBe(1);
+    expect(handlers.size).toBeGreaterThan(0);
+  });
+  it('cancels in-flight setup when cleanup runs first', async () => {
+    const { cleanupRealtimeListener, setupRealtimeListener } =
+      await import('@/stores/tarkov/realtimeListener');
+    // Establish a live channel first so teardown has something to remove.
+    await setupRealtimeListener(store);
+    expect(openTopics.size).toBe(1);
+    const queued = setupRealtimeListener(store);
+    // Teardown while the second setup is waiting for the old leave must win.
+    const teardown = cleanupRealtimeListener();
+    await Promise.all([queued, teardown]);
+    expect(createdChannels.filter(({ subscribed }) => subscribed)).toEqual([]);
+    expect(openTopics.size).toBe(0);
+  });
+  it('never joins a channel that teardown removed after ownership was published', async () => {
+    const { cleanupRealtimeListener, setupRealtimeListener } =
+      await import('@/stores/tarkov/realtimeListener');
+    const createChannel = supabaseContext.client.channel.getMockImplementation()!;
+    let teardown: Promise<void> | null = null;
+    // Queue teardown from the synchronous channel construction so it runs at the
+    // first microtask checkpoint after ownership is published. Publishing
+    // ownership and calling `subscribe()` must share one synchronous segment: if
+    // an await separates them, this teardown removes the channel and the setup
+    // then joins it anyway, leaving an orphan no ownership check can reclaim.
+    supabaseContext.client.channel.mockImplementationOnce((topic: string) => {
+      const created = createChannel(topic);
+      teardown = Promise.resolve().then(() => cleanupRealtimeListener());
+      return created;
+    });
+    await setupRealtimeListener(store);
+    await teardown;
+    expect(createdChannels.filter(({ subscribed }) => subscribed)).toEqual([]);
+    expect(openTopics.size).toBe(0);
+  });
+  it('ignores progress and metadata from a listener after teardown starts', async () => {
+    const { cleanupRealtimeListener, setupRealtimeListener } =
+      await import('@/stores/tarkov/realtimeListener');
+    await setupRealtimeListener(store);
+    const progressHandler = handlers.get('user_game_mode_progress');
+    const metadataHandler = handlers.get('user_progress');
+    removalGate.defer = true;
+    const teardown = cleanupRealtimeListener();
+    try {
+      progressHandler?.({
+        new: {
+          game_mode: 'seasonal',
+          progress_data: { level: 44 },
+          season_number: 1,
+          updated_at: new Date().toISOString(),
+        },
+      });
+      metadataHandler?.({
+        new: { current_game_mode: 'pve', game_edition: 2 },
+      });
+      expect(state).toEqual(defaultState);
+    } finally {
+      releaseDeferredRemovals();
+      await teardown;
+    }
+  });
+  it('reconciles before the freshness migration without inventing a mode clock', async () => {
+    subscribeGate.defer = true;
+    const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+    const { progressStorageSerializer } = await import('@/stores/tarkov/localStorage');
+    const { parseUserScopedStorage } = await import('@/utils/userScopedStorage');
+    progressStorageSerializer.reset();
+    const selects: string[] = [];
+    supabaseContext.client.from.mockImplementation((table: string) => ({
+      select: (columns: string) => ({
+        abortSignal() {
+          return this;
+        },
+        eq: () => {
+          if (table === 'user_progress')
+            return { single: async () => ({ data: null, error: null }) };
+          selects.push(columns);
+          return Promise.resolve(
+            columns.includes('progress_updated_at')
+              ? {
+                  data: null,
+                  error: {
+                    code: '42703',
+                    message: 'column user_game_mode_progress.progress_updated_at does not exist',
+                  },
+                }
+              : {
+                  data: [
+                    {
+                      game_mode: 'pvp',
+                      season_number: 0,
+                      progress_data: { ...structuredClone(defaultState.pvp), level: 25 },
+                      updated_at: '2026-09-06T12:00:00Z',
+                    },
+                  ],
+                  error: null,
+                }
+          );
+        },
+      }),
+    }));
+    await setupRealtimeListener(store);
+    createdChannels[0]?.subscribeCallback?.('SUBSCRIBED');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(state.pvp.level).toBe(25);
+    expect(selects).toEqual([
+      'game_mode,season_number,progress_data,updated_at,progress_updated_at',
+      'game_mode,season_number,progress_data,updated_at',
+    ]);
+    const persisted = parseUserScopedStorage(
+      progressStorageSerializer.serialize(state, supabaseContext.user.id, Date.now())
+    );
+    expect(persisted?._modeTimestamps?.pvp).toBe(0);
+    progressStorageSerializer.reset();
+  });
+  it('retains local progress when a reconnect snapshot fails', async () => {
+    const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+    const failure = { message: 'snapshot unavailable' };
+    supabaseContext.client.from.mockImplementation((table: string) => ({
+      select: () => ({
+        abortSignal() {
+          return this;
+        },
+        eq: () =>
+          table === 'user_progress'
+            ? { single: async () => ({ data: null, error: null }) }
+            : Promise.resolve({ data: null, error: failure }),
+      }),
+    }));
+    state.pvp.level = 25;
+    await setupRealtimeListener(store);
+    createdChannels[0]?.subscribeCallback?.('SUBSCRIBED');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(supabaseContext.client.from).toHaveBeenCalledWith('user_game_mode_progress');
+    expect(logger.warn).toHaveBeenCalledWith(
+      '[Realtime] Subscription degraded; using background refresh',
+      failure
+    );
+    expect(state.pvp.level).toBe(25);
+    expect(createdChannels).toHaveLength(1);
+  });
+  it('rejects a pre-retry reconcile when the remote snapshot cannot be read', async () => {
+    const { cleanupRealtimeListener, reconcileRemoteSnapshot, setupRealtimeListener } =
+      await import('@/stores/tarkov/realtimeListener');
+    await expect(reconcileRemoteSnapshot()).rejects.toThrow('reader unavailable');
+    const failure = { message: 'snapshot unavailable' };
+    supabaseContext.client.from.mockImplementation((table: string) => ({
+      select: () => ({
+        abortSignal() {
+          return this;
+        },
+        eq: () =>
+          table === 'user_progress'
+            ? { single: async () => ({ data: null, error: null }) }
+            : Promise.resolve({ data: null, error: failure }),
+      }),
+    }));
+    await setupRealtimeListener(store);
+    await expect(reconcileRemoteSnapshot()).rejects.toBeTruthy();
+    await cleanupRealtimeListener();
+    await expect(reconcileRemoteSnapshot()).rejects.toThrow('reader unavailable');
+  });
+  it('waits for a newer reconnect snapshot before a superseded pre-retry reconcile resolves', async () => {
+    const { reconcileRemoteSnapshot, setupRealtimeListener } =
+      await import('@/stores/tarkov/realtimeListener');
+    const pendingModes: ((value: unknown) => void)[] = [];
+    supabaseContext.client.from.mockImplementation((table: string) => ({
+      select: () => ({
+        abortSignal() {
+          return this;
+        },
+        eq: () =>
+          table === 'user_progress'
+            ? { single: async () => ({ data: null, error: null }) }
+            : new Promise((resolve) => pendingModes.push(resolve)),
+      }),
+    }));
+    const modeRows = (level: number) => ({
+      data: [
+        {
+          game_mode: 'pvp',
+          season_number: 0,
+          progress_data: { ...structuredClone(defaultState.pvp), level },
+          updated_at: '2026-09-06T12:00:00Z',
+          progress_updated_at: '2026-09-06T12:00:00Z',
+        },
+      ],
+      error: null,
+    });
+    await setupRealtimeListener(store);
+    let settled = false;
+    const retry = reconcileRemoteSnapshot().finally(() => {
+      settled = true;
+    });
+    createdChannels[0]?.subscribeCallback?.('SUBSCRIBED');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(pendingModes).toHaveLength(2);
+    pendingModes[0]?.(modeRows(10));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(settled).toBe(false);
+    pendingModes[1]?.(modeRows(25));
+    await retry;
+    expect(state.pvp.level).toBe(25);
+  });
+  it('rejects a pre-retry reconcile whose snapshot could not be merged', async () => {
+    const { reconcileRemoteSnapshot, setupRealtimeListener } =
+      await import('@/stores/tarkov/realtimeListener');
+    let resolveModes!: (value: unknown) => void;
+    supabaseContext.client.from.mockImplementation((table: string) => ({
+      select: () => ({
+        abortSignal() {
+          return this;
+        },
+        eq: () =>
+          table === 'user_progress'
+            ? { single: async () => ({ data: null, error: null }) }
+            : new Promise((resolve) => {
+                resolveModes = resolve;
+              }),
+      }),
+    }));
+    await setupRealtimeListener(store);
+    const retry = reconcileRemoteSnapshot();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const previousUserId = supabaseContext.user.id;
+    supabaseContext.user.id = '44444444-4444-4444-8444-444444444444';
+    try {
+      resolveModes({ data: [], error: null });
+      await expect(retry).rejects.toThrow('snapshot unavailable');
+    } finally {
+      supabaseContext.user.id = previousUserId;
+    }
+  });
+  it.each([false, true])(
+    'uses the newer mode row when a live event arrives during a snapshot (snapshot wins: %s)',
+    async (snapshotWins) => {
+      const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+      let resolveModes!: (value: unknown) => void;
+      const modeResult = new Promise((resolve) => {
+        resolveModes = resolve;
+      });
+      supabaseContext.client.from.mockImplementation((table: string) => ({
+        select: () => ({
+          abortSignal() {
+            return this;
+          },
+          eq: () =>
+            table === 'user_progress'
+              ? {
+                  single: async () => ({
+                    data: { current_game_mode: 'pvp', updated_at: '2026-09-06T12:00:00Z' },
+                    error: null,
+                  }),
+                }
+              : modeResult,
+        }),
+      }));
+      await setupRealtimeListener(store);
+      const channel = createdChannels[0]!;
+      channel.subscribeCallback?.('SUBSCRIBED');
+      const handler = handlers.get('user_game_mode_progress');
+      handler?.({
+        new: {
+          game_mode: 'pvp',
+          season_number: 0,
+          progress_data: { level: 35, displayName: 'live' },
+          updated_at: '2026-09-06T12:01:00Z',
+        },
+      });
+      resolveModes({
+        data: [
+          {
+            game_mode: 'pvp',
+            season_number: 0,
+            progress_data: {
+              level: 45,
+              displayName: 'snapshot',
+              taskObjectives: { staleOnly: { count: 9 } },
+            },
+            updated_at: snapshotWins ? '2026-09-06T12:02:00Z' : '2026-09-06T12:00:00Z',
+          },
+        ],
+        error: null,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(state.pvp.level).toBe(snapshotWins ? 45 : 35);
+      expect(state.pvp.displayName).toBe(snapshotWins ? 'snapshot' : 'live');
+      expect(state.pvp.taskObjectives.staleOnly?.count).toBe(snapshotWins ? 9 : undefined);
+      expect(createdChannels).toHaveLength(1);
+    }
+  );
+  it('uses entry timestamps for counts already clean when the listener starts', async () => {
+    const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+    state.pvp.taskObjectives.objective = { count: 0, timestamp: 20 };
+    state.pvp.hideoutParts.part = { count: 0, timestamp: 20 };
+    await setupRealtimeListener(store);
+    handlers.get('user_game_mode_progress')?.({
+      new: {
+        game_mode: 'pvp',
+        season_number: 0,
+        updated_at: new Date().toISOString(),
+        progress_data: {
+          ...structuredClone(defaultState.pvp),
+          taskObjectives: { objective: { count: 5, timestamp: 10 } },
+          hideoutParts: { part: { count: 3, timestamp: 10 } },
+        },
+      },
+    });
+    expect(state.pvp.taskObjectives.objective?.count).toBe(0);
+    expect(state.pvp.hideoutParts.part?.count).toBe(0);
+  });
+  it('does not turn a skipped remote clear into a pending local name edit', async () => {
+    const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+    state.pvp.displayName = 'existing';
+    await setupRealtimeListener(store);
+    const handler = handlers.get('user_game_mode_progress');
+    const send = (displayName: string | null, seconds: number) =>
+      handler?.({
+        new: {
+          game_mode: 'pvp',
+          season_number: 0,
+          updated_at: new Date(Date.UTC(2026, 8, 6, 12, 0, seconds)).toISOString(),
+          progress_data: { ...structuredClone(defaultState.pvp), displayName },
+        },
+      });
+    send(null, 0);
+    expect(state.pvp.displayName).toBe('existing');
+    send('new remote name', 1);
+    expect(state.pvp.displayName).toBe('new remote name');
+  });
+  it('preserves local clears while accepting unrelated mode and field updates', async () => {
+    const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
+    state.pvp.taskObjectives.objective = { count: 5 };
+    state.pvp.hideoutParts.part = { count: 3 };
+    state.pvp.storyChapters.chapter = { complete: true };
+    await setupRealtimeListener(store);
+    state.pvp.taskObjectives.objective = { count: 0 };
+    delete state.pvp.hideoutParts.part;
+    state.pvp.storyChapters.chapter = { complete: false };
+    const handler = handlers.get('user_game_mode_progress');
+    handler?.({
+      new: {
+        game_mode: 'pvp',
+        season_number: 0,
+        updated_at: new Date().toISOString(),
+        progress_data: {
+          ...structuredClone(defaultState.pvp),
+          displayName: 'remote name',
+          taskObjectives: { objective: { count: 5 }, other: { count: 2 } },
+          hideoutParts: { part: { count: 3 } },
+          storyChapters: { chapter: { complete: true } },
+        },
+      },
+    });
+    handler?.({
+      new: {
+        game_mode: 'pve',
+        season_number: 0,
+        updated_at: new Date().toISOString(),
+        progress_data: {
+          ...structuredClone(defaultState.pve),
+          displayName: 'other mode',
+        },
+      },
+    });
+    expect(state.pvp.displayName).toBe('remote name');
+    expect(state.pve.displayName).toBe('other mode');
+    expect(state.pvp.taskObjectives.objective?.count).toBe(0);
+    expect(state.pvp.taskObjectives.other?.count).toBe(2);
+    expect(state.pvp.hideoutParts.part).toBeUndefined();
+    expect(state.pvp.storyChapters.chapter?.complete).toBe(false);
+  });
+  it.each([
+    'pending',
+    'edited-during-read',
+    'saved-during-read',
+    'remote-reset',
+    'missing-metadata',
+    'live-event',
+  ])('preserves reconnect edits while respecting reset epochs: %s', async (scenario) => {
+    const { setupRealtimeListener, registerSyncControllerGetter } =
+      await import('@/stores/tarkov/realtimeListener');
+    let pending = scenario !== 'edited-during-read';
+    const controller = { pause: vi.fn(), resume: vi.fn(), hasPendingChanges: () => pending };
+    registerSyncControllerGetter(() => controller);
+    let resolveModes!: (result: unknown) => void;
+    const modeResult = new Promise((resolve) => {
+      resolveModes = resolve;
+    });
+    supabaseContext.client.from.mockImplementation((table: string) => ({
+      select: () => ({
+        abortSignal() {
+          return this;
+        },
+        eq: () =>
+          table === 'user_progress'
+            ? {
+                single: async () => ({
+                  data: null,
+                  error: scenario === 'missing-metadata' ? { code: 'PGRST116' } : null,
+                }),
+              }
+            : modeResult,
+      }),
+    }));
+    try {
+      state.pvp.displayName = 'before';
+      await setupRealtimeListener(store);
+      createdChannels[0]!.subscribeCallback?.('SUBSCRIBED');
+      Object.assign(state.pvp, {
+        displayName: null,
+        pmcFaction: 'BEAR',
+        skillOffsets: { Endurance: 4 },
+      });
+      pending = scenario !== 'saved-during-read';
+      if (!pending) recordLocalSyncTime();
+      if (scenario === 'live-event') {
+        handlers.get('user_game_mode_progress')?.({
+          new: {
+            game_mode: 'pvp',
+            season_number: 0,
+            updated_at: '2026-09-06T12:01:00Z',
+            progress_data: {
+              ...structuredClone(defaultState.pvp),
+              displayName: 'live',
+              taskCompletions: { remoteTask: { complete: true, timestamp: 10 } },
+            },
+          },
+        });
+      }
+      resolveModes({
+        data: [
+          {
+            game_mode: 'pvp',
+            season_number: 0,
+            updated_at: '2026-09-06T12:00:00Z',
+            progress_data: {
+              ...structuredClone(defaultState.pvp),
+              displayName: 'remote',
+              progressEpoch: scenario === 'remote-reset' ? 1 : 0,
+              taskCompletions: { remoteTask: { complete: true, timestamp: 10 } },
+            },
+          },
+        ],
+        error: null,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(state.pvp.taskCompletions.remoteTask?.complete).toBe(true);
+      if (scenario === 'remote-reset') {
+        expect(state.pvp.displayName).toBe('remote');
+        expect(state.pvp.progressEpoch).toBe(1);
+      } else {
+        expect(state.pvp).toMatchObject({
+          displayName: null,
+          pmcFaction: 'BEAR',
+          skillOffsets: { Endurance: 4 },
+        });
+      }
+    } finally {
+      registerSyncControllerGetter(() => null);
+    }
   });
   it('applies only the active Seasonal row without changing persistent modes', async () => {
     const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
@@ -88,6 +1357,9 @@ describe('seasonal progress realtime synchronization', () => {
     expect(state.seasonal.taskCompletions.task?.complete).toBe(true);
     expect(state.pvp).toEqual(defaultState.pvp);
     expect(state.pve).toEqual(defaultState.pve);
+    // The union merge can reintroduce objective ids the overlay retired, so the merged mode is
+    // reconciled before sync resumes.
+    expect(migrateStoryObjectiveIdsMock).toHaveBeenCalledWith('seasonal');
   });
   it('ignores historical Seasonal rows', async () => {
     const { setupRealtimeListener } = await import('@/stores/tarkov/realtimeListener');
@@ -111,7 +1383,7 @@ describe('seasonal progress realtime synchronization', () => {
     handler?.({
       new: {
         game_mode: 'seasonal',
-        progress_data: { displayName: 'newer', level: 30, xpOffset: 300 },
+        progress_data: { displayName: 'newer', level: 30, skillOffsets: { Endurance: 300 } },
         season_number: 1,
         updated_at: '2026-08-04T12:00:00.000Z',
       },
@@ -119,14 +1391,14 @@ describe('seasonal progress realtime synchronization', () => {
     handler?.({
       new: {
         game_mode: 'seasonal',
-        progress_data: { displayName: 'older', level: 20, xpOffset: 200 },
+        progress_data: { displayName: 'older', level: 20, skillOffsets: { Endurance: 200 } },
         season_number: 1,
         updated_at: '2026-08-04T11:00:00.000Z',
       },
     });
     expect(state.seasonal.displayName).toBe('newer');
     expect(state.seasonal.level).toBe(30);
-    expect(state.seasonal.xpOffset).toBe(300);
+    expect(state.seasonal.skillOffsets.Endurance).toBe(300);
   });
   it('applies a divergent normalized update during the self-origin window', async () => {
     vi.useFakeTimers();
@@ -155,7 +1427,7 @@ describe('seasonal progress realtime synchronization', () => {
     handlers.get('user_game_mode_progress')?.({
       new: {
         game_mode: 'pvp',
-        progress_data: { displayName: 'newer', level: 30, xpOffset: 300 },
+        progress_data: { displayName: 'newer', level: 30, skillOffsets: { Endurance: 300 } },
         season_number: 0,
         updated_at: '2026-08-04T12:00:00.000Z',
       },
@@ -164,12 +1436,16 @@ describe('seasonal progress realtime synchronization', () => {
       new: {
         current_game_mode: 'pvp',
         pve_data: defaultState.pve,
-        pvp_data: { displayName: 'older', level: 20, xpOffset: 200 },
+        pvp_data: { displayName: 'older', level: 20, skillOffsets: { Endurance: 200 } },
         updated_at: '2026-08-04T13:00:00.000Z',
       },
     });
     expect(state.pvp.displayName).toBe('newer');
     expect(state.pvp.level).toBe(30);
-    expect(state.pvp.xpOffset).toBe(300);
+    expect(state.pvp.skillOffsets.Endurance).toBe(300);
   });
+});
+vi.mock('@/stores/tarkov/progressAuthority', async () => {
+  const { createProgressPolicyAuthority } = await import('#tests/test-helpers/progressAuthority');
+  return createProgressPolicyAuthority();
 });

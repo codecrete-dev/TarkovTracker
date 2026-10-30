@@ -13,7 +13,10 @@
   </div>
 </template>
 <script setup lang="ts">
-  import type { ProgressBarColor } from '@/features/dashboard/progressCard';
+  import { useTheme } from '@/composables/useTheme';
+  import { progressBarFillStyle } from '@/features/dashboard/traderPercentageStyle';
+  type ProgressBarColor = 'primary' | 'success' | 'gradient';
+  const { isLightTheme } = useTheme();
   const props = withDefaults(
     defineProps<{
       percentage: number;
@@ -22,19 +25,14 @@
       ariaLabel?: string;
     }>(),
     {
-      color: 'neutral',
+      color: 'primary',
       size: 'md',
       ariaLabel: undefined,
     }
   );
   const fillColors: Record<ProgressBarColor, string> = {
     primary: 'bg-primary-500',
-    neutral: 'bg-surface-400',
-    info: 'bg-info-500',
     success: 'bg-success-500',
-    kappa: 'bg-kappa-500',
-    lightkeeper: 'bg-lightkeeper-500',
-    locked: 'bg-surface-600/40',
     gradient: '',
   };
   const sizeClass = computed(() => (props.size === 'sm' ? 'h-1' : 'h-2.5'));
@@ -42,8 +40,10 @@
   const fillStyle = computed(() => {
     const style: Record<string, string> = { width: `${props.percentage}%` };
     if (props.color === 'gradient') {
-      const hue = (props.percentage / 100) * 120;
-      style.backgroundColor = `hsl(${hue}, 70%, 45%)`;
+      const fill = progressBarFillStyle(props.percentage, isLightTheme.value ? 'light' : 'dark');
+      if (fill.backgroundColor) {
+        style.backgroundColor = fill.backgroundColor;
+      }
     }
     return style;
   });

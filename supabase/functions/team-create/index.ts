@@ -13,7 +13,9 @@ import {
 } from '../_shared/authenticated-mutation.ts';
 import { isTeamGameMode, type TeamGameMode } from '../_shared/team-mode.ts';
 import { rejectExistingTeamMembership } from '../_shared/team-membership.ts';
+import { isMembershipConflict } from '../_shared/team-create-error.ts';
 const DEFAULT_MAX_TEAM_MEMBERS = 5;
+const MIN_JOIN_CODE_LENGTH = 12;
 type TeamRow = {
   created_at: string;
   id: string;
@@ -41,8 +43,12 @@ const validateTeamName = (req: Request, name: unknown): Response | null => {
   return null;
 };
 const validateJoinCode = (req: Request, joinCode: string): Response | null => {
-  if (joinCode.length < 4) {
-    return createErrorResponse('Join code must be at least 4 characters', 400, req);
+  if (joinCode.length < MIN_JOIN_CODE_LENGTH) {
+    return createErrorResponse(
+      `Join code must be at least ${MIN_JOIN_CODE_LENGTH} characters`,
+      400,
+      req
+    );
   }
   if (joinCode.length > 255) {
     return createErrorResponse('Join code cannot exceed 255 characters', 400, req);
@@ -101,18 +107,6 @@ const prepareCreate = async (req: Request): Promise<MutationStep<CreateContext>>
   const auth = await authenticateMutation(req, 'team-create');
   if (auth.response) return rejectMutationStep(auth.response);
   return parseCreateInput(req, auth.supabase, auth.user.id);
-};
-const isMembershipConflict = (
-  error: {
-    code?: string;
-    details?: string | null;
-    message?: string;
-  } | null
-): boolean => {
-  if (error?.code !== '23505') return false;
-  return [error.message, error.details].some((value) =>
-    value?.includes('team_memberships_user_mode_unique')
-  );
 };
 const createTeamInsertError = (
   req: Request,

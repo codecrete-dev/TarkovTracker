@@ -12,7 +12,7 @@ contributors. It covers the basics and links to focused guides for details.
   issue tracker.
 - **Submit pull requests** — fix a bug, add a feature, or improve docs.
 - **Translate** — add keys to `app/locales/en.json` only; Crowdin propagates the other locales. See
-  [`../docs/contributing/development.md`](../docs/contributing/development.md) for the i18n workflow.
+  [`../docs/contributing.md`](../docs/contributing.md) for the i18n workflow.
 
 ## Where to Ask Questions
 
@@ -33,7 +33,7 @@ automation, see [`PROJECT_BOARD.md`](PROJECT_BOARD.md).
 
 ## Development Setup (Summary)
 
-**Prerequisites:** Node.js >= 24.19.0, pnpm 11.14.0 (via Corepack), Git.
+**Prerequisites:** Node.js per [`.nvmrc`](../.nvmrc), pnpm 11.14.0 (via Corepack), Git.
 
 ```bash
 corepack enable && pnpm run setup   # installs deps + creates .env
@@ -43,7 +43,7 @@ pnpm run dev                        # localhost:3000
 > Most features work without Supabase configured; auth and sync are simply disabled.
 
 For the full setup guide, coding standards, common tasks, debugging, and commit conventions, see
-[`../docs/contributing/development.md`](../docs/contributing/development.md).
+[`../docs/contributing.md`](../docs/contributing.md).
 
 ## Pull Request Process (Summary)
 
@@ -51,20 +51,20 @@ For the full setup guide, coding standards, common tasks, debugging, and commit 
    (`fix/`, `feat/`, `enhance/`, `refactor/`, `docs/`, `chore/`)
 2. Make your changes following the coding standards
 3. Self-review, run the smallest relevant validation (`pnpm run lint` for code, `pnpm run typecheck`
-   for Nuxt/TS, `pnpm --filter api-gateway run typecheck` for Workers, `pnpm test` for executable
+   for Nuxt/TS, `pnpm run verify:api-parity` for external API integration, `pnpm test` for executable
    code), and update docs
 4. Open a PR using the template, link related issues, and ensure all CI checks pass
 5. Address review feedback; a maintainer merges once approved
 
 For detailed PR requirements, the template fields, the review process, and the pre-submit checklist,
-see [`../docs/contributing/pull-requests.md`](../docs/contributing/pull-requests.md).
+see [`../docs/contributing.md`](../docs/contributing.md).
 
 ## Review Expectations
 
 - Each PR focuses on a single change; unrelated changes may be requested to be split or closed.
 - Maintainers review for correctness, style, tests, and scope.
 - Address all feedback on the same PR branch; do not open follow-up PRs for in-scope feedback.
-- Your contribution ships in the next release once merged.
+- Your contribution deploys as soon as it is merged and is listed in the next weekly release.
 
 ## Security and Conduct
 

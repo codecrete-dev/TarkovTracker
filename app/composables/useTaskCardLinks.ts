@@ -1,11 +1,9 @@
-import { writeToClipboard } from '@/composables/useCopyToClipboard';
+import { useCopyToClipboard, writeToClipboard } from '@/composables/useCopyToClipboard';
 import { useWikiLink } from '@/composables/useWikiLink';
-import { useTarkovStore } from '@/stores/useTarkov';
 import { openExternalUrl } from '@/utils/redirect';
-import type { Task, TaskObjective } from '@/types/tarkov';
+import type { Task } from '@/types/tarkov';
 interface UseTaskCardLinksOptions {
   task: () => Task;
-  objectives: () => TaskObjective[];
 }
 type SelectedTaskItem = {
   id: string;
@@ -19,17 +17,15 @@ interface UseTaskCardLinksReturn {
   copyTaskLink: () => Promise<boolean>;
   openTaskWiki: () => void;
   openTaskOnTarkovDev: () => void;
-  getTaskDataIssueUrl: () => string;
-  openTaskDataIssue: () => void;
   setSelectedItem: (item: SelectedTaskItem | null) => void;
   openItemOnTarkovDev: () => void;
   openItemOnWiki: () => void;
 }
 export function useTaskCardLinks(options: UseTaskCardLinksOptions): UseTaskCardLinksReturn {
-  const { task, objectives } = options;
+  const { task } = options;
   const router = useRouter();
-  const tarkovStore = useTarkovStore();
   const { toWikiUrl } = useWikiLink();
+  const { copyToClipboard } = useCopyToClipboard();
   const selectedItem = ref<SelectedTaskItem | null>(null);
   const tarkovDevTaskUrl = computed(() => `https://tarkov.dev/task/${task().id}`);
   const copyTextToClipboard = async (text: string): Promise<boolean> => {
@@ -37,7 +33,7 @@ export function useTaskCardLinks(options: UseTaskCardLinksOptions): UseTaskCardL
   };
   const copyTaskLink = async (): Promise<boolean> => {
     const href = router.resolve(`/tasks?task=${task().id}`).href;
-    return copyTextToClipboard(`${window.location.origin}${href}`);
+    return copyToClipboard(`${window.location.origin}${href}`, { revealValue: false });
   };
   const openTaskWiki = () => {
     const wikiLink = toWikiUrl(task().wikiLink);
@@ -47,37 +43,6 @@ export function useTaskCardLinks(options: UseTaskCardLinksOptions): UseTaskCardL
   };
   const openTaskOnTarkovDev = () => {
     openExternalUrl(tarkovDevTaskUrl.value);
-  };
-  const getTaskDataIssueUrl = (): string => {
-    const currentTask = task();
-    const taskObjectives = objectives();
-    const title = `${currentTask.name} (${currentTask.id})`;
-    const objectiveIds = taskObjectives.map((objective) => objective.id).filter(Boolean);
-    const minLevel = currentTask.minPlayerLevel ?? 0;
-    const playerLevel = tarkovStore.playerLevel();
-    const gameMode = tarkovStore.getCurrentGameMode().toUpperCase();
-    const descriptionLines = [
-      `Task Name: ${currentTask.name}`,
-      `Task ID: ${currentTask.id}`,
-      objectiveIds.length ? `Objective IDs: ${objectiveIds.join(', ')}` : '',
-      minLevel > 0 ? `Task Req Level: ${minLevel}` : '',
-      `Dev Link: https://tarkov.dev/task/${currentTask.id}`,
-      playerLevel > 0 ? `\nUSER LEVEL: ${playerLevel}` : '',
-      `USER MODE: ${gameMode}`,
-    ].filter(Boolean);
-    const description = `>--Describe issue here--<\n\n\n${descriptionLines.join('\n')}`;
-    const params = new URLSearchParams({
-      title,
-      category: 'Overlay - Quests',
-      description,
-    });
-    if (currentTask.wikiLink) {
-      params.set('reference', currentTask.wikiLink);
-    }
-    return `https://trackerbot.nivmizz7.dev/data?${params.toString()}`;
-  };
-  const openTaskDataIssue = () => {
-    openExternalUrl(getTaskDataIssueUrl());
   };
   const setSelectedItem = (item: SelectedTaskItem | null) => {
     selectedItem.value = item;
@@ -110,8 +75,6 @@ export function useTaskCardLinks(options: UseTaskCardLinksOptions): UseTaskCardL
     copyTaskLink,
     openTaskWiki,
     openTaskOnTarkovDev,
-    getTaskDataIssueUrl,
-    openTaskDataIssue,
     setSelectedItem,
     openItemOnTarkovDev,
     openItemOnWiki,
